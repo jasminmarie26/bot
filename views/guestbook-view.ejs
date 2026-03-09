@@ -1,0 +1,88 @@
+<%- include("partials/start") %>
+
+<section class="panel">
+  <div class="header-line">
+    <div>
+      <h1>Gaestebuch: <%= character.name %></h1>
+      <p class="muted">
+        Besitzer: <strong><%= character.owner_name %></strong>
+        | Server: <strong><%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></strong>
+      </p>
+    </div>
+    <div class="dashboard-server-actions">
+      <a class="btn btn-secondary" href="/characters/<%= character.id %>#roomlist">Zur Raumliste</a>
+      <% if (isOwner) { %>
+        <a class="btn" href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>">Gaestebuch editieren</a>
+      <% } %>
+    </div>
+  </div>
+
+  <nav class="guestbook-page-tabs" aria-label="Gaestebuch Seiten">
+    <% (guestbookPages || []).forEach((page) => { %>
+      <a
+        class="guestbook-page-tab <%= activeGuestbookPage.id === page.id ? "is-active" : "" %>"
+        href="/characters/<%= character.id %>/guestbook?page_id=<%= page.id %>"
+      >
+        <%= page.page_number %>
+      </a>
+    <% }) %>
+  </nav>
+
+  <article
+    class="guestbook-page-preview gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+    style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+  >
+    <% if (guestbookSettings?.image_url) { %>
+      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gaestebuch Bild" />
+    <% } %>
+    <% if (activeGuestbookPage?.content_html) { %>
+      <p class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></p>
+    <% } else { %>
+      <p class="muted">Diese Seite ist noch leer.</p>
+    <% } %>
+  </article>
+
+  <form method="POST" action="/characters/<%= character.id %>/guestbook" class="form">
+    <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
+    <a class="bbcode-help-link" href="#bbcode-hilfe-<%= activeGuestbookPage.id %>">BBCode Hilfe anzeigen</a>
+    <details id="bbcode-hilfe-<%= activeGuestbookPage.id %>" class="bbcode-help">
+      <summary>Welche Codes gehen?</summary>
+      <div class="bbcode-help-content">
+        <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
+        <p><code>[h1]Titel[/h1]</code> <code>[h2]Titel[/h2]</code> <code>[h3]Titel[/h3]</code></p>
+        <p><code>[color=#610b0b]Text[/color]</code> <code>[gradient=0,0,#ff0000,#00aaff]Text[/gradient]</code></p>
+        <p><code>[center]Text[/center]</code> <code>[right]Text[/right]</code> <code>[block]Text[/block]</code></p>
+        <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
+        <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
+        <p><code>[img float=right]https://...[/img]Text</code></p>
+        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gaestebuch[/url]</code></p>
+        <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
+        <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
+      </div>
+    </details>
+    <label>
+      Eintrag
+      <textarea name="content" rows="5" maxlength="4000" required></textarea>
+    </label>
+    <button type="submit" class="rp-enter-btn">Eintragen (Seite <%= activeGuestbookPage.page_number %>)</button>
+  </form>
+
+  <h3>Eintraege auf Seite <%= activeGuestbookPage.page_number %></h3>
+  <% if (!guestbookEntries || !guestbookEntries.length) { %>
+    <p class="muted">Noch keine Eintraege.</p>
+  <% } else { %>
+    <div class="guestbook-list">
+      <% guestbookEntries.forEach((entry) => { %>
+        <article class="guestbook-item">
+          <header>
+            <strong><%= entry.author_name %></strong>
+            <small><%= entry.created_at %></small>
+          </header>
+          <p class="guestbook-entry-body"><%- entry.content_html %></p>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include("partials/end") %>

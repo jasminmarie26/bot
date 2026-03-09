@@ -1,0 +1,56 @@
+<%- include("partials/start") %>
+
+<section class="panel narrow">
+  <h1><%= mode === "register" ? "Registrieren" : "Login" %></h1>
+
+  <% if (mode === "login" && currentUser) { %>
+    <p>Du bist bereits eingeloggt als <strong><%= currentUser.username %></strong>.</p>
+    <div class="hero-actions">
+      <a class="btn" href="/dashboard">Zum Dashboard</a>
+      <a class="btn btn-secondary" href="/">Zur Startseite</a>
+    </div>
+  <% } else { %>
+    <% if (error) { %>
+      <div class="inline-error"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="<%= mode === "register" ? "/register" : "/login" %>" class="form">
+      <label>
+        Username
+        <input name="username" required minlength="3" maxlength="24" value="<%= values.username %>" />
+      </label>
+      <label>
+        Passwort
+        <input type="password" name="password" required minlength="6" />
+      </label>
+      <button type="submit" class="btn"><%= mode === "register" ? "Account erstellen" : "Einloggen" %></button>
+    </form>
+
+    <div class="oauth-section">
+      <p class="muted">Oder mit Social Login:</p>
+      <div class="oauth-buttons">
+        <% if (oauthEnabled.google) { %>
+          <a class="btn btn-secondary oauth-btn" href="/auth/google">Mit Google einloggen</a>
+        <% } else { %>
+          <span class="oauth-disabled">Google Login nicht eingerichtet</span>
+        <% } %>
+
+        <% if (oauthEnabled.facebook) { %>
+          <a class="btn btn-secondary oauth-btn" href="/auth/facebook">Mit Facebook einloggen</a>
+        <% } else { %>
+          <span class="oauth-disabled">Facebook Login nicht eingerichtet</span>
+        <% } %>
+      </div>
+    </div>
+
+    <p class="muted">
+      <% if (mode === "register") { %>
+        Schon registriert? <a href="/login">Zum Login</a>
+      <% } else { %>
+        Noch keinen Account? <a href="/register">Jetzt registrieren</a>
+      <% } %>
+    </p>
+  <% } %>
+</section>
+
+<%- include("partials/end") %>

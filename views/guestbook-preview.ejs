@@ -1,0 +1,30 @@
+<%- include("partials/start") %>
+
+<section class="panel">
+  <div class="header-line">
+    <div>
+      <h1>Vorschau: Gaestebuch <%= character.name %></h1>
+      <p class="muted">Ungespeicherte Vorschau von Seite <strong><%= pageNumber %></strong>.</p>
+    </div>
+    <div class="dashboard-server-actions">
+      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zurueck zum Editor</a>
+      <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes Gaestebuch</a>
+    </div>
+  </div>
+
+  <article
+    class="guestbook-page-preview gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+    style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+  >
+    <% if (guestbookSettings?.image_url) { %>
+      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gaestebuch Bild" />
+    <% } %>
+    <% if (previewHtml) { %>
+      <p class="guestbook-entry-body"><%- previewHtml %></p>
+    <% } else { %>
+      <p class="muted">Diese Seite ist noch leer.</p>
+    <% } %>
+  </article>
+</section>
+
+<%- include("partials/end") %>

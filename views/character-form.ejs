@@ -1,0 +1,75 @@
+<%- include("partials/start") %>
+
+<section class="panel">
+  <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
+
+  <% if (error) { %>
+    <div class="inline-error"><%= error %></div>
+  <% } %>
+
+  <form
+    method="POST"
+    action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
+    class="form"
+  >
+    <label>
+      Server
+      <select name="server_id" required>
+        <% (serverOptions || []).forEach((server) => { %>
+          <option
+            value="<%= server.id %>"
+            <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
+          >
+            <%= server.label %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>
+      Festplay
+      <select name="festplay_id" required>
+        <option value="">Festplay suchen / auswaehlen</option>
+        <% festplays.forEach((festplay) => { %>
+          <option
+            value="<%= festplay.id %>"
+            <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
+          >
+            <%= festplay.name %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+
+    <% if (!festplays.length) { %>
+      <p class="muted">
+        Es gibt noch kein Festplay. Bitte als Admin zuerst unter /admin ein Festplay anlegen.
+      </p>
+    <% } %>
+
+    <label>
+      Name
+      <input name="name" required maxlength="80" value="<%= character.name %>" />
+    </label>
+
+    <label>
+      Avatar URL
+      <input name="avatar_url" maxlength="500" value="<%= character.avatar_url %>" />
+    </label>
+
+    <label>
+      Beschreibung
+      <textarea name="description" rows="8" maxlength="4000"><%= character.description %></textarea>
+    </label>
+
+    <label class="checkbox">
+      <input type="checkbox" name="is_public" <%= character.is_public ? "checked" : "" %> />
+      Oeffentlich sichtbar
+    </label>
+
+    <button type="submit" class="btn">Speichern</button>
+  </form>
+</section>
+
+<%- include("partials/end") %>
+

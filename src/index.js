@@ -1,0 +1,2348 @@
+require("dotenv").config();
+
+const fs = require("fs");
+const path = require("path");
+const http = require("http");
+const express = require("express");
+const session = require("express-session");
+const SQLiteStore = require("connect-sqlite3")(session);
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const FacebookStrategy = require("passport-facebook").Strategy;
+const Database = require("better-sqlite3");
+const { Server } = require("socket.io");
+const db = require("./db");
+
+const THEME_OPTIONS = [
+  { id: "glass-aurora", label: "Glass Aurora" },
+  { id: "glass-noir", label: "Glass Noir" },
+  { id: "glass-sunset", label: "Glass Sunset" },
+  { id: "paper-ink", label: "Paper Ink" }
+];
+const SERVER_OPTIONS = [
+  { id: "free-rp", label: "FREE-RP" },
+  { id: "erp", label: "ERP" }
+];
+const GUESTBOOK_PAGE_SIZE = 12;
+const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
+const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
+const GUESTBOOK_THEME_STYLE_OPTIONS = new Set(["blumen", "nacht", "minimal"]);
+const GUESTBOOK_FONT_OPTIONS = [
+  { id: "default", label: "Default" },
+  { id: "serif", label: "Serif" },
+  { id: "sans", label: "Sans" },
+  { id: "mono", label: "Mono" },
+  { id: "audiowide", label: "Audiowide" },
+  { id: "berkshire-swash", label: "Berkshire Swash" },
+  { id: "cardo", label: "Cardo" },
+  { id: "della-respira", label: "Della Respira" },
+  { id: "flamenco", label: "Flamenco" },
+  { id: "indie-flower", label: "Indie Flower" },
+  { id: "josefin-slab", label: "Josefin Slab" },
+  { id: "kelly-slab", label: "Kelly Slab" },
+  { id: "medieval-sharp", label: "MedievalSharp" },
+  { id: "old-standard-tt", label: "Old Standard TT" },
+  { id: "russo-one", label: "Russo One" },
+  { id: "sunshiney", label: "Sunshiney" },
+  { id: "altdeutsch", label: "Altdeutsch (Unifraktur)" },
+  { id: "altdeutsch-royal", label: "Altdeutsch Royal" },
+  { id: "jedi", label: "Jedi Schrift" },
+  { id: "jedi-tech", label: "Jedi Tech" },
+  { id: "elfisch", label: "Elfenschrift" },
+  { id: "elfisch-rune", label: "Elfenschrift Runen" },
+  { id: "magie", label: "Magie Script" },
+  { id: "vintage-fantasy", label: "Vintage Fantasy" }
+];
+const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
+  GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
+);
+const DEFAULT_THEME = "glass-aurora";
+const ALLOWED_THEME_IDS = new Set(THEME_OPTIONS.map((theme) => theme.id));
+const DEFAULT_SERVER_ID = "free-rp";
+const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
+const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
+const GOOGLE_AUTH_ENABLED = Boolean(
+  process.env.GOOGLE_CLIENT_ID &&
+    process.env.GOOGLE_CLIENT_SECRET &&
+    process.env.GOOGLE_CALLBACK_URL
+);
+const FACEBOOK_AUTH_ENABLED = Boolean(
+  process.env.FACEBOOK_APP_ID &&
+    process.env.FACEBOOK_APP_SECRET &&
+    process.env.FACEBOOK_CALLBACK_URL
+);
+
+function normalizeTheme(themeValue) {
+  const input = (themeValue || "").trim().toLowerCase();
+  return ALLOWED_THEME_IDS.has(input) ? input : DEFAULT_THEME;
+}
+
+function normalizeServer(serverValue) {
+  const input = (serverValue || "").trim().toLowerCase();
+  return ALLOWED_SERVER_IDS.has(input) ? input : DEFAULT_SERVER_ID;
+}
+
+function getServerLabel(serverId) {
+  const normalized = normalizeServer(serverId);
+  const found = SERVER_OPTIONS.find((server) => server.id === normalized);
+  return found?.label || "FREE-RP";
+}
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+const dataDir = path.join(__dirname, "..", "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+const sessionsDbPath = path.join(dataDir, "sessions.sqlite");
+
+const sessionMiddleware = session({
+  store: new SQLiteStore({
+    db: "sessions.sqlite",
+    dir: dataDir
+  }),
+  secret: process.env.SESSION_SECRET || "change-me-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 14,
+    sameSite: "lax"
+  }
+});
+
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "..", "views"));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(sessionMiddleware);
+app.use(passport.initialize());
+
+function setFlash(req, type, text) {
+  req.session.flash = { type, text };
+}
+
+function getLoggedInUsersCount() {
+  let sessionsDb;
+  try {
+    sessionsDb = new Database(sessionsDbPath, { fileMustExist: true, readonly: true });
+  } catch (error) {
+    return 0;
+  }
+
+  try {
+    const rows = sessionsDb
+      .prepare("SELECT sess FROM sessions WHERE expired > ?")
+      .all(Date.now());
+
+    const uniqueUserIds = new Set();
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.sess);
+        const userId = Number(parsed?.user?.id);
+        if (Number.isInteger(userId) && userId > 0) {
+          uniqueUserIds.add(userId);
+        }
+      } catch (error) {
+        // Ignore malformed session rows.
+      }
+    }
+
+    return uniqueUserIds.size;
+  } catch (error) {
+    return 0;
+  } finally {
+    sessionsDb.close();
+  }
+}
+
+function getLoginStats() {
+  const accountCount =
+    db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
+  const characterCount =
+    db.prepare("SELECT COUNT(*) AS count FROM characters").get()?.count || 0;
+
+  return {
+    accountCount,
+    characterCount,
+    loggedInUserCount: getLoggedInUsersCount()
+  };
+}
+
+function normalizeEmail(value) {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase().slice(0, 255);
+}
+
+function getAccountNumberByUserId(userId) {
+  const user = db
+    .prepare("SELECT id, created_at FROM users WHERE id = ?")
+    .get(userId);
+  if (!user) return null;
+
+  const rank = db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM users
+       WHERE created_at < ?
+          OR (created_at = ? AND id <= ?)`
+    )
+    .get(user.created_at, user.created_at, user.id);
+
+  return Number(rank?.count) || null;
+}
+
+function toSessionUser(user) {
+  return {
+    id: user.id,
+    username: user.username,
+    is_admin: user.is_admin === 1,
+    theme: normalizeTheme(user.theme),
+    account_number: getAccountNumberByUserId(user.id)
+  };
+}
+
+function getUserForSessionById(userId) {
+  return db
+    .prepare(
+      "SELECT id, username, is_admin, theme FROM users WHERE id = ?"
+    )
+    .get(userId);
+}
+
+function makeUsernameBase(input) {
+  const prepared = String(input || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  if (!prepared) return "user";
+  if (prepared.length >= 3) return prepared.slice(0, 24);
+  return (prepared + "_user").slice(0, 24);
+}
+
+function makeUniqueUsername(baseInput) {
+  const base = makeUsernameBase(baseInput);
+  let candidate = base;
+  let counter = 1;
+
+  while (db.prepare("SELECT id FROM users WHERE username = ?").get(candidate)) {
+    const suffix = `_${counter}`;
+    const maxBaseLen = 24 - suffix.length;
+    candidate = `${base.slice(0, Math.max(1, maxBaseLen))}${suffix}`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+function getProfileEmail(profile) {
+  const emailEntry = Array.isArray(profile?.emails)
+    ? profile.emails.find((item) => item && typeof item.value === "string")
+    : null;
+  return normalizeEmail(emailEntry?.value || "");
+}
+
+function findOrCreateOAuthUser(provider, profile) {
+  const providerId = String(profile?.id || "").trim();
+  if (!providerId) {
+    throw new Error("OAuth profile without provider id");
+  }
+
+  const providerColumn = provider === "google" ? "google_id" : "facebook_id";
+  const email = getProfileEmail(profile);
+  const userByProvider = db
+    .prepare(
+      `SELECT id, username, is_admin, theme
+       FROM users
+       WHERE ${providerColumn} = ?`
+    )
+    .get(providerId);
+
+  if (userByProvider) {
+    return toSessionUser(userByProvider);
+  }
+
+  if (email) {
+    const userByEmail = db
+      .prepare(
+        `SELECT id, username, is_admin, theme, ${providerColumn} AS provider_value
+         FROM users
+         WHERE email = ?`
+      )
+      .get(email);
+
+    if (userByEmail) {
+      if (
+        userByEmail.provider_value &&
+        userByEmail.provider_value !== providerId
+      ) {
+        throw new Error("OAuth account already linked to another provider id");
+      }
+
+      db.prepare(
+        `UPDATE users
+         SET ${providerColumn} = ?, email = CASE WHEN email = '' THEN ? ELSE email END
+         WHERE id = ?`
+      ).run(providerId, email, userByEmail.id);
+
+      const refreshed = getUserForSessionById(userByEmail.id);
+      return toSessionUser(refreshed);
+    }
+  }
+
+  const displayName = String(profile?.displayName || "").trim();
+  const emailBase = email ? email.split("@")[0] : "";
+  const username = makeUniqueUsername(displayName || emailBase || provider);
+  const randomPassword = crypto.randomBytes(24).toString("hex");
+  const passwordHash = bcrypt.hashSync(randomPassword, 10);
+  const adminCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+    .get().count;
+  const isAdmin = adminCount === 0 ? 1 : 0;
+
+  const googleId = provider === "google" ? providerId : "";
+  const facebookId = provider === "facebook" ? providerId : "";
+
+  const info = db
+    .prepare(
+      `INSERT INTO users
+       (username, password_hash, is_admin, theme, email, google_id, facebook_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      username,
+      passwordHash,
+      isAdmin,
+      DEFAULT_THEME,
+      email,
+      googleId,
+      facebookId
+    );
+
+  const created = getUserForSessionById(info.lastInsertRowid);
+  return toSessionUser(created);
+}
+
+if (GOOGLE_AUTH_ENABLED) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL
+      },
+      (accessToken, refreshToken, profile, done) => {
+        return done(null, profile);
+      }
+    )
+  );
+}
+
+if (FACEBOOK_AUTH_ENABLED) {
+  passport.use(
+    new FacebookStrategy(
+      {
+        clientID: process.env.FACEBOOK_APP_ID,
+        clientSecret: process.env.FACEBOOK_APP_SECRET,
+        callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+        profileFields: ["id", "displayName", "emails"]
+      },
+      (accessToken, refreshToken, profile, done) => {
+        return done(null, profile);
+      }
+    )
+  );
+}
+
+function normalizeCharacterInput(body) {
+  const parsedFestplayId = Number(body.festplay_id);
+  return {
+    server_id: normalizeServer(body.server_id),
+    festplay_id:
+      Number.isInteger(parsedFestplayId) && parsedFestplayId > 0
+        ? parsedFestplayId
+        : null,
+    name: (body.name || "").trim().slice(0, 80),
+    species: (body.species || "").trim().slice(0, 80),
+    age: (body.age || "").trim().slice(0, 40),
+    faceclaim: (body.faceclaim || "").trim().slice(0, 120),
+    description: (body.description || "").trim().slice(0, 4000),
+    avatar_url: (body.avatar_url || "").trim().slice(0, 500),
+    is_public: body.is_public === "on" ? 1 : 0
+  };
+}
+
+function isAvatarUrlValid(url) {
+  if (!url) return true;
+  return /^https?:\/\/.+/i.test(url);
+}
+
+function getCharacterById(id) {
+  return db
+    .prepare(
+      `SELECT c.*, u.username AS owner_name, f.name AS festplay_name
+       FROM characters c
+       JOIN users u ON u.id = c.user_id
+       LEFT JOIN festplays f ON f.id = c.festplay_id
+       WHERE c.id = ?`
+    )
+    .get(id);
+}
+
+function getFestplays() {
+  return db
+    .prepare(
+      `SELECT id, name
+       FROM festplays
+       ORDER BY lower(name) ASC`
+    )
+    .all();
+}
+
+function festplayExists(festplayId) {
+  if (!Number.isInteger(festplayId) || festplayId < 1) return false;
+  const row = db
+    .prepare("SELECT id FROM festplays WHERE id = ?")
+    .get(festplayId);
+  return Boolean(row);
+}
+
+function normalizeRoomName(input) {
+  return String(input || "").trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
+function toRoomNameKey(roomName) {
+  return normalizeRoomName(roomName).toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sanitizeBbcodeUrl(rawUrl) {
+  const value = String(rawUrl || "").trim();
+  if (!value) return null;
+
+  if (/^\/(?!\/)[^\s]*$/i.test(value)) {
+    return value;
+  }
+
+  if (!/^https?:\/\//i.test(value)) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch (error) {
+    return null;
+  }
+}
+
+function sanitizeBbcodeColor(rawColor) {
+  const value = String(rawColor || "").trim();
+  if (!value) return null;
+  if (/^#[0-9a-f]{3,8}$/i.test(value)) return value;
+  if (/^[a-z]{3,20}$/i.test(value)) return value.toLowerCase();
+  return null;
+}
+
+function sanitizeBbcodeImageUrl(rawUrl) {
+  const value = String(rawUrl || "").trim();
+  if (!value) return null;
+
+  if (/^\/(?!\/)[^\s]*$/i.test(value)) {
+    return value;
+  }
+
+  if (/^\/\//.test(value)) {
+    return `https:${value}`;
+  }
+
+  if (!/^https?:\/\//i.test(value)) {
+    const looksLikeHostPath = /^[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?$/i.test(value);
+    if (!looksLikeHostPath) return null;
+    const normalized = `https://${value}`;
+    try {
+      const parsed = new URL(normalized);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+      return parsed.toString();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch (error) {
+    return null;
+  }
+}
+
+function toGuestbookImageSrc(safeUrl) {
+  const value = String(safeUrl || "").trim();
+  if (!value) return "";
+  if (value.startsWith("/")) return value;
+  if (/^https?:\/\/images\.weserv\.nl\//i.test(value)) return value;
+
+  const normalized = value.replace(/^https?:\/\//i, "");
+  return `https://images.weserv.nl/?n=-1&url=${encodeURIComponent(normalized)}`;
+}
+
+function normalizeGradientColorToken(rawToken) {
+  const token = String(rawToken || "").trim();
+  if (!token) return null;
+
+  if (/^#?[0-9a-f]{3}$/i.test(token) || /^#?[0-9a-f]{6}$/i.test(token)) {
+    return token.startsWith("#") ? token : `#${token}`;
+  }
+
+  return sanitizeBbcodeColor(token);
+}
+
+function parseGradientSpec(rawSpec) {
+  const tokens = String(rawSpec || "")
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  if (tokens.length < 2) {
+    return null;
+  }
+
+  let directionKey = null;
+  let colorTokens = tokens;
+  if (tokens.length >= 4 && /^[01]$/.test(tokens[0]) && /^[01]$/.test(tokens[1])) {
+    directionKey = `${tokens[0]},${tokens[1]}`;
+    colorTokens = tokens.slice(2);
+  }
+
+  const colors = colorTokens
+    .map((token) => normalizeGradientColorToken(token))
+    .filter(Boolean);
+  if (colors.length < 2) {
+    return null;
+  }
+
+  const angleMap = {
+    "0,0": 90,
+    "0,1": 135,
+    "1,0": 45,
+    "1,1": 180
+  };
+
+  return {
+    angle: directionKey ? angleMap[directionKey] ?? 90 : 90,
+    colors
+  };
+}
+
+function renderGuestbookBbcode(rawContent) {
+  let html = escapeHtml(String(rawContent || "").slice(0, 12000)).replace(/\r\n?/g, "\n");
+
+  const inlineTags = [
+    ["b", "strong"],
+    ["i", "em"],
+    ["u", "u"],
+    ["s", "s"]
+  ];
+
+  html = html.replace(/\[hr\]/gi, "<hr class=\"bb-hr\">");
+
+  html = html.replace(/\[h1\]([\s\S]*?)\[\/h1\]/gi, "<h1>$1</h1>");
+  html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, "<h2>$1</h2>");
+  html = html.replace(/\[h3\]([\s\S]*?)\[\/h3\]/gi, "<h3>$1</h3>");
+
+  html = html.replace(/\[center\]([\s\S]*?)\[\/center\]/gi, "<div class=\"bb-center\">$1</div>");
+  html = html.replace(/\[right\]([\s\S]*?)\[\/right\]/gi, "<div class=\"bb-right\">$1</div>");
+  html = html.replace(/\[block\]([\s\S]*?)\[\/block\]/gi, "<div class=\"bb-block\">$1</div>");
+
+  html = html.replace(/\[table\]([\s\S]*?)\[\/table\]/gi, "<table class=\"bb-table\">$1</table>");
+  html = html.replace(/\[tr\]([\s\S]*?)\[\/tr\]/gi, "<tr>$1</tr>");
+  html = html.replace(/\[td\]([\s\S]*?)\[\/td\]/gi, "<td>$1</td>");
+
+  html = html.replace(/\[spoiler=([^\]\n]+)\]([\s\S]*?)\[\/spoiler\]/gi, (full, title, inner) => (
+    `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
+  ));
+  html = html.replace(
+    /\[ab18\]([\s\S]*?)\[\/ab18\]/gi,
+    "<details class=\"bb-spoiler bb-spoiler-ab18\"><summary>Ab 18 Inhalt</summary><div class=\"bb-spoiler-content\">$1</div></details>"
+  );
+
+  html = html.replace(/\[img([^\]]*)\]([\s\S]*?)\[\/img\]/gi, (full, rawAttributes, rawUrl) => {
+    const safeUrl = sanitizeBbcodeImageUrl(rawUrl);
+    if (!safeUrl) return "";
+
+    const attributeText = String(rawAttributes || "");
+    const floatMatch = attributeText.match(/\bfloat\s*=\s*["']?\s*(left|right)\s*["']?/i);
+    const floatValue = floatMatch ? floatMatch[1].toLowerCase() : "";
+    const floatClass = floatValue ? ` bb-image-${floatValue}` : "";
+    return `<img class="bb-image${floatClass}" src="${escapeHtml(toGuestbookImageSrc(safeUrl))}" alt="Bild" />`;
+  });
+
+  inlineTags.forEach(([bbTag, htmlTag]) => {
+    const re = new RegExp(`\\[${bbTag}\\]([\\s\\S]*?)\\[\\/${bbTag}\\]`, "gi");
+    html = html.replace(re, `<${htmlTag}>$1</${htmlTag}>`);
+  });
+
+  html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, "<blockquote>$1</blockquote>");
+  html = html.replace(/\[code\]([\s\S]*?)\[\/code\]/gi, "<code>$1</code>");
+
+  html = html.replace(/\[url=([^\]\s]+)\]([\s\S]*?)\[\/url\]/gi, (full, rawUrl, label) => {
+    const safeUrl = sanitizeBbcodeUrl(rawUrl);
+    if (!safeUrl) return label;
+    return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
+
+  html = html.replace(/\[url\]([^\[]+)\[\/url\]/gi, (full, rawUrl) => {
+    const safeUrl = sanitizeBbcodeUrl(rawUrl);
+    if (!safeUrl) return escapeHtml(rawUrl);
+    const safeLabel = escapeHtml(safeUrl);
+    return `<a href="${safeLabel}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+  });
+
+  html = html.replace(/\[color=([^\]\n]+)\]([\s\S]*?)\[\/color\]/gi, (full, rawColor, inner) => {
+    const safeColor = sanitizeBbcodeColor(rawColor);
+    if (!safeColor) return inner;
+    return `<span style="color:${safeColor}">${inner}</span>`;
+  });
+
+  html = html.replace(/\[gradient=([^\]\n]+)\]([\s\S]*?)\[\/gradient\]/gi, (full, rawSpec, inner) => {
+    const gradient = parseGradientSpec(rawSpec);
+    if (!gradient) return inner;
+    return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
+  });
+
+  html = html.replace(/\[([^\]\n]*,[^\]\n]+)\]([\s\S]*?)\[\/gradient\]/gi, (full, rawSpec, inner) => {
+    const gradient = parseGradientSpec(rawSpec);
+    if (!gradient) return inner;
+    return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
+  });
+
+  return html.replace(/\n/g, "<br>");
+}
+
+function normalizeGuestbookColor(rawColor) {
+  const prepared = String(rawColor || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(prepared)) {
+    return prepared.toUpperCase();
+  }
+  return "#AEE7B7";
+}
+
+function normalizeGuestbookOption(input, allowedValues, fallback) {
+  const value = String(input || "").trim().toLowerCase();
+  return allowedValues.has(value) ? value : fallback;
+}
+
+function getGuestbookEditorPayload(body) {
+  const pageContent = (body.page_content || "").trim().slice(0, 12000);
+  const imageUrl = (body.image_url || "").trim().slice(0, 500);
+  const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
+  const censorLevel = normalizeGuestbookOption(
+    body.censor_level,
+    GUESTBOOK_CENSOR_OPTIONS,
+    "none"
+  );
+  const chatTextColor = normalizeGuestbookColor(body.chat_text_color);
+  const pageStyle = normalizeGuestbookOption(
+    body.page_style,
+    GUESTBOOK_PAGE_STYLE_OPTIONS,
+    "scroll"
+  );
+  const themeStyle = normalizeGuestbookOption(
+    body.theme_style,
+    GUESTBOOK_THEME_STYLE_OPTIONS,
+    "blumen"
+  );
+  const fontStyle = normalizeGuestbookOption(
+    body.font_style,
+    GUESTBOOK_FONT_STYLE_OPTIONS,
+    "default"
+  );
+  const tags = (body.tags || "").trim().slice(0, 500);
+
+  return {
+    pageContent,
+    settings: {
+      image_url: sanitizedImageUrl,
+      censor_level: censorLevel,
+      chat_text_color: chatTextColor,
+      page_style: pageStyle,
+      theme_style: themeStyle,
+      font_style: fontStyle,
+      tags
+    }
+  };
+}
+
+function ensureGuestbookPages(characterId) {
+  const existingPages = db
+    .prepare(
+      `SELECT id, character_id, page_number, title, content, created_at, updated_at
+       FROM guestbook_pages
+       WHERE character_id = ?
+       ORDER BY page_number ASC, id ASC`
+    )
+    .all(characterId);
+
+  if (existingPages.length) {
+    return existingPages;
+  }
+
+  db.prepare(
+    `INSERT INTO guestbook_pages (character_id, page_number, title, content)
+     VALUES (?, 1, '1', '')`
+  ).run(characterId);
+
+  return db
+    .prepare(
+      `SELECT id, character_id, page_number, title, content, created_at, updated_at
+       FROM guestbook_pages
+       WHERE character_id = ?
+       ORDER BY page_number ASC, id ASC`
+    )
+    .all(characterId);
+}
+
+function renumberGuestbookPages(characterId) {
+  const pages = db
+    .prepare(
+      `SELECT id
+       FROM guestbook_pages
+       WHERE character_id = ?
+       ORDER BY page_number ASC, id ASC`
+    )
+    .all(characterId);
+
+  const updatePage = db.prepare(
+    `UPDATE guestbook_pages
+     SET page_number = ?, title = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  );
+
+  const tx = db.transaction(() => {
+    pages.forEach((page, index) => {
+      const nextNumber = index + 1;
+      updatePage.run(nextNumber, String(nextNumber), page.id);
+    });
+  });
+
+  tx();
+}
+
+function getOrCreateGuestbookSettings(characterId) {
+  let settings = db
+    .prepare(
+      `SELECT character_id, image_url, censor_level, chat_text_color, page_style, theme_style, font_style, tags
+       FROM guestbook_settings
+       WHERE character_id = ?`
+    )
+    .get(characterId);
+
+  if (!settings) {
+    db.prepare(
+      `INSERT INTO guestbook_settings (character_id)
+       VALUES (?)`
+    ).run(characterId);
+    settings = db
+      .prepare(
+        `SELECT character_id, image_url, censor_level, chat_text_color, page_style, theme_style, font_style, tags
+         FROM guestbook_settings
+         WHERE character_id = ?`
+      )
+      .get(characterId);
+  }
+
+  return settings;
+}
+
+function getRoomWithCharacter(roomId) {
+  if (!Number.isInteger(roomId) || roomId < 1) return null;
+  return db
+    .prepare(
+      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at,
+              c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
+              u.username AS room_owner_name
+       FROM chat_rooms r
+       JOIN characters c ON c.id = r.character_id
+       JOIN users u ON u.id = r.created_by_user_id
+       WHERE r.id = ?`
+    )
+    .get(roomId);
+}
+
+function canAccessCharacter(userId, characterOwnerId, isCharacterPublic) {
+  return Number(userId) === Number(characterOwnerId) || Number(isCharacterPublic) === 1;
+}
+
+function getRecentSiteUpdates(limit = 10) {
+  return db
+    .prepare(
+      `SELECT id, author_name, content, created_at
+       FROM site_updates
+       ORDER BY id DESC
+       LIMIT ?`
+    )
+    .all(limit);
+}
+
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    setFlash(req, "error", "Bitte melde dich zuerst an.");
+    return res.redirect("/login");
+  }
+  return next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.session.user?.is_admin) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur Admins duerfen diese Seite sehen."
+    });
+  }
+  return next();
+}
+
+app.use((req, res, next) => {
+  if (req.session.guest_theme) {
+    req.session.guest_theme = normalizeTheme(req.session.guest_theme);
+  }
+
+  if (req.session.user) {
+    const user = getUserForSessionById(req.session.user.id);
+
+    if (user) {
+      req.session.user = toSessionUser(user);
+    } else {
+      req.session.user = null;
+    }
+  }
+
+  res.locals.currentUser = req.session.user || null;
+  res.locals.oauthEnabled = {
+    google: GOOGLE_AUTH_ENABLED,
+    facebook: FACEBOOK_AUTH_ENABLED
+  };
+  res.locals.availableThemes = THEME_OPTIONS;
+  res.locals.serverOptions = SERVER_OPTIONS;
+  res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
+  const currentPath = String(req.originalUrl || "/").trim();
+  res.locals.currentPath =
+    currentPath.startsWith("/") && !currentPath.startsWith("//")
+      ? currentPath
+      : "/";
+  res.locals.activeTheme =
+    req.session.user?.theme ||
+    req.session.guest_theme ||
+    DEFAULT_THEME;
+  res.locals.flash = req.session.flash || null;
+  delete req.session.flash;
+  next();
+});
+
+app.get("/", (req, res) => {
+  return res.render("home", {
+    title: "Heldenhaft Reisen",
+    stats: getLoginStats(),
+    siteUpdates: getRecentSiteUpdates(12)
+  });
+});
+
+app.get("/register", (req, res) => {
+  res.render("auth", {
+    title: "Registrieren",
+    mode: "register",
+    error: null,
+    values: { username: "" }
+  });
+});
+
+app.post("/register", (req, res) => {
+  const username = (req.body.username || "").trim().slice(0, 24);
+  const password = req.body.password || "";
+
+  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+    return res.status(400).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error: "Username nur mit Buchstaben, Zahlen, _ (3-24 Zeichen).",
+      values: { username }
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error: "Passwort muss mindestens 6 Zeichen lang sein.",
+      values: { username }
+    });
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM users WHERE username = ?")
+    .get(username);
+  if (existing) {
+    return res.status(400).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error: "Dieser Username ist bereits vergeben.",
+      values: { username }
+    });
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 10);
+  const adminCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+    .get().count;
+  const isAdmin = adminCount === 0 ? 1 : 0;
+  const info = db
+    .prepare(
+      "INSERT INTO users (username, password_hash, is_admin, theme) VALUES (?, ?, ?, ?)"
+    )
+    .run(username, passwordHash, isAdmin, DEFAULT_THEME);
+
+  const createdUser = getUserForSessionById(info.lastInsertRowid);
+  req.session.user = toSessionUser(createdUser);
+  setFlash(req, "success", "Account erstellt. Willkommen!");
+  return res.redirect("/dashboard");
+});
+
+app.get("/login", (req, res) => {
+  res.render("auth", {
+    title: "Login",
+    mode: "login",
+    error: null,
+    values: { username: "" }
+  });
+});
+
+app.post("/login", (req, res) => {
+  const username = (req.body.username || "").trim().slice(0, 24);
+  const password = req.body.password || "";
+
+  const user = db
+    .prepare(
+      "SELECT id, username, password_hash, is_admin, theme FROM users WHERE username = ?"
+    )
+    .get(username);
+
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    return res.status(401).render("auth", {
+      title: "Login",
+      mode: "login",
+      error: "Ungueltige Zugangsdaten.",
+      values: { username }
+    });
+  }
+
+  req.session.user = toSessionUser(user);
+  setFlash(req, "success", "Erfolgreich eingeloggt.");
+  return res.redirect("/dashboard");
+});
+
+app.get("/auth/google", (req, res, next) => {
+  if (!GOOGLE_AUTH_ENABLED) {
+    setFlash(req, "error", "Google Login ist noch nicht konfiguriert.");
+    return res.redirect("/login");
+  }
+
+  return passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false
+  })(req, res, next);
+});
+
+app.get("/auth/google/callback", (req, res, next) => {
+  if (!GOOGLE_AUTH_ENABLED) {
+    setFlash(req, "error", "Google Login ist noch nicht konfiguriert.");
+    return res.redirect("/login");
+  }
+
+  return passport.authenticate(
+    "google",
+    { session: false, failureRedirect: "/login" },
+    (error, profile) => {
+      if (error || !profile) {
+        setFlash(req, "error", "Google Login fehlgeschlagen.");
+        return res.redirect("/login");
+      }
+
+      try {
+        req.session.user = findOrCreateOAuthUser("google", profile);
+        setFlash(req, "success", "Mit Google eingeloggt.");
+        return res.redirect("/dashboard");
+      } catch (oauthError) {
+        console.error(oauthError);
+        setFlash(req, "error", "Google Login konnte nicht verarbeitet werden.");
+        return res.redirect("/login");
+      }
+    }
+  )(req, res, next);
+});
+
+app.get("/auth/facebook", (req, res, next) => {
+  if (!FACEBOOK_AUTH_ENABLED) {
+    setFlash(req, "error", "Facebook Login ist noch nicht konfiguriert.");
+    return res.redirect("/login");
+  }
+
+  return passport.authenticate("facebook", {
+    scope: ["email"],
+    session: false
+  })(req, res, next);
+});
+
+app.get("/auth/facebook/callback", (req, res, next) => {
+  if (!FACEBOOK_AUTH_ENABLED) {
+    setFlash(req, "error", "Facebook Login ist noch nicht konfiguriert.");
+    return res.redirect("/login");
+  }
+
+  return passport.authenticate(
+    "facebook",
+    { session: false, failureRedirect: "/login" },
+    (error, profile) => {
+      if (error || !profile) {
+        setFlash(req, "error", "Facebook Login fehlgeschlagen.");
+        return res.redirect("/login");
+      }
+
+      try {
+        req.session.user = findOrCreateOAuthUser("facebook", profile);
+        setFlash(req, "success", "Mit Facebook eingeloggt.");
+        return res.redirect("/dashboard");
+      } catch (oauthError) {
+        console.error(oauthError);
+        setFlash(req, "error", "Facebook Login konnte nicht verarbeitet werden.");
+        return res.redirect("/login");
+      }
+    }
+  )(req, res, next);
+});
+
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/");
+  });
+});
+
+app.post("/updates", requireAuth, requireAdmin, (req, res) => {
+  const content = (req.body.content || "").trim().slice(0, 1200);
+  if (!content) {
+    setFlash(req, "error", "Update darf nicht leer sein.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO site_updates (author_id, author_name, content)
+       VALUES (?, ?, ?)`
+    )
+    .run(req.session.user.id, req.session.user.username, content);
+
+  const saved = db
+    .prepare(
+      `SELECT id, author_name, content, created_at
+       FROM site_updates
+       WHERE id = ?`
+    )
+    .get(info.lastInsertRowid);
+
+  io.emit("site:update", saved);
+  setFlash(req, "success", "Live-Update veroeffentlicht.");
+  return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/settings/theme", (req, res) => {
+  const theme = normalizeTheme(req.body.theme);
+
+  if (req.session.user) {
+    db.prepare("UPDATE users SET theme = ? WHERE id = ?").run(theme, req.session.user.id);
+    req.session.user.theme = theme;
+    setFlash(req, "success", "Design aktualisiert.");
+  } else {
+    req.session.guest_theme = theme;
+  }
+
+  const returnTo = String(req.body.return_to || "").trim();
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    return res.redirect(returnTo);
+  }
+
+  const referer = req.get("referer");
+  if (referer) {
+    try {
+      const url = new URL(referer);
+      const target = `${url.pathname}${url.search}${url.hash}`;
+      if (target.startsWith("/") && !target.startsWith("//")) {
+        return res.redirect(target);
+      }
+    } catch (error) {
+      // Ignore malformed referer and use fallback.
+    }
+  }
+
+  return res.redirect("/");
+});
+
+app.get("/dashboard", requireAuth, (req, res) => {
+  const ownCharacters = db
+    .prepare(
+      `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
+       FROM characters c
+       LEFT JOIN festplays f ON f.id = c.festplay_id
+       WHERE c.user_id = ?
+       ORDER BY c.updated_at DESC`
+    )
+    .all(req.session.user.id);
+
+  const serverSections = SERVER_OPTIONS.map((server) => ({
+    ...server,
+    characters: ownCharacters.filter(
+      (character) => normalizeServer(character.server_id) === server.id
+    )
+  }));
+
+  return res.render("dashboard", {
+    title: "Dashboard",
+    serverSections
+  });
+});
+
+app.get("/characters/new", requireAuth, (req, res) => {
+  const festplays = getFestplays();
+  const requestedServer = normalizeServer(req.query.server);
+  res.render("character-form", {
+    title: "Neuer Charakter",
+    mode: "create",
+    error: null,
+    festplays,
+    serverOptions: SERVER_OPTIONS,
+    character: {
+      server_id: requestedServer,
+      festplay_id: festplays[0]?.id || null,
+      name: "",
+      species: "",
+      age: "",
+      faceclaim: "",
+      description: "",
+      avatar_url: "",
+      is_public: 1
+    }
+  });
+});
+
+app.post("/characters", requireAuth, (req, res) => {
+  const payload = normalizeCharacterInput(req.body);
+  const festplays = getFestplays();
+
+  if (!payload.name) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Name ist erforderlich.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: payload
+    });
+  }
+
+  if (!isAvatarUrlValid(payload.avatar_url)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Avatar-URL muss mit http:// oder https:// starten.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: payload
+    });
+  }
+
+  if (!payload.festplay_id || !festplayExists(payload.festplay_id)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Bitte ein gueltiges Festplay auswaehlen.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: payload
+    });
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO characters
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      req.session.user.id,
+      payload.server_id,
+      payload.festplay_id,
+      payload.name,
+      payload.species,
+      payload.age,
+      payload.faceclaim,
+      payload.description,
+      payload.avatar_url,
+      payload.is_public
+    );
+
+  setFlash(req, "success", "Charakter gespeichert.");
+  return res.redirect(`/characters/${info.lastInsertRowid}`);
+});
+
+app.get("/characters/:id", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const isOwner = req.session.user.id === character.user_id;
+  if (!character.is_public && !isOwner) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const rooms = db
+    .prepare(
+      `SELECT r.id, r.name, r.created_at, r.created_by_user_id,
+              u.username AS creator_name,
+              CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS has_room_rights
+       FROM chat_rooms r
+       JOIN users u ON u.id = r.created_by_user_id
+       WHERE r.character_id = ?
+       ORDER BY lower(name) ASC`
+    )
+    .all(req.session.user.id, id);
+
+  const guestbookPages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.query.page_id);
+  const activeGuestbookPage =
+    guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
+  const guestbookSettings = getOrCreateGuestbookSettings(id);
+
+  const guestbookEntries = db
+    .prepare(
+      `SELECT id, author_name, content, created_at
+       FROM guestbook_entries
+       WHERE character_id = ? AND guestbook_page_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`
+    )
+    .all(id, activeGuestbookPage.id, GUESTBOOK_PAGE_SIZE)
+    .map((entry) => ({
+      ...entry,
+      content_html: renderGuestbookBbcode(entry.content)
+    }));
+
+  return res.render("character-view", {
+    title: character.name,
+    character,
+    isOwner,
+    rooms,
+    guestbookEntries,
+    guestbookPages,
+    activeGuestbookPage: {
+      ...activeGuestbookPage,
+      content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
+    },
+    guestbookSettings
+  });
+});
+
+app.get("/characters/:id/edit", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  return res.redirect(`/characters/${id}/guestbook/edit`);
+});
+
+app.post("/characters/:id/update", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+  const festplays = getFestplays();
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Charakter bearbeiten."
+    });
+  }
+
+  const payload = normalizeCharacterInput(req.body);
+
+  if (!payload.name) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: "Name ist erforderlich.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: { ...character, ...payload }
+    });
+  }
+
+  if (!isAvatarUrlValid(payload.avatar_url)) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: "Avatar-URL muss mit http:// oder https:// starten.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: { ...character, ...payload }
+    });
+  }
+
+  if (!payload.festplay_id || !festplayExists(payload.festplay_id)) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: "Bitte ein gueltiges Festplay auswaehlen.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: { ...character, ...payload }
+    });
+  }
+
+  db.prepare(
+    `UPDATE characters
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(
+    payload.server_id,
+    payload.festplay_id,
+    payload.name,
+    payload.species,
+    payload.age,
+    payload.faceclaim,
+    payload.description,
+    payload.avatar_url,
+    payload.is_public,
+    id
+  );
+
+  setFlash(req, "success", "Charakter aktualisiert.");
+  return res.redirect(`/characters/${id}`);
+});
+
+app.post("/characters/:id/delete", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Charakter loeschen."
+    });
+  }
+
+  db.prepare("DELETE FROM characters WHERE id = ?").run(id);
+  setFlash(req, "success", "Charakter geloescht.");
+  return res.redirect("/dashboard");
+});
+
+app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public)) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const roomName = normalizeRoomName(req.body.room_name);
+  if (roomName.length < 2) {
+    setFlash(req, "error", "Bitte einen gueltigen Raumname eingeben.");
+    return res.redirect(`/characters/${id}#roomlist`);
+  }
+
+  const roomNameKey = toRoomNameKey(roomName);
+  const existingRoom = db
+    .prepare(
+      `SELECT id, name
+       FROM chat_rooms
+       WHERE character_id = ? AND name_key = ?`
+    )
+    .get(character.id, roomNameKey);
+
+  if (existingRoom) {
+    setFlash(req, "success", `Raum ${existingRoom.name} existiert bereits.`);
+    return res.redirect(`/chat?room_id=${existingRoom.id}`);
+  }
+
+  const info = db.prepare(
+    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, server_id)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(
+    character.id,
+    req.session.user.id,
+    roomName,
+    roomNameKey,
+    normalizeServer(character.server_id)
+  );
+
+  setFlash(req, "success", `Raum ${roomName} wurde angelegt.`);
+  return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
+});
+
+app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const isOwner = req.session.user.id === character.user_id;
+  if (!character.is_public && !isOwner) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const guestbookPages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.query.page_id);
+  const activeGuestbookPage =
+    guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
+  const guestbookSettings = getOrCreateGuestbookSettings(id);
+
+  const guestbookEntries = db
+    .prepare(
+      `SELECT id, author_name, content, created_at
+       FROM guestbook_entries
+       WHERE character_id = ? AND guestbook_page_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`
+    )
+    .all(id, activeGuestbookPage.id, GUESTBOOK_PAGE_SIZE)
+    .map((entry) => ({
+      ...entry,
+      content_html: renderGuestbookBbcode(entry.content)
+    }));
+
+  return res.render("guestbook-view", {
+    title: `Gaestebuch: ${character.name}`,
+    character,
+    isOwner,
+    guestbookEntries,
+    guestbookPages,
+    activeGuestbookPage: {
+      ...activeGuestbookPage,
+      content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
+    },
+    guestbookSettings
+  });
+});
+
+app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const isOwner = req.session.user.id === character.user_id;
+  if (!character.is_public && !isOwner) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const content = (req.body.content || "").trim().slice(0, 4000);
+  if (!content) {
+    setFlash(req, "error", "Gaestebucheintrag darf nicht leer sein.");
+    return res.redirect(`/characters/${id}/guestbook`);
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const activePage =
+    pages.find((page) => page.id === requestedPageId) || pages[0];
+
+  db.prepare(
+    `INSERT INTO guestbook_entries (character_id, author_id, author_name, content, guestbook_page_id)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(id, req.session.user.id, req.session.user.username, content, activePage.id);
+
+  setFlash(req, "success", "Eintrag gespeichert.");
+  return res.redirect(`/characters/${id}/guestbook?page_id=${activePage.id}`);
+});
+
+app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.query.page_id);
+  const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
+  const settings = getOrCreateGuestbookSettings(id);
+
+  return res.render("guestbook-editor", {
+    title: `Gaestebuch bearbeiten: ${character.name}`,
+    character,
+    pages,
+    activePage,
+    settings
+  });
+});
+
+app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.query.page_id);
+  const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
+
+  const storedPreview = req.session.guestbookPreview;
+  const canUseStoredPreview = Boolean(
+    storedPreview &&
+      Number(storedPreview.character_id) === id &&
+      (!requestedPageId || Number(storedPreview.page_id) === requestedPageId)
+  );
+
+  const previewPage = canUseStoredPreview
+    ? pages.find((page) => page.id === Number(storedPreview.page_id)) || fallbackPage
+    : fallbackPage;
+
+  const baseSettings = getOrCreateGuestbookSettings(id);
+  const previewSettings = canUseStoredPreview
+    ? { ...baseSettings, ...(storedPreview.settings || {}) }
+    : baseSettings;
+  const previewContent = canUseStoredPreview
+    ? String(storedPreview.page_content || "")
+    : String(previewPage.content || "");
+
+  return res.render("guestbook-preview", {
+    title: `Vorschau: ${character.name}`,
+    character,
+    pageId: previewPage.id,
+    pageNumber: previewPage.page_number,
+    guestbookSettings: previewSettings,
+    previewHtml: renderGuestbookBbcode(previewContent),
+    previewBackUrl: `/characters/${id}/guestbook/edit?page_id=${previewPage.id}`
+  });
+});
+
+app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
+  const payload = getGuestbookEditorPayload(req.body);
+
+  db.prepare(
+    `UPDATE guestbook_pages
+     SET content = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND character_id = ?`
+  ).run(payload.pageContent, activePage.id, id);
+
+  db.prepare(
+    `UPDATE guestbook_settings
+     SET image_url = ?,
+         censor_level = ?,
+         chat_text_color = ?,
+         page_style = ?,
+         theme_style = ?,
+         font_style = ?,
+         tags = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE character_id = ?`
+  ).run(
+    payload.settings.image_url,
+    payload.settings.censor_level,
+    payload.settings.chat_text_color,
+    payload.settings.page_style,
+    payload.settings.theme_style,
+    payload.settings.font_style,
+    payload.settings.tags,
+    id
+  );
+
+  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
+    delete req.session.guestbookPreview;
+  }
+
+  setFlash(req, "success", "Gaestebuch gespeichert.");
+  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${activePage.id}`);
+});
+
+app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
+  const payload = getGuestbookEditorPayload(req.body);
+
+  req.session.guestbookPreview = {
+    character_id: id,
+    page_id: activePage.id,
+    page_number: activePage.page_number,
+    settings: payload.settings,
+    page_content: payload.pageContent,
+    saved_at: Date.now()
+  };
+
+  return res.render("guestbook-preview", {
+    title: `Vorschau: ${character.name}`,
+    character,
+    pageId: activePage.id,
+    pageNumber: activePage.page_number,
+    guestbookSettings: payload.settings,
+    previewHtml: renderGuestbookBbcode(payload.pageContent || ""),
+    previewBackUrl: `/characters/${id}/guestbook/edit?page_id=${activePage.id}`
+  });
+});
+
+app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const nextPageNumber =
+    db
+      .prepare(
+        `SELECT COALESCE(MAX(page_number), 0) + 1 AS next_number
+         FROM guestbook_pages
+         WHERE character_id = ?`
+      )
+      .get(id).next_number || 1;
+
+  const info = db
+    .prepare(
+      `INSERT INTO guestbook_pages (character_id, page_number, title, content)
+       VALUES (?, ?, ?, '')`
+    )
+    .run(id, nextPageNumber, String(nextPageNumber));
+
+  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
+    delete req.session.guestbookPreview;
+  }
+
+  setFlash(req, "success", `Seite ${nextPageNumber} erstellt.`);
+  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${info.lastInsertRowid}`);
+});
+
+app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  if (pages.length <= 1) {
+    setFlash(req, "error", "Mindestens eine Seite muss bestehen bleiben.");
+    return res.redirect(`/characters/${id}/guestbook/edit?page_id=${pages[0].id}`);
+  }
+
+  const requestedPageId = Number(req.body.page_id);
+  const pageToDelete = pages.find((page) => page.id === requestedPageId) || pages[pages.length - 1];
+
+  const removeTx = db.transaction(() => {
+    db.prepare("DELETE FROM guestbook_entries WHERE character_id = ? AND guestbook_page_id = ?").run(
+      id,
+      pageToDelete.id
+    );
+    db.prepare("DELETE FROM guestbook_pages WHERE id = ? AND character_id = ?").run(
+      pageToDelete.id,
+      id
+    );
+  });
+  removeTx();
+
+  renumberGuestbookPages(id);
+  const remainingPages = ensureGuestbookPages(id);
+  const redirectPage = remainingPages[0];
+  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
+    delete req.session.guestbookPreview;
+  }
+  setFlash(req, "success", "Aktuelle Seite geloescht.");
+  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${redirectPage.id}`);
+});
+
+app.get("/chat", requireAuth, (req, res) => {
+  const requestedServerId = normalizeServer(req.query.server);
+  const roomId = Number(req.query.room_id);
+  let activeServerId = requestedServerId;
+  let activeRoom = null;
+  let activeCharacter = null;
+
+  if (Number.isInteger(roomId) && roomId > 0) {
+    const room = getRoomWithCharacter(roomId);
+    if (!room) {
+      setFlash(req, "error", "Raum wurde nicht gefunden.");
+      return res.redirect("/dashboard");
+    }
+
+    if (!canAccessCharacter(req.session.user.id, room.character_owner_id, room.character_is_public)) {
+      return res.status(403).render("error", {
+        title: "Kein Zugriff",
+        message: "Dieser Raum ist nicht fuer dich sichtbar."
+      });
+    }
+
+    activeRoom = {
+      id: room.id,
+      name: room.name,
+      has_room_rights: room.created_by_user_id === req.session.user.id,
+      owner_name: room.room_owner_name
+    };
+    activeCharacter = {
+      id: room.character_id,
+      name: room.character_name,
+      is_owner: room.character_owner_id === req.session.user.id
+    };
+    activeServerId = normalizeServer(room.character_server_id);
+  }
+
+  const messages = activeRoom
+    ? db
+        .prepare(
+          `SELECT username, content, created_at
+           FROM chat_messages
+           WHERE room_id = ? AND server_id = ?
+           ORDER BY id DESC
+           LIMIT 100`
+        )
+        .all(activeRoom.id, activeServerId)
+        .reverse()
+    : db
+        .prepare(
+          `SELECT username, content, created_at
+           FROM chat_messages
+           WHERE room_id IS NULL AND server_id = ?
+           ORDER BY id DESC
+           LIMIT 100`
+        )
+        .all(activeServerId)
+        .reverse();
+
+  const onlineCharacters = getOnlineCharactersForChannel(
+    activeRoom ? activeRoom.id : null,
+    activeServerId
+  );
+
+  return res.render("chat", {
+    title: activeRoom
+      ? `${getServerLabel(activeServerId)} Raum: ${activeRoom.name}`
+      : `${getServerLabel(activeServerId)} Chat`,
+    messages,
+    activeRoom,
+    activeCharacter,
+    activeServerId,
+    onlineCharacters
+  });
+});
+
+app.get("/admin", requireAuth, requireAdmin, (req, res) => {
+  const users = db
+    .prepare(
+      `SELECT u.id, u.username, u.is_admin, u.created_at,
+              (
+                SELECT COUNT(*)
+                FROM users ux
+                WHERE ux.created_at < u.created_at
+                   OR (ux.created_at = u.created_at AND ux.id <= u.id)
+              ) AS account_number,
+              COUNT(c.id) AS character_count
+       FROM users u
+       LEFT JOIN characters c ON c.user_id = u.id
+       GROUP BY u.id
+       ORDER BY u.created_at ASC`
+    )
+    .all();
+
+  const adminCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+    .get().count;
+  const festplays = getFestplays();
+
+  return res.render("admin", {
+    title: "Adminbereich",
+    users,
+    adminCount,
+    festplays
+  });
+});
+
+app.post("/admin/festplays", requireAuth, requireAdmin, (req, res) => {
+  const name = (req.body.name || "").trim().slice(0, 80);
+  if (name.length < 2) {
+    setFlash(req, "error", "Festplay-Name muss mindestens 2 Zeichen haben.");
+    return res.redirect("/admin");
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM festplays WHERE lower(name) = lower(?)")
+    .get(name);
+  if (existing) {
+    setFlash(req, "error", "Dieses Festplay existiert bereits.");
+    return res.redirect("/admin");
+  }
+
+  db.prepare(
+    `INSERT INTO festplays (name, created_by_user_id)
+     VALUES (?, ?)`
+  ).run(name, req.session.user.id);
+
+  setFlash(req, "success", "Festplay erstellt.");
+  return res.redirect("/admin");
+});
+
+app.post("/admin/festplays/:id/delete", requireAuth, requireAdmin, (req, res) => {
+  const festplayId = Number(req.params.id);
+  if (!Number.isInteger(festplayId) || festplayId < 1) {
+    setFlash(req, "error", "Ungueltige Festplay-ID.");
+    return res.redirect("/admin");
+  }
+
+  const festplay = db
+    .prepare("SELECT id, name FROM festplays WHERE id = ?")
+    .get(festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Festplay wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  const count = db
+    .prepare("SELECT COUNT(*) AS count FROM festplays")
+    .get().count;
+  if (count <= 1) {
+    setFlash(req, "error", "Mindestens ein Festplay muss bestehen bleiben.");
+    return res.redirect("/admin");
+  }
+
+  const clearCharacters = db.prepare(
+    "UPDATE characters SET festplay_id = NULL WHERE festplay_id = ?"
+  );
+  const deleteFestplay = db.prepare("DELETE FROM festplays WHERE id = ?");
+  const tx = db.transaction(() => {
+    clearCharacters.run(festplayId);
+    deleteFestplay.run(festplayId);
+  });
+  tx();
+
+  setFlash(req, "success", `Festplay ${festplay.name} geloescht.`);
+  return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    return res.status(400).render("error", {
+      title: "Ungueltige Anfrage",
+      message: "User-ID ist ungueltig."
+    });
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username, is_admin FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    return res.status(404).render("error", {
+      title: "Nicht gefunden",
+      message: "User wurde nicht gefunden."
+    });
+  }
+
+  const action = req.body.action === "demote" ? "demote" : "promote";
+
+  if (action === "demote" && targetUser.id === req.session.user.id) {
+    setFlash(req, "error", "Du kannst dich nicht selbst als Admin entfernen.");
+    return res.redirect("/admin");
+  }
+
+  if (action === "demote") {
+    const adminCount = db
+      .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+      .get().count;
+
+    if (adminCount <= 1) {
+      setFlash(req, "error", "Mindestens ein Admin muss erhalten bleiben.");
+      return res.redirect("/admin");
+    }
+  }
+
+  const nextValue = action === "promote" ? 1 : 0;
+  db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(nextValue, targetId);
+
+  if (nextValue === 1) {
+    setFlash(req, "success", `User ${targetUser.username} ist jetzt Admin.`);
+  } else {
+    setFlash(req, "success", `User ${targetUser.username} ist kein Admin mehr.`);
+  }
+
+  return res.redirect("/admin");
+});
+
+app.use((req, res) => {
+  res.status(404).render("404", { title: "Nicht gefunden" });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).render("error", {
+    title: "Serverfehler",
+    message: "Es ist ein unerwarteter Fehler aufgetreten."
+  });
+});
+
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, {}, () => {
+    socket.data.user = socket.request.session?.user || null;
+    next();
+  });
+});
+
+function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID) {
+  if (Number.isInteger(roomId) && roomId > 0) {
+    return `room:${roomId}`;
+  }
+  return `lobby:${normalizeServer(serverId)}`;
+}
+
+function getPreferredCharacterForUser(userId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return null;
+
+  const normalizedServerId = normalizeServer(serverId);
+  return (
+    db
+      .prepare(
+        `SELECT id, name
+         FROM characters
+         WHERE user_id = ? AND server_id = ?
+         ORDER BY lower(name) ASC, id ASC
+         LIMIT 1`
+      )
+      .get(parsedUserId, normalizedServerId) ||
+    db
+      .prepare(
+        `SELECT id, name
+         FROM characters
+         WHERE user_id = ?
+         ORDER BY lower(name) ASC, id ASC
+         LIMIT 1`
+      )
+      .get(parsedUserId)
+  );
+}
+
+function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
+  const members = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId, serverId));
+  if (!members || members.size === 0) {
+    return [];
+  }
+
+  const sockets = [];
+  for (const socketId of members) {
+    const memberSocket = io.sockets.sockets.get(socketId);
+    if (memberSocket) {
+      sockets.push(memberSocket);
+    }
+  }
+  return sockets;
+}
+
+function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+  return getSocketsInChannel(roomId, serverId).filter(
+    (memberSocket) => Number(memberSocket?.data?.user?.id) === parsedUserId
+  );
+}
+
+function formatChatTimestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate())
+  ].join("-") +
+    " " +
+    [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
+}
+
+function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
+  const sockets = getSocketsInChannel(roomId, serverId);
+  if (!sockets.length) {
+    return [];
+  }
+
+  const onlineCharacters = [];
+  const seenUserIds = new Set();
+  for (const memberSocket of sockets) {
+    const user = memberSocket?.data?.user;
+    const userId = Number(user?.id);
+
+    if (!Number.isInteger(userId) || userId < 1 || seenUserIds.has(userId)) {
+      continue;
+    }
+
+    seenUserIds.add(userId);
+    const chosenCharacter = getPreferredCharacterForUser(userId, serverId);
+    const displayName = String(chosenCharacter?.name || user.username || "").trim();
+
+    onlineCharacters.push({
+      user_id: userId,
+      name: displayName || `User ${userId}`,
+      character_id: chosenCharacter?.id || null
+    });
+  }
+
+  return onlineCharacters.sort((a, b) =>
+    a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+  );
+}
+
+function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
+  io.to(socketChannelForRoom(roomId, serverId)).emit(
+    "chat:online-characters",
+    getOnlineCharactersForChannel(roomId, serverId)
+  );
+}
+
+const pendingRoomDeletionTimers = new Map();
+
+function clearPendingRoomDeletion(roomId) {
+  if (!Number.isInteger(roomId) || roomId < 1) return;
+  const timer = pendingRoomDeletionTimers.get(roomId);
+  if (!timer) return;
+  clearTimeout(timer);
+  pendingRoomDeletionTimers.delete(roomId);
+}
+
+function scheduleRoomDeletion(roomId) {
+  if (!Number.isInteger(roomId) || roomId < 1) return;
+  if (pendingRoomDeletionTimers.has(roomId)) return;
+
+  const timer = setTimeout(() => {
+    pendingRoomDeletionTimers.delete(roomId);
+    maybeRemoveEmptyRoom(roomId);
+  }, ROOM_EMPTY_DELETE_DELAY_MS);
+
+  pendingRoomDeletionTimers.set(roomId, timer);
+}
+
+function deleteRoomData(roomId) {
+  const removeTx = db.transaction((targetRoomId) => {
+    db.prepare("DELETE FROM chat_messages WHERE room_id = ?").run(targetRoomId);
+    db.prepare("DELETE FROM chat_rooms WHERE id = ?").run(targetRoomId);
+  });
+
+  removeTx(roomId);
+}
+
+function maybeRemoveEmptyRoom(roomId) {
+  if (!Number.isInteger(roomId) || roomId < 1) return false;
+
+  const roomExists = db
+    .prepare("SELECT id FROM chat_rooms WHERE id = ?")
+    .get(roomId);
+  if (!roomExists) return false;
+
+  const activeMembers = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId));
+  if (activeMembers && activeMembers.size > 0) {
+    clearPendingRoomDeletion(roomId);
+    return false;
+  }
+
+  clearPendingRoomDeletion(roomId);
+  deleteRoomData(roomId);
+  io.emit("chat:room-removed", { room_id: roomId });
+  return true;
+}
+
+function pruneEmptyRooms() {
+  const rooms = db.prepare("SELECT id FROM chat_rooms").all();
+  rooms.forEach((room) => {
+    maybeRemoveEmptyRoom(room.id);
+  });
+}
+
+io.on("connection", (socket) => {
+  socket.data.roomId = null;
+  socket.data.serverId = DEFAULT_SERVER_ID;
+  socket.join(socketChannelForRoom(null, socket.data.serverId));
+
+  socket.on("chat:join", (payload) => {
+    if (!socket.data.user) return;
+
+    const rawRoomId =
+      payload && typeof payload === "object" ? payload.roomId : payload;
+    const rawServerId =
+      payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
+
+    const parsedRoomId = Number(rawRoomId);
+    const nextRoomId =
+      Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
+    let nextServerId = normalizeServer(rawServerId);
+
+    if (nextRoomId) {
+      const room = getRoomWithCharacter(nextRoomId);
+      if (!room) return;
+      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+        return;
+      }
+      nextServerId = normalizeServer(room.character_server_id);
+    }
+
+    const previousRoomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    const previousServerId = normalizeServer(socket.data.serverId);
+    socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+
+    socket.data.roomId = nextRoomId;
+    socket.data.serverId = nextServerId;
+    socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    clearPendingRoomDeletion(nextRoomId);
+
+    const previousRoomWasRemoved = maybeRemoveEmptyRoom(previousRoomId);
+    if (!previousRoomWasRemoved) {
+      emitOnlineCharacters(previousRoomId, previousServerId);
+    }
+    emitOnlineCharacters(nextRoomId, nextServerId);
+  });
+
+  socket.on("chat:message", (rawMessage) => {
+    if (!socket.data.user) return;
+    if (typeof rawMessage !== "string") return;
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+        return;
+      }
+      serverId = normalizeServer(room.character_server_id);
+    }
+
+    const content = rawMessage.trim().slice(0, 500);
+    if (!content) return;
+
+    const info = db
+      .prepare(
+        `INSERT INTO chat_messages (user_id, username, content, server_id, room_id)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        socket.data.user.id,
+        socket.data.user.username,
+        content,
+        serverId,
+        roomId
+      );
+
+    const saved = db
+      .prepare("SELECT created_at FROM chat_messages WHERE id = ?")
+      .get(info.lastInsertRowid);
+
+    io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
+      username: socket.data.user.username,
+      content,
+      created_at: saved.created_at
+    });
+  });
+
+  socket.on("chat:whisper", (payload) => {
+    if (!socket.data.user) return;
+    if (!payload || typeof payload !== "object") return;
+
+    const targetUserId = Number(payload.targetUserId);
+    const content = String(payload.content || "").trim().slice(0, 500);
+    if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
+      return;
+    }
+    if (targetUserId === Number(socket.data.user.id)) {
+      return;
+    }
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+        return;
+      }
+      serverId = normalizeServer(room.character_server_id);
+    }
+
+    const recipientSockets = getUserSocketsInChannel(roomId, serverId, targetUserId);
+    if (!recipientSockets.length) {
+      return;
+    }
+
+    const senderSockets = getUserSocketsInChannel(roomId, serverId, socket.data.user.id);
+    const senderCharacter = getPreferredCharacterForUser(socket.data.user.id, serverId);
+    const recipientCharacter = getPreferredCharacterForUser(targetUserId, serverId);
+    const senderName = String(senderCharacter?.name || socket.data.user.username || "").trim() ||
+      `User ${socket.data.user.id}`;
+    const recipientName = String(recipientCharacter?.name || "").trim() || `User ${targetUserId}`;
+    const createdAt = formatChatTimestamp();
+
+    const senderPayload = {
+      outgoing: true,
+      from_name: senderName,
+      to_name: recipientName,
+      content,
+      created_at: createdAt
+    };
+    const recipientPayload = {
+      outgoing: false,
+      from_name: senderName,
+      to_name: recipientName,
+      content,
+      created_at: createdAt
+    };
+
+    senderSockets.forEach((memberSocket) => {
+      memberSocket.emit("chat:whisper", senderPayload);
+    });
+    recipientSockets.forEach((memberSocket) => {
+      memberSocket.emit("chat:whisper", recipientPayload);
+    });
+  });
+
+  socket.on("disconnect", () => {
+    const previousRoomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    const previousServerId = normalizeServer(socket.data.serverId);
+    emitOnlineCharacters(previousRoomId, previousServerId);
+    scheduleRoomDeletion(previousRoomId);
+  });
+});
+
+const port = Number(process.env.PORT) || 3000;
+server.listen(port, () => {
+  pruneEmptyRooms();
+  console.log(`Server laeuft auf http://localhost:${port}`);
+});
+

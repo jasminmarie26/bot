@@ -1,0 +1,59 @@
+﻿<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="theme-<%= activeTheme %>">
+    <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
+    <% if (!topbarHidden) { %>
+      <header class="topbar">
+        <div class="topbar-inner">
+          <a class="brand" href="/">Heldenhaft Reisen</a>
+          <nav class="nav">
+            <% if (currentUser) { %>
+              <a href="/dashboard">Dashboard</a>
+              <% if (currentUser.is_admin) { %>
+                <a href="/admin">Admin</a>
+              <% } %>
+            <% } else { %>
+              <a href="/login">Login</a>
+              <a href="/register">Registrieren</a>
+            <% } %>
+            <form method="POST" action="/settings/theme" class="inline-form theme-form">
+              <label for="theme-select">Design</label>
+              <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+              <select
+                id="theme-select"
+                name="theme"
+                class="theme-select"
+                onchange="this.form.elements.return_to.value = this.form.elements.return_to.value.split('#')[0] + window.location.hash; this.form.submit();"
+              >
+                <% availableThemes.forEach((theme) => { %>
+                  <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+                    <%= theme.label %>
+                  </option>
+                <% }) %>
+              </select>
+            </form>
+            <% if (currentUser) { %>
+              <span class="account-chip">Account Nr. : <%= currentUser.account_number %></span>
+              <form method="POST" action="/logout" class="inline-form">
+                <button type="submit" class="ghost-btn">Logout (<%= currentUser.username %>)</button>
+              </form>
+            <% } %>
+          </nav>
+        </div>
+      </header>
+    <% } %>
+
+    <main class="container">
+      <% if (flash) { %>
+        <div class="flash <%= flash.type === "error" ? "flash-error" : "flash-success" %>">
+          <%= flash.text %>
+        </div>
+      <% } %>
+

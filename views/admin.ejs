@@ -1,0 +1,57 @@
+<%- include("partials/start") %>
+
+<section class="panel">
+  <h1>Adminbereich</h1>
+  <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
+</section>
+
+<section class="panel">
+  <h2>Festplays verwalten</h2>
+  <form method="POST" action="/admin/festplays" class="form">
+    <label>
+      Neues Festplay
+      <input name="name" maxlength="80" required placeholder="z.B. Sigel der Welten" />
+    </label>
+    <button class="btn" type="submit">Festplay anlegen</button>
+  </form>
+
+  <div class="list">
+    <% festplays.forEach((festplay) => { %>
+      <article class="list-item">
+        <strong><%= festplay.name %></strong>
+        <form method="POST" action="/admin/festplays/<%= festplay.id %>/delete" class="inline-form">
+          <button class="btn btn-danger" type="submit">Loeschen</button>
+        </form>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Benutzerverwaltung</h2>
+  <div class="list">
+    <% users.forEach((user) => { %>
+      <article class="list-item">
+        <strong>#<%= user.account_number %> <%= user.username %> <% if (user.is_admin) { %>(Admin)<% } %></strong>
+        <span>Charaktere: <%= user.character_count %></span>
+        <small>Erstellt: <%= user.created_at %></small>
+
+        <% if (user.id === currentUser.id) { %>
+          <small>Dein eigener Account</small>
+        <% } else { %>
+          <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
+            <% if (user.is_admin) { %>
+              <input type="hidden" name="action" value="demote" />
+              <button class="btn btn-danger" type="submit">Admin entfernen</button>
+            <% } else { %>
+              <input type="hidden" name="action" value="promote" />
+              <button class="btn" type="submit">Zu Admin machen</button>
+            <% } %>
+          </form>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<%- include("partials/end") %>

@@ -1,0 +1,136 @@
+<%- include("partials/start") %>
+
+<section class="panel">
+  <h1><%= activeRoom ? "Raumchat" : "Server Chat" %></h1>
+  <p class="muted chat-server-switch">
+    Server:
+    <% (serverOptions || []).forEach((server, idx) => { %>
+      <% if (server.id === activeServerId) { %>
+        <strong><%= server.label %></strong>
+      <% } else { %>
+        <a href="/chat?server=<%= server.id %>"><%= server.label %></a>
+      <% } %>
+      <% if (idx < (serverOptions || []).length - 1) { %>
+        <span aria-hidden="true">|</span>
+      <% } %>
+    <% }) %>
+  </p>
+
+  <% if (activeRoom) { %>
+    <div class="muted chat-room-meta">
+      Raum: <strong><%= activeRoom.name %></strong>
+      <% if (activeCharacter) { %>
+        | Charakter: <strong><%= activeCharacter.name %></strong>
+        | <a href="/characters/<%= activeCharacter.id %>#roomlist">Raumliste</a>
+        <% if (activeCharacter.is_owner) { %>
+          | <div class="chat-character-dropdown">
+              <button class="chat-character-dropdown-toggle" type="button">Charakter</button>
+              <div class="chat-character-dropdown-menu">
+                <a
+                  href="/characters/<%= activeCharacter.id %>/guestbook/edit"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Charakter editieren
+                </a>
+              </div>
+            </div>
+        <% } else { %>
+          | <a href="/characters/<%= activeCharacter.id %>">Charakter</a>
+        <% } %>
+      <% } %>
+      | Rechte: <strong><%= activeRoom.has_room_rights ? "Raumrechte" : `Gast (Leitung: ${activeRoom.owner_name})` %></strong>
+    </div>
+  <% } else { %>
+    <p class="muted">Echtzeit-Chat fuer alle eingeloggten User im <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %>-Server.</p>
+  <% } %>
+
+  <div class="chat-layout">
+    <aside class="chat-online-panel">
+      <h2>Online Charaktere</h2>
+      <div id="online-char-list" class="chat-online-list">
+        <% if (onlineCharacters && onlineCharacters.length) { %>
+          <% onlineCharacters.forEach((entry) => { %>
+            <button
+              class="chat-online-item chat-online-trigger"
+              type="button"
+              data-user-id="<%= entry.user_id %>"
+              data-character-id="<%= entry.character_id || '' %>"
+              data-name="<%= entry.name %>"
+            >
+              <%= entry.name %>
+            </button>
+          <% }) %>
+        <% } else { %>
+          <p class="muted">Niemand online.</p>
+        <% } %>
+      </div>
+    </aside>
+
+    <div class="chat-main">
+      <div
+        id="chat-box"
+        class="chat-box"
+        data-room-id="<%= activeRoom ? activeRoom.id : '' %>"
+        data-server-id="<%= activeServerId %>"
+      >
+        <% messages.forEach((msg) => { %>
+          <article class="chat-message">
+            <header>
+              <strong><%= msg.username %></strong>
+              <small><%= msg.created_at %></small>
+            </header>
+            <p><%= msg.content %></p>
+          </article>
+        <% }) %>
+      </div>
+
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" maxlength="500" placeholder="Nachricht eingeben..." required />
+        <button class="btn" type="submit">Senden</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="online-actions-menu" class="online-actions-menu" hidden>
+  <a
+    id="online-action-guestbook"
+    class="online-actions-item"
+    href="#"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    Gaestebuch oeffnen
+  </a>
+  <button id="online-action-whisper" class="online-actions-item" type="button">
+    Fluestern
+  </button>
+</div>
+
+<div id="whisper-modal" class="whisper-modal" hidden>
+  <div class="whisper-modal-card">
+    <header class="whisper-modal-head">
+      <h3 id="whisper-modal-title">Fluestern</h3>
+      <button id="whisper-close-btn" type="button" class="whisper-close-btn" aria-label="Schliessen">
+        &times;
+      </button>
+    </header>
+    <form id="whisper-form" class="form">
+      <input id="whisper-target-user-id" type="hidden" />
+      <label>
+        Nachricht
+        <textarea id="whisper-input" rows="4" maxlength="500" required></textarea>
+      </label>
+      <div class="whisper-actions">
+        <button class="btn" type="submit">Senden</button>
+        <button id="whisper-cancel-btn" class="btn btn-secondary" type="button">Abbrechen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/chat.js"></script>
+
+<%- include("partials/end") %>
+

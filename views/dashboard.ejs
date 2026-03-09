@@ -1,0 +1,37 @@
+<%- include("partials/start") %>
+
+<section class="header-line">
+  <div>
+    <h1>Dashboard</h1>
+  </div>
+</section>
+
+<div class="dashboard-server-list">
+  <% serverSections.forEach((section) => { %>
+    <section class="panel">
+      <div class="header-line">
+        <div>
+          <h2><%= section.label %></h2>
+        </div>
+        <div class="dashboard-server-actions">
+          <a class="btn" href="/characters/new?server=<%= section.id %>">+ Charakter</a>
+        </div>
+      </div>
+
+      <% if (!section.characters.length) { %>
+        <p class="muted">Noch keine Charaktere im <%= section.label %>-Server.</p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% section.characters.forEach((char) => { %>
+            <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+              <span class="character-mini-name"><%= char.name %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  <% }) %>
+</div>
+
+<%- include("partials/end") %>
+

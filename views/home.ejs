@@ -1,0 +1,87 @@
+<%- include("partials/start") %>
+
+<div class="home-layout">
+  <aside class="home-stats" aria-label="Plattform Statistiken">
+    <article class="home-stat">
+      <strong><%= stats.accountCount %></strong>
+      <span>Registrierte Accounts</span>
+    </article>
+    <article class="home-stat">
+      <strong><%= stats.characterCount %></strong>
+      <span>Erstellte Charaktere</span>
+    </article>
+    <article class="home-stat">
+      <strong><%= stats.loggedInUserCount %></strong>
+      <span>Gerade eingeloggt</span>
+    </article>
+  </aside>
+
+  <div class="home-main">
+    <section class="hero">
+      <h1>Heldenhaft Reisen</h1>
+      <p>
+        Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich.
+        Admins koennen sie direkt ueber den Stift veroeffentlichen.
+      </p>
+      <div class="hero-actions">
+        <% if (currentUser) { %>
+          <a class="btn" href="/dashboard">Zum Dashboard</a>
+          <a class="btn btn-secondary" href="/chat">In den Chat</a>
+        <% } else { %>
+          <a class="btn" href="/register">Jetzt starten</a>
+          <a class="btn btn-secondary" href="/login">Einloggen</a>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="panel updates-panel">
+      <div class="updates-header">
+        <h2>Live Updates</h2>
+        <% if (currentUser && currentUser.is_admin) { %>
+          <button id="update-open-btn" class="ghost-btn update-pen-btn" type="button">&#9998; Schreiben</button>
+        <% } %>
+      </div>
+
+      <div id="site-updates-list" class="site-updates-list">
+        <% if (!siteUpdates || !siteUpdates.length) { %>
+          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veroeffentlicht.</p>
+        <% } else { %>
+          <% siteUpdates.forEach((item) => { %>
+            <article class="update-item" data-update-id="<%= item.id %>">
+              <header class="update-meta">
+                <strong><%= item.author_name %></strong>
+                <small><%= item.created_at %></small>
+              </header>
+              <p class="pre-line"><%= item.content %></p>
+            </article>
+          <% }) %>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<% if (currentUser && currentUser.is_admin) { %>
+  <button id="update-fab" class="update-fab" type="button" title="Live-Update schreiben">&#9998;</button>
+  <div id="update-modal" class="update-modal" hidden>
+    <section class="panel update-modal-card">
+      <div class="updates-header">
+        <h2>Neues Live-Update</h2>
+        <button id="update-close-btn" class="ghost-btn" type="button">Schliessen</button>
+      </div>
+
+      <form method="POST" action="/updates" class="form">
+        <label>
+          Neuigkeit
+          <textarea name="content" rows="6" maxlength="1200" required></textarea>
+        </label>
+        <button type="submit" class="btn">Veroeffentlichen</button>
+      </form>
+    </section>
+  </div>
+<% } %>
+
+<script src="/updates.js"></script>
+
+<%- include("partials/end") %>
+

@@ -1,0 +1,165 @@
+<%- include("partials/start", { hideTopbar: true }) %>
+
+<section class="gb-editor-shell">
+  <header class="gb-editor-topbar">
+    <a class="rp-logo" href="/">Heldenhaft Reisen</a>
+
+    <div class="gb-editor-actions">
+      <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
+      <button
+        class="btn btn-secondary"
+        type="submit"
+        form="guestbook-editor-form"
+        formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+        formmethod="POST"
+        formtarget="_blank"
+      >
+        Vorschau
+      </button>
+
+      <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+        <button class="btn btn-secondary" type="submit">Seite hinzufuegen</button>
+      </form>
+
+      <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
+        <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+        <button
+          class="btn btn-danger"
+          type="submit"
+          onclick="return confirm('Aktuelle Seite wirklich loeschen?')"
+        >
+          Aktuelle Seite loeschen
+        </button>
+      </form>
+    </div>
+
+    <form method="POST" action="/logout" class="inline-form">
+      <button type="submit" class="ghost-btn">Logout</button>
+    </form>
+  </header>
+
+  <nav class="gb-editor-tabs" aria-label="Gaestebuch Seiten">
+    <% pages.forEach((page) => { %>
+      <a
+        class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+        href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= page.id %>"
+      >
+        <%= page.page_number %>
+      </a>
+    <% }) %>
+  </nav>
+
+  <form
+    id="guestbook-editor-form"
+    method="POST"
+    action="/characters/<%= character.id %>/guestbook/edit/save"
+    class="panel form gb-editor-form"
+  >
+    <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+
+    <h2>Einstellungen und Bilder</h2>
+
+    <label>
+      Bild URL
+      <input
+        name="image_url"
+        maxlength="500"
+        placeholder="https://..."
+        value="<%= settings.image_url %>"
+      />
+    </label>
+
+    <label>
+      Zensur
+      <div class="gb-radio-list">
+        <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
+        <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
+        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level === "none" ? "checked" : "" %> /> keine</label>
+      </div>
+    </label>
+
+    <label>
+      Textfarbe im Chat
+      <div class="gb-color-row">
+        <input id="gb-chat-color-text" name="chat_text_color" value="<%= settings.chat_text_color %>" maxlength="7" />
+        <input id="gb-chat-color-picker" type="color" value="<%= settings.chat_text_color %>" />
+      </div>
+    </label>
+
+    <label>
+      Gaestebuch Seiten Stil
+      <div class="gb-radio-list">
+        <label><input type="radio" name="page_style" value="scroll" <%= settings.page_style === "scroll" ? "checked" : "" %> /> Scroll</label>
+        <label><input type="radio" name="page_style" value="book" <%= settings.page_style === "book" ? "checked" : "" %> /> Buch</label>
+      </div>
+    </label>
+
+    <label>
+      Style
+      <select name="theme_style">
+        <option value="blumen" <%= settings.theme_style === "blumen" ? "selected" : "" %>>Blumen</option>
+        <option value="nacht" <%= settings.theme_style === "nacht" ? "selected" : "" %>>Nacht</option>
+        <option value="minimal" <%= settings.theme_style === "minimal" ? "selected" : "" %>>Minimal</option>
+      </select>
+    </label>
+
+    <label>
+      Font
+      <select name="font_style">
+        <% (guestbookFontOptions || []).forEach((fontOption) => { %>
+          <option value="<%= fontOption.id %>" <%= settings.font_style === fontOption.id ? "selected" : "" %>>
+            <%= fontOption.label %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>
+      Tags
+      <input name="tags" maxlength="500" value="<%= settings.tags %>" />
+    </label>
+
+    <details class="bbcode-help">
+      <summary>BBCode Hilfe</summary>
+      <div class="bbcode-help-content">
+        <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
+        <p><code>[h1]Titel[/h1]</code> <code>[h2]Titel[/h2]</code> <code>[h3]Titel[/h3]</code></p>
+        <p><code>[color=#610b0b]Text[/color]</code> <code>[gradient=0,0,#ff0000,#00aaff]Text[/gradient]</code></p>
+        <p><code>[0,0,ff0000,00aaff]Text[/gradient]</code> (Kurzform Gradient)</p>
+        <p><code>[center]Text[/center]</code> <code>[right]Text[/right]</code> <code>[block]Text[/block]</code></p>
+        <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
+        <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
+        <p><code>[img float=right]https://...[/img]Text</code></p>
+        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gaestebuch[/url]</code></p>
+        <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
+        <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
+      </div>
+    </details>
+
+    <label>
+      Seiteninhalt (BBCode)
+      <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
+    </label>
+  </form>
+</section>
+
+<script>
+  (() => {
+    const colorText = document.getElementById("gb-chat-color-text");
+    const colorPicker = document.getElementById("gb-chat-color-picker");
+    if (!colorText || !colorPicker) return;
+
+    colorPicker.addEventListener("input", () => {
+      colorText.value = colorPicker.value.toUpperCase();
+    });
+
+    colorText.addEventListener("input", () => {
+      const value = colorText.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+        colorPicker.value = value;
+      }
+    });
+  })();
+</script>
+
+<%- include("partials/end") %>
