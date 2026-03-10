@@ -834,6 +834,12 @@ a:hover {
   color: color-mix(in srgb, var(--accent) 65%, white 35%);
 }
 
+.admin-role-badge.is-suspicious {
+  border-color: color-mix(in srgb, var(--danger) 72%, transparent);
+  color: color-mix(in srgb, var(--danger-text) 84%, var(--danger) 16%);
+  background: color-mix(in srgb, var(--danger) 14%, var(--field-bg) 86%);
+}
+
 .admin-user-summary-meta {
   display: flex;
   flex-wrap: wrap;
@@ -876,6 +882,11 @@ a:hover {
 .admin-user-page {
   display: grid;
   gap: 0.8rem;
+}
+
+.suspicious-user-card {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--panel-edge));
+  box-shadow: 0 18px 34px -24px color-mix(in srgb, var(--danger) 28%, var(--panel-shadow));
 }
 
 .dashboard-server-list {

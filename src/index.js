@@ -2504,33 +2504,33 @@ function getAdminUsersOverview() {
     .all();
 }
 
-function getAdminUserDetail(targetId) {
-  const userColumns = getUsersTableColumnSet();
-  const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
-  const loginIpExpr = userColumns.has("last_login_ip")
-    ? "u.last_login_ip"
-    : "'' AS last_login_ip";
-  const loginAtExpr = userColumns.has("last_login_at")
-    ? "u.last_login_at"
-    : "'' AS last_login_at";
+function decorateAdminUsers(users) {
+  const ipUsage = new Map();
+  for (const user of users) {
+    const ip = String(user.last_login_ip || "").trim();
+    if (!ip) continue;
+    ipUsage.set(ip, (ipUsage.get(ip) || 0) + 1);
+  }
 
-  return db
-    .prepare(
-      `SELECT u.id, u.username, ${emailExpr}, ${loginIpExpr}, ${loginAtExpr},
-              u.is_admin, u.is_moderator, u.created_at,
-              (
-                SELECT COUNT(*)
-                FROM users ux
-                WHERE ux.created_at < u.created_at
-                   OR (ux.created_at = u.created_at AND ux.id <= u.id)
-              ) AS account_number,
-              COUNT(c.id) AS character_count
-       FROM users u
-       LEFT JOIN characters c ON c.user_id = u.id
-       WHERE u.id = ?
-       GROUP BY u.id`
-    )
-    .get(targetId);
+  return users.map((user) => {
+    const reasons = [];
+    const email = String(user.email || "").trim();
+    const ip = String(user.last_login_ip || "").trim();
+
+    if (email && isDisposableEmailDomain(email)) {
+      reasons.push("Wegwerf-E-Mail");
+    }
+
+    if (ip && (ipUsage.get(ip) || 0) >= 3) {
+      reasons.push(`Mehrere Accounts über dieselbe IP (${ipUsage.get(ip)})`);
+    }
+
+    return {
+      ...user,
+      suspicion_reasons: reasons,
+      is_suspicious: reasons.length > 0
+    };
+  });
 }
 
 function getAdminGuestbookCharacters() {
@@ -2556,7 +2556,8 @@ function getAdminGuestbookCharacters() {
 }
 
 app.get("/admin", requireAuth, requireAdmin, (req, res) => {
-  const users = getAdminUsersOverview();
+  const users = decorateAdminUsers(getAdminUsersOverview());
+  const suspiciousUsers = users.filter((user) => user.is_suspicious);
 
   const adminCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
@@ -2572,6 +2573,7 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   return res.render("admin", {
     title: "Adminbereich",
     users,
+    suspiciousUsers,
     accountCount,
     adminCount,
     moderatorCount,
@@ -2586,7 +2588,8 @@ app.get("/admin/users/:id", requireAuth, requireAdmin, (req, res) => {
     return res.redirect("/admin");
   }
 
-  const targetUser = getAdminUserDetail(targetId);
+  const users = decorateAdminUsers(getAdminUsersOverview());
+  const targetUser = users.find((user) => Number(user.id) === targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
     return res.redirect("/admin");

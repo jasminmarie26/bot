@@ -21,6 +21,9 @@
     <% if (!targetUser.is_admin && !targetUser.is_moderator) { %>
       <span class="admin-role-badge">User</span>
     <% } %>
+    <% if (targetUser.is_suspicious) { %>
+      <span class="admin-role-badge is-suspicious">Verdächtig</span>
+    <% } %>
   </div>
 
   <div class="admin-user-meta">
@@ -31,6 +34,17 @@
     <small>Erstellt: <%= targetUser.created_at %></small>
   </div>
 </section>
+
+<% if (targetUser.is_suspicious) { %>
+  <section class="panel suspicious-user-card">
+    <h2>Verdachtsgründe</h2>
+    <div class="admin-user-meta">
+      <% targetUser.suspicion_reasons.forEach((reason) => { %>
+        <span><%= reason %></span>
+      <% }) %>
+    </div>
+  </section>
+<% } %>
 
 <section class="panel">
   <h2>Basisdaten</h2>
