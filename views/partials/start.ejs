@@ -12,7 +12,7 @@
     <% const showAccountDeleteControl = Boolean(
       currentUser &&
       currentPath &&
-      (currentPath === "/dashboard" || currentPath.startsWith("/characters"))
+      currentPath === "/dashboard"
     ); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
@@ -21,17 +21,6 @@
           <nav class="nav">
             <% if (currentUser) { %>
               <a href="/dashboard">Dashboard</a>
-              <% if (showAccountDeleteControl) { %>
-                <button
-                  type="button"
-                  class="ghost-btn nav-delete-btn"
-                  id="account-delete-open"
-                  aria-haspopup="dialog"
-                  aria-controls="account-delete-modal"
-                >
-                  Account löschen
-                </button>
-              <% } %>
               <% if (currentUser.is_admin) { %>
                 <a href="/admin">Admin</a>
               <% } %>
@@ -114,28 +103,30 @@
 
       <script>
         (() => {
-          const openButton = document.getElementById("account-delete-open");
-          const modal = document.getElementById("account-delete-modal");
-          if (!openButton || !modal) return;
+          document.addEventListener("DOMContentLoaded", () => {
+            const openButton = document.getElementById("account-delete-open");
+            const modal = document.getElementById("account-delete-modal");
+            if (!openButton || !modal) return;
 
-          const closeElements = modal.querySelectorAll("[data-account-delete-close]");
-          const closeModal = () => {
-            modal.hidden = true;
-            document.body.classList.remove("modal-open");
-          };
-          const openModal = () => {
-            modal.hidden = false;
-            document.body.classList.add("modal-open");
-          };
+            const closeElements = modal.querySelectorAll("[data-account-delete-close]");
+            const closeModal = () => {
+              modal.hidden = true;
+              document.body.classList.remove("modal-open");
+            };
+            const openModal = () => {
+              modal.hidden = false;
+              document.body.classList.add("modal-open");
+            };
 
-          openButton.addEventListener("click", openModal);
-          closeElements.forEach((element) => {
-            element.addEventListener("click", closeModal);
-          });
-          document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape" && !modal.hidden) {
-              closeModal();
-            }
+            openButton.addEventListener("click", openModal);
+            closeElements.forEach((element) => {
+              element.addEventListener("click", closeModal);
+            });
+            document.addEventListener("keydown", (event) => {
+              if (event.key === "Escape" && !modal.hidden) {
+                closeModal();
+              }
+            });
           });
         })();
       </script>
