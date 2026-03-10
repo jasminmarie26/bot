@@ -19,6 +19,12 @@
         Username
         <input name="username" required minlength="3" maxlength="24" value="<%= values.username %>" />
       </label>
+      <% if (mode === "register") { %>
+        <label>
+          E-Mail
+          <input type="email" name="email" required maxlength="255" value="<%= values.email || "" %>" />
+        </label>
+      <% } %>
       <label>
         Passwort
         <input type="password" name="password" required minlength="6" />

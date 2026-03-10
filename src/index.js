@@ -866,20 +866,31 @@ app.get("/register", (req, res) => {
     title: "Registrieren",
     mode: "register",
     error: null,
-    values: { username: "" }
+    values: { username: "", email: "" }
   });
 });
 
 app.post("/register", (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
+  const email = normalizeEmail(req.body.email || "");
   const password = req.body.password || "";
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
     return res.status(400).render("auth", {
       title: "Registrieren",
       mode: "register",
       error: "Username nur mit Buchstaben, Zahlen, _ (3-24 Zeichen).",
-      values: { username }
+      values: { username, email }
+    });
+  }
+
+  if (!emailPattern.test(email)) {
+    return res.status(400).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      values: { username, email }
     });
   }
 
@@ -888,19 +899,29 @@ app.post("/register", (req, res) => {
       title: "Registrieren",
       mode: "register",
       error: "Passwort muss mindestens 6 Zeichen lang sein.",
-      values: { username }
+      values: { username, email }
     });
   }
 
-  const existing = db
+  const existingUsername = db
     .prepare("SELECT id FROM users WHERE username = ?")
     .get(username);
-  if (existing) {
+  if (existingUsername) {
     return res.status(400).render("auth", {
       title: "Registrieren",
       mode: "register",
       error: "Dieser Username ist bereits vergeben.",
-      values: { username }
+      values: { username, email }
+    });
+  }
+
+  const existingEmail = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  if (existingEmail) {
+    return res.status(400).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error: "Diese E-Mail-Adresse wird bereits verwendet.",
+      values: { username, email }
     });
   }
 
@@ -911,9 +932,9 @@ app.post("/register", (req, res) => {
   const isAdmin = adminCount === 0 ? 1 : 0;
   const info = db
     .prepare(
-      "INSERT INTO users (username, password_hash, is_admin, theme) VALUES (?, ?, ?, ?)"
+      "INSERT INTO users (username, password_hash, is_admin, theme, email) VALUES (?, ?, ?, ?, ?)"
     )
-    .run(username, passwordHash, isAdmin, DEFAULT_THEME);
+    .run(username, passwordHash, isAdmin, DEFAULT_THEME, email);
 
   const createdUser = getUserForSessionById(info.lastInsertRowid);
   req.session.user = toSessionUser(createdUser);
