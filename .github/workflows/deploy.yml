@@ -35,13 +35,25 @@ jobs:
           script: |
             set -e
             cd /opt/eigene-rp-seite
-            npm ci --omit=dev
-            npm rebuild better-sqlite3 --build-from-source
+            /usr/bin/npm ci --omit=dev
+            /usr/bin/npm rebuild better-sqlite3 --build-from-source
 
-            if pm2 describe rp-chat >/dev/null 2>&1; then
-              pm2 restart rp-chat --update-env
-            else
-              pm2 start src/index.js --name rp-chat --interpreter /usr/bin/node
+            PM2_BIN="$(command -v pm2 || true)"
+            if [ -z "$PM2_BIN" ] && [ -x /usr/local/bin/pm2 ]; then
+              PM2_BIN="/usr/local/bin/pm2"
+            fi
+            if [ -z "$PM2_BIN" ]; then
+              /usr/bin/npm i -g pm2
+              PM2_BIN="$(command -v pm2 || true)"
+            fi
+            if [ -z "$PM2_BIN" ] && [ -x /usr/local/bin/pm2 ]; then
+              PM2_BIN="/usr/local/bin/pm2"
+            fi
+            if [ -z "$PM2_BIN" ]; then
+              echo "pm2 not found after install"
+              exit 1
             fi
 
-            pm2 save
+            "$PM2_BIN" delete rp-chat || true
+            "$PM2_BIN" start src/index.js --name rp-chat --interpreter /usr/bin/node
+            "$PM2_BIN" save
