@@ -42,7 +42,7 @@
       | Rechte: <strong><%= activeRoom.has_room_rights ? "Raumrechte" : `Gast (Leitung: ${activeRoom.owner_name})` %></strong>
     </div>
   <% } else { %>
-    <p class="muted">Echtzeit-Chat fuer alle eingeloggten User im <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %>-Server.</p>
+    <p class="muted">Echtzeit-Chat für alle eingeloggten User im <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %>-Server.</p>
   <% } %>
 
   <div class="chat-layout">
@@ -101,7 +101,7 @@
     target="_blank"
     rel="noopener noreferrer"
   >
-    Gaestebuch oeffnen
+    Gästebuch öffnen
   </a>
   <button id="online-action-whisper" class="online-actions-item" type="button">
     Fluestern
@@ -112,7 +112,7 @@
   <div class="whisper-modal-card">
     <header class="whisper-modal-head">
       <h3 id="whisper-modal-title">Fluestern</h3>
-      <button id="whisper-close-btn" type="button" class="whisper-close-btn" aria-label="Schliessen">
+      <button id="whisper-close-btn" type="button" class="whisper-close-btn" aria-label="Schließen">
         &times;
       </button>
     </header>

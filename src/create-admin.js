@@ -26,7 +26,7 @@ if (password.length < 6) {
 }
 
 if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-  console.error("Optionales E-Mail-Format ist ungueltig.");
+  console.error("Optionales E-Mail-Format ist ungültig.");
   process.exit(1);
 }
 

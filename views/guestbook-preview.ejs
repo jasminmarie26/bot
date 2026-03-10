@@ -3,12 +3,12 @@
 <section class="panel">
   <div class="header-line">
     <div>
-      <h1>Vorschau: Gaestebuch <%= character.name %></h1>
+      <h1>Vorschau: Gästebuch <%= character.name %></h1>
       <p class="muted">Ungespeicherte Vorschau von Seite <strong><%= pageNumber %></strong>.</p>
     </div>
     <div class="dashboard-server-actions">
-      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zurueck zum Editor</a>
-      <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes Gaestebuch</a>
+      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zurück zum Editor</a>
+      <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes Gästebuch</a>
     </div>
   </div>
 
@@ -17,7 +17,7 @@
     style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
   >
     <% if (guestbookSettings?.image_url) { %>
-      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gaestebuch Bild" />
+      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gästebuch Bild" />
     <% } %>
     <% if (previewHtml) { %>
       <p class="guestbook-entry-body"><%- previewHtml %></p>

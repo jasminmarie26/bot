@@ -26,9 +26,9 @@
         <button
           class="btn btn-danger"
           type="submit"
-          onclick="return confirm('Aktuelle Seite wirklich loeschen?')"
+          onclick="return confirm('Aktuelle Seite wirklich löschen?')"
         >
-          Aktuelle Seite loeschen
+          Aktuelle Seite löschen
         </button>
       </form>
     </div>
@@ -38,7 +38,7 @@
     </form>
   </header>
 
-  <nav class="gb-editor-tabs" aria-label="Gaestebuch Seiten">
+  <nav class="gb-editor-tabs" aria-label="Gästebuch Seiten">
     <% pages.forEach((page) => { %>
       <a
         class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
@@ -87,7 +87,7 @@
     </label>
 
     <label>
-      Gaestebuch Seiten Stil
+      Gästebuch Seiten Stil
       <div class="gb-radio-list">
         <label><input type="radio" name="page_style" value="scroll" <%= settings.page_style === "scroll" ? "checked" : "" %> /> Scroll</label>
         <label><input type="radio" name="page_style" value="book" <%= settings.page_style === "book" ? "checked" : "" %> /> Buch</label>
@@ -130,7 +130,7 @@
         <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
         <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
         <p><code>[img float=right]https://...[/img]Text</code></p>
-        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gaestebuch[/url]</code></p>
+        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gästebuch[/url]</code></p>
         <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
         <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
       </div>

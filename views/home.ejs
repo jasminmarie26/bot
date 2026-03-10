@@ -43,7 +43,7 @@
       <h1>Heldenhaft Reisen</h1>
       <p>
         Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich.
-        Admins koennen sie direkt ueber den Stift veroeffentlichen.
+        Admins können sie direkt über den Stift veröffentlichen.
       </p>
       <div class="hero-actions">
         <% if (currentUser) { %>
@@ -65,7 +65,7 @@
 
       <div id="site-updates-list" class="site-updates-list">
         <% if (!siteUpdates || !siteUpdates.length) { %>
-          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veroeffentlicht.</p>
+          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veröffentlicht.</p>
         <% } else { %>
           <% siteUpdates.forEach((item) => { %>
             <article class="update-item" data-update-id="<%= item.id %>">
@@ -88,7 +88,7 @@
     <section class="panel update-modal-card">
       <div class="updates-header">
         <h2>Neues Live-Update</h2>
-        <button id="update-close-btn" class="ghost-btn" type="button">Schliessen</button>
+        <button id="update-close-btn" class="ghost-btn" type="button">Schließen</button>
       </div>
 
       <form method="POST" action="/updates" class="form">
@@ -96,7 +96,7 @@
           Neuigkeit
           <textarea name="content" rows="6" maxlength="1200" required></textarea>
         </label>
-        <button type="submit" class="btn">Veroeffentlichen</button>
+        <button type="submit" class="btn">Veröffentlichen</button>
       </form>
     </section>
   </div>

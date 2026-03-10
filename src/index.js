@@ -333,8 +333,8 @@ async function sendVerificationEmail(req, payload) {
   const text = [
     `Hallo ${payload.username},`,
     "",
-    "danke fuer deine Registrierung bei Heldenhaft Reisen.",
-    "Bitte bestaetige deine E-Mail-Adresse ueber diesen Link:",
+    "danke für deine Registrierung bei Heldenhaft Reisen.",
+    "Bitte bestätige deine E-Mail-Adresse über diesen Link:",
     verifyUrl,
     "",
     "Danach kannst du dich ganz normal einloggen."
@@ -343,7 +343,7 @@ async function sendVerificationEmail(req, payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: payload.email,
-    subject: "Bitte bestaetige deine E-Mail bei Heldenhaft Reisen",
+    subject: "Bitte bestätige deine E-Mail bei Heldenhaft Reisen",
     text
   });
 }
@@ -359,7 +359,7 @@ async function sendAccountDeletionEmail(payload) {
   const text = [
     `Hallo ${username},`,
     "",
-    "dein Account bei Heldenhaft Reisen wurde soeben geloescht.",
+    "dein Account bei Heldenhaft Reisen wurde soeben gelöscht.",
     "Falls du das nicht selbst warst, kontaktiere bitte umgehend den Support.",
     "",
     "Hinweis: Diese E-Mail wurde automatisch versendet."
@@ -368,7 +368,7 @@ async function sendAccountDeletionEmail(payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: email,
-    subject: "Bestaetigung: Dein Account wurde geloescht",
+    subject: "Bestätigung: Dein Account wurde gelöscht",
     text
   });
 
@@ -1020,7 +1020,7 @@ function requireAdmin(req, res, next) {
   if (!req.session.user?.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Admins duerfen diese Seite sehen."
+      message: "Nur Admins dürfen diese Seite sehen."
     });
   }
   return next();
@@ -1139,7 +1139,7 @@ app.post("/register", async (req, res) => {
       title: "Registrieren",
       mode: "register",
       error:
-        "Registrierung ist derzeit nicht verfuegbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
+        "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
       values: { username, email }
     });
   }
@@ -1184,7 +1184,7 @@ app.post("/register", async (req, res) => {
       title: "Registrieren",
       mode: "register",
       error:
-        "Die Bestaetigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
+        "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
       values: { username, email }
     });
   }
@@ -1192,7 +1192,7 @@ app.post("/register", async (req, res) => {
   setFlash(
     req,
     "success",
-    "Account erstellt. Bitte bestaetige jetzt deine E-Mail ueber den Link aus der Nachricht."
+    "Account erstellt. Bitte bestätige jetzt deine E-Mail über den Link aus der Nachricht."
   );
   return res.redirect("/login");
 });
@@ -1201,7 +1201,7 @@ app.get("/verify-email", (req, res) => {
   const token = String(req.query.token || "").trim();
 
   if (!/^[a-f0-9]{64}$/i.test(token)) {
-    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig.");
+    setFlash(req, "error", "Der Bestätigungslink ist ungültig.");
     return res.redirect("/login");
   }
 
@@ -1211,7 +1211,7 @@ app.get("/verify-email", (req, res) => {
     )
     .get(token);
   if (!user) {
-    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig oder bereits verwendet.");
+    setFlash(req, "error", "Der Bestätigungslink ist ungültig oder bereits verwendet.");
     return res.redirect("/login");
   }
 
@@ -1223,7 +1223,7 @@ app.get("/verify-email", (req, res) => {
     db.prepare("UPDATE users SET email_verification_token = '' WHERE id = ?").run(user.id);
   }
 
-  setFlash(req, "success", "E-Mail bestaetigt. Du kannst dich jetzt einloggen.");
+  setFlash(req, "success", "E-Mail bestätigt. Du kannst dich jetzt einloggen.");
   return res.redirect("/login");
 });
 
@@ -1252,7 +1252,7 @@ app.post("/login", (req, res) => {
     return res.status(401).render("auth", {
       title: "Login",
       mode: "login",
-      error: "Ungueltige Zugangsdaten.",
+      error: "Ungültige Zugangsdaten.",
       values: { username }
     });
   }
@@ -1262,7 +1262,7 @@ app.post("/login", (req, res) => {
       title: "Login",
       mode: "login",
       error:
-        "Bitte bestaetige zuerst deine E-Mail-Adresse ueber den Link aus der Willkommensmail.",
+        "Bitte bestätige zuerst deine E-Mail-Adresse über den Link aus der Willkommensmail.",
       values: { username }
     });
   }
@@ -1388,7 +1388,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
     setFlash(
       req,
       "error",
-      "Bitte gib zur Bestaetigung exakt deinen aktuellen Username ein."
+      "Bitte gib zur Bestätigung exakt deinen aktuellen Username ein."
     );
     return res.redirect("/dashboard");
   }
@@ -1422,7 +1422,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
     deleteAccountTx(user.id, user.is_admin);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "Account konnte nicht geloescht werden.");
+    setFlash(req, "error", "Account konnte nicht gelöscht werden.");
     return res.redirect("/dashboard");
   }
 
@@ -1432,7 +1432,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
       email: user.email
     });
   } catch (error) {
-    console.error("Konnte Account-Loesch-E-Mail nicht senden:", error);
+    console.error("Konnte Account-Lösch-E-Mail nicht senden:", error);
   }
 
   req.session.destroy(() => {
@@ -1463,7 +1463,7 @@ app.post("/updates", requireAuth, requireAdmin, (req, res) => {
     .get(info.lastInsertRowid);
 
   io.emit("site:update", saved);
-  setFlash(req, "success", "Live-Update veroeffentlicht.");
+  setFlash(req, "success", "Live-Update veröffentlicht.");
   return res.redirect(req.get("referer") || "/");
 });
 
@@ -1765,12 +1765,12 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf diesen Charakter loeschen."
+      message: "Nur der Besitzer darf diesen Charakter löschen."
     });
   }
 
   db.prepare("DELETE FROM characters WHERE id = ?").run(id);
-  setFlash(req, "success", "Charakter geloescht.");
+  setFlash(req, "success", "Charakter gelöscht.");
   return res.redirect("/dashboard");
 });
 
@@ -1872,7 +1872,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     }));
 
   return res.render("guestbook-view", {
-    title: `Gaestebuch: ${character.name}`,
+    title: `Gästebuch: ${character.name}`,
     character,
     isOwner,
     guestbookEntries,
@@ -1904,7 +1904,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const content = (req.body.content || "").trim().slice(0, 4000);
   if (!content) {
-    setFlash(req, "error", "Gaestebucheintrag darf nicht leer sein.");
+    setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
     return res.redirect(`/characters/${id}/guestbook`);
   }
 
@@ -1933,7 +1933,7 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -1943,7 +1943,7 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
   const settings = getOrCreateGuestbookSettings(id);
 
   return res.render("guestbook-editor", {
-    title: `Gaestebuch bearbeiten: ${character.name}`,
+    title: `Gästebuch bearbeiten: ${character.name}`,
     character,
     pages,
     activePage,
@@ -1962,7 +1962,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -2011,7 +2011,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -2052,7 +2052,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     delete req.session.guestbookPreview;
   }
 
-  setFlash(req, "success", "Gaestebuch gespeichert.");
+  setFlash(req, "success", "Gästebuch gespeichert.");
   return res.redirect(`/characters/${id}/guestbook/edit?page_id=${activePage.id}`);
 });
 
@@ -2067,7 +2067,7 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -2107,7 +2107,7 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -2146,7 +2146,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
   }
 
@@ -2177,7 +2177,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
     delete req.session.guestbookPreview;
   }
-  setFlash(req, "success", "Aktuelle Seite geloescht.");
+  setFlash(req, "success", "Aktuelle Seite gelöscht.");
   return res.redirect(`/characters/${id}/guestbook/edit?page_id=${redirectPage.id}`);
 });
 
@@ -2205,7 +2205,7 @@ app.get("/chat", requireAuth, (req, res) => {
     ) {
       return res.status(403).render("error", {
         title: "Kein Zugriff",
-        message: "Dieser Raum ist nicht fuer dich sichtbar."
+        message: "Dieser Raum ist nicht für dich sichtbar."
       });
     }
 
@@ -2358,7 +2358,7 @@ app.post("/admin/festplays", requireAuth, requireAdmin, (req, res) => {
 app.post("/admin/festplays/:id/delete", requireAuth, requireAdmin, (req, res) => {
   const festplayId = Number(req.params.id);
   if (!Number.isInteger(festplayId) || festplayId < 1) {
-    setFlash(req, "error", "Ungueltige Festplay-ID.");
+    setFlash(req, "error", "Ungültige Festplay-ID.");
     return res.redirect("/admin");
   }
 
@@ -2388,7 +2388,7 @@ app.post("/admin/festplays/:id/delete", requireAuth, requireAdmin, (req, res) =>
   });
   tx();
 
-  setFlash(req, "success", `Festplay ${festplay.name} geloescht.`);
+  setFlash(req, "success", `Festplay ${festplay.name} gelöscht.`);
   return res.redirect("/admin");
 });
 
@@ -2396,8 +2396,8 @@ app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) 
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
     return res.status(400).render("error", {
-      title: "Ungueltige Anfrage",
-      message: "User-ID ist ungueltig."
+      title: "Ungültige Anfrage",
+      message: "User-ID ist ungültig."
     });
   }
 
@@ -2445,8 +2445,8 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
     return res.status(400).render("error", {
-      title: "Ungueltige Anfrage",
-      message: "User-ID ist ungueltig."
+      title: "Ungültige Anfrage",
+      message: "User-ID ist ungültig."
     });
   }
 
@@ -2476,7 +2476,7 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
 app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungueltig.");
+    setFlash(req, "error", "User-ID ist ungültig.");
     return res.redirect("/admin");
   }
 
@@ -2536,14 +2536,14 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
     }
   }
 
-  setFlash(req, "success", `Basisdaten fuer ${targetUser.username} gespeichert.`);
+  setFlash(req, "success", `Basisdaten für ${targetUser.username} gespeichert.`);
   return res.redirect("/admin");
 });
 
 app.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungueltig.");
+    setFlash(req, "error", "User-ID ist ungültig.");
     return res.redirect("/admin");
   }
 
@@ -2564,19 +2564,19 @@ app.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, (req, res
   const nextHash = bcrypt.hashSync(newPassword, 10);
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(nextHash, targetId);
 
-  setFlash(req, "success", `Passwort fuer ${targetUser.username} wurde zurueckgesetzt.`);
+  setFlash(req, "success", `Passwort für ${targetUser.username} wurde zurückgesetzt.`);
   return res.redirect("/admin");
 });
 
 app.post("/admin/users/:id/delete", requireAuth, requireAdmin, async (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungueltig.");
+    setFlash(req, "error", "User-ID ist ungültig.");
     return res.redirect("/admin");
   }
 
   if (targetId === Number(req.session.user?.id)) {
-    setFlash(req, "error", "Du kannst deinen eigenen Admin-Account hier nicht loeschen.");
+    setFlash(req, "error", "Du kannst deinen eigenen Admin-Account hier nicht löschen.");
     return res.redirect("/admin");
   }
 
@@ -2622,7 +2622,7 @@ app.post("/admin/users/:id/delete", requireAuth, requireAdmin, async (req, res) 
     tx(targetUser.id, targetUser.is_admin);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "User konnte nicht geloescht werden.");
+    setFlash(req, "error", "User konnte nicht gelöscht werden.");
     return res.redirect("/admin");
   }
 
@@ -2632,17 +2632,17 @@ app.post("/admin/users/:id/delete", requireAuth, requireAdmin, async (req, res) 
       email: targetUser.email
     });
   } catch (error) {
-    console.error("Konnte Account-Loesch-E-Mail nicht senden:", error);
+    console.error("Konnte Account-Lösch-E-Mail nicht senden:", error);
   }
 
-  setFlash(req, "success", `User ${targetUser.username} wurde geloescht.`);
+  setFlash(req, "success", `User ${targetUser.username} wurde gelöscht.`);
   return res.redirect("/admin");
 });
 
 app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) => {
   const characterId = Number(req.params.id);
   if (!Number.isInteger(characterId) || characterId < 1) {
-    setFlash(req, "error", "Charakter-ID ist ungueltig.");
+    setFlash(req, "error", "Charakter-ID ist ungültig.");
     return res.redirect("/admin");
   }
 
@@ -2666,11 +2666,11 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
     tx(characterId);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "Gaestebuch konnte nicht geleert werden.");
+    setFlash(req, "error", "Gästebuch konnte nicht geleert werden.");
     return res.redirect("/admin");
   }
 
-  setFlash(req, "success", `Gaestebuch von ${character.name} wurde geleert.`);
+  setFlash(req, "success", `Gästebuch von ${character.name} wurde geleert.`);
   return res.redirect("/admin");
 });
 
