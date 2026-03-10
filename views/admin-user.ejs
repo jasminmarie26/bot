@@ -1,0 +1,97 @@
+<%- include("partials/start") %>
+
+<section class="panel admin-user-page">
+  <div class="header-line">
+    <div>
+      <h1><%= targetUser.username %></h1>
+      <p class="muted">Account #<%= targetUser.account_number %></p>
+    </div>
+    <div class="dashboard-server-actions">
+      <a class="btn btn-secondary" href="/admin">Zurück zum Admin-Panel</a>
+    </div>
+  </div>
+
+  <div class="admin-user-role-list">
+    <% if (targetUser.is_admin) { %>
+      <span class="admin-role-badge is-admin">Admin</span>
+    <% } %>
+    <% if (targetUser.is_moderator) { %>
+      <span class="admin-role-badge is-moderator">Moderator</span>
+    <% } %>
+    <% if (!targetUser.is_admin && !targetUser.is_moderator) { %>
+      <span class="admin-role-badge">User</span>
+    <% } %>
+  </div>
+
+  <div class="admin-user-meta">
+    <span>E-Mail: <%= targetUser.email || "-" %></span>
+    <span>Charaktere: <%= targetUser.character_count %></span>
+    <span>Letzter Login: <%= targetUser.last_login_at || "-" %></span>
+    <span>Letzte IP: <%= targetUser.last_login_ip || "-" %></span>
+    <small>Erstellt: <%= targetUser.created_at %></small>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Basisdaten</h2>
+  <form method="POST" action="/admin/users/<%= targetUser.id %>/update-basic" class="admin-inline-form">
+    <label>
+      Name
+      <input name="username" maxlength="24" value="<%= targetUser.username %>" required />
+    </label>
+    <label>
+      E-Mail
+      <input name="email" maxlength="255" value="<%= targetUser.email %>" placeholder="name@domain.tld" />
+    </label>
+    <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Passwort</h2>
+  <p class="muted">Passwörter sind aus Sicherheitsgründen nicht lesbar. Du kannst sie hier nur zurücksetzen.</p>
+  <form method="POST" action="/admin/users/<%= targetUser.id %>/reset-password" class="admin-inline-form">
+    <label>
+      Neues Passwort
+      <input name="new_password" type="password" minlength="6" required placeholder="Mind. 6 Zeichen" />
+    </label>
+    <button class="btn btn-secondary" type="submit">Passwort zurücksetzen</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Rollen und Aktionen</h2>
+  <div class="dashboard-server-actions">
+    <% if (targetUser.id === currentUser.id) { %>
+      <small>Dein eigener Account</small>
+    <% } else { %>
+      <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-admin" class="inline-form">
+        <% if (targetUser.is_admin) { %>
+          <input type="hidden" name="action" value="demote" />
+          <button class="btn btn-danger" type="submit">Admin entfernen</button>
+        <% } else { %>
+          <input type="hidden" name="action" value="promote" />
+          <button class="btn" type="submit">Zu Admin machen</button>
+        <% } %>
+      </form>
+    <% } %>
+
+    <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-moderator" class="inline-form">
+      <% if (targetUser.is_moderator) { %>
+        <input type="hidden" name="action" value="demote" />
+        <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
+      <% } else { %>
+        <input type="hidden" name="action" value="promote" />
+        <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
+      <% } %>
+    </form>
+
+    <% if (targetUser.id !== currentUser.id) { %>
+      <form method="POST" action="/admin/users/<%= targetUser.id %>/delete" class="inline-form">
+        <button class="btn btn-danger" type="submit">Account löschen</button>
+      </form>
+    <% } %>
+  </div>
+</section>
+
+<%- include("partials/end") %>

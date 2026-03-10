@@ -700,6 +700,12 @@ a:hover {
   gap: 0.75rem;
 }
 
+.admin-name-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .admin-letter-heading {
   display: flex;
   align-items: baseline;
@@ -720,6 +726,37 @@ a:hover {
 .admin-user-stack {
   display: grid;
   gap: 0.7rem;
+}
+
+.admin-user-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.68rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--panel-edge);
+  background: color-mix(in srgb, var(--panel-bg) 90%, white 10%);
+  color: var(--text);
+  box-shadow: 0 14px 28px -24px var(--panel-shadow);
+}
+
+.admin-user-link:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--panel-edge));
+}
+
+.admin-user-link[hidden] {
+  display: none;
+}
+
+.admin-user-link-name {
+  font-weight: 700;
+}
+
+.admin-user-link-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .dashboard-delete-btn:hover {
@@ -834,6 +871,11 @@ a:hover {
   display: grid;
   gap: 0.28rem;
   font-size: 0.9rem;
+}
+
+.admin-user-page {
+  display: grid;
+  gap: 0.8rem;
 }
 
 .dashboard-server-list {
@@ -2150,6 +2192,15 @@ select:focus {
   .admin-user-summary-main {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .admin-name-grid {
+    gap: 0.5rem;
+  }
+
+  .admin-user-link {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .admin-user-summary {

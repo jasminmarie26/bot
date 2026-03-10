@@ -25,36 +25,13 @@
   <p class="muted">Accounts gesamt: <strong><%= accountCount %></strong></p>
   <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
   <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
-  <p class="muted">Hinweis: Passwörter sind aus Sicherheitsgründen nicht lesbar. Du kannst sie nur zurücksetzen.</p>
-</section>
-
-<section class="panel">
-  <h2>Festplays verwalten</h2>
-  <form method="POST" action="/admin/festplays" class="form">
-    <label>
-      Neues Festplay
-      <input name="name" maxlength="80" required placeholder="z. B. Sigel der Welten" />
-    </label>
-    <button class="btn" type="submit">Festplay anlegen</button>
-  </form>
-
-  <div class="list">
-    <% festplays.forEach((festplay) => { %>
-      <article class="list-item">
-        <strong><%= festplay.name %></strong>
-        <form method="POST" action="/admin/festplays/<%= festplay.id %>/delete" class="inline-form">
-          <button class="btn btn-danger" type="submit">Löschen</button>
-        </form>
-      </article>
-    <% }) %>
-  </div>
 </section>
 
 <section class="panel">
   <div class="header-line">
     <div>
       <h2>Benutzerverwaltung</h2>
-      <p class="muted">Nach Buchstaben sortiert. Ein Klick auf den Namen öffnet die Bearbeitung.</p>
+      <p class="muted">Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab.</p>
     </div>
   </div>
 
@@ -94,7 +71,7 @@
             <span><%= groupedUsers[letter].length %> Benutzer</span>
           </div>
 
-          <div class="admin-user-stack">
+          <div class="admin-name-grid">
             <% groupedUsers[letter].forEach((user) => { %>
               <%
                 const searchValues = [
@@ -106,96 +83,22 @@
                   .filter(Boolean)
                   .join(" ");
               %>
-              <details
-                class="list-item admin-user-card admin-user-accordion"
-                data-user-card
+              <a
+                class="admin-user-link"
+                href="/admin/users/<%= user.id %>"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-user-link
                 data-search="<%= searchValues %>"
               >
-                <summary class="admin-user-summary">
-                  <div class="admin-user-summary-main">
-                    <strong>#<%= user.account_number %> <%= user.username %></strong>
-                    <div class="admin-user-role-list">
-                      <% if (user.is_admin) { %>
-                        <span class="admin-role-badge is-admin">Admin</span>
-                      <% } %>
-                      <% if (user.is_moderator) { %>
-                        <span class="admin-role-badge is-moderator">Moderator</span>
-                      <% } %>
-                      <% if (!user.is_admin && !user.is_moderator) { %>
-                        <span class="admin-role-badge">User</span>
-                      <% } %>
-                    </div>
-                  </div>
-                  <div class="admin-user-summary-meta">
-                    <span><%= user.email || "Keine E-Mail" %></span>
-                    <span><%= user.character_count %> Charaktere</span>
-                  </div>
-                </summary>
-
-                <div class="admin-user-details">
-                  <div class="admin-user-meta">
-                    <span>E-Mail: <%= user.email || "-" %></span>
-                    <span>Charaktere: <%= user.character_count %></span>
-                    <span>Letzter Login: <%= user.last_login_at || "-" %></span>
-                    <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
-                    <small>Erstellt: <%= user.created_at %></small>
-                  </div>
-
-                  <div class="admin-user-forms">
-                    <form method="POST" action="/admin/users/<%= user.id %>/update-basic" class="admin-inline-form">
-                      <label>
-                        Name
-                        <input name="username" maxlength="24" value="<%= user.username %>" required />
-                      </label>
-                      <label>
-                        E-Mail
-                        <input name="email" maxlength="255" value="<%= user.email %>" placeholder="name@domain.tld" />
-                      </label>
-                      <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
-                    </form>
-
-                    <form method="POST" action="/admin/users/<%= user.id %>/reset-password" class="admin-inline-form">
-                      <label>
-                        Neues Passwort
-                        <input name="new_password" type="password" minlength="6" required placeholder="Mind. 6 Zeichen" />
-                      </label>
-                      <button class="btn btn-secondary" type="submit">Passwort zurücksetzen</button>
-                    </form>
-
-                    <div class="dashboard-server-actions">
-                      <% if (user.id === currentUser.id) { %>
-                        <small>Dein eigener Account</small>
-                      <% } else { %>
-                        <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
-                          <% if (user.is_admin) { %>
-                            <input type="hidden" name="action" value="demote" />
-                            <button class="btn btn-danger" type="submit">Admin entfernen</button>
-                          <% } else { %>
-                            <input type="hidden" name="action" value="promote" />
-                            <button class="btn" type="submit">Zu Admin machen</button>
-                          <% } %>
-                        </form>
-                      <% } %>
-
-                      <form method="POST" action="/admin/users/<%= user.id %>/toggle-moderator" class="inline-form">
-                        <% if (user.is_moderator) { %>
-                          <input type="hidden" name="action" value="demote" />
-                          <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
-                        <% } else { %>
-                          <input type="hidden" name="action" value="promote" />
-                          <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
-                        <% } %>
-                      </form>
-
-                      <% if (user.id !== currentUser.id) { %>
-                        <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                          <button class="btn btn-danger" type="submit">Account löschen</button>
-                        </form>
-                      <% } %>
-                    </div>
-                  </div>
-                </div>
-              </details>
+                <span class="admin-user-link-name"><%= user.username %></span>
+                <span class="admin-user-link-meta">#<%= user.account_number %></span>
+                <% if (user.is_admin) { %>
+                  <span class="admin-role-badge is-admin">Admin</span>
+                <% } else if (user.is_moderator) { %>
+                  <span class="admin-role-badge is-moderator">Moderator</span>
+                <% } %>
+              </a>
             <% }) %>
           </div>
         </section>
@@ -250,22 +153,22 @@
       const searchInput = document.getElementById("admin-user-search");
       if (!searchInput) return;
 
-      const userCards = Array.from(document.querySelectorAll("[data-user-card]"));
+      const userLinks = Array.from(document.querySelectorAll("[data-user-link]"));
       const letterGroups = Array.from(document.querySelectorAll("[data-letter-group]"));
 
       const applyFilter = () => {
         const query = normalizeSearchValue(searchInput.value);
 
-        userCards.forEach((card) => {
-          const haystack = normalizeSearchValue(card.getAttribute("data-search"));
-          card.hidden = Boolean(query) && !haystack.includes(query);
+        userLinks.forEach((link) => {
+          const haystack = normalizeSearchValue(link.getAttribute("data-search"));
+          link.hidden = Boolean(query) && !haystack.includes(query);
         });
 
         letterGroups.forEach((group) => {
-          const hasVisibleCards = Array.from(group.querySelectorAll("[data-user-card]")).some(
-            (card) => !card.hidden
+          const hasVisibleLinks = Array.from(group.querySelectorAll("[data-user-link]")).some(
+            (link) => !link.hidden
           );
-          group.hidden = !hasVisibleCards;
+          group.hidden = !hasVisibleLinks;
         });
       };
 

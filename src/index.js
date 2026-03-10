@@ -2262,7 +2262,7 @@ app.get("/chat", requireAuth, (req, res) => {
   });
 });
 
-app.get("/admin", requireAuth, requireAdmin, (req, res) => {
+function getAdminUsersOverview() {
   const userColumns = getUsersTableColumnSet();
   const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
   const loginIpExpr = userColumns.has("last_login_ip")
@@ -2272,7 +2272,7 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
     ? "u.last_login_at"
     : "'' AS last_login_at";
 
-  const users = db
+  return db
     .prepare(
       `SELECT u.id, u.username, ${emailExpr}, ${loginIpExpr}, ${loginAtExpr},
               u.is_admin, u.is_moderator, u.created_at,
@@ -2286,21 +2286,42 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
        FROM users u
        LEFT JOIN characters c ON c.user_id = u.id
        GROUP BY u.id
-       ORDER BY u.created_at ASC`
+       ORDER BY lower(u.username) ASC, u.id ASC`
     )
     .all();
+}
 
-  const adminCount = db
-    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
-    .get().count;
-  const moderatorCount = db
-    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_moderator = 1")
-    .get().count;
-  const accountCount = db
-    .prepare("SELECT COUNT(*) AS count FROM users")
-    .get().count;
-  const festplays = getFestplays();
-  const guestbookCharacters = db
+function getAdminUserDetail(targetId) {
+  const userColumns = getUsersTableColumnSet();
+  const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
+  const loginIpExpr = userColumns.has("last_login_ip")
+    ? "u.last_login_ip"
+    : "'' AS last_login_ip";
+  const loginAtExpr = userColumns.has("last_login_at")
+    ? "u.last_login_at"
+    : "'' AS last_login_at";
+
+  return db
+    .prepare(
+      `SELECT u.id, u.username, ${emailExpr}, ${loginIpExpr}, ${loginAtExpr},
+              u.is_admin, u.is_moderator, u.created_at,
+              (
+                SELECT COUNT(*)
+                FROM users ux
+                WHERE ux.created_at < u.created_at
+                   OR (ux.created_at = u.created_at AND ux.id <= u.id)
+              ) AS account_number,
+              COUNT(c.id) AS character_count
+       FROM users u
+       LEFT JOIN characters c ON c.user_id = u.id
+       WHERE u.id = ?
+       GROUP BY u.id`
+    )
+    .get(targetId);
+}
+
+function getAdminGuestbookCharacters() {
+  return db
     .prepare(
       `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at,
               u.username AS owner_name,
@@ -2319,6 +2340,21 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
        ORDER BY c.updated_at DESC, c.id DESC`
     )
     .all();
+}
+
+app.get("/admin", requireAuth, requireAdmin, (req, res) => {
+  const users = getAdminUsersOverview();
+
+  const adminCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+    .get().count;
+  const moderatorCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_moderator = 1")
+    .get().count;
+  const accountCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users")
+    .get().count;
+  const guestbookCharacters = getAdminGuestbookCharacters();
 
   return res.render("admin", {
     title: "Adminbereich",
@@ -2326,8 +2362,26 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
     accountCount,
     adminCount,
     moderatorCount,
-    festplays,
     guestbookCharacters
+  });
+});
+
+app.get("/admin/users/:id", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungültig.");
+    return res.redirect("/admin");
+  }
+
+  const targetUser = getAdminUserDetail(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  return res.render("admin-user", {
+    title: `Admin: ${targetUser.username}`,
+    targetUser
   });
 });
 
