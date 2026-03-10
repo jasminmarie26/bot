@@ -989,6 +989,15 @@ function getRecentSiteUpdates(limit = 10) {
     .all(limit);
 }
 
+function getUsersTableColumnSet() {
+  try {
+    const rows = db.prepare("PRAGMA table_info(users)").all();
+    return new Set(rows.map((row) => row.name));
+  } catch (error) {
+    return new Set();
+  }
+}
+
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     setFlash(req, "error", "Bitte melde dich zuerst an.");
@@ -2244,9 +2253,18 @@ app.get("/chat", requireAuth, (req, res) => {
 });
 
 app.get("/admin", requireAuth, requireAdmin, (req, res) => {
+  const userColumns = getUsersTableColumnSet();
+  const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
+  const loginIpExpr = userColumns.has("last_login_ip")
+    ? "u.last_login_ip"
+    : "'' AS last_login_ip";
+  const loginAtExpr = userColumns.has("last_login_at")
+    ? "u.last_login_at"
+    : "'' AS last_login_at";
+
   const users = db
     .prepare(
-      `SELECT u.id, u.username, u.email, u.last_login_ip, u.last_login_at,
+      `SELECT u.id, u.username, ${emailExpr}, ${loginIpExpr}, ${loginAtExpr},
               u.is_admin, u.is_moderator, u.created_at,
               (
                 SELECT COUNT(*)
