@@ -444,6 +444,10 @@ a:hover {
   padding: 1rem;
 }
 
+.account-delete-modal[hidden] {
+  display: none !important;
+}
+
 .account-delete-backdrop {
   position: absolute;
   inset: 0;
