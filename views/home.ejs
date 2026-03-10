@@ -23,8 +23,6 @@
             <span class="staff-name-admin"><%= name %></span><%= index < stats.adminOnlineNames.length - 1 ? ", " : "" %>
           <% }) %>
         </small>
-      <% } else { %>
-        <small class="home-stat-empty">Niemand online</small>
       <% } %>
     </article>
     <article class="home-stat">
@@ -36,8 +34,6 @@
             <span class="staff-name-moderator"><%= name %></span><%= index < stats.moderatorOnlineNames.length - 1 ? ", " : "" %>
           <% }) %>
         </small>
-      <% } else { %>
-        <small class="home-stat-empty">Niemand online</small>
       <% } %>
     </article>
   </aside>
