@@ -34,7 +34,9 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd /opt/eigene-rp-seite
+            LIVE_DIR="/opt/eigene-rp-seite"
+            STAGE_DIR="${LIVE_DIR}/.deploy-stage"
+            cd "$LIVE_DIR"
             export PATH="/usr/bin:/bin:${PATH}"
 
             PM2_BIN="$(command -v pm2 || true)"
@@ -53,31 +55,42 @@ jobs:
               exit 1
             fi
 
-            install_app() {
-              rm -rf node_modules
+            build_stage() {
+              rm -rf "$STAGE_DIR"
+              mkdir -p "$STAGE_DIR"
+              cp "$LIVE_DIR/package.json" "$STAGE_DIR/package.json"
+              cp "$LIVE_DIR/package-lock.json" "$STAGE_DIR/package-lock.json"
               rm -rf /root/.cache/node-gyp/18.19.1 || true
               export npm_config_build_from_source=true
               export npm_config_nodedir=/usr
               export npm_config_jobs=1
+              cd "$STAGE_DIR"
               /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
               /usr/bin/node /usr/bin/npm rebuild better-sqlite3 --build-from-source --foreground-scripts
+              /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
+              cd "$LIVE_DIR"
             }
 
             ATTEMPT=1
             MAX_ATTEMPTS=3
-            until install_app; do
+            until build_stage; do
               if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
-                echo "npm ci failed after ${MAX_ATTEMPTS} attempts"
+                echo "Build failed after ${MAX_ATTEMPTS} attempts"
                 exit 1
               fi
               ATTEMPT=$((ATTEMPT + 1))
-              echo "npm ci failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
-              rm -rf node_modules
+              echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
+              rm -rf "$STAGE_DIR"
               /usr/bin/npm cache verify || true
               sleep 2
             done
 
-            /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
+            rm -rf "$LIVE_DIR/node_modules.prev"
+            if [ -d "$LIVE_DIR/node_modules" ]; then
+              mv "$LIVE_DIR/node_modules" "$LIVE_DIR/node_modules.prev"
+            fi
+            mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
+            rm -rf "$STAGE_DIR"
 
             if "$PM2_BIN" describe rp-chat >/dev/null 2>&1; then
               "$PM2_BIN" restart rp-chat --update-env
@@ -87,16 +100,26 @@ jobs:
             "$PM2_BIN" save
 
             sleep 2
+            HEALTH_OK=0
             for i in 1 2 3 4 5 6 7 8 9 10; do
               if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
+                HEALTH_OK=1
                 break
               fi
               sleep 1
             done
 
             APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
-            if [ "$APP_STATUS" != "online" ] || ! curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
+            if [ "$APP_STATUS" != "online" ] || [ "$HEALTH_OK" -ne 1 ]; then
+              echo "New release unhealthy. Rolling back node_modules."
+              if [ -d "$LIVE_DIR/node_modules.prev" ]; then
+                rm -rf "$LIVE_DIR/node_modules"
+                mv "$LIVE_DIR/node_modules.prev" "$LIVE_DIR/node_modules"
+                "$PM2_BIN" restart rp-chat --update-env || true
+              fi
               echo "rp-chat status is $APP_STATUS"
               "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
               exit 1
             fi
+
+            rm -rf "$LIVE_DIR/node_modules.prev"
