@@ -36,10 +36,6 @@ jobs:
             set -e
             cd /opt/eigene-rp-seite
             export PATH="/usr/bin:/bin:${PATH}"
-            export npm_config_build_from_source=true
-            export npm_config_nodedir=/usr
-            /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
-            /usr/bin/node /usr/bin/npm rebuild better-sqlite3 --build-from-source --foreground-scripts
 
             PM2_BIN="$(command -v pm2 || true)"
             if [ -z "$PM2_BIN" ] && [ -x /usr/local/bin/pm2 ]; then
@@ -58,5 +54,38 @@ jobs:
             fi
 
             "$PM2_BIN" delete rp-chat || true
-            "$PM2_BIN" start src/index.js --name rp-chat --interpreter /usr/bin/node
+
+            install_app() {
+              rm -rf node_modules
+              export npm_config_build_from_source=true
+              export npm_config_jobs=1
+              /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
+            }
+
+            ATTEMPT=1
+            MAX_ATTEMPTS=3
+            until install_app; do
+              if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                echo "npm ci failed after ${MAX_ATTEMPTS} attempts"
+                exit 1
+              fi
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "npm ci failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
+              rm -rf node_modules
+              /usr/bin/npm cache verify || true
+              sleep 2
+            done
+
+            /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
+
+            "$PM2_BIN" delete rp-chat || true
+            "$PM2_BIN" start src/index.js --name rp-chat --cwd /opt/eigene-rp-seite --interpreter /usr/bin/node
             "$PM2_BIN" save
+
+            sleep 3
+            APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
+            if [ "$APP_STATUS" != "online" ]; then
+              echo "rp-chat status is $APP_STATUS"
+              "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
+              exit 1
+            fi
