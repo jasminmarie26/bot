@@ -26,6 +26,8 @@ db.exec(`
     email_verification_token TEXT DEFAULT '',
     google_id TEXT DEFAULT '',
     facebook_id TEXT DEFAULT '',
+    last_login_ip TEXT DEFAULT '',
+    last_login_at TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -189,6 +191,14 @@ if (!userColumns.includes("facebook_id")) {
   db.exec("ALTER TABLE users ADD COLUMN facebook_id TEXT DEFAULT ''");
 }
 
+if (!userColumns.includes("last_login_ip")) {
+  db.exec("ALTER TABLE users ADD COLUMN last_login_ip TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("last_login_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT DEFAULT ''");
+}
+
 if (!characterColumns.includes("festplay_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_id INTEGER");
 }
@@ -233,6 +243,8 @@ db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").r
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();
 db.prepare("UPDATE users SET google_id = '' WHERE google_id IS NULL").run();
 db.prepare("UPDATE users SET facebook_id = '' WHERE facebook_id IS NULL").run();
+db.prepare("UPDATE users SET last_login_ip = '' WHERE last_login_ip IS NULL").run();
+db.prepare("UPDATE users SET last_login_at = '' WHERE last_login_at IS NULL").run();
 db.prepare(
   "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
 ).run();

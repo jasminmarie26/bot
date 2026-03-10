@@ -2,8 +2,10 @@
 
 <section class="panel">
   <h1>Adminbereich</h1>
+  <p class="muted">Accounts gesamt: <strong><%= accountCount %></strong></p>
   <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
   <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
+  <p class="muted">Hinweis: Passwoerter sind aus Sicherheitsgruenden nicht lesbar. Du kannst sie nur zuruecksetzen.</p>
 </section>
 
 <section class="panel">
@@ -32,44 +34,107 @@
   <h2>Benutzerverwaltung</h2>
   <div class="list">
     <% users.forEach((user) => { %>
-      <article class="list-item">
+      <article class="list-item admin-user-card">
         <strong>
           #<%= user.account_number %> <%= user.username %>
           <% if (user.is_admin) { %>(Admin)<% } %>
           <% if (user.is_moderator) { %>(Moderator)<% } %>
         </strong>
-        <span>Charaktere: <%= user.character_count %></span>
-        <small>Erstellt: <%= user.created_at %></small>
 
-        <div class="dashboard-server-actions">
-          <% if (user.id === currentUser.id) { %>
-            <small>Dein eigener Account</small>
-          <% } else { %>
-            <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
-              <% if (user.is_admin) { %>
-                <input type="hidden" name="action" value="demote" />
-                <button class="btn btn-danger" type="submit">Admin entfernen</button>
-              <% } else { %>
-                <input type="hidden" name="action" value="promote" />
-                <button class="btn" type="submit">Zu Admin machen</button>
-              <% } %>
-            </form>
-          <% } %>
-
-          <form method="POST" action="/admin/users/<%= user.id %>/toggle-moderator" class="inline-form">
-            <% if (user.is_moderator) { %>
-              <input type="hidden" name="action" value="demote" />
-              <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
-            <% } else { %>
-              <input type="hidden" name="action" value="promote" />
-              <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
-            <% } %>
-          </form>
+        <div class="admin-user-meta">
+          <span>E-Mail: <%= user.email || "-" %></span>
+          <span>Charaktere: <%= user.character_count %></span>
+          <span>Letzter Login: <%= user.last_login_at || "-" %></span>
+          <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
+          <small>Erstellt: <%= user.created_at %></small>
         </div>
 
+        <div class="admin-user-forms">
+          <form method="POST" action="/admin/users/<%= user.id %>/update-basic" class="admin-inline-form">
+            <label>
+              Name
+              <input name="username" maxlength="24" value="<%= user.username %>" required />
+            </label>
+            <label>
+              E-Mail
+              <input name="email" maxlength="255" value="<%= user.email %>" placeholder="name@domain.tld" />
+            </label>
+            <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
+          </form>
+
+          <form method="POST" action="/admin/users/<%= user.id %>/reset-password" class="admin-inline-form">
+            <label>
+              Neues Passwort
+              <input name="new_password" type="password" minlength="6" required placeholder="Mind. 6 Zeichen" />
+            </label>
+            <button class="btn btn-secondary" type="submit">Passwort zuruecksetzen</button>
+          </form>
+
+          <div class="dashboard-server-actions">
+            <% if (user.id === currentUser.id) { %>
+              <small>Dein eigener Account</small>
+            <% } else { %>
+              <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
+                <% if (user.is_admin) { %>
+                  <input type="hidden" name="action" value="demote" />
+                  <button class="btn btn-danger" type="submit">Admin entfernen</button>
+                <% } else { %>
+                  <input type="hidden" name="action" value="promote" />
+                  <button class="btn" type="submit">Zu Admin machen</button>
+                <% } %>
+              </form>
+            <% } %>
+
+            <form method="POST" action="/admin/users/<%= user.id %>/toggle-moderator" class="inline-form">
+              <% if (user.is_moderator) { %>
+                <input type="hidden" name="action" value="demote" />
+                <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
+              <% } else { %>
+                <input type="hidden" name="action" value="promote" />
+                <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
+              <% } %>
+            </form>
+
+            <% if (user.id !== currentUser.id) { %>
+              <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
+                <button class="btn btn-danger" type="submit">Account loeschen</button>
+              </form>
+            <% } %>
+          </div>
+        </div>
       </article>
     <% }) %>
   </div>
+</section>
+
+<section class="panel">
+  <h2>Gaestebuecher verwalten</h2>
+  <% if (!guestbookCharacters.length) { %>
+    <p class="muted">Noch keine Charaktere vorhanden.</p>
+  <% } else { %>
+    <div class="list">
+      <% guestbookCharacters.forEach((item) => { %>
+        <article class="list-item admin-user-card">
+          <strong><%= item.name %> (<%= item.server_id %>)</strong>
+          <div class="admin-user-meta">
+            <span>Besitzer: <%= item.owner_name %></span>
+            <span>Seiten: <%= item.page_count %></span>
+            <span>Eintraege: <%= item.entry_count %></span>
+            <span>Status: <%= item.is_public ? "oeffentlich" : "privat" %></span>
+          </div>
+
+          <div class="dashboard-server-actions">
+            <a class="btn btn-secondary" href="/characters/<%= item.id %>">Charakter oeffnen</a>
+            <a class="btn btn-secondary" href="/characters/<%= item.id %>/guestbook">Gaestebuch ansehen</a>
+            <a class="btn" href="/characters/<%= item.id %>/guestbook/edit">Gaestebuch bearbeiten</a>
+            <form method="POST" action="/admin/guestbooks/<%= item.id %>/clear" class="inline-form">
+              <button class="btn btn-danger" type="submit">Gaestebuch leeren</button>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
 </section>
 
 <%- include("partials/end") %>

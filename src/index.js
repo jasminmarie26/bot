@@ -89,6 +89,8 @@ const EMAIL_VERIFICATION_MAIL_ENABLED =
   Boolean(SMTP_HOST && Number.isFinite(SMTP_PORT) && SMTP_PORT > 0 && MAIL_FROM) &&
   (SMTP_AUTH_ENABLED || (!SMTP_USER && !SMTP_PASS));
 let verificationMailer = null;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.+\- ]{3,24}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizeTheme(themeValue) {
   const input = (themeValue || "").trim().toLowerCase();
@@ -253,6 +255,26 @@ function normalizeEmail(value) {
   return value.trim().toLowerCase().slice(0, 255);
 }
 
+function getRequestIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").trim();
+  if (forwarded) {
+    return forwarded.split(",")[0].trim().slice(0, 120);
+  }
+  return String(req.ip || req.socket?.remoteAddress || "").trim().slice(0, 120);
+}
+
+function touchUserLoginMetadata(userId, req) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return;
+
+  const ip = getRequestIp(req);
+  db.prepare(
+    `UPDATE users
+     SET last_login_ip = ?, last_login_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(ip, parsedUserId);
+}
+
 function getPublicBaseUrl(req) {
   if (APP_BASE_URL) return APP_BASE_URL;
   const forwardedProtoRaw = String(req.headers["x-forwarded-proto"] || "").trim();
@@ -314,6 +336,33 @@ async function sendVerificationEmail(req, payload) {
     subject: "Bitte bestaetige deine E-Mail bei Heldenhaft Reisen",
     text
   });
+}
+
+async function sendAccountDeletionEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) return false;
+
+  const email = normalizeEmail(payload.email || "");
+  if (!email) return false;
+
+  const username = String(payload.username || "Account").trim() || "Account";
+  const text = [
+    `Hallo ${username},`,
+    "",
+    "dein Account bei Heldenhaft Reisen wurde soeben geloescht.",
+    "Falls du das nicht selbst warst, kontaktiere bitte umgehend den Support.",
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: "Bestaetigung: Dein Account wurde geloescht",
+    text
+  });
+
+  return true;
 }
 
 function getAccountNumberByUserId(userId) {
@@ -922,7 +971,10 @@ function getRoomWithCharacter(roomId) {
     .get(roomId);
 }
 
-function canAccessCharacter(userId, characterOwnerId, isCharacterPublic) {
+function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin = false) {
+  if (isAdmin === true || Number(isAdmin) === 1) {
+    return true;
+  }
   return Number(userId) === Number(characterOwnerId) || Number(isCharacterPublic) === 1;
 }
 
@@ -1013,9 +1065,8 @@ app.post("/register", async (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const password = req.body.password || "";
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!/^[a-zA-Z0-9_.+\- ]{3,24}$/.test(username)) {
+  if (!USERNAME_PATTERN.test(username)) {
     return res.status(400).render("auth", {
       title: "Registrieren",
       mode: "register",
@@ -1024,7 +1075,7 @@ app.post("/register", async (req, res) => {
     });
   }
 
-  if (!emailPattern.test(email)) {
+  if (!EMAIL_PATTERN.test(email)) {
     return res.status(400).render("auth", {
       title: "Registrieren",
       mode: "register",
@@ -1086,10 +1137,18 @@ app.post("/register", async (req, res) => {
     const info = db
       .prepare(
         `INSERT INTO users
-         (username, password_hash, is_admin, theme, email, email_verified, email_verification_token)
-         VALUES (?, ?, ?, ?, ?, 0, ?)`
+         (username, password_hash, is_admin, theme, email, email_verified, email_verification_token, last_login_ip, last_login_at)
+         VALUES (?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)`
       )
-      .run(username, passwordHash, isAdmin, DEFAULT_THEME, email, verificationToken);
+      .run(
+        username,
+        passwordHash,
+        isAdmin,
+        DEFAULT_THEME,
+        email,
+        verificationToken,
+        getRequestIp(req)
+      );
     createdUserId = info.lastInsertRowid;
 
     await sendVerificationEmail(req, {
@@ -1189,6 +1248,7 @@ app.post("/login", (req, res) => {
     });
   }
 
+  touchUserLoginMetadata(user.id, req);
   req.session.user = toSessionUser(user);
   setFlash(req, "success", "Erfolgreich eingeloggt.");
   return res.redirect("/dashboard");
@@ -1223,6 +1283,7 @@ app.get("/auth/google/callback", (req, res, next) => {
 
       try {
         req.session.user = findOrCreateOAuthUser("google", profile);
+        touchUserLoginMetadata(req.session.user.id, req);
         setFlash(req, "success", "Mit Google eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
@@ -1263,6 +1324,7 @@ app.get("/auth/facebook/callback", (req, res, next) => {
 
       try {
         req.session.user = findOrCreateOAuthUser("facebook", profile);
+        touchUserLoginMetadata(req.session.user.id, req);
         setFlash(req, "success", "Mit Facebook eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
@@ -1280,7 +1342,7 @@ app.post("/logout", (req, res) => {
   });
 });
 
-app.post("/account/delete", requireAuth, (req, res) => {
+app.post("/account/delete", requireAuth, async (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
     setFlash(req, "error", "Account konnte nicht zugeordnet werden.");
@@ -1291,7 +1353,7 @@ app.post("/account/delete", requireAuth, (req, res) => {
   const password = String(req.body.password || "");
   const user = db
     .prepare(
-      `SELECT id, username, password_hash, is_admin
+      `SELECT id, username, password_hash, is_admin, email
        FROM users
        WHERE id = ?`
     )
@@ -1307,7 +1369,7 @@ app.post("/account/delete", requireAuth, (req, res) => {
     setFlash(
       req,
       "error",
-      "Bitte gib zur Bestätigung exakt deinen aktuellen Username ein."
+      "Bitte gib zur Bestaetigung exakt deinen aktuellen Username ein."
     );
     return res.redirect("/dashboard");
   }
@@ -1341,8 +1403,17 @@ app.post("/account/delete", requireAuth, (req, res) => {
     deleteAccountTx(user.id, user.is_admin);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "Account konnte nicht gelöscht werden.");
+    setFlash(req, "error", "Account konnte nicht geloescht werden.");
     return res.redirect("/dashboard");
+  }
+
+  try {
+    await sendAccountDeletionEmail({
+      username: user.username,
+      email: user.email
+    });
+  } catch (error) {
+    console.error("Konnte Account-Loesch-E-Mail nicht senden:", error);
   }
 
   req.session.destroy(() => {
@@ -1528,7 +1599,8 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   }
 
   const isOwner = req.session.user.id === character.user_id;
-  if (!character.is_public && !isOwner) {
+  const isAdmin = req.session.user.is_admin === true;
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
@@ -1691,7 +1763,14 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public)) {
+  if (
+    !canAccessCharacter(
+      req.session.user.id,
+      character.user_id,
+      character.is_public,
+      req.session.user.is_admin
+    )
+  ) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
@@ -1745,7 +1824,8 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const isOwner = req.session.user.id === character.user_id;
-  if (!character.is_public && !isOwner) {
+  const isAdmin = req.session.user.is_admin === true;
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
@@ -1795,7 +1875,8 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const isOwner = req.session.user.id === character.user_id;
-  if (!character.is_public && !isOwner) {
+  const isAdmin = req.session.user.is_admin === true;
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
@@ -1830,10 +1911,10 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -1859,10 +1940,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -1908,10 +1989,10 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -1964,10 +2045,10 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -2004,10 +2085,10 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -2043,10 +2124,10 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  if (character.user_id !== req.session.user.id) {
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Gaestebuch bearbeiten."
+      message: "Nur Besitzer oder Admins duerfen das Gaestebuch bearbeiten."
     });
   }
 
@@ -2095,7 +2176,14 @@ app.get("/chat", requireAuth, (req, res) => {
       return res.redirect("/dashboard");
     }
 
-    if (!canAccessCharacter(req.session.user.id, room.character_owner_id, room.character_is_public)) {
+    if (
+      !canAccessCharacter(
+        req.session.user.id,
+        room.character_owner_id,
+        room.character_is_public,
+        req.session.user.is_admin
+      )
+    ) {
       return res.status(403).render("error", {
         title: "Kein Zugriff",
         message: "Dieser Raum ist nicht fuer dich sichtbar."
@@ -2158,7 +2246,8 @@ app.get("/chat", requireAuth, (req, res) => {
 app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   const users = db
     .prepare(
-      `SELECT u.id, u.username, u.is_admin, u.is_moderator, u.created_at,
+      `SELECT u.id, u.username, u.email, u.last_login_ip, u.last_login_at,
+              u.is_admin, u.is_moderator, u.created_at,
               (
                 SELECT COUNT(*)
                 FROM users ux
@@ -2179,14 +2268,38 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   const moderatorCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_moderator = 1")
     .get().count;
+  const accountCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users")
+    .get().count;
   const festplays = getFestplays();
+  const guestbookCharacters = db
+    .prepare(
+      `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at,
+              u.username AS owner_name,
+              (
+                SELECT COUNT(*)
+                FROM guestbook_pages gp
+                WHERE gp.character_id = c.id
+              ) AS page_count,
+              (
+                SELECT COUNT(*)
+                FROM guestbook_entries ge
+                WHERE ge.character_id = c.id
+              ) AS entry_count
+       FROM characters c
+       JOIN users u ON u.id = c.user_id
+       ORDER BY c.updated_at DESC, c.id DESC`
+    )
+    .all();
 
   return res.render("admin", {
     title: "Adminbereich",
     users,
+    accountCount,
     adminCount,
     moderatorCount,
-    festplays
+    festplays,
+    guestbookCharacters
   });
 });
 
@@ -2329,6 +2442,207 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
     setFlash(req, "success", `User ${targetUser.username} ist kein Moderator mehr.`);
   }
 
+  return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungueltig.");
+    return res.redirect("/admin");
+  }
+
+  const username = String(req.body.username || "").trim().slice(0, 24);
+  const email = normalizeEmail(req.body.email || "");
+
+  if (!USERNAME_PATTERN.test(username)) {
+    setFlash(
+      req,
+      "error",
+      "Username nur mit Buchstaben, Zahlen, Leerzeichen und . _ + - (3-24 Zeichen)."
+    );
+    return res.redirect("/admin");
+  }
+
+  if (email && !EMAIL_PATTERN.test(email)) {
+    setFlash(req, "error", "Bitte eine gueltige E-Mail-Adresse verwenden.");
+    return res.redirect("/admin");
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username, email FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  const usernameOwner = db
+    .prepare("SELECT id FROM users WHERE username = ?")
+    .get(username);
+  if (usernameOwner && Number(usernameOwner.id) !== targetId) {
+    setFlash(req, "error", "Dieser Username ist bereits vergeben.");
+    return res.redirect("/admin");
+  }
+
+  if (email) {
+    const emailOwner = db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get(email);
+    if (emailOwner && Number(emailOwner.id) !== targetId) {
+      setFlash(req, "error", "Diese E-Mail-Adresse wird bereits verwendet.");
+      return res.redirect("/admin");
+    }
+  }
+
+  db.prepare("UPDATE users SET username = ?, email = ? WHERE id = ?").run(
+    username,
+    email,
+    targetId
+  );
+
+  if (targetId === Number(req.session.user?.id)) {
+    const refreshed = getUserForSessionById(targetId);
+    if (refreshed) {
+      req.session.user = toSessionUser(refreshed);
+    }
+  }
+
+  setFlash(req, "success", `Basisdaten fuer ${targetUser.username} gespeichert.`);
+  return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/reset-password", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungueltig.");
+    return res.redirect("/admin");
+  }
+
+  const newPassword = String(req.body.new_password || "");
+  if (newPassword.length < 6) {
+    setFlash(req, "error", "Neues Passwort muss mindestens 6 Zeichen lang sein.");
+    return res.redirect("/admin");
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  const nextHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(nextHash, targetId);
+
+  setFlash(req, "success", `Passwort fuer ${targetUser.username} wurde zurueckgesetzt.`);
+  return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/delete", requireAuth, requireAdmin, async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungueltig.");
+    return res.redirect("/admin");
+  }
+
+  if (targetId === Number(req.session.user?.id)) {
+    setFlash(req, "error", "Du kannst deinen eigenen Admin-Account hier nicht loeschen.");
+    return res.redirect("/admin");
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username, email, is_admin FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  if (targetUser.is_admin === 1) {
+    const adminCount = db
+      .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
+      .get().count;
+    if (adminCount <= 1) {
+      setFlash(req, "error", "Mindestens ein Admin muss erhalten bleiben.");
+      return res.redirect("/admin");
+    }
+  }
+
+  try {
+    const tx = db.transaction((userId, isAdmin) => {
+      if (isAdmin === 1) {
+        const replacement = db
+          .prepare(
+            `SELECT id
+             FROM users
+             WHERE id != ?
+             ORDER BY is_admin DESC, created_at ASC, id ASC
+             LIMIT 1`
+          )
+          .get(userId);
+
+        if (replacement) {
+          db.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").run(replacement.id);
+        }
+      }
+
+      db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+    });
+
+    tx(targetUser.id, targetUser.is_admin);
+  } catch (error) {
+    console.error(error);
+    setFlash(req, "error", "User konnte nicht geloescht werden.");
+    return res.redirect("/admin");
+  }
+
+  try {
+    await sendAccountDeletionEmail({
+      username: targetUser.username,
+      email: targetUser.email
+    });
+  } catch (error) {
+    console.error("Konnte Account-Loesch-E-Mail nicht senden:", error);
+  }
+
+  setFlash(req, "success", `User ${targetUser.username} wurde geloescht.`);
+  return res.redirect("/admin");
+});
+
+app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) => {
+  const characterId = Number(req.params.id);
+  if (!Number.isInteger(characterId) || characterId < 1) {
+    setFlash(req, "error", "Charakter-ID ist ungueltig.");
+    return res.redirect("/admin");
+  }
+
+  const character = db
+    .prepare("SELECT id, name FROM characters WHERE id = ?")
+    .get(characterId);
+  if (!character) {
+    setFlash(req, "error", "Charakter wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  try {
+    const tx = db.transaction((id) => {
+      db.prepare("DELETE FROM guestbook_entries WHERE character_id = ?").run(id);
+      db.prepare("DELETE FROM guestbook_pages WHERE character_id = ?").run(id);
+      db.prepare(
+        `INSERT INTO guestbook_pages (character_id, page_number, title, content)
+         VALUES (?, 1, '1', '')`
+      ).run(id);
+    });
+    tx(characterId);
+  } catch (error) {
+    console.error(error);
+    setFlash(req, "error", "Gaestebuch konnte nicht geleert werden.");
+    return res.redirect("/admin");
+  }
+
+  setFlash(req, "success", `Gaestebuch von ${character.name} wurde geleert.`);
   return res.redirect("/admin");
 });
 
@@ -2540,7 +2854,14 @@ io.on("connection", (socket) => {
     if (nextRoomId) {
       const room = getRoomWithCharacter(nextRoomId);
       if (!room) return;
-      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+      if (
+        !canAccessCharacter(
+          socket.data.user.id,
+          room.character_owner_id,
+          room.character_is_public,
+          socket.data.user.is_admin
+        )
+      ) {
         return;
       }
       nextServerId = normalizeServer(room.character_server_id);
@@ -2578,7 +2899,14 @@ io.on("connection", (socket) => {
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
       if (!room) return;
-      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+      if (
+        !canAccessCharacter(
+          socket.data.user.id,
+          room.character_owner_id,
+          room.character_is_public,
+          socket.data.user.is_admin
+        )
+      ) {
         return;
       }
       serverId = normalizeServer(room.character_server_id);
@@ -2633,7 +2961,14 @@ io.on("connection", (socket) => {
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
       if (!room) return;
-      if (!canAccessCharacter(socket.data.user.id, room.character_owner_id, room.character_is_public)) {
+      if (
+        !canAccessCharacter(
+          socket.data.user.id,
+          room.character_owner_id,
+          room.character_is_public,
+          socket.data.user.is_admin
+        )
+      ) {
         return;
       }
       serverId = normalizeServer(room.character_server_id);
@@ -2691,4 +3026,3 @@ server.listen(port, () => {
   pruneEmptyRooms();
   console.log(`Server laeuft auf http://localhost:${port}`);
 });
-

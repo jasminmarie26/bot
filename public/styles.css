@@ -643,8 +643,40 @@ a:hover {
   color: color-mix(in srgb, var(--danger-text) 88%, var(--danger) 12%);
 }
 
+.dashboard-admin-btn {
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
 .dashboard-delete-btn:hover {
   border-color: color-mix(in srgb, var(--danger) 85%, transparent);
+}
+
+.admin-user-card {
+  gap: 0.7rem;
+}
+
+.admin-user-meta {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-user-forms {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-inline-form {
+  display: grid;
+  gap: 0.42rem;
+  align-items: end;
+}
+
+.admin-inline-form label {
+  display: grid;
+  gap: 0.28rem;
+  font-size: 0.9rem;
 }
 
 .dashboard-server-list {
