@@ -95,6 +95,33 @@ const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
 const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
 const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "10minutemail.com",
+  "10minutemail.net",
+  "20minutemail.com",
+  "dispostable.com",
+  "emailondeck.com",
+  "fakeinbox.com",
+  "guerrillamail.com",
+  "guerrillamailblock.com",
+  "guerrillamail.net",
+  "guerrillamail.org",
+  "maildrop.cc",
+  "mailinator.com",
+  "mohmal.com",
+  "sharklasers.com",
+  "temp-mail.org",
+  "temp-mail.io",
+  "tempmailo.com",
+  "throwawaymail.com",
+  "yopmail.com"
+]);
+for (const extraDomain of String(process.env.BLOCKED_EMAIL_DOMAINS || "").split(",")) {
+  const normalizedDomain = extraDomain.trim().toLowerCase();
+  if (normalizedDomain) {
+    DISPOSABLE_EMAIL_DOMAINS.add(normalizedDomain);
+  }
+}
 
 function normalizeTheme(themeValue) {
   const input = (themeValue || "").trim().toLowerCase();
@@ -267,6 +294,18 @@ function getLoginStats() {
 function normalizeEmail(value) {
   if (typeof value !== "string") return "";
   return value.trim().toLowerCase().slice(0, 255);
+}
+
+function getEmailDomain(email) {
+  const normalized = normalizeEmail(email);
+  const atIndex = normalized.lastIndexOf("@");
+  if (atIndex < 0) return "";
+  return normalized.slice(atIndex + 1);
+}
+
+function isDisposableEmailDomain(email) {
+  const domain = getEmailDomain(email);
+  return Boolean(domain) && DISPOSABLE_EMAIL_DOMAINS.has(domain);
 }
 
 function getRequestIp(req) {
@@ -559,6 +598,11 @@ function findOrCreateOAuthUser(provider, profile) {
 
   const providerColumn = provider === "google" ? "google_id" : "facebook_id";
   const email = getProfileEmail(profile);
+  if (email && isDisposableEmailDomain(email)) {
+    const error = new Error("Disposable email domains are not allowed");
+    error.code = "DISPOSABLE_EMAIL_DOMAIN";
+    throw error;
+  }
   const userByProvider = db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, theme
@@ -1224,6 +1268,21 @@ app.post("/register", async (req, res) => {
     });
   }
 
+  if (isDisposableEmailDomain(email)) {
+    logRegistrationGuardEvent({
+      ip: getRequestIp(req),
+      username,
+      email,
+      outcome: "blocked",
+      reason: "disposable-email-domain"
+    });
+    return renderRegisterPage(req, res, {
+      status: 400,
+      error: "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.",
+      values: { username, email }
+    });
+  }
+
   if (password.length < 6) {
     return renderRegisterPage(req, res, {
       status: 400,
@@ -1439,7 +1498,18 @@ app.get("/auth/google/callback", (req, res, next) => {
         return res.redirect("/dashboard");
       } catch (oauthError) {
         console.error(oauthError);
-        setFlash(req, "error", "Google Login konnte nicht verarbeitet werden.");
+        if (oauthError?.code === "DISPOSABLE_EMAIL_DOMAIN") {
+          logRegistrationGuardEvent({
+            ip: getRequestIp(req),
+            username: String(profile?.displayName || "").trim(),
+            email: getProfileEmail(profile),
+            outcome: "blocked",
+            reason: "oauth-disposable-email-domain"
+          });
+          setFlash(req, "error", "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.");
+        } else {
+          setFlash(req, "error", "Google Login konnte nicht verarbeitet werden.");
+        }
         return res.redirect("/login");
       }
     }
@@ -1480,7 +1550,18 @@ app.get("/auth/facebook/callback", (req, res, next) => {
         return res.redirect("/dashboard");
       } catch (oauthError) {
         console.error(oauthError);
-        setFlash(req, "error", "Facebook Login konnte nicht verarbeitet werden.");
+        if (oauthError?.code === "DISPOSABLE_EMAIL_DOMAIN") {
+          logRegistrationGuardEvent({
+            ip: getRequestIp(req),
+            username: String(profile?.displayName || "").trim(),
+            email: getProfileEmail(profile),
+            outcome: "blocked",
+            reason: "oauth-disposable-email-domain"
+          });
+          setFlash(req, "error", "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.");
+        } else {
+          setFlash(req, "error", "Facebook Login konnte nicht verarbeitet werden.");
+        }
         return res.redirect("/login");
       }
     }
