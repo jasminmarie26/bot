@@ -1175,6 +1175,20 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+function canPublishSiteUpdates(user) {
+  return Boolean(user?.is_admin || user?.is_moderator);
+}
+
+function requireSiteUpdateEditor(req, res, next) {
+  if (!canPublishSiteUpdates(req.session.user)) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur Admins und Moderatoren dÃ¼rfen Live-Updates verÃ¶ffentlichen."
+    });
+  }
+  return next();
+}
+
 app.use((req, res, next) => {
   if (req.session.guest_theme) {
     req.session.guest_theme = normalizeTheme(req.session.guest_theme);
@@ -1653,7 +1667,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
   });
 });
 
-app.post("/updates", requireAuth, requireAdmin, (req, res) => {
+app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
   const content = (req.body.content || "").trim().slice(0, 1200);
   if (!content) {
     setFlash(req, "error", "Update darf nicht leer sein.");

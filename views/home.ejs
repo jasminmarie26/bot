@@ -43,7 +43,7 @@
       <h1>Heldenhaft Reisen</h1>
       <p>
         Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich.
-        Admins können sie direkt über den Stift veröffentlichen.
+        Admins und Moderatoren können sie direkt über den Stift veröffentlichen.
       </p>
       <div class="hero-actions">
         <% if (currentUser) { %>
@@ -58,7 +58,7 @@
     <section class="panel updates-panel">
       <div class="updates-header">
         <h2>Live Updates</h2>
-        <% if (currentUser && currentUser.is_admin) { %>
+        <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
           <button id="update-open-btn" class="ghost-btn update-pen-btn" type="button">&#9998; Schreiben</button>
         <% } %>
       </div>
@@ -82,8 +82,7 @@
   </div>
 </div>
 
-<% if (currentUser && currentUser.is_admin) { %>
-  <button id="update-fab" class="update-fab" type="button" title="Live-Update schreiben">&#9998;</button>
+<% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
   <div id="update-modal" class="update-modal" hidden>
     <section class="panel update-modal-card">
       <div class="updates-header">
@@ -105,4 +104,3 @@
 <script src="/updates.js"></script>
 
 <%- include("partials/end") %>
-

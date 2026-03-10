@@ -2,7 +2,6 @@
   const list = document.getElementById("site-updates-list");
   const emptyState = document.getElementById("site-updates-empty");
   const openButton = document.getElementById("update-open-btn");
-  const fabButton = document.getElementById("update-fab");
   const closeButton = document.getElementById("update-close-btn");
   const modal = document.getElementById("update-modal");
 
@@ -21,7 +20,6 @@
   }
 
   if (openButton) openButton.addEventListener("click", openModal);
-  if (fabButton) fabButton.addEventListener("click", openModal);
   if (closeButton) closeButton.addEventListener("click", closeModal);
   if (modal) {
     modal.addEventListener("click", (event) => {

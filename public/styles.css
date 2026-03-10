@@ -398,23 +398,6 @@ a:hover {
   align-items: baseline;
 }
 
-.update-fab {
-  position: fixed;
-  right: 1.2rem;
-  bottom: 1.2rem;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: 1px solid var(--accent-2);
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-text);
-  font-size: 1.25rem;
-  font-weight: 700;
-  cursor: pointer;
-  z-index: 45;
-  box-shadow: 0 16px 30px -18px var(--panel-shadow);
-}
-
 .update-modal {
   position: fixed;
   inset: 0;
