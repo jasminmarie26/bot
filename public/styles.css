@@ -1744,6 +1744,14 @@ select:focus {
   margin-bottom: 0.8rem;
 }
 
+.bot-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .muted {
   color: var(--muted);
 }

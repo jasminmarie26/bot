@@ -91,6 +91,10 @@ const EMAIL_VERIFICATION_MAIL_ENABLED =
 let verificationMailer = null;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_.+\- ]{3,24}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const REGISTRATION_FORM_MIN_AGE_MS = 3500;
+const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
+const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
+const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
 
 function normalizeTheme(themeValue) {
   const input = (themeValue || "").trim().toLowerCase();
@@ -283,6 +287,107 @@ function touchUserLoginMetadata(userId, req) {
      SET last_login_ip = ?, last_login_at = CURRENT_TIMESTAMP
      WHERE id = ?`
   ).run(ip, parsedUserId);
+}
+
+function issueRegistrationGuard(req) {
+  const guard = {
+    token: crypto.randomBytes(18).toString("hex"),
+    issuedAt: Date.now()
+  };
+  req.session.registrationGuard = guard;
+  return guard;
+}
+
+function renderRegisterPage(req, res, options = {}) {
+  const values = {
+    username: options.values?.username || "",
+    email: options.values?.email || ""
+  };
+  const guard = issueRegistrationGuard(req);
+
+  return res.status(options.status || 200).render("auth", {
+    title: "Registrieren",
+    mode: "register",
+    error: options.error || null,
+    values,
+    registrationGuardToken: guard.token
+  });
+}
+
+function logRegistrationGuardEvent({ ip, username = "", email = "", outcome, reason = "" }) {
+  db.prepare(
+    `DELETE FROM registration_guard_events
+     WHERE created_at < datetime('now', '-30 days')`
+  ).run();
+  db.prepare(
+    `INSERT INTO registration_guard_events (ip, username, email, outcome, reason)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(ip, username.slice(0, 24), email.slice(0, 255), outcome, reason.slice(0, 120));
+}
+
+function getRecentRegistrationGuardCount(ip, outcome, sinceModifier) {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM registration_guard_events
+       WHERE ip = ?
+         AND outcome = ?
+         AND created_at >= datetime('now', ?)`
+    )
+    .get(ip, outcome, sinceModifier);
+  return Number(row?.count || 0);
+}
+
+function isSuspiciousRegistrationPayload({ username, email }) {
+  const sample = `${username} ${email}`.toLowerCase();
+  return /https?:\/\/|www\.|<[^>]+>|\[url|\[link|discord\.gg|t\.me|bit\.ly|tinyurl/i.test(sample);
+}
+
+function validateRegistrationGuard(req, submittedToken) {
+  const guard = req.session.registrationGuard;
+  delete req.session.registrationGuard;
+
+  if (!guard || !submittedToken || submittedToken !== guard.token) {
+    return { ok: false, reason: "invalid-token" };
+  }
+
+  const ageMs = Date.now() - Number(guard.issuedAt || 0);
+  if (!Number.isFinite(ageMs) || ageMs < REGISTRATION_FORM_MIN_AGE_MS) {
+    return { ok: false, reason: "too-fast" };
+  }
+
+  if (ageMs > REGISTRATION_FORM_MAX_AGE_MS) {
+    return { ok: false, reason: "expired-form" };
+  }
+
+  return { ok: true };
+}
+
+function getRegistrationBlockReason(req, { username, email, honeypotValue, submittedToken }) {
+  const ip = getRequestIp(req);
+
+  if (honeypotValue) {
+    return { ip, reason: "honeypot-filled" };
+  }
+
+  if (getRecentRegistrationGuardCount(ip, "blocked", "-1 hour") >= REGISTRATION_MAX_ATTEMPTS_PER_HOUR) {
+    return { ip, reason: "too-many-blocked-attempts" };
+  }
+
+  if (getRecentRegistrationGuardCount(ip, "success", "-24 hours") >= REGISTRATION_MAX_SUCCESSES_PER_DAY) {
+    return { ip, reason: "too-many-successes" };
+  }
+
+  const guardCheck = validateRegistrationGuard(req, submittedToken);
+  if (!guardCheck.ok) {
+    return { ip, reason: guardCheck.reason };
+  }
+
+  if (isSuspiciousRegistrationPayload({ username, email })) {
+    return { ip, reason: "suspicious-payload" };
+  }
+
+  return null;
 }
 
 function getPublicBaseUrl(req) {
@@ -1072,41 +1177,56 @@ app.get("/", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  res.render("auth", {
-    title: "Registrieren",
-    mode: "register",
-    error: null,
-    values: { username: "", email: "" }
-  });
+  return renderRegisterPage(req, res);
 });
 
 app.post("/register", async (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const password = req.body.password || "";
+  const submittedToken = String(req.body.form_token || "").trim();
+  const honeypotValue = String(req.body.website || "").trim();
+  const blockReason = getRegistrationBlockReason(req, {
+    username,
+    email,
+    honeypotValue,
+    submittedToken
+  });
+
+  if (blockReason) {
+    logRegistrationGuardEvent({
+      ip: blockReason.ip,
+      username,
+      email,
+      outcome: "blocked",
+      reason: blockReason.reason
+    });
+    return renderRegisterPage(req, res, {
+      status: 429,
+      error: "Registrierung im Moment nicht möglich. Bitte versuche es in ein paar Minuten erneut.",
+      values: { username, email }
+    });
+  }
 
   if (!USERNAME_PATTERN.test(username)) {
-    return res.status(400).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 400,
       error: "Username nur mit Buchstaben, Zahlen, Leerzeichen und . _ + - (3-24 Zeichen).",
       values: { username, email }
     });
   }
 
   if (!EMAIL_PATTERN.test(email)) {
-    return res.status(400).render("auth", {
-      title: "Registrieren",
-      mode: "register",
-      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+    return renderRegisterPage(req, res, {
+      status: 400,
+      error: "Bitte gib eine gültige E-Mail-Adresse ein.",
       values: { username, email }
     });
   }
 
   if (password.length < 6) {
-    return res.status(400).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 400,
       error: "Passwort muss mindestens 6 Zeichen lang sein.",
       values: { username, email }
     });
@@ -1116,9 +1236,8 @@ app.post("/register", async (req, res) => {
     .prepare("SELECT id FROM users WHERE username = ?")
     .get(username);
   if (existingUsername) {
-    return res.status(400).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 400,
       error: "Dieser Username ist bereits vergeben.",
       values: { username, email }
     });
@@ -1126,23 +1245,29 @@ app.post("/register", async (req, res) => {
 
   const existingEmail = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (existingEmail) {
-    return res.status(400).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 400,
       error: "Diese E-Mail-Adresse wird bereits verwendet.",
       values: { username, email }
     });
   }
 
   if (!EMAIL_VERIFICATION_MAIL_ENABLED) {
-    return res.status(503).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 503,
       error:
         "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
       values: { username, email }
     });
   }
+
+  logRegistrationGuardEvent({
+    ip: getRequestIp(req),
+    username,
+    email,
+    outcome: "attempt",
+    reason: "validated"
+  });
 
   const passwordHash = bcrypt.hashSync(password, 10);
   const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -1180,14 +1305,21 @@ app.post("/register", async (req, res) => {
     if (createdUserId) {
       db.prepare("DELETE FROM users WHERE id = ?").run(createdUserId);
     }
-    return res.status(500).render("auth", {
-      title: "Registrieren",
-      mode: "register",
+    return renderRegisterPage(req, res, {
+      status: 500,
       error:
         "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
       values: { username, email }
     });
   }
+
+  logRegistrationGuardEvent({
+    ip: getRequestIp(req),
+    username,
+    email,
+    outcome: "success",
+    reason: "account-created"
+  });
 
   setFlash(
     req,

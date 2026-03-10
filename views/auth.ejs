@@ -15,6 +15,20 @@
     <% } %>
 
     <form method="POST" action="<%= mode === "register" ? "/register" : "/login" %>" class="form">
+      <% if (mode === "register") { %>
+        <input type="hidden" name="form_token" value="<%= registrationGuardToken || "" %>" />
+        <div class="bot-trap" aria-hidden="true">
+          <label>
+            Webseite
+            <input
+              name="website"
+              tabindex="-1"
+              autocomplete="off"
+              data-lpignore="true"
+            />
+          </label>
+        </div>
+      <% } %>
       <label>
         Username
         <input name="username" required minlength="3" maxlength="24" value="<%= values.username %>" />

@@ -125,6 +125,16 @@ db.exec(`
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS registration_guard_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip TEXT NOT NULL,
+    username TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    outcome TEXT NOT NULL,
+    reason TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_character_name_key
@@ -132,6 +142,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
+  CREATE INDEX IF NOT EXISTS idx_registration_guard_ip_created_at
+    ON registration_guard_events(ip, created_at);
 `);
 
 const userColumns = db
