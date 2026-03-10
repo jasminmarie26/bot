@@ -1219,6 +1219,76 @@ app.post("/logout", (req, res) => {
   });
 });
 
+app.post("/account/delete", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    setFlash(req, "error", "Account konnte nicht zugeordnet werden.");
+    return res.redirect("/login");
+  }
+
+  const confirmUsername = (req.body.confirm_username || "").trim().slice(0, 24);
+  const password = String(req.body.password || "");
+  const user = db
+    .prepare(
+      `SELECT id, username, password_hash, is_admin
+       FROM users
+       WHERE id = ?`
+    )
+    .get(currentUserId);
+
+  if (!user) {
+    req.session.user = null;
+    setFlash(req, "error", "Account existiert nicht mehr.");
+    return res.redirect("/login");
+  }
+
+  if (confirmUsername !== user.username) {
+    setFlash(
+      req,
+      "error",
+      "Bitte gib zur Bestaetigung exakt deinen aktuellen Username ein."
+    );
+    return res.redirect("/dashboard");
+  }
+
+  if (!bcrypt.compareSync(password, user.password_hash)) {
+    setFlash(req, "error", "Passwort stimmt nicht.");
+    return res.redirect("/dashboard");
+  }
+
+  try {
+    const deleteAccountTx = db.transaction((userId, isAdmin) => {
+      if (isAdmin === 1) {
+        const replacement = db
+          .prepare(
+            `SELECT id
+             FROM users
+             WHERE id != ?
+             ORDER BY is_admin DESC, created_at ASC, id ASC
+             LIMIT 1`
+          )
+          .get(userId);
+
+        if (replacement) {
+          db.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").run(replacement.id);
+        }
+      }
+
+      db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+    });
+
+    deleteAccountTx(user.id, user.is_admin);
+  } catch (error) {
+    console.error(error);
+    setFlash(req, "error", "Account konnte nicht geloescht werden.");
+    return res.redirect("/dashboard");
+  }
+
+  req.session.destroy(() => {
+    res.redirect("/");
+  });
+});
+
 app.post("/updates", requireAuth, requireAdmin, (req, res) => {
   const content = (req.body.content || "").trim().slice(0, 1200);
   if (!content) {
