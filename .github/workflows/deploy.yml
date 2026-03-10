@@ -53,8 +53,6 @@ jobs:
               exit 1
             fi
 
-            "$PM2_BIN" delete rp-chat || true
-
             install_app() {
               rm -rf node_modules
               rm -rf /root/.cache/node-gyp/18.19.1 || true
@@ -81,13 +79,23 @@ jobs:
 
             /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
 
-            "$PM2_BIN" delete rp-chat || true
-            "$PM2_BIN" start src/index.js --name rp-chat --cwd /opt/eigene-rp-seite --interpreter /usr/bin/node
+            if "$PM2_BIN" describe rp-chat >/dev/null 2>&1; then
+              "$PM2_BIN" restart rp-chat --update-env
+            else
+              "$PM2_BIN" start src/index.js --name rp-chat --cwd /opt/eigene-rp-seite --interpreter /usr/bin/node
+            fi
             "$PM2_BIN" save
 
-            sleep 3
+            sleep 2
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+
             APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
-            if [ "$APP_STATUS" != "online" ]; then
+            if [ "$APP_STATUS" != "online" ] || ! curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
               echo "rp-chat status is $APP_STATUS"
               "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
               exit 1
