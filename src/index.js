@@ -8,6 +8,7 @@ const session = require("express-session");
 const SQLiteStore = require("connect-sqlite3")(session);
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const FacebookStrategy = require("passport-facebook").Strategy;
@@ -73,6 +74,20 @@ const FACEBOOK_AUTH_ENABLED = Boolean(
     process.env.FACEBOOK_APP_SECRET &&
     process.env.FACEBOOK_CALLBACK_URL
 );
+const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
+const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+const SMTP_PASS = String(process.env.SMTP_PASS || "");
+const MAIL_FROM = String(process.env.MAIL_FROM || SMTP_USER || "").trim();
+const SMTP_AUTH_ENABLED = Boolean(SMTP_USER && SMTP_PASS);
+const EMAIL_VERIFICATION_MAIL_ENABLED =
+  Boolean(SMTP_HOST && Number.isFinite(SMTP_PORT) && SMTP_PORT > 0 && MAIL_FROM) &&
+  (SMTP_AUTH_ENABLED || (!SMTP_USER && !SMTP_PASS));
+let verificationMailer = null;
 
 function normalizeTheme(themeValue) {
   const input = (themeValue || "").trim().toLowerCase();
@@ -176,6 +191,69 @@ function getLoginStats() {
 function normalizeEmail(value) {
   if (typeof value !== "string") return "";
   return value.trim().toLowerCase().slice(0, 255);
+}
+
+function getPublicBaseUrl(req) {
+  if (APP_BASE_URL) return APP_BASE_URL;
+  const forwardedProtoRaw = String(req.headers["x-forwarded-proto"] || "").trim();
+  const forwardedProto = forwardedProtoRaw
+    ? forwardedProtoRaw.split(",")[0].trim()
+    : "";
+  const protocol = forwardedProto || req.protocol || "http";
+  const host = req.get("host");
+  return host ? `${protocol}://${host}` : "";
+}
+
+function getVerificationMailer() {
+  if (!EMAIL_VERIFICATION_MAIL_ENABLED) return null;
+  if (verificationMailer) return verificationMailer;
+
+  const transporterConfig = {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE
+  };
+  if (SMTP_AUTH_ENABLED) {
+    transporterConfig.auth = {
+      user: SMTP_USER,
+      pass: SMTP_PASS
+    };
+  }
+
+  verificationMailer = nodemailer.createTransport(transporterConfig);
+  return verificationMailer;
+}
+
+async function sendVerificationEmail(req, payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) {
+    throw new Error("Verification mailer is not configured");
+  }
+
+  const baseUrl = getPublicBaseUrl(req);
+  if (!baseUrl) {
+    throw new Error("Public base URL missing");
+  }
+
+  const verifyUrl = `${baseUrl}/verify-email?token=${encodeURIComponent(
+    payload.verificationToken
+  )}`;
+  const text = [
+    `Hallo ${payload.username},`,
+    "",
+    "danke fuer deine Registrierung bei Heldenhaft Reisen.",
+    "Bitte bestaetige deine E-Mail-Adresse ueber diesen Link:",
+    verifyUrl,
+    "",
+    "Danach kannst du dich ganz normal einloggen."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: payload.email,
+    subject: "Bitte bestaetige deine E-Mail bei Heldenhaft Reisen",
+    text
+  });
 }
 
 function getAccountNumberByUserId(userId) {
@@ -870,7 +948,7 @@ app.get("/register", (req, res) => {
   });
 });
 
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const password = req.body.password || "";
@@ -925,21 +1003,89 @@ app.post("/register", (req, res) => {
     });
   }
 
+  if (!EMAIL_VERIFICATION_MAIL_ENABLED) {
+    return res.status(503).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error:
+        "Registrierung ist derzeit nicht verfuegbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
+      values: { username, email }
+    });
+  }
+
   const passwordHash = bcrypt.hashSync(password, 10);
+  const verificationToken = crypto.randomBytes(32).toString("hex");
   const adminCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
     .get().count;
   const isAdmin = adminCount === 0 ? 1 : 0;
-  const info = db
-    .prepare(
-      "INSERT INTO users (username, password_hash, is_admin, theme, email) VALUES (?, ?, ?, ?, ?)"
-    )
-    .run(username, passwordHash, isAdmin, DEFAULT_THEME, email);
+  let createdUserId = null;
 
-  const createdUser = getUserForSessionById(info.lastInsertRowid);
-  req.session.user = toSessionUser(createdUser);
-  setFlash(req, "success", "Account erstellt. Willkommen!");
-  return res.redirect("/dashboard");
+  try {
+    const info = db
+      .prepare(
+        `INSERT INTO users
+         (username, password_hash, is_admin, theme, email, email_verified, email_verification_token)
+         VALUES (?, ?, ?, ?, ?, 0, ?)`
+      )
+      .run(username, passwordHash, isAdmin, DEFAULT_THEME, email, verificationToken);
+    createdUserId = info.lastInsertRowid;
+
+    await sendVerificationEmail(req, {
+      username,
+      email,
+      verificationToken
+    });
+  } catch (error) {
+    console.error(error);
+    if (createdUserId) {
+      db.prepare("DELETE FROM users WHERE id = ?").run(createdUserId);
+    }
+    return res.status(500).render("auth", {
+      title: "Registrieren",
+      mode: "register",
+      error:
+        "Die Bestaetigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
+      values: { username, email }
+    });
+  }
+
+  setFlash(
+    req,
+    "success",
+    "Account erstellt. Bitte bestaetige jetzt deine E-Mail ueber den Link aus der Nachricht."
+  );
+  return res.redirect("/login");
+});
+
+app.get("/verify-email", (req, res) => {
+  const token = String(req.query.token || "").trim();
+
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig.");
+    return res.redirect("/login");
+  }
+
+  const user = db
+    .prepare(
+      "SELECT id, email_verified FROM users WHERE email_verification_token = ?"
+    )
+    .get(token);
+  if (!user) {
+    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig oder bereits verwendet.");
+    return res.redirect("/login");
+  }
+
+  if (user.email_verified !== 1) {
+    db.prepare(
+      "UPDATE users SET email_verified = 1, email_verification_token = '' WHERE id = ?"
+    ).run(user.id);
+  } else {
+    db.prepare("UPDATE users SET email_verification_token = '' WHERE id = ?").run(user.id);
+  }
+
+  setFlash(req, "success", "E-Mail bestaetigt. Du kannst dich jetzt einloggen.");
+  return res.redirect("/login");
 });
 
 app.get("/login", (req, res) => {
@@ -957,7 +1103,9 @@ app.post("/login", (req, res) => {
 
   const user = db
     .prepare(
-      "SELECT id, username, password_hash, is_admin, theme FROM users WHERE username = ?"
+      `SELECT id, username, password_hash, is_admin, theme, email_verified
+       FROM users
+       WHERE username = ?`
     )
     .get(username);
 
@@ -966,6 +1114,16 @@ app.post("/login", (req, res) => {
       title: "Login",
       mode: "login",
       error: "Ungueltige Zugangsdaten.",
+      values: { username }
+    });
+  }
+
+  if (user.email_verified !== 1) {
+    return res.status(403).render("auth", {
+      title: "Login",
+      mode: "login",
+      error:
+        "Bitte bestaetige zuerst deine E-Mail-Adresse ueber den Link aus der Willkommensmail.",
       values: { username }
     });
   }
