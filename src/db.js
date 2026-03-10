@@ -19,6 +19,7 @@ db.exec(`
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     is_admin INTEGER NOT NULL DEFAULT 0,
+    is_moderator INTEGER NOT NULL DEFAULT 0,
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
     email TEXT DEFAULT '',
     email_verified INTEGER NOT NULL DEFAULT 1,
@@ -160,6 +161,10 @@ if (!userColumns.includes("is_admin")) {
   db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!userColumns.includes("is_moderator")) {
+  db.exec("ALTER TABLE users ADD COLUMN is_moderator INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!userColumns.includes("theme")) {
   db.exec("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'glass-aurora'");
 }
@@ -222,6 +227,7 @@ db.exec(
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id)");
 
 db.prepare("UPDATE users SET theme = 'glass-aurora' WHERE theme IS NULL OR theme = ''").run();
+db.prepare("UPDATE users SET is_moderator = 0 WHERE is_moderator IS NULL").run();
 db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();

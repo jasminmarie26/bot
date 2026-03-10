@@ -3,6 +3,7 @@
 <section class="panel">
   <h1>Adminbereich</h1>
   <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
+  <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
 </section>
 
 <section class="panel">
@@ -32,23 +33,40 @@
   <div class="list">
     <% users.forEach((user) => { %>
       <article class="list-item">
-        <strong>#<%= user.account_number %> <%= user.username %> <% if (user.is_admin) { %>(Admin)<% } %></strong>
+        <strong>
+          #<%= user.account_number %> <%= user.username %>
+          <% if (user.is_admin) { %>(Admin)<% } %>
+          <% if (user.is_moderator) { %>(Moderator)<% } %>
+        </strong>
         <span>Charaktere: <%= user.character_count %></span>
         <small>Erstellt: <%= user.created_at %></small>
 
-        <% if (user.id === currentUser.id) { %>
-          <small>Dein eigener Account</small>
-        <% } else { %>
-          <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
-            <% if (user.is_admin) { %>
+        <div class="dashboard-server-actions">
+          <% if (user.id === currentUser.id) { %>
+            <small>Dein eigener Account</small>
+          <% } else { %>
+            <form method="POST" action="/admin/users/<%= user.id %>/toggle-admin" class="inline-form">
+              <% if (user.is_admin) { %>
+                <input type="hidden" name="action" value="demote" />
+                <button class="btn btn-danger" type="submit">Admin entfernen</button>
+              <% } else { %>
+                <input type="hidden" name="action" value="promote" />
+                <button class="btn" type="submit">Zu Admin machen</button>
+              <% } %>
+            </form>
+          <% } %>
+
+          <form method="POST" action="/admin/users/<%= user.id %>/toggle-moderator" class="inline-form">
+            <% if (user.is_moderator) { %>
               <input type="hidden" name="action" value="demote" />
-              <button class="btn btn-danger" type="submit">Admin entfernen</button>
+              <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
             <% } else { %>
               <input type="hidden" name="action" value="promote" />
-              <button class="btn" type="submit">Zu Admin machen</button>
+              <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
             <% } %>
           </form>
-        <% } %>
+        </div>
+
       </article>
     <% }) %>
   </div>

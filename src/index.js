@@ -142,12 +142,12 @@ function setFlash(req, type, text) {
   req.session.flash = { type, text };
 }
 
-function getLoggedInUsersCount() {
+function getActiveSessionUserIds() {
   let sessionsDb;
   try {
     sessionsDb = new Database(sessionsDbPath, { fileMustExist: true, readonly: true });
   } catch (error) {
-    return 0;
+    return [];
   }
 
   try {
@@ -168,24 +168,83 @@ function getLoggedInUsersCount() {
       }
     }
 
-    return uniqueUserIds.size;
+    return Array.from(uniqueUserIds);
   } catch (error) {
-    return 0;
+    return [];
   } finally {
     sessionsDb.close();
   }
 }
 
+function getLoggedInUsersCount(activeUserIds = null) {
+  if (Array.isArray(activeUserIds)) {
+    return activeUserIds.length;
+  }
+  return getActiveSessionUserIds().length;
+}
+
+function getOnlineStaffStats(activeUserIds = null) {
+  const sessionUserIds = Array.isArray(activeUserIds)
+    ? activeUserIds
+    : getActiveSessionUserIds();
+  if (!sessionUserIds.length) {
+    return {
+      adminOnlineCount: 0,
+      adminOnlineNames: [],
+      moderatorOnlineCount: 0,
+      moderatorOnlineNames: []
+    };
+  }
+
+  const placeholders = sessionUserIds.map(() => "?").join(", ");
+  const staffUsers = db
+    .prepare(
+      `SELECT username, is_admin, is_moderator
+       FROM users
+       WHERE id IN (${placeholders})`
+    )
+    .all(...sessionUserIds);
+
+  const adminOnlineNames = [];
+  const moderatorOnlineNames = [];
+
+  for (const user of staffUsers) {
+    if (user.is_admin === 1) {
+      adminOnlineNames.push(user.username);
+      continue;
+    }
+    if (user.is_moderator === 1) {
+      moderatorOnlineNames.push(user.username);
+    }
+  }
+
+  adminOnlineNames.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  moderatorOnlineNames.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+
+  return {
+    adminOnlineCount: adminOnlineNames.length,
+    adminOnlineNames,
+    moderatorOnlineCount: moderatorOnlineNames.length,
+    moderatorOnlineNames
+  };
+}
+
 function getLoginStats() {
+  const activeUserIds = getActiveSessionUserIds();
   const accountCount =
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
   const characterCount =
     db.prepare("SELECT COUNT(*) AS count FROM characters").get()?.count || 0;
+  const staffStats = getOnlineStaffStats(activeUserIds);
 
   return {
     accountCount,
     characterCount,
-    loggedInUserCount: getLoggedInUsersCount()
+    loggedInUserCount: getLoggedInUsersCount(activeUserIds),
+    adminOnlineCount: staffStats.adminOnlineCount,
+    adminOnlineNames: staffStats.adminOnlineNames,
+    moderatorOnlineCount: staffStats.moderatorOnlineCount,
+    moderatorOnlineNames: staffStats.moderatorOnlineNames
   };
 }
 
@@ -280,6 +339,7 @@ function toSessionUser(user) {
     id: user.id,
     username: user.username,
     is_admin: user.is_admin === 1,
+    is_moderator: user.is_moderator === 1,
     theme: normalizeTheme(user.theme),
     account_number: getAccountNumberByUserId(user.id)
   };
@@ -288,7 +348,7 @@ function toSessionUser(user) {
 function getUserForSessionById(userId) {
   return db
     .prepare(
-      "SELECT id, username, is_admin, theme FROM users WHERE id = ?"
+      "SELECT id, username, is_admin, is_moderator, theme FROM users WHERE id = ?"
     )
     .get(userId);
 }
@@ -337,7 +397,7 @@ function findOrCreateOAuthUser(provider, profile) {
   const email = getProfileEmail(profile);
   const userByProvider = db
     .prepare(
-      `SELECT id, username, is_admin, theme
+      `SELECT id, username, is_admin, is_moderator, theme
        FROM users
        WHERE ${providerColumn} = ?`
     )
@@ -350,7 +410,7 @@ function findOrCreateOAuthUser(provider, profile) {
   if (email) {
     const userByEmail = db
       .prepare(
-        `SELECT id, username, is_admin, theme, ${providerColumn} AS provider_value
+        `SELECT id, username, is_admin, is_moderator, theme, ${providerColumn} AS provider_value
          FROM users
          WHERE email = ?`
       )
@@ -391,8 +451,8 @@ function findOrCreateOAuthUser(provider, profile) {
   const info = db
     .prepare(
       `INSERT INTO users
-       (username, password_hash, is_admin, theme, email, google_id, facebook_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?)`
     )
     .run(
       username,
@@ -1104,7 +1164,7 @@ app.post("/login", (req, res) => {
 
   const user = db
     .prepare(
-      `SELECT id, username, password_hash, is_admin, theme, email_verified
+      `SELECT id, username, password_hash, is_admin, is_moderator, theme, email_verified
        FROM users
        WHERE username = ?`
     )
@@ -2098,7 +2158,7 @@ app.get("/chat", requireAuth, (req, res) => {
 app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   const users = db
     .prepare(
-      `SELECT u.id, u.username, u.is_admin, u.created_at,
+      `SELECT u.id, u.username, u.is_admin, u.is_moderator, u.created_at,
               (
                 SELECT COUNT(*)
                 FROM users ux
@@ -2116,12 +2176,16 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   const adminCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
     .get().count;
+  const moderatorCount = db
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE is_moderator = 1")
+    .get().count;
   const festplays = getFestplays();
 
   return res.render("admin", {
     title: "Adminbereich",
     users,
     adminCount,
+    moderatorCount,
     festplays
   });
 });
@@ -2231,6 +2295,38 @@ app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) 
     setFlash(req, "success", `User ${targetUser.username} ist jetzt Admin.`);
   } else {
     setFlash(req, "success", `User ${targetUser.username} ist kein Admin mehr.`);
+  }
+
+  return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    return res.status(400).render("error", {
+      title: "Ungueltige Anfrage",
+      message: "User-ID ist ungueltig."
+    });
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username, is_moderator FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    return res.status(404).render("error", {
+      title: "Nicht gefunden",
+      message: "User wurde nicht gefunden."
+    });
+  }
+
+  const action = req.body.action === "demote" ? "demote" : "promote";
+  const nextValue = action === "promote" ? 1 : 0;
+  db.prepare("UPDATE users SET is_moderator = ? WHERE id = ?").run(nextValue, targetId);
+
+  if (nextValue === 1) {
+    setFlash(req, "success", `User ${targetUser.username} ist jetzt Moderator.`);
+  } else {
+    setFlash(req, "success", `User ${targetUser.username} ist kein Moderator mehr.`);
   }
 
   return res.redirect("/admin");

@@ -14,6 +14,32 @@
       <strong><%= stats.loggedInUserCount %></strong>
       <span>Gerade eingeloggt</span>
     </article>
+    <article class="home-stat">
+      <strong><%= stats.adminOnlineCount %></strong>
+      <span>Admins online</span>
+      <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
+        <small class="home-stat-names">
+          <% stats.adminOnlineNames.forEach((name, index) => { %>
+            <span class="staff-name-admin"><%= name %></span><%= index < stats.adminOnlineNames.length - 1 ? ", " : "" %>
+          <% }) %>
+        </small>
+      <% } else { %>
+        <small class="home-stat-empty">Niemand online</small>
+      <% } %>
+    </article>
+    <article class="home-stat">
+      <strong><%= stats.moderatorOnlineCount %></strong>
+      <span>Moderatoren online</span>
+      <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
+        <small class="home-stat-names">
+          <% stats.moderatorOnlineNames.forEach((name, index) => { %>
+            <span class="staff-name-moderator"><%= name %></span><%= index < stats.moderatorOnlineNames.length - 1 ? ", " : "" %>
+          <% }) %>
+        </small>
+      <% } else { %>
+        <small class="home-stat-empty">Niemand online</small>
+      <% } %>
+    </article>
   </aside>
 
   <div class="home-main">

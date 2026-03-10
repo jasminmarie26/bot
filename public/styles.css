@@ -576,6 +576,31 @@ a:hover {
   color: var(--muted);
 }
 
+.home-stat-names {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.home-stat-empty {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.staff-name-admin {
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.staff-name-moderator {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 82%, white 18%);
+}
+
 .oauth-section {
   margin-top: 0.9rem;
 }
