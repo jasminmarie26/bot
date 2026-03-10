@@ -35,8 +35,11 @@ jobs:
           script: |
             set -e
             cd /opt/eigene-rp-seite
-            /usr/bin/npm ci --omit=dev
-            /usr/bin/npm rebuild better-sqlite3 --build-from-source
+            export PATH="/usr/bin:/bin:${PATH}"
+            export npm_config_build_from_source=true
+            export npm_config_nodedir=/usr
+            /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
+            /usr/bin/node /usr/bin/npm rebuild better-sqlite3 --build-from-source --foreground-scripts
 
             PM2_BIN="$(command -v pm2 || true)"
             if [ -z "$PM2_BIN" ] && [ -x /usr/local/bin/pm2 ]; then
