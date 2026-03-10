@@ -884,6 +884,60 @@ a:hover {
   gap: 0.8rem;
 }
 
+.admin-character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.admin-character-card {
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.admin-character-primary {
+  display: grid;
+  gap: 0.55rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.admin-character-primary:hover {
+  text-decoration: none;
+}
+
+.admin-character-name {
+  font-size: 1.04rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.admin-character-server {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 0.18rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 85%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 92%, white 8%);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.admin-character-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.admin-character-actions {
+  justify-content: flex-start;
+}
+
 .suspicious-user-card {
   border-color: color-mix(in srgb, var(--danger) 55%, var(--panel-edge));
   box-shadow: 0 18px 34px -24px color-mix(in srgb, var(--danger) 28%, var(--panel-shadow));
@@ -2228,6 +2282,10 @@ select:focus {
 
   .admin-user-details {
     padding: 0 0.9rem 0.9rem;
+  }
+
+  .admin-character-grid {
+    grid-template-columns: 1fr;
   }
 
   .chat-form {

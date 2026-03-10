@@ -2533,11 +2533,10 @@ function decorateAdminUsers(users) {
   });
 }
 
-function getAdminGuestbookCharacters() {
+function getAdminUserCharacters(userId) {
   return db
     .prepare(
       `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at,
-              u.username AS owner_name,
               (
                 SELECT COUNT(*)
                 FROM guestbook_pages gp
@@ -2549,10 +2548,10 @@ function getAdminGuestbookCharacters() {
                 WHERE ge.character_id = c.id
               ) AS entry_count
        FROM characters c
-       JOIN users u ON u.id = c.user_id
+       WHERE c.user_id = ?
        ORDER BY c.updated_at DESC, c.id DESC`
     )
-    .all();
+    .all(userId);
 }
 
 app.get("/admin", requireAuth, requireAdmin, (req, res) => {
@@ -2568,7 +2567,6 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
   const accountCount = db
     .prepare("SELECT COUNT(*) AS count FROM users")
     .get().count;
-  const guestbookCharacters = getAdminGuestbookCharacters();
 
   return res.render("admin", {
     title: "Adminbereich",
@@ -2576,8 +2574,7 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
     suspiciousUsers,
     accountCount,
     adminCount,
-    moderatorCount,
-    guestbookCharacters
+    moderatorCount
   });
 });
 
@@ -2595,9 +2592,12 @@ app.get("/admin/users/:id", requireAuth, requireAdmin, (req, res) => {
     return res.redirect("/admin");
   }
 
+  const userCharacters = getAdminUserCharacters(targetId);
+
   return res.render("admin-user", {
     title: `Admin: ${targetUser.username}`,
-    targetUser
+    targetUser,
+    userCharacters
   });
 });
 

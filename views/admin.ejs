@@ -66,7 +66,7 @@
   <div class="header-line">
     <div>
       <h2>Benutzerverwaltung</h2>
-      <p class="muted">Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab.</p>
+      <p class="muted">Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab, dort findest du unten auch die Charaktere und Gästebücher.</p>
     </div>
   </div>
 
@@ -140,36 +140,6 @@
             <% }) %>
           </div>
         </section>
-      <% }) %>
-    </div>
-  <% } %>
-</section>
-
-<section class="panel">
-  <h2>Gästebücher verwalten</h2>
-  <% if (!guestbookCharacters.length) { %>
-    <p class="muted">Noch keine Charaktere vorhanden.</p>
-  <% } else { %>
-    <div class="list">
-      <% guestbookCharacters.forEach((item) => { %>
-        <article class="list-item admin-user-card">
-          <strong><%= item.name %> (<%= item.server_id %>)</strong>
-          <div class="admin-user-meta">
-            <span>Besitzer: <%= item.owner_name %></span>
-            <span>Seiten: <%= item.page_count %></span>
-            <span>Einträge: <%= item.entry_count %></span>
-            <span>Status: <%= item.is_public ? "öffentlich" : "privat" %></span>
-          </div>
-
-          <div class="dashboard-server-actions">
-            <a class="btn btn-secondary" href="/characters/<%= item.id %>">Charakter öffnen</a>
-            <a class="btn btn-secondary" href="/characters/<%= item.id %>/guestbook">Gästebuch ansehen</a>
-            <a class="btn" href="/characters/<%= item.id %>/guestbook/edit">Gästebuch bearbeiten</a>
-            <form method="POST" action="/admin/guestbooks/<%= item.id %>/clear" class="inline-form">
-              <button class="btn btn-danger" type="submit">Gästebuch leeren</button>
-            </form>
-          </div>
-        </article>
       <% }) %>
     </div>
   <% } %>
