@@ -16,6 +16,15 @@
           <nav class="nav">
             <% if (currentUser) { %>
               <a href="/dashboard">Dashboard</a>
+              <button
+                type="button"
+                class="ghost-btn nav-delete-btn"
+                id="account-delete-open"
+                aria-haspopup="dialog"
+                aria-controls="account-delete-modal"
+              >
+                Account löschen
+              </button>
               <% if (currentUser.is_admin) { %>
                 <a href="/admin">Admin</a>
               <% } %>
@@ -48,6 +57,81 @@
           </nav>
         </div>
       </header>
+    <% } %>
+
+    <% if (currentUser) { %>
+      <div id="account-delete-modal" class="account-delete-modal" hidden>
+        <div class="account-delete-backdrop" data-account-delete-close></div>
+        <section
+          class="account-delete-card panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="account-delete-title"
+        >
+          <h2 id="account-delete-title">Account löschen</h2>
+          <p class="muted">
+            Dieser Schritt ist dauerhaft. Dein Account und alle dazugehörigen Daten
+            (Charaktere, Räume, Einträge) werden unwiderruflich entfernt.
+          </p>
+
+          <form method="POST" action="/account/delete" class="form">
+            <label>
+              Username zur Bestätigung
+              <input
+                name="confirm_username"
+                required
+                maxlength="24"
+                autocomplete="off"
+                placeholder="<%= currentUser.username %>"
+              />
+            </label>
+            <label>
+              Passwort
+              <input
+                type="password"
+                name="password"
+                required
+                minlength="6"
+                autocomplete="current-password"
+              />
+            </label>
+            <div class="account-delete-actions">
+              <button type="button" class="btn btn-secondary" data-account-delete-close>
+                Abbrechen
+              </button>
+              <button type="submit" class="btn btn-danger">Account endgültig löschen</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <script>
+        (() => {
+          const openButton = document.getElementById("account-delete-open");
+          const modal = document.getElementById("account-delete-modal");
+          if (!openButton || !modal) return;
+
+          const closeElements = modal.querySelectorAll("[data-account-delete-close]");
+          const closeModal = () => {
+            modal.hidden = true;
+            document.body.classList.remove("modal-open");
+          };
+          const openModal = () => {
+            modal.hidden = false;
+            document.body.classList.add("modal-open");
+          };
+
+          openButton.addEventListener("click", openModal);
+          closeElements.forEach((element) => {
+            element.addEventListener("click", closeModal);
+          });
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !modal.hidden) {
+              closeModal();
+            }
+          });
+        })();
+      </script>
     <% } %>
 
     <main class="container">

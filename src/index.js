@@ -1246,7 +1246,7 @@ app.post("/account/delete", requireAuth, (req, res) => {
     setFlash(
       req,
       "error",
-      "Bitte gib zur Bestaetigung exakt deinen aktuellen Username ein."
+      "Bitte gib zur Bestätigung exakt deinen aktuellen Username ein."
     );
     return res.redirect("/dashboard");
   }
@@ -1280,7 +1280,7 @@ app.post("/account/delete", requireAuth, (req, res) => {
     deleteAccountTx(user.id, user.is_admin);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "Account konnte nicht geloescht werden.");
+    setFlash(req, "error", "Account konnte nicht gelöscht werden.");
     return res.redirect("/dashboard");
   }
 

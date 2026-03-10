@@ -31,32 +31,6 @@
       <% } %>
     </section>
   <% }) %>
-
-  <section class="panel">
-    <h2>Account loeschen</h2>
-    <p class="muted">
-      Dieser Schritt ist dauerhaft. Dein Account und alle dazugehoerigen Daten
-      (Charaktere, Rooms, Eintraege) werden unwiderruflich entfernt.
-    </p>
-
-    <form method="POST" action="/account/delete" class="form">
-      <label>
-        Username zur Bestaetigung
-        <input
-          name="confirm_username"
-          required
-          maxlength="24"
-          autocomplete="off"
-          placeholder="<%= currentUser.username %>"
-        />
-      </label>
-      <label>
-        Passwort
-        <input type="password" name="password" required minlength="6" autocomplete="current-password" />
-      </label>
-      <button type="submit" class="btn btn-danger">Account endgueltig loeschen</button>
-    </form>
-  </section>
 </div>
 
 <%- include("partials/end") %>

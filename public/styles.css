@@ -77,6 +77,10 @@ body::after {
   z-index: 0;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 body.theme-glass-aurora {
   --bg-base: #091322;
   --orb-1: rgba(0, 201, 255, 0.25);
@@ -252,6 +256,17 @@ a:hover {
   white-space: nowrap;
 }
 
+.nav-delete-btn {
+  padding: 0.36rem 0.6rem;
+  font-size: 0.85rem;
+  border-color: color-mix(in srgb, var(--danger) 70%, transparent);
+  color: color-mix(in srgb, var(--danger-text) 88%, var(--danger) 12%);
+}
+
+.nav-delete-btn:hover {
+  border-color: color-mix(in srgb, var(--danger) 85%, transparent);
+}
+
 .theme-form {
   display: flex;
   align-items: center;
@@ -392,6 +407,37 @@ a:hover {
 
 .update-modal-card {
   width: min(640px, 96vw);
+}
+
+.account-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.account-delete-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.account-delete-card {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 96vw);
+  border-radius: 16px;
+}
+
+.account-delete-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .hero {
