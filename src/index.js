@@ -876,11 +876,11 @@ app.post("/register", (req, res) => {
   const password = req.body.password || "";
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+  if (!/^[a-zA-Z0-9_.+-]{3,24}$/.test(username)) {
     return res.status(400).render("auth", {
       title: "Registrieren",
       mode: "register",
-      error: "Username nur mit Buchstaben, Zahlen, _ (3-24 Zeichen).",
+      error: "Username nur mit Buchstaben, Zahlen und . _ + - (3-24 Zeichen).",
       values: { username, email }
     });
   }
