@@ -170,7 +170,17 @@ function getActiveSessionUserIds() {
       }
     }
 
-    return Array.from(uniqueUserIds);
+    const candidateUserIds = Array.from(uniqueUserIds);
+    if (!candidateUserIds.length) {
+      return [];
+    }
+
+    const placeholders = candidateUserIds.map(() => "?").join(", ");
+    const existingUsers = db
+      .prepare(`SELECT id FROM users WHERE id IN (${placeholders})`)
+      .all(...candidateUserIds);
+
+    return existingUsers.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
   } catch (error) {
     return [];
   } finally {
