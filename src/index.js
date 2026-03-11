@@ -99,6 +99,7 @@ const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
 const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
 const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
+const PASSWORD_RESET_TOKEN_LIFETIME_HOURS = 2;
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "10minutemail.com",
   "10minutemail.net",
@@ -300,6 +301,23 @@ function normalizeEmail(value) {
   return value.trim().toLowerCase().slice(0, 255);
 }
 
+function normalizeBirthDate(value) {
+  const prepared = String(value || "").trim().slice(0, 10);
+  if (!prepared) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(prepared)) return "";
+
+  const parsed = new Date(`${prepared}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return "";
+  if (parsed.toISOString().slice(0, 10) !== prepared) return "";
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (prepared < "1900-01-01" || prepared > today) {
+    return "";
+  }
+
+  return prepared;
+}
+
 function getEmailDomain(email) {
   const normalized = normalizeEmail(email);
   const atIndex = normalized.lastIndexOf("@");
@@ -341,19 +359,71 @@ function issueRegistrationGuard(req) {
   return guard;
 }
 
-function renderRegisterPage(req, res, options = {}) {
+function renderAuthPage(req, res, options = {}) {
+  const mode = options.mode || "login";
   const values = {
     username: options.values?.username || "",
-    email: options.values?.email || ""
+    email: options.values?.email || "",
+    birth_date: options.values?.birth_date || ""
   };
-  const guard = issueRegistrationGuard(req);
 
-  return res.status(options.status || 200).render("auth", {
-    title: "Registrieren",
-    mode: "register",
+  const pageTitles = {
+    login: "Login",
+    register: "Registrieren",
+    "forgot-username": "Benutzernamen vergessen",
+    "forgot-password": "Passwort vergessen",
+    "reset-password": "Passwort zuruecksetzen"
+  };
+
+  const viewData = {
+    title: options.title || pageTitles[mode] || "Login",
+    mode,
     error: options.error || null,
     values,
-    registrationGuardToken: guard.token
+    registrationGuardToken: "",
+    resetToken: options.resetToken || ""
+  };
+
+  if (mode === "register") {
+    const guard = issueRegistrationGuard(req);
+    viewData.registrationGuardToken = guard.token;
+  }
+
+  return res.status(options.status || 200).render("auth", viewData);
+}
+
+function renderRegisterPage(req, res, options = {}) {
+  return renderAuthPage(req, res, {
+    ...options,
+    mode: "register"
+  });
+}
+
+function renderLoginPage(req, res, options = {}) {
+  return renderAuthPage(req, res, {
+    ...options,
+    mode: "login"
+  });
+}
+
+function renderForgotUsernamePage(req, res, options = {}) {
+  return renderAuthPage(req, res, {
+    ...options,
+    mode: "forgot-username"
+  });
+}
+
+function renderForgotPasswordPage(req, res, options = {}) {
+  return renderAuthPage(req, res, {
+    ...options,
+    mode: "forgot-password"
+  });
+}
+
+function renderResetPasswordPage(req, res, options = {}) {
+  return renderAuthPage(req, res, {
+    ...options,
+    mode: "reset-password"
   });
 }
 
@@ -521,6 +591,87 @@ async function sendAccountDeletionEmail(payload) {
   });
 
   return true;
+}
+
+async function sendUsernameReminderEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) {
+    throw new Error("Verification mailer is not configured");
+  }
+
+  const email = normalizeEmail(payload.email || "");
+  const username = String(payload.username || "").trim();
+  if (!email || !username) {
+    throw new Error("Username reminder payload incomplete");
+  }
+
+  const text = [
+    "Hallo,",
+    "",
+    "du hast eine Erinnerung fuer deinen Benutzernamen angefordert.",
+    `Dein Benutzername lautet: ${username}`,
+    "",
+    "Wenn du diese Anfrage nicht selbst gestellt hast, kannst du diese E-Mail ignorieren."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: "Dein Benutzername bei Heldenhafte Reisen",
+    text
+  });
+}
+
+async function sendPasswordResetEmail(req, payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) {
+    throw new Error("Verification mailer is not configured");
+  }
+
+  const email = normalizeEmail(payload.email || "");
+  const username = String(payload.username || "").trim() || "Account";
+  if (!email || !payload.resetToken) {
+    throw new Error("Password reset payload incomplete");
+  }
+
+  const baseUrl = getPublicBaseUrl(req);
+  if (!baseUrl) {
+    throw new Error("Public base URL missing");
+  }
+
+  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(payload.resetToken)}`;
+  const text = [
+    `Hallo ${username},`,
+    "",
+    "du hast ein neues Passwort angefordert.",
+    "Oeffne diesen Link, um ein neues Passwort zu setzen:",
+    resetUrl,
+    "",
+    `Der Link ist ${PASSWORD_RESET_TOKEN_LIFETIME_HOURS} Stunden gueltig.`,
+    "Wenn du diese Anfrage nicht selbst gestellt hast, kannst du diese E-Mail ignorieren."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: "Passwort zuruecksetzen bei Heldenhafte Reisen",
+    text
+  });
+}
+
+function getValidPasswordResetUser(token) {
+  if (!/^[a-f0-9]{64}$/i.test(String(token || "").trim())) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT id, username, is_admin, is_moderator, theme, email_verified
+       FROM users
+       WHERE password_reset_token = ?
+         AND password_reset_sent_at >= datetime('now', ?)`
+    )
+    .get(String(token || "").trim(), `-${PASSWORD_RESET_TOKEN_LIFETIME_HOURS} hours`);
 }
 
 function getAccountNumberByUserId(userId) {
