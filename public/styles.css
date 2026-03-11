@@ -217,6 +217,7 @@ body.theme-sith {
     linear-gradient(180deg, transparent 56%, rgba(13, 6, 9, 0.18) 76%, rgba(7, 3, 5, 0.48) 100%),
     url("/sith-wallpaper-user.png") center center / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
+  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed;
 }
 
 body.theme-sith::before {
@@ -2681,6 +2682,10 @@ select:focus {
   body.theme-sith .hero-copy,
   body.theme-sith .hero-actions {
     width: min(76%, 720px);
+  }
+
+  body.theme-sith {
+    background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
   }
 }
 
