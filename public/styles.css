@@ -193,10 +193,10 @@ body.theme-sith {
   --text: #f6f0f0;
   --muted: #d0bbbb;
   --link: #ff9c9c;
-  --panel-bg: rgba(18, 8, 10, 0.7);
+  --panel-bg: rgba(18, 8, 10, 0.8);
   --panel-edge: rgba(255, 92, 92, 0.25);
   --panel-shadow: rgba(0, 0, 0, 0.8);
-  --field-bg: rgba(11, 7, 9, 0.78);
+  --field-bg: rgba(11, 7, 9, 0.86);
   --field-edge: rgba(255, 120, 120, 0.28);
   --accent: #ff4c4c;
   --accent-2: #8d0606;
@@ -210,45 +210,47 @@ body.theme-sith {
   --error-edge: rgba(255, 120, 148, 0.36);
   --glass-blur: 12px;
   background:
-    linear-gradient(180deg, rgba(248, 238, 242, 0.1), rgba(16, 8, 12, 0.38)),
-    radial-gradient(760px 420px at 16% 18%, rgba(255, 88, 88, 0.18), transparent 70%),
-    radial-gradient(680px 440px at 78% 12%, rgba(255, 236, 236, 0.12), transparent 62%),
-    radial-gradient(840px 560px at 54% 102%, rgba(255, 212, 212, 0.08), transparent 68%),
+    linear-gradient(180deg, rgba(245, 240, 243, 0.16), rgba(18, 9, 13, 0.56)),
+    radial-gradient(760px 420px at 16% 18%, rgba(255, 88, 88, 0.12), transparent 70%),
+    radial-gradient(680px 440px at 78% 12%, rgba(255, 236, 236, 0.1), transparent 62%),
+    radial-gradient(840px 560px at 54% 102%, rgba(255, 212, 212, 0.06), transparent 68%),
     url("/sith-wallpaper-user.png") center center / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
 }
 
 body.theme-sith::before {
   inset: 0;
-  opacity: 0.68;
+  opacity: 0.82;
   background:
-    radial-gradient(circle at 70% 16%, rgba(255, 244, 244, 0.18), transparent 18%),
-    radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.08), transparent 26%),
-    radial-gradient(circle at 58% 50%, rgba(255, 90, 90, 0.08), transparent 26%),
-    radial-gradient(circle at 50% 118%, rgba(34, 10, 14, 0.4), transparent 48%),
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.1), transparent 28%),
+    radial-gradient(circle at 74% 18%, rgba(255, 244, 244, 0.12), transparent 18%),
+    radial-gradient(circle at 58% 50%, rgba(255, 90, 90, 0.05), transparent 26%),
+    radial-gradient(circle at 50% 118%, rgba(34, 10, 14, 0.3), transparent 48%),
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(20, 9, 14, 0.08) 34%,
-      rgba(15, 7, 11, 0.2) 68%,
-      rgba(10, 5, 8, 0.34) 100%
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(24, 11, 16, 0.12) 34%,
+      rgba(16, 8, 12, 0.28) 68%,
+      rgba(10, 5, 8, 0.48) 100%
     ),
     linear-gradient(
       112deg,
       transparent 0 62%,
-      rgba(255, 96, 96, 0.03) 68%,
-      rgba(255, 124, 124, 0.12) 71%,
-      rgba(255, 229, 229, 0.18) 72.1%,
-      rgba(255, 124, 124, 0.12) 73.2%,
-      rgba(255, 96, 96, 0.03) 76%,
+      rgba(255, 96, 96, 0.02) 68%,
+      rgba(255, 124, 124, 0.08) 71%,
+      rgba(255, 229, 229, 0.12) 72.1%,
+      rgba(255, 124, 124, 0.08) 73.2%,
+      rgba(255, 96, 96, 0.02) 76%,
       transparent 82%
     ),
     repeating-linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.024) 0 2px,
+      rgba(255, 255, 255, 0.018) 0 2px,
       transparent 2px 22px
     );
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
+  backdrop-filter: blur(10px) saturate(74%) brightness(0.8);
+  -webkit-backdrop-filter: blur(10px) saturate(74%) brightness(0.8);
   animation-duration: 30s;
 }
 
@@ -256,15 +258,15 @@ body.theme-sith::after {
   right: 8%;
   top: 16%;
   bottom: auto;
-  width: 620px;
-  height: 760px;
+  width: 680px;
+  height: 820px;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 42% 34%, rgba(255, 236, 236, 0.22), transparent 16%),
-    radial-gradient(circle at 48% 48%, rgba(255, 120, 120, 0.12), transparent 30%),
-    radial-gradient(circle at 50% 68%, rgba(32, 10, 14, 0.26), transparent 58%);
-  filter: blur(34px);
-  opacity: 0.68;
+    radial-gradient(circle at 42% 34%, rgba(255, 236, 236, 0.16), transparent 16%),
+    radial-gradient(circle at 48% 48%, rgba(255, 120, 120, 0.08), transparent 30%),
+    radial-gradient(circle at 50% 68%, rgba(32, 10, 14, 0.18), transparent 58%);
+  filter: blur(46px);
+  opacity: 0.44;
 }
 
 body.theme-sith .topbar,
