@@ -353,6 +353,174 @@ body.theme-sith .hero-copy.guestbook-entry-body {
   font-size: clamp(1.08rem, 2vw, 1.42rem);
 }
 
+body.theme-jedi {
+  --bg-base: #050912;
+  --orb-1: rgba(72, 162, 255, 0.24);
+  --orb-2: rgba(58, 113, 201, 0.2);
+  --orb-3: rgba(194, 236, 255, 0.08);
+  --text: #f2f8ff;
+  --muted: #c7d7e6;
+  --link: #9edaff;
+  --panel-bg: rgba(8, 16, 28, 0.8);
+  --panel-edge: rgba(114, 180, 255, 0.24);
+  --panel-shadow: rgba(0, 0, 0, 0.82);
+  --field-bg: rgba(7, 12, 20, 0.86);
+  --field-edge: rgba(129, 196, 255, 0.26);
+  --accent: #58bfff;
+  --accent-2: #0a6dc0;
+  --accent-text: #f5fbff;
+  --danger: #3ca9ff;
+  --danger-2: #09588f;
+  --danger-text: #f4fbff;
+  --success-bg: rgba(88, 138, 111, 0.2);
+  --success-edge: rgba(162, 240, 198, 0.3);
+  --error-bg: rgba(40, 112, 186, 0.28);
+  --error-edge: rgba(138, 210, 255, 0.34);
+  --glass-blur: 12px;
+  background:
+    linear-gradient(180deg, rgba(239, 247, 255, 0.16), rgba(9, 18, 31, 0.56)),
+    radial-gradient(760px 420px at 16% 18%, rgba(102, 183, 255, 0.12), transparent 70%),
+    radial-gradient(680px 440px at 78% 12%, rgba(223, 244, 255, 0.1), transparent 62%),
+    radial-gradient(840px 560px at 54% 102%, rgba(196, 229, 255, 0.06), transparent 68%),
+    linear-gradient(180deg, transparent 56%, rgba(7, 12, 20, 0.18) 76%, rgba(4, 7, 13, 0.5) 100%),
+    url("/Jedi design.png") center 8% / cover no-repeat,
+    linear-gradient(145deg, #050912 0%, #0a1522 40%, #10213a 70%, #050912 100%);
+  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed;
+}
+
+body.theme-jedi::before {
+  inset: 0;
+  opacity: 0.82;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.11), transparent 28%),
+    radial-gradient(circle at 74% 18%, rgba(232, 246, 255, 0.12), transparent 18%),
+    radial-gradient(circle at 58% 50%, rgba(108, 184, 255, 0.05), transparent 26%),
+    radial-gradient(540px 240px at 8% 100%, rgba(8, 16, 28, 0.68), transparent 74%),
+    radial-gradient(620px 260px at 86% 100%, rgba(8, 16, 28, 0.54), transparent 76%),
+    radial-gradient(980px 320px at 50% 104%, rgba(10, 18, 30, 0.4), transparent 72%),
+    radial-gradient(circle at 50% 118%, rgba(10, 20, 34, 0.28), transparent 48%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(13, 22, 38, 0.12) 34%,
+      rgba(10, 18, 30, 0.28) 68%,
+      rgba(5, 9, 18, 0.5) 100%
+    ),
+    repeating-linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.012) 0 2px,
+      transparent 2px 26px
+    );
+  mix-blend-mode: normal;
+  backdrop-filter: blur(12px) saturate(72%) brightness(0.76);
+  -webkit-backdrop-filter: blur(12px) saturate(72%) brightness(0.76);
+  animation-duration: 30s;
+}
+
+body.theme-jedi::after {
+  right: 8%;
+  top: 16%;
+  bottom: auto;
+  width: 680px;
+  height: 820px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 42% 34%, rgba(237, 249, 255, 0.16), transparent 16%),
+    radial-gradient(circle at 48% 48%, rgba(128, 197, 255, 0.08), transparent 30%),
+    radial-gradient(circle at 50% 68%, rgba(8, 20, 34, 0.18), transparent 58%);
+  filter: blur(46px);
+  opacity: 0.44;
+}
+
+body.theme-jedi .topbar,
+body.theme-jedi .panel,
+body.theme-jedi .card,
+body.theme-jedi .hero,
+body.theme-jedi .list-item,
+body.theme-jedi .character-mini-item,
+body.theme-jedi .guestbook-item,
+body.theme-jedi .chat-message,
+body.theme-jedi .chat-box {
+  box-shadow:
+    0 22px 52px -30px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(149, 216, 255, 0.05);
+}
+
+body.theme-jedi .btn {
+  box-shadow: 0 18px 28px -24px rgba(88, 191, 255, 0.62);
+}
+
+body.theme-jedi .brand {
+  text-shadow: 0 0 18px rgba(88, 191, 255, 0.16);
+}
+
+body.theme-jedi .hero {
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(8, 18, 31, 0.8) 0%,
+      rgba(8, 18, 31, 0.68) 48%,
+      rgba(7, 14, 24, 0.54) 100%
+    );
+  border-color: rgba(113, 180, 255, 0.26);
+  backdrop-filter: blur(8px) saturate(125%);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+}
+
+body.theme-jedi .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 78% 22%, rgba(151, 222, 255, 0.08), transparent 18%),
+    radial-gradient(circle at 24% 88%, rgba(92, 175, 255, 0.08), transparent 16%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.14) 50%, rgba(0, 0, 0, 0.34) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-jedi .hero::after {
+  right: -40px;
+  top: -40px;
+  width: 260px;
+  height: 260px;
+  transform: none;
+  background:
+    radial-gradient(circle, rgba(229, 248, 255, 0.1) 0%, rgba(88, 191, 255, 0.08) 30%, transparent 72%);
+  filter: blur(30px);
+  opacity: 0.3;
+}
+
+body.theme-jedi .hero h1,
+body.theme-jedi .hero-copy,
+body.theme-jedi .hero-actions {
+  position: relative;
+  z-index: 1;
+  width: min(62%, 900px);
+  margin-left: 0;
+  text-align: left;
+}
+
+body.theme-jedi .hero h1 {
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
+body.theme-jedi .hero-actions {
+  justify-content: flex-start;
+}
+
+body.theme-jedi .hero-copy.guestbook-entry-body {
+  font-size: clamp(1.08rem, 2vw, 1.42rem);
+}
+
 a {
   color: var(--link);
   text-decoration: none;
@@ -2679,7 +2847,28 @@ select:focus {
     width: min(76%, 720px);
   }
 
+  body.theme-jedi .hero {
+    min-height: 320px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(8, 18, 31, 0.78) 0%,
+        rgba(8, 18, 31, 0.6) 42%,
+        rgba(7, 14, 24, 0.46) 100%
+      );
+  }
+
+  body.theme-jedi .hero h1,
+  body.theme-jedi .hero-copy,
+  body.theme-jedi .hero-actions {
+    width: min(76%, 720px);
+  }
+
   body.theme-sith {
+    background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
+  }
+
+  body.theme-jedi {
     background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
   }
 }
@@ -2791,6 +2980,43 @@ select:focus {
   }
 
   body.theme-sith .hero::after {
+    right: 8%;
+    top: -12px;
+    width: 180px;
+    height: 180px;
+    transform: none;
+    opacity: 0.18;
+  }
+
+  body.theme-jedi .hero {
+    min-height: 0;
+    align-items: center;
+    text-align: center;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(8, 18, 31, 0.72) 0%,
+        rgba(8, 18, 31, 0.56) 42%,
+        rgba(7, 14, 24, 0.42) 100%
+      );
+  }
+
+  body.theme-jedi .hero h1,
+  body.theme-jedi .hero-copy,
+  body.theme-jedi .hero-actions {
+    width: 100%;
+    text-align: center;
+  }
+
+  body.theme-jedi .hero h1 {
+    white-space: normal;
+  }
+
+  body.theme-jedi .hero-actions {
+    justify-content: center;
+  }
+
+  body.theme-jedi .hero::after {
     right: 8%;
     top: -12px;
     width: 180px;

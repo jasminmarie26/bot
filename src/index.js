@@ -21,7 +21,8 @@ const THEME_OPTIONS = [
   { id: "glass-noir", label: "Glass Noir" },
   { id: "glass-sunset", label: "Glass Sunset" },
   { id: "paper-ink", label: "Paper Ink" },
-  { id: "sith", label: "Sith" }
+  { id: "sith", label: "Sith" },
+  { id: "jedi", label: "Jedi" }
 ];
 const SERVER_OPTIONS = [
   { id: "free-rp", label: "FREE-RP" },
