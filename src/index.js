@@ -154,6 +154,24 @@ if (!fs.existsSync(dataDir)) {
 }
 const sessionsDbPath = path.join(dataDir, "sessions.sqlite");
 
+function getAcmeChallengeRoots() {
+  const appRoot = path.join(__dirname, "..");
+  const candidateRoots = [
+    path.join(process.cwd(), ".well-known", "acme-challenge"),
+    path.join(process.cwd(), "htdocs", ".well-known", "acme-challenge"),
+    path.join(process.cwd(), "httpdocs", ".well-known", "acme-challenge"),
+    path.join(appRoot, ".well-known", "acme-challenge"),
+    path.join(appRoot, "htdocs", ".well-known", "acme-challenge"),
+    path.join(appRoot, "httpdocs", ".well-known", "acme-challenge"),
+    path.join(appRoot, "..", "htdocs", ".well-known", "acme-challenge"),
+    path.join(appRoot, "..", "httpdocs", ".well-known", "acme-challenge")
+  ];
+
+  return Array.from(new Set(candidateRoots.map((candidate) => path.resolve(candidate))));
+}
+
+const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
+
 const sessionMiddleware = session({
   store: new SQLiteStore({
     db: "sessions.sqlite",
@@ -172,6 +190,18 @@ const sessionMiddleware = session({
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
 app.use(express.urlencoded({ extended: false }));
+for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
+  app.use(
+    "/.well-known/acme-challenge",
+    express.static(acmeChallengeRoot, {
+      fallthrough: true,
+      index: false,
+      redirect: false,
+      etag: false,
+      maxAge: 0
+    })
+  );
+}
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(sessionMiddleware);
 app.use(passport.initialize());
