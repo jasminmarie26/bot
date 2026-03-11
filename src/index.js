@@ -1603,7 +1603,7 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 503,
       error:
-        "Registrierung ist derzeit nicht verfuegbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
+        "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
       values
     });
   }
@@ -2243,14 +2243,27 @@ app.get("/dashboard", requireAuth, (req, res) => {
 
   const serverSections = SERVER_OPTIONS.map((server) => ({
     ...server,
+    dashboard_label: server.id === "free-rp" ? "Free - RP" : server.label,
+    dashboard_caption:
+      server.id === "free-rp"
+        ? "Für offene Geschichten, entspannte Begegnungen und neue Charakterideen."
+        : "Für intensivere Szenen, klare Dynamik und laufende Verbindungen.",
     characters: ownCharacters.filter(
       (character) => normalizeServer(character.server_id) === server.id
     )
   }));
 
+  const larpSection = {
+    title: "Welten & Cons",
+    description:
+      "Hier entsteht dein Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
+    note: "In Planung für Kampagnen, Orga-Ideen und Charakterkonzepte."
+  };
+
   return res.render("dashboard", {
     title: "Dashboard",
-    serverSections
+    serverSections,
+    larpSection
   });
 });
 
@@ -3273,6 +3286,8 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
 
   const username = String(req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
+  const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
 
   if (!USERNAME_PATTERN.test(username)) {
     setFlash(
@@ -3288,8 +3303,13 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
     return res.redirect("/admin");
   }
 
+  if (rawBirthDate && !birthDate) {
+    setFlash(req, "error", "Bitte ein gültiges Geburtsdatum verwenden.");
+    return res.redirect("/admin");
+  }
+
   const targetUser = db
-    .prepare("SELECT id, username, email FROM users WHERE id = ?")
+    .prepare("SELECT id, username, email, birth_date FROM users WHERE id = ?")
     .get(targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
@@ -3314,9 +3334,10 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
     }
   }
 
-  db.prepare("UPDATE users SET username = ?, email = ? WHERE id = ?").run(
+  db.prepare("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?").run(
     username,
     email,
+    birthDate,
     targetId
   );
 
@@ -3843,5 +3864,5 @@ io.on("connection", (socket) => {
 const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {
   pruneEmptyRooms();
-  console.log(`Server laeuft auf http://localhost:${port}`);
+  console.log(`Server läuft auf http://localhost:${port}`);
 });

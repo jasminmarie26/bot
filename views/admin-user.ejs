@@ -60,6 +60,15 @@
       E-Mail
       <input name="email" maxlength="255" value="<%= targetUser.email %>" placeholder="name@domain.tld" />
     </label>
+    <label>
+      Geburtsdatum
+      <input
+        type="date"
+        name="birth_date"
+        max="<%= new Date().toISOString().slice(0, 10) %>"
+        value="<%= targetUser.birth_date || "" %>"
+      />
+    </label>
     <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
   </form>
 </section>
