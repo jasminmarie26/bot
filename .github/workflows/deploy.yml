@@ -66,7 +66,6 @@ jobs:
               export npm_config_jobs=1
               cd "$STAGE_DIR"
               /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
-              /usr/bin/node /usr/bin/npm rebuild better-sqlite3 --build-from-source --foreground-scripts
               /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
               cd "$LIVE_DIR"
             }
