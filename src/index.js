@@ -66,7 +66,7 @@ const DEFAULT_SERVER_ID = "free-rp";
 const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
 const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
 const DEFAULT_HOME_HERO_BODY =
-  "Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.";
+  "Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
 const GOOGLE_AUTH_ENABLED = Boolean(
@@ -403,7 +403,7 @@ function renderAuthPage(req, res, options = {}) {
     register: "Registrieren",
     "forgot-username": "Benutzernamen vergessen",
     "forgot-password": "Passwort vergessen",
-    "reset-password": "Passwort zuruecksetzen"
+    "reset-password": "Passwort zurücksetzen"
   };
 
   const viewData = {
@@ -585,8 +585,8 @@ async function sendVerificationEmail(req, payload) {
   const text = [
     `Hallo ${payload.username},`,
     "",
-    "danke fuer deine Registrierung bei Heldenhafte Reisen.",
-    "Bitte bestaetige deine E-Mail-Adresse ueber diesen Link:",
+    "danke für deine Registrierung bei Heldenhafte Reisen.",
+    "Bitte bestätige deine E-Mail-Adresse über diesen Link:",
     verifyUrl,
     "",
     "Danach kannst du dich ganz normal einloggen."
@@ -595,7 +595,7 @@ async function sendVerificationEmail(req, payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: payload.email,
-    subject: "Bitte bestaetige deine E-Mail bei Heldenhafte Reisen",
+    subject: "Bitte bestätige deine E-Mail bei Heldenhafte Reisen",
     text
   });
 }
@@ -611,7 +611,7 @@ async function sendAccountDeletionEmail(payload) {
   const text = [
     `Hallo ${username},`,
     "",
-    "dein Account bei Heldenhafte Reisen wurde soeben geloescht.",
+    "dein Account bei Heldenhafte Reisen wurde soeben gelöscht.",
     "Falls du das nicht selbst warst, kontaktiere bitte umgehend den Support.",
     "",
     "Hinweis: Diese E-Mail wurde automatisch versendet."
@@ -620,7 +620,7 @@ async function sendAccountDeletionEmail(payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: email,
-    subject: "Bestaetigung: Dein Account wurde geloescht",
+    subject: "Bestätigung: Dein Account wurde gelöscht",
     text
   });
 
@@ -642,7 +642,7 @@ async function sendUsernameReminderEmail(payload) {
   const text = [
     "Hallo,",
     "",
-    "du hast eine Erinnerung fuer deinen Benutzernamen angefordert.",
+    "du hast eine Erinnerung für deinen Benutzernamen angefordert.",
     `Dein Benutzername lautet: ${username}`,
     "",
     "Wenn du diese Anfrage nicht selbst gestellt hast, kannst du diese E-Mail ignorieren."
@@ -686,17 +686,17 @@ async function sendPasswordResetEmail(req, payload) {
     `Hallo ${username},`,
     "",
     "du hast ein neues Passwort angefordert.",
-    "Oeffne diesen Link, um ein neues Passwort zu setzen:",
+    "Öffne diesen Link, um ein neues Passwort zu setzen:",
     resetUrl,
     "",
-    `Der Link ist ${PASSWORD_RESET_TOKEN_LIFETIME_HOURS} Stunden gueltig.`,
+    `Der Link ist ${PASSWORD_RESET_TOKEN_LIFETIME_HOURS} Stunden gültig.`,
     "Wenn du diese Anfrage nicht selbst gestellt hast, kannst du diese E-Mail ignorieren."
   ].join("\n");
 
   await transporter.sendMail({
     from: MAIL_FROM,
     to: email,
-    subject: "Passwort zuruecksetzen bei Heldenhafte Reisen",
+    subject: "Passwort zurücksetzen bei Heldenhafte Reisen",
     text
   });
 }
@@ -1443,7 +1443,7 @@ function requireSiteUpdateEditor(req, res, next) {
   if (!canPublishSiteUpdates(req.session.user)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur Admins und Moderatoren dÃ¼rfen Live-Updates verÃ¶ffentlichen."
+      message: "Nur Admins und Moderatoren dürfen Live-Updates veröffentlichen."
     });
   }
   return next();
@@ -1527,7 +1527,7 @@ app.post("/register", async (req, res) => {
     });
     return renderRegisterPage(req, res, {
       status: 429,
-      error: "Registrierung im Moment nicht moeglich. Bitte versuche es in ein paar Minuten erneut.",
+      error: "Registrierung im Moment nicht möglich. Bitte versuche es in ein paar Minuten erneut.",
       values
     });
   }
@@ -1543,7 +1543,7 @@ app.post("/register", async (req, res) => {
   if (!EMAIL_PATTERN.test(email)) {
     return renderRegisterPage(req, res, {
       status: 400,
-      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      error: "Bitte gib eine gültige E-Mail-Adresse ein.",
       values
     });
   }
@@ -1551,7 +1551,7 @@ app.post("/register", async (req, res) => {
   if (!birthDate) {
     return renderRegisterPage(req, res, {
       status: 400,
-      error: "Bitte gib ein gueltiges Geburtsdatum ein.",
+      error: "Bitte gib ein gültiges Geburtsdatum ein.",
       values
     });
   }
@@ -1566,7 +1566,7 @@ app.post("/register", async (req, res) => {
     });
     return renderRegisterPage(req, res, {
       status: 400,
-      error: "Wegwerf-E-Mail-Adressen sind fuer die Registrierung nicht erlaubt.",
+      error: "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.",
       values
     });
   }
@@ -1656,7 +1656,7 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 500,
       error:
-        "Die Bestaetigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
+        "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
       values
     });
   }
@@ -1672,7 +1672,7 @@ app.post("/register", async (req, res) => {
   setFlash(
     req,
     "success",
-    "Account erstellt. Bitte bestaetige jetzt deine E-Mail ueber den Link aus der Nachricht."
+    "Account erstellt. Bitte bestätige jetzt deine E-Mail über den Link aus der Nachricht."
   );
   return res.redirect("/login");
 });
@@ -1681,7 +1681,7 @@ app.get("/verify-email", (req, res) => {
   const token = String(req.query.token || "").trim();
 
   if (!/^[a-f0-9]{64}$/i.test(token)) {
-    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig.");
+    setFlash(req, "error", "Der Bestätigungslink ist ungültig.");
     return res.redirect("/login");
   }
 
@@ -1691,7 +1691,7 @@ app.get("/verify-email", (req, res) => {
     )
     .get(token);
   if (!user) {
-    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig oder bereits verwendet.");
+    setFlash(req, "error", "Der Bestätigungslink ist ungültig oder bereits verwendet.");
     return res.redirect("/login");
   }
 
@@ -1703,7 +1703,7 @@ app.get("/verify-email", (req, res) => {
     db.prepare("UPDATE users SET email_verification_token = '' WHERE id = ?").run(user.id);
   }
 
-  setFlash(req, "success", "E-Mail bestaetigt. Du kannst dich jetzt einloggen.");
+  setFlash(req, "success", "E-Mail bestätigt. Du kannst dich jetzt einloggen.");
   return res.redirect("/login");
 });
 
@@ -1726,7 +1726,7 @@ app.post("/login", (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return renderLoginPage(req, res, {
       status: 401,
-      error: "Ungueltige Zugangsdaten.",
+      error: "Ungültige Zugangsdaten.",
       values: { username }
     });
   }
@@ -1735,7 +1735,7 @@ app.post("/login", (req, res) => {
     return renderLoginPage(req, res, {
       status: 403,
       error:
-        "Bitte bestaetige zuerst deine E-Mail-Adresse ueber den Link aus der Willkommensmail.",
+        "Bitte bestätige zuerst deine E-Mail-Adresse über den Link aus der Willkommensmail.",
       values: { username }
     });
   }
@@ -1756,7 +1756,7 @@ app.post("/forgot-username", async (req, res) => {
   if (!EMAIL_PATTERN.test(email)) {
     return renderForgotUsernamePage(req, res, {
       status: 400,
-      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      error: "Bitte gib eine gültige E-Mail-Adresse ein.",
       values: { email }
     });
   }
@@ -1777,7 +1777,7 @@ app.post("/forgot-username", async (req, res) => {
   if (EMAIL_VERIFICATION_MAIL_ENABLED) {
     try {
       await sendUsernameReminderEmail(user);
-      success = "Der Benutzername wurde angezeigt und zusaetzlich per E-Mail gesendet.";
+      success = "Der Benutzername wurde angezeigt und zusätzlich per E-Mail gesendet.";
     } catch (error) {
       console.error("Konnte Username-Erinnerung nicht senden:", error);
     }
@@ -1800,7 +1800,7 @@ app.post("/forgot-password", async (req, res) => {
   if (!EMAIL_PATTERN.test(email)) {
     return renderForgotPasswordPage(req, res, {
       status: 400,
-      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      error: "Bitte gib eine gültige E-Mail-Adresse ein.",
       values: { email }
     });
   }
@@ -1851,7 +1851,7 @@ app.get("/reset-password", (req, res) => {
   const user = getValidPasswordResetUser(token);
 
   if (!user) {
-    setFlash(req, "error", "Der Passwort-Link ist ungueltig oder abgelaufen.");
+    setFlash(req, "error", "Der Passwort-Link ist ungültig oder abgelaufen.");
     return res.redirect("/forgot-password");
   }
 
@@ -1867,7 +1867,7 @@ app.post("/reset-password", (req, res) => {
   const user = getValidPasswordResetUser(token);
 
   if (!user) {
-    setFlash(req, "error", "Der Passwort-Link ist ungueltig oder abgelaufen.");
+    setFlash(req, "error", "Der Passwort-Link ist ungültig oder abgelaufen.");
     return res.redirect("/forgot-password");
   }
 
@@ -1882,7 +1882,7 @@ app.post("/reset-password", (req, res) => {
   if (password !== passwordConfirm) {
     return renderResetPasswordPage(req, res, {
       status: 400,
-      error: "Die beiden Passwoerter stimmen nicht ueberein.",
+      error: "Die beiden Passwörter stimmen nicht überein.",
       resetToken: token
     });
   }
@@ -2148,7 +2148,7 @@ app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res)
   }
 
   io.emit("site:update:delete", { id: updateId });
-  setFlash(req, "success", "Live-Update geloescht.");
+  setFlash(req, "success", "Live-Update gelöscht.");
   return res.redirect(req.get("referer") || "/");
 });
 
@@ -2157,7 +2157,7 @@ app.post("/site-content/hero", requireAuth, requireAdmin, (req, res) => {
   const heroBody = normalizeHomeSectionBody(req.body.body);
 
   if (!heroTitle) {
-    setFlash(req, "error", "Die Startseiten-Ueberschrift darf nicht leer sein.");
+    setFlash(req, "error", "Die Startseiten-Überschrift darf nicht leer sein.");
     return res.redirect(req.get("referer") || "/");
   }
 
@@ -2182,7 +2182,7 @@ app.post("/site-content/updates-title", requireAuth, requireAdmin, (req, res) =>
   const updatesTitle = normalizeHomeSectionTitle(req.body.title);
 
   if (!updatesTitle) {
-    setFlash(req, "error", "Die Live-Updates-Ueberschrift darf nicht leer sein.");
+    setFlash(req, "error", "Die Live-Updates-Überschrift darf nicht leer sein.");
     return res.redirect(req.get("referer") || "/");
   }
 
@@ -2194,7 +2194,7 @@ app.post("/site-content/updates-title", requireAuth, requireAdmin, (req, res) =>
 
   const homeContent = getHomeContent();
   io.emit("site:home-content:update", homeContent);
-  setFlash(req, "success", "Live-Updates-Ueberschrift aktualisiert.");
+  setFlash(req, "success", "Live-Updates-Überschrift aktualisiert.");
   return res.redirect(req.get("referer") || "/");
 });
 
@@ -2307,7 +2307,7 @@ app.post("/characters", requireAuth, (req, res) => {
     return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
-      error: "Bitte ein gueltiges Festplay auswaehlen.",
+      error: "Bitte ein gültiges Festplay auswählen.",
       festplays,
       serverOptions: SERVER_OPTIONS,
       character: payload
@@ -2457,7 +2457,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     return res.status(400).render("character-form", {
       title: `Bearbeiten: ${character.name}`,
       mode: "edit",
-      error: "Bitte ein gueltiges Festplay auswaehlen.",
+      error: "Bitte ein gültiges Festplay auswählen.",
       festplays,
       serverOptions: SERVER_OPTIONS,
       character: { ...character, ...payload }
@@ -2529,7 +2529,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
 
   const roomName = normalizeRoomName(req.body.room_name);
   if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gueltigen Raumname eingeben.");
+    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(`/characters/${id}#roomlist`);
   }
 
@@ -3284,7 +3284,7 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
   }
 
   if (email && !EMAIL_PATTERN.test(email)) {
-    setFlash(req, "error", "Bitte eine gueltige E-Mail-Adresse verwenden.");
+    setFlash(req, "error", "Bitte eine gültige E-Mail-Adresse verwenden.");
     return res.redirect("/admin");
   }
 

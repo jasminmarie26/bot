@@ -29,10 +29,10 @@
 
 <% if (suspiciousUsers && suspiciousUsers.length) { %>
   <section class="panel">
-    <h2>Verdaechtige Accounts</h2>
+    <h2>Verdächtige Accounts</h2>
     <p class="muted">
-      Hier siehst du auffaellige Accounts gesammelt, damit du sie schnell pruefen oder
-      loeschen kannst.
+      Hier siehst du auffällige Accounts gesammelt, damit du sie schnell prüfen oder
+      löschen kannst.
     </p>
 
     <div class="list">
@@ -43,7 +43,7 @@
             <span>E-Mail: <%= user.email || "-" %></span>
             <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
             <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
-            <span>Gruende: <%= user.suspicion_reasons.join(", ") %></span>
+            <span>Gründe: <%= user.suspicion_reasons.join(", ") %></span>
           </div>
           <div class="dashboard-server-actions">
             <a
@@ -52,11 +52,11 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              Pruefen
+              Prüfen
             </a>
             <% if (user.id !== currentUser.id) { %>
               <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                <button class="btn btn-danger" type="submit">Loeschen</button>
+                <button class="btn btn-danger" type="submit">Löschen</button>
               </form>
             <% } %>
           </div>
@@ -71,8 +71,8 @@
     <div>
       <h2>Benutzerverwaltung</h2>
       <p class="muted">
-        Klicke auf einen Namen. Die Details oeffnen sich in einem neuen Tab, dort
-        findest du unten auch die Charaktere und Gaestebuecher.
+        Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab, dort
+        findest du unten auch die Charaktere und Gästebücher.
       </p>
     </div>
   </div>
@@ -149,7 +149,7 @@
                     <span class="admin-role-badge is-moderator">Moderator</span>
                   <% } %>
                   <% if (user.is_suspicious) { %>
-                    <span class="admin-role-badge is-suspicious">Verdaechtig</span>
+                    <span class="admin-role-badge is-suspicious">Verdächtig</span>
                   <% } %>
                 </span>
               </a>

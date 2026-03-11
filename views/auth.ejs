@@ -14,7 +14,7 @@
       : isForgotPassword
         ? "Passwort vergessen"
         : isResetPassword
-          ? "Passwort zuruecksetzen"
+          ? "Passwort zurücksetzen"
           : "Login";
 
   const formAction = isRegister
@@ -63,7 +63,7 @@
           <a class="btn btn-secondary auth-result-link" href="<%= resetUrl %>">
             Neues Passwort festlegen
           </a>
-          <p class="field-hint">Der Link ist 2 Stunden gueltig.</p>
+          <p class="field-hint">Der Link ist 2 Stunden gültig.</p>
         <% } %>
       </div>
     <% } %>
@@ -119,7 +119,7 @@
             value="<%= values.birth_date || "" %>"
           />
         </label>
-        <p class="field-hint">Dieses Datum ist nicht oeffentlich sichtbar und wird nur im Adminbereich angezeigt.</p>
+        <p class="field-hint">Dieses Datum ist nicht öffentlich sichtbar und wird nur für Admins angezeigt.</p>
       <% } %>
 
       <% if (isLogin || isRegister || isResetPassword) { %>
@@ -169,11 +169,11 @@
       <% if (isRegister) { %>
         Schon registriert? <a href="/login">Zum Login</a>
       <% } else if (isForgotUsername) { %>
-        Zurueck zum <a href="/login">Login</a> oder direkt <a href="/forgot-password">Passwort zuruecksetzen</a>
+        Zurück zum <a href="/login">Login</a> oder direkt <a href="/forgot-password">Passwort zurücksetzen</a>
       <% } else if (isForgotPassword) { %>
-        Zurueck zum <a href="/login">Login</a> oder zuerst <a href="/forgot-username">Username anfordern</a>
+        Zurück zum <a href="/login">Login</a> oder zuerst <a href="/forgot-username">Username anfordern</a>
       <% } else if (isResetPassword) { %>
-        Zurueck zum <a href="/login">Login</a>
+        Zurück zum <a href="/login">Login</a>
       <% } else { %>
         Noch keinen Account? <a href="/register">Jetzt registrieren</a>
       <% } %>

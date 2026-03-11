@@ -63,8 +63,8 @@
     const header = document.createElement("header");
     const strong = document.createElement("strong");
     strong.textContent = msg?.outgoing
-      ? `Fluestern an ${msg?.to_name || "Unbekannt"}`
-      : `Fluestern von ${msg?.from_name || "Unbekannt"}`;
+      ? `Flüstern an ${msg?.to_name || "Unbekannt"}`
+      : `Flüstern von ${msg?.from_name || "Unbekannt"}`;
     const small = document.createElement("small");
     small.textContent = msg?.created_at || "";
     header.appendChild(strong);
@@ -103,7 +103,7 @@
     if (!entry?.userId) return;
 
     whisperTargetUserIdInput.value = String(entry.userId);
-    whisperModalTitle.textContent = `Fluestern an ${entry.name}`;
+    whisperModalTitle.textContent = `Flüstern an ${entry.name}`;
     whisperModal.hidden = false;
     whisperModal.classList.add("is-open");
     whisperInput.focus();

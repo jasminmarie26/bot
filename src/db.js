@@ -131,7 +131,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS site_home_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
-    hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.',
+    hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.',
     updates_title TEXT NOT NULL DEFAULT 'Live Updates'
   );
 
@@ -264,7 +264,7 @@ if (!siteHomeSettingsColumns.includes("hero_title")) {
 
 if (!siteHomeSettingsColumns.includes("hero_body")) {
   db.exec(
-    "ALTER TABLE site_home_settings ADD COLUMN hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
+    "ALTER TABLE site_home_settings ADD COLUMN hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.'"
   );
 }
 
@@ -374,7 +374,10 @@ db.prepare(
   "UPDATE site_home_settings SET hero_title = 'Heldenhaft Reisen' WHERE hero_title IS NULL OR trim(hero_title) = ''"
 ).run();
 db.prepare(
-  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
+  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
 ).run();
 db.prepare(
   "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"

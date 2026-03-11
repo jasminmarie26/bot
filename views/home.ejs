@@ -93,8 +93,8 @@
                 class="ghost-btn icon-btn update-pen-btn"
                 type="button"
                 data-site-content-open="updates-title"
-                aria-label="Live-Updates-Ueberschrift bearbeiten"
-                title="Live-Updates-Ueberschrift bearbeiten"
+                aria-label="Live-Updates-Überschrift bearbeiten"
+                title="Live-Updates-Überschrift bearbeiten"
               >
                 &#9998;
               </button>
@@ -105,7 +105,7 @@
 
       <div id="site-updates-list" class="site-updates-list">
         <% if (!siteUpdates || !siteUpdates.length) { %>
-          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veroeffentlicht.</p>
+          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veröffentlicht.</p>
         <% } else { %>
           <% siteUpdates.forEach((item) => { %>
             <article
@@ -134,13 +134,13 @@
                         method="POST"
                         action="/updates/<%= item.id %>/delete"
                         class="inline-form"
-                        onsubmit="return confirm('Update wirklich loeschen?')"
+                        onsubmit="return confirm('Update wirklich löschen?')"
                       >
                         <button
                           class="ghost-btn icon-btn update-delete-btn"
                           type="submit"
-                          aria-label="Update loeschen"
-                          title="Update loeschen"
+                          aria-label="Update löschen"
+                          title="Update löschen"
                         >
                           X
                         </button>
@@ -163,7 +163,7 @@
     <section class="panel update-modal-card">
       <div class="updates-header">
         <h2 id="update-modal-title">Neues Live-Update</h2>
-        <button id="update-close-btn" class="ghost-btn" type="button">Schliessen</button>
+        <button id="update-close-btn" class="ghost-btn" type="button">Schließen</button>
       </div>
 
       <form id="update-form" method="POST" action="/updates" class="form update-form">
@@ -190,13 +190,13 @@
           <div class="bbcode-help-content">
             <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
             <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
-            <p><code>[right]Rechts[/right]</code> <code>[block]Einruecken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
+            <p><code>[right]Rechts[/right]</code> <code>[block]Einrücken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
             <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
           </div>
         </details>
 
         <div class="update-form-actions">
-          <button id="update-submit-btn" type="submit" class="btn">Veroeffentlichen</button>
+          <button id="update-submit-btn" type="submit" class="btn">Veröffentlichen</button>
         </div>
       </form>
     </section>
@@ -207,17 +207,17 @@
       <section class="panel update-modal-card">
         <div class="updates-header">
           <h2 id="site-content-modal-title">Bereich bearbeiten</h2>
-          <button id="site-content-close-btn" class="ghost-btn" type="button">Schliessen</button>
+          <button id="site-content-close-btn" class="ghost-btn" type="button">Schließen</button>
         </div>
 
         <form id="site-content-form" method="POST" action="/site-content/hero" class="form update-form">
           <label>
-            Ueberschrift
+            Überschrift
             <input id="site-content-title-input" name="title" maxlength="120" required />
           </label>
 
           <div id="site-content-body-wrap">
-            <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge fuer den Startseitentext">
+            <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge für den Startseitentext">
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="b">B</button>
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="i">I</button>
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="u">U</button>

@@ -113,7 +113,7 @@
     const emptyState = document.createElement("p");
     emptyState.id = "site-updates-empty";
     emptyState.className = "muted";
-    emptyState.textContent = "Noch keine Neuigkeiten veroeffentlicht.";
+    emptyState.textContent = "Noch keine Neuigkeiten veröffentlicht.";
     list.appendChild(emptyState);
   }
 
@@ -123,7 +123,7 @@
     formElement.action = `/updates/${updateId}/delete`;
     formElement.className = "inline-form";
     formElement.addEventListener("submit", (event) => {
-      if (!window.confirm("Update wirklich loeschen?")) {
+      if (!window.confirm("Update wirklich löschen?")) {
         event.preventDefault();
       }
     });
@@ -131,8 +131,8 @@
     const button = document.createElement("button");
     button.className = "ghost-btn icon-btn update-delete-btn";
     button.type = "submit";
-    button.setAttribute("aria-label", "Update loeschen");
-    button.title = "Update loeschen";
+    button.setAttribute("aria-label", "Update löschen");
+    button.title = "Update löschen";
     button.textContent = "X";
     formElement.appendChild(button);
 
@@ -243,7 +243,7 @@
       updateForm.action = "/updates";
       updateForm.dataset.mode = "create";
       updateTitle.textContent = "Neues Live-Update";
-      updateSubmitButton.textContent = "Veroeffentlichen";
+      updateSubmitButton.textContent = "Veröffentlichen";
       updateField.value = "";
     }
   }
@@ -279,7 +279,7 @@
     if (target === "updates-title") {
       siteContentForm.action = "/site-content/updates-title";
       siteContentForm.dataset.mode = "updates-title";
-      siteContentModalTitle.textContent = "Live-Updates-Ueberschrift bearbeiten";
+      siteContentModalTitle.textContent = "Live-Updates-Überschrift bearbeiten";
       siteContentTitleInput.value = homeContent.updates_title || "";
       if (siteContentBodyWrap) {
         siteContentBodyWrap.hidden = true;
