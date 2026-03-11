@@ -214,7 +214,7 @@ body.theme-sith {
     radial-gradient(640px 360px at 14% 18%, rgba(255, 66, 66, 0.2), transparent 68%),
     radial-gradient(520px 400px at 78% 14%, rgba(255, 186, 95, 0.1), transparent 66%),
     radial-gradient(720px 520px at 70% 86%, rgba(120, 0, 0, 0.24), transparent 72%),
-    url("/sith-wallpaper.svg") center center / cover no-repeat,
+    url("/sith-wallpaper-user.png") center center / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
 }
 
@@ -289,7 +289,7 @@ body.theme-sith .brand {
 }
 
 body.theme-sith .hero {
-  min-height: 320px;
+  min-height: 340px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -298,12 +298,12 @@ body.theme-sith .hero {
   background:
     linear-gradient(
       90deg,
-      rgba(9, 4, 6, 0.96) 0%,
-      rgba(16, 4, 8, 0.94) 36%,
-      rgba(14, 4, 7, 0.72) 58%,
-      rgba(8, 4, 6, 0.28) 100%
+      rgba(7, 3, 5, 0.94) 0%,
+      rgba(9, 3, 5, 0.88) 28%,
+      rgba(10, 3, 5, 0.58) 52%,
+      rgba(7, 3, 5, 0.18) 100%
     ),
-    url("/sith-wallpaper.svg") right center / 62% auto no-repeat,
+    url("/sith-wallpaper-user.png") 58% center / cover no-repeat,
     linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
   border-color: rgba(255, 78, 78, 0.28);
 }
@@ -313,22 +313,23 @@ body.theme-sith .hero::before {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 76% 38%, rgba(255, 82, 82, 0.18), transparent 18%),
-    radial-gradient(circle at 80% 50%, rgba(0, 0, 0, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 42%);
+    radial-gradient(circle at 77% 72%, rgba(255, 64, 64, 0.22), transparent 18%),
+    radial-gradient(circle at 24% 88%, rgba(255, 68, 68, 0.12), transparent 16%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.16) 50%, rgba(0, 0, 0, 0.4) 100%);
   pointer-events: none;
   z-index: 0;
 }
 
 body.theme-sith .hero::after {
   right: 10%;
-  top: 50%;
-  width: 360px;
-  height: 360px;
-  transform: translateY(-50%);
+  top: 76%;
+  width: 520px;
+  height: 220px;
+  transform: translateY(-50%) rotate(-12deg);
   background:
-    radial-gradient(circle, rgba(255, 236, 236, 0.2) 0%, rgba(255, 87, 87, 0.12) 28%, transparent 68%);
-  opacity: 0.28;
+    radial-gradient(circle, rgba(255, 236, 236, 0.26) 0%, rgba(255, 64, 64, 0.18) 30%, transparent 72%);
+  filter: blur(30px);
+  opacity: 0.42;
 }
 
 body.theme-sith .hero h1,
@@ -336,7 +337,7 @@ body.theme-sith .hero-copy,
 body.theme-sith .hero-actions {
   position: relative;
   z-index: 1;
-  width: min(52%, 760px);
+  width: min(38%, 560px);
   margin-left: 0;
   text-align: left;
 }
@@ -2655,22 +2656,22 @@ select:focus {
   }
 
   body.theme-sith .hero {
-    min-height: 300px;
+    min-height: 320px;
     background:
       linear-gradient(
         180deg,
-        rgba(9, 4, 6, 0.94) 0%,
-        rgba(12, 4, 7, 0.76) 42%,
-        rgba(8, 4, 6, 0.3) 100%
+        rgba(7, 3, 5, 0.88) 0%,
+        rgba(10, 3, 5, 0.66) 42%,
+        rgba(7, 3, 5, 0.26) 100%
       ),
-      url("/sith-wallpaper.svg") 86% center / 84% auto no-repeat,
+      url("/sith-wallpaper-user.png") 62% center / cover no-repeat,
       linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
   }
 
   body.theme-sith .hero h1,
   body.theme-sith .hero-copy,
   body.theme-sith .hero-actions {
-    width: min(60%, 680px);
+    width: min(46%, 520px);
   }
 }
 
@@ -2759,11 +2760,11 @@ select:focus {
     background:
       linear-gradient(
         180deg,
-        rgba(9, 4, 6, 0.84) 0%,
-        rgba(12, 4, 7, 0.68) 44%,
-        rgba(8, 4, 6, 0.24) 100%
+        rgba(7, 3, 5, 0.82) 0%,
+        rgba(10, 3, 5, 0.62) 42%,
+        rgba(7, 3, 5, 0.26) 100%
       ),
-      url("/sith-wallpaper.svg") 88% top / 128% auto no-repeat,
+      url("/sith-wallpaper-user.png") 64% center / cover no-repeat,
       linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
   }
 
@@ -2779,11 +2780,11 @@ select:focus {
   }
 
   body.theme-sith .hero::after {
-    right: -30px;
-    top: -20px;
-    width: 220px;
-    height: 220px;
-    transform: none;
-    opacity: 0.2;
+    right: 8%;
+    top: 62%;
+    width: 180px;
+    height: 110px;
+    transform: translateY(-50%) rotate(-7deg);
+    opacity: 0.24;
   }
 }
