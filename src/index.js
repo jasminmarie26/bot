@@ -100,6 +100,7 @@ const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
 const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
 const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
 const PASSWORD_RESET_TOKEN_LIFETIME_HOURS = 2;
+const STATIC_ASSET_VERSION = Date.now().toString(36);
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "10minutemail.com",
   "10minutemail.net",
@@ -1470,6 +1471,7 @@ app.use((req, res, next) => {
     req.session.guest_theme ||
     DEFAULT_THEME;
   res.locals.flash = req.session.flash || null;
+  res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   delete req.session.flash;
   next();
 });
