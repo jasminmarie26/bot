@@ -210,73 +210,60 @@ body.theme-sith {
   --error-edge: rgba(255, 120, 148, 0.36);
   --glass-blur: 12px;
   background:
-    radial-gradient(560px 340px at 18% 14%, rgba(255, 66, 66, 0.2), transparent 68%),
-    radial-gradient(540px 420px at 82% 16%, rgba(255, 186, 95, 0.08), transparent 66%),
-    radial-gradient(720px 520px at 70% 88%, rgba(120, 0, 0, 0.24), transparent 72%),
+    linear-gradient(180deg, rgba(4, 4, 7, 0.16), rgba(4, 4, 7, 0.56)),
+    radial-gradient(640px 360px at 14% 18%, rgba(255, 66, 66, 0.2), transparent 68%),
+    radial-gradient(520px 400px at 78% 14%, rgba(255, 186, 95, 0.1), transparent 66%),
+    radial-gradient(720px 520px at 70% 86%, rgba(120, 0, 0, 0.24), transparent 72%),
+    url("/sith-wallpaper.svg") center center / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
 }
 
 body.theme-sith::before {
-  inset: -12% -10%;
-  opacity: 0.72;
+  inset: 0;
+  opacity: 0.52;
   background:
-    radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.08), transparent 16%),
+    radial-gradient(circle at 72% 18%, rgba(255, 230, 220, 0.14), transparent 18%),
+    radial-gradient(circle at 62% 48%, rgba(255, 52, 52, 0.1), transparent 24%),
+    radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.72), transparent 46%),
     linear-gradient(
-      126deg,
-      transparent 0 34%,
-      rgba(255, 47, 47, 0.06) 38%,
-      rgba(255, 103, 103, 0.86) 40.4%,
-      rgba(255, 214, 214, 0.95) 41.2%,
-      rgba(255, 103, 103, 0.86) 42%,
-      rgba(255, 47, 47, 0.06) 44.5%,
-      transparent 48%
+      180deg,
+      rgba(0, 0, 0, 0.04) 0%,
+      rgba(0, 0, 0, 0.16) 34%,
+      rgba(0, 0, 0, 0.34) 68%,
+      rgba(0, 0, 0, 0.58) 100%
     ),
     linear-gradient(
-      130deg,
-      transparent 0 28.6%,
-      rgba(255, 255, 255, 0.18) 29.1%,
-      rgba(46, 46, 52, 0.98) 30%,
-      rgba(10, 10, 12, 0.98) 31.7%,
-      rgba(255, 255, 255, 0.14) 32.3%,
-      transparent 33.2%
+      112deg,
+      transparent 0 62%,
+      rgba(255, 96, 96, 0.03) 68%,
+      rgba(255, 124, 124, 0.18) 71%,
+      rgba(255, 229, 229, 0.24) 72.1%,
+      rgba(255, 124, 124, 0.18) 73.2%,
+      rgba(255, 96, 96, 0.03) 76%,
+      transparent 82%
     ),
     repeating-linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.028) 0 2px,
-      transparent 2px 18px
+      rgba(255, 255, 255, 0.018) 0 2px,
+      transparent 2px 22px
     );
   mix-blend-mode: screen;
-  animation-duration: 24s;
+  animation-duration: 30s;
 }
 
 body.theme-sith::after {
-  right: -120px;
-  top: auto;
-  bottom: -110px;
-  width: 760px;
-  height: 520px;
-  border-radius: 40px 40px 0 0;
+  right: 8%;
+  top: 16%;
+  bottom: auto;
+  width: 540px;
+  height: 720px;
+  border-radius: 50%;
   background:
-    linear-gradient(
-      36deg,
-      transparent 0 53%,
-      rgba(255, 40, 40, 0.04) 56%,
-      rgba(255, 102, 102, 0.6) 58.8%,
-      rgba(255, 219, 219, 0.82) 59.6%,
-      rgba(255, 102, 102, 0.6) 60.4%,
-      rgba(255, 40, 40, 0.04) 63%,
-      transparent 66%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 12%,
-      rgba(0, 0, 0, 0.78) 52%,
-      rgba(0, 0, 0, 0.96) 100%
-    );
-  clip-path: polygon(18% 100%, 34% 44%, 50% 18%, 66% 44%, 82% 100%);
-  filter: blur(2px);
-  opacity: 0.42;
+    radial-gradient(circle at 42% 34%, rgba(255, 226, 226, 0.16), transparent 16%),
+    radial-gradient(circle at 48% 48%, rgba(255, 48, 48, 0.2), transparent 28%),
+    radial-gradient(circle at 50% 68%, rgba(0, 0, 0, 0.74), transparent 58%);
+  filter: blur(26px);
+  opacity: 0.54;
 }
 
 body.theme-sith .topbar,
