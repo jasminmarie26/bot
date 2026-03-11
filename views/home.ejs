@@ -39,11 +39,25 @@
   </aside>
 
   <div class="home-main">
-    <section class="hero">
+    <section class="hero <%= currentUser && (currentUser.is_admin || currentUser.is_moderator) ? "has-update-actions" : "" %>">
+      <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+        <div class="hero-update-actions">
+          <button
+            class="ghost-btn icon-btn update-pen-btn"
+            type="button"
+            data-update-open
+            aria-label="Neues Live-Update"
+            title="Neues Live-Update"
+          >
+            &#9998;
+          </button>
+        </div>
+      <% } %>
+
       <h1>Heldenhaft Reisen</h1>
       <p>
         Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich.
-        Admins und Moderatoren können sie direkt über den Stift veröffentlichen.
+        Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.
       </p>
       <div class="hero-actions">
         <% if (currentUser) { %>
@@ -59,21 +73,66 @@
       <div class="updates-header">
         <h2>Live Updates</h2>
         <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
-          <button id="update-open-btn" class="ghost-btn update-pen-btn" type="button">&#9998; Schreiben</button>
+          <button
+            id="update-open-btn"
+            class="ghost-btn icon-btn update-pen-btn"
+            type="button"
+            data-update-open
+            aria-label="Neues Live-Update"
+            title="Neues Live-Update"
+          >
+            &#9998;
+          </button>
         <% } %>
       </div>
 
       <div id="site-updates-list" class="site-updates-list">
         <% if (!siteUpdates || !siteUpdates.length) { %>
-          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veröffentlicht.</p>
+          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veroeffentlicht.</p>
         <% } else { %>
           <% siteUpdates.forEach((item) => { %>
-            <article class="update-item" data-update-id="<%= item.id %>">
+            <article
+              class="update-item"
+              data-update-id="<%= item.id %>"
+              data-update-author-name="<%= item.author_name %>"
+              data-update-content="<%= item.content %>"
+              data-update-created-at="<%= item.created_at %>"
+            >
               <header class="update-meta">
                 <strong><%= item.author_name %></strong>
-                <small><%= item.created_at %></small>
+                <div class="update-meta-right">
+                  <small><%= item.created_at %></small>
+                  <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+                    <div class="update-item-actions">
+                      <button
+                        class="ghost-btn icon-btn update-edit-btn"
+                        type="button"
+                        data-update-edit
+                        aria-label="Update bearbeiten"
+                        title="Update bearbeiten"
+                      >
+                        &#9998;
+                      </button>
+                      <form
+                        method="POST"
+                        action="/updates/<%= item.id %>/delete"
+                        class="inline-form"
+                        onsubmit="return confirm('Update wirklich loeschen?')"
+                      >
+                        <button
+                          class="ghost-btn icon-btn update-delete-btn"
+                          type="submit"
+                          aria-label="Update loeschen"
+                          title="Update loeschen"
+                        >
+                          X
+                        </button>
+                      </form>
+                    </div>
+                  <% } %>
+                </div>
               </header>
-              <p class="pre-line"><%= item.content %></p>
+              <div class="update-body guestbook-entry-body"><%- item.content_html %></div>
             </article>
           <% }) %>
         <% } %>
@@ -86,16 +145,42 @@
   <div id="update-modal" class="update-modal" hidden>
     <section class="panel update-modal-card">
       <div class="updates-header">
-        <h2>Neues Live-Update</h2>
-        <button id="update-close-btn" class="ghost-btn" type="button">Schließen</button>
+        <h2 id="update-modal-title">Neues Live-Update</h2>
+        <button id="update-close-btn" class="ghost-btn" type="button">Schliessen</button>
       </div>
 
-      <form method="POST" action="/updates" class="form">
+      <form id="update-form" method="POST" action="/updates" class="form update-form">
+        <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge">
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="b">B</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="i">I</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="u">U</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="h2">H2</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="left">Links</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="center">Mitte</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="right">Rechts</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="block">Einr.</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="quote">Zitat</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-link>Link</button>
+        </div>
+
         <label>
-          Neuigkeit
+          Neuigkeit (BBCode)
           <textarea name="content" rows="6" maxlength="1200" required></textarea>
         </label>
-        <button type="submit" class="btn">Veröffentlichen</button>
+
+        <details class="bbcode-help">
+          <summary>BBCode Hilfe</summary>
+          <div class="bbcode-help-content">
+            <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
+            <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
+            <p><code>[right]Rechts[/right]</code> <code>[block]Einruecken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
+            <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
+          </div>
+        </details>
+
+        <div class="update-form-actions">
+          <button id="update-submit-btn" type="submit" class="btn">Veroeffentlichen</button>
+        </div>
       </form>
     </section>
   </div>

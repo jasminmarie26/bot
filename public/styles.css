@@ -368,8 +368,29 @@ a:hover {
   margin: 0;
 }
 
+.hero-update-actions {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.45rem;
+  z-index: 1;
+}
+
+.icon-btn {
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .update-pen-btn {
-  padding-inline: 0.66rem;
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
+  color: var(--link);
 }
 
 .site-updates-list {
@@ -387,8 +408,9 @@ a:hover {
   padding: 0.62rem 0.7rem;
 }
 
-.update-item p {
-  margin: 0.32rem 0 0;
+.update-body {
+  margin-top: 0.32rem;
+  max-width: none;
 }
 
 .update-meta {
@@ -396,6 +418,51 @@ a:hover {
   justify-content: space-between;
   gap: 0.7rem;
   align-items: baseline;
+}
+
+.update-meta-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.update-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.update-edit-btn {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--field-edge));
+}
+
+.update-delete-btn {
+  border-color: color-mix(in srgb, var(--danger) 66%, transparent);
+  color: color-mix(in srgb, var(--danger-text) 88%, var(--danger) 12%);
+}
+
+.update-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.update-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.update-tool-btn {
+  min-width: 3rem;
+  padding-inline: 0.7rem;
+  font-weight: 700;
+}
+
+.update-form-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .update-modal {
@@ -416,6 +483,8 @@ a:hover {
 
 .update-modal-card {
   width: min(640px, 96vw);
+  max-height: min(92vh, 820px);
+  overflow: auto;
 }
 
 .account-delete-modal {
@@ -488,6 +557,10 @@ a:hover {
   flex-wrap: wrap;
   margin-top: 1rem;
   justify-content: center;
+}
+
+.hero.has-update-actions p {
+  padding-right: 3.4rem;
 }
 
 .grid {
@@ -1452,6 +1525,10 @@ a:hover {
   margin-top: 0.15rem;
 }
 
+.bb-left {
+  text-align: left;
+}
+
 .bb-center {
   text-align: center;
 }
@@ -2237,11 +2314,32 @@ select:focus {
   .chat-online-list {
     max-height: 180px;
   }
+
+  .hero.has-update-actions p {
+    padding-right: 0;
+  }
 }
 
 @media (max-width: 640px) {
   .home-stats {
     grid-template-columns: 1fr;
+  }
+
+  .hero-update-actions {
+    position: static;
+    margin-bottom: 0.8rem;
+    justify-content: center;
+  }
+
+  .updates-header,
+  .update-meta,
+  .update-meta-right {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .update-item-actions {
+    justify-content: flex-start;
   }
 
   .admin-letter-heading,

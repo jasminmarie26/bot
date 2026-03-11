@@ -911,6 +911,7 @@ function renderGuestbookBbcode(rawContent) {
   html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, "<h2>$1</h2>");
   html = html.replace(/\[h3\]([\s\S]*?)\[\/h3\]/gi, "<h3>$1</h3>");
 
+  html = html.replace(/\[left\]([\s\S]*?)\[\/left\]/gi, "<div class=\"bb-left\">$1</div>");
   html = html.replace(/\[center\]([\s\S]*?)\[\/center\]/gi, "<div class=\"bb-center\">$1</div>");
   html = html.replace(/\[right\]([\s\S]*?)\[\/right\]/gi, "<div class=\"bb-right\">$1</div>");
   html = html.replace(/\[block\]([\s\S]*?)\[\/block\]/gi, "<div class=\"bb-block\">$1</div>");
@@ -1137,6 +1138,33 @@ function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin
   return Number(userId) === Number(characterOwnerId) || Number(isCharacterPublic) === 1;
 }
 
+function normalizeSiteUpdateContent(rawContent) {
+  return String(rawContent || "").trim().slice(0, 1200);
+}
+
+function decorateSiteUpdate(siteUpdate) {
+  if (!siteUpdate) {
+    return null;
+  }
+
+  return {
+    ...siteUpdate,
+    content_html: renderGuestbookBbcode(siteUpdate.content || "")
+  };
+}
+
+function getSiteUpdateById(updateId) {
+  const siteUpdate = db
+    .prepare(
+      `SELECT id, author_name, content, created_at
+       FROM site_updates
+       WHERE id = ?`
+    )
+    .get(updateId);
+
+  return decorateSiteUpdate(siteUpdate);
+}
+
 function getRecentSiteUpdates(limit = 10) {
   return db
     .prepare(
@@ -1145,7 +1173,8 @@ function getRecentSiteUpdates(limit = 10) {
        ORDER BY id DESC
        LIMIT ?`
     )
-    .all(limit);
+    .all(limit)
+    .map((siteUpdate) => decorateSiteUpdate(siteUpdate));
 }
 
 function getUsersTableColumnSet() {
@@ -1668,7 +1697,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
 });
 
 app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
-  const content = (req.body.content || "").trim().slice(0, 1200);
+  const content = normalizeSiteUpdateContent(req.body.content);
   if (!content) {
     setFlash(req, "error", "Update darf nicht leer sein.");
     return res.redirect(req.get("referer") || "/");
@@ -1681,16 +1710,54 @@ app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
     )
     .run(req.session.user.id, req.session.user.username, content);
 
-  const saved = db
-    .prepare(
-      `SELECT id, author_name, content, created_at
-       FROM site_updates
-       WHERE id = ?`
-    )
-    .get(info.lastInsertRowid);
+  const saved = getSiteUpdateById(info.lastInsertRowid);
 
-  io.emit("site:update", saved);
+  io.emit("site:update:create", saved);
   setFlash(req, "success", "Live-Update veröffentlicht.");
+  return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/updates/:id/edit", requireAuth, requireSiteUpdateEditor, (req, res) => {
+  const updateId = Number.parseInt(req.params.id, 10);
+  if (!Number.isInteger(updateId) || updateId <= 0) {
+    setFlash(req, "error", "Update wurde nicht gefunden.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  if (!getSiteUpdateById(updateId)) {
+    setFlash(req, "error", "Update wurde nicht gefunden.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  const content = normalizeSiteUpdateContent(req.body.content);
+  if (!content) {
+    setFlash(req, "error", "Update darf nicht leer sein.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  db.prepare("UPDATE site_updates SET content = ? WHERE id = ?").run(content, updateId);
+
+  const saved = getSiteUpdateById(updateId);
+  io.emit("site:update:update", saved);
+  setFlash(req, "success", "Live-Update aktualisiert.");
+  return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res) => {
+  const updateId = Number.parseInt(req.params.id, 10);
+  if (!Number.isInteger(updateId) || updateId <= 0) {
+    setFlash(req, "error", "Update wurde nicht gefunden.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  const deleteInfo = db.prepare("DELETE FROM site_updates WHERE id = ?").run(updateId);
+  if (deleteInfo.changes < 1) {
+    setFlash(req, "error", "Update wurde nicht gefunden.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  io.emit("site:update:delete", { id: updateId });
+  setFlash(req, "success", "Live-Update geloescht.");
   return res.redirect(req.get("referer") || "/");
 });
 
