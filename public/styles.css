@@ -215,7 +215,7 @@ body.theme-sith {
     radial-gradient(680px 440px at 78% 12%, rgba(255, 236, 236, 0.1), transparent 62%),
     radial-gradient(840px 560px at 54% 102%, rgba(255, 212, 212, 0.06), transparent 68%),
     linear-gradient(180deg, transparent 56%, rgba(13, 6, 9, 0.18) 76%, rgba(7, 3, 5, 0.48) 100%),
-    url("/sith-wallpaper-user.png") center 18% / cover no-repeat,
+    url("/sith-wallpaper-user.png") center 8% / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
   background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed;
 }
@@ -229,6 +229,7 @@ body.theme-sith::before {
     radial-gradient(circle at 58% 50%, rgba(255, 90, 90, 0.05), transparent 26%),
     radial-gradient(540px 240px at 8% 100%, rgba(18, 8, 10, 0.7), transparent 74%),
     radial-gradient(620px 260px at 86% 100%, rgba(18, 8, 10, 0.56), transparent 76%),
+    radial-gradient(980px 320px at 50% 104%, rgba(20, 9, 13, 0.42), transparent 72%),
     radial-gradient(circle at 50% 118%, rgba(34, 10, 14, 0.3), transparent 48%),
     linear-gradient(
       180deg,
@@ -237,20 +238,10 @@ body.theme-sith::before {
       rgba(16, 8, 12, 0.28) 68%,
       rgba(10, 5, 8, 0.48) 100%
     ),
-    linear-gradient(
-      112deg,
-      transparent 0 62%,
-      rgba(255, 96, 96, 0.02) 68%,
-      rgba(255, 124, 124, 0.08) 71%,
-      rgba(255, 229, 229, 0.12) 72.1%,
-      rgba(255, 124, 124, 0.08) 73.2%,
-      rgba(255, 96, 96, 0.02) 76%,
-      transparent 82%
-    ),
     repeating-linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.018) 0 2px,
-      transparent 2px 22px
+      rgba(255, 255, 255, 0.012) 0 2px,
+      transparent 2px 26px
     );
   mix-blend-mode: normal;
   backdrop-filter: blur(12px) saturate(72%) brightness(0.76);
