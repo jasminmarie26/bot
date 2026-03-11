@@ -1801,7 +1801,7 @@ app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res)
   return res.redirect(req.get("referer") || "/");
 });
 
-app.post("/site-content/hero", requireAuth, requireSiteUpdateEditor, (req, res) => {
+app.post("/site-content/hero", requireAuth, requireAdmin, (req, res) => {
   const heroTitle = normalizeHomeSectionTitle(req.body.title);
   const heroBody = normalizeHomeSectionBody(req.body.body);
 
@@ -1827,7 +1827,7 @@ app.post("/site-content/hero", requireAuth, requireSiteUpdateEditor, (req, res) 
   return res.redirect(req.get("referer") || "/");
 });
 
-app.post("/site-content/updates-title", requireAuth, requireSiteUpdateEditor, (req, res) => {
+app.post("/site-content/updates-title", requireAuth, requireAdmin, (req, res) => {
   const updatesTitle = normalizeHomeSectionTitle(req.body.title);
 
   if (!updatesTitle) {

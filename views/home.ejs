@@ -41,12 +41,12 @@
   <div class="home-main">
     <section
       id="home-hero"
-      class="hero <%= currentUser && (currentUser.is_admin || currentUser.is_moderator) ? "has-update-actions" : "" %>"
+      class="hero <%= currentUser && currentUser.is_admin ? "has-update-actions" : "" %>"
     >
       <input id="home-hero-title-source" type="hidden" value="<%= homeContent.hero_title %>" />
       <textarea id="home-hero-body-source" hidden><%= homeContent.hero_body %></textarea>
 
-      <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+      <% if (currentUser && currentUser.is_admin) { %>
         <div class="hero-update-actions">
           <button
             class="ghost-btn icon-btn update-pen-btn"
@@ -88,15 +88,17 @@
             >
               +
             </button>
-            <button
-              class="ghost-btn icon-btn update-pen-btn"
-              type="button"
-              data-site-content-open="updates-title"
-              aria-label="Live-Updates-Ueberschrift bearbeiten"
-              title="Live-Updates-Ueberschrift bearbeiten"
-            >
-              &#9998;
-            </button>
+            <% if (currentUser.is_admin) { %>
+              <button
+                class="ghost-btn icon-btn update-pen-btn"
+                type="button"
+                data-site-content-open="updates-title"
+                aria-label="Live-Updates-Ueberschrift bearbeiten"
+                title="Live-Updates-Ueberschrift bearbeiten"
+              >
+                &#9998;
+              </button>
+            <% } %>
           </div>
         <% } %>
       </div>
@@ -200,54 +202,56 @@
     </section>
   </div>
 
-  <div id="site-content-modal" class="update-modal" hidden>
-    <section class="panel update-modal-card">
-      <div class="updates-header">
-        <h2 id="site-content-modal-title">Bereich bearbeiten</h2>
-        <button id="site-content-close-btn" class="ghost-btn" type="button">Schliessen</button>
-      </div>
+  <% if (currentUser.is_admin) { %>
+    <div id="site-content-modal" class="update-modal" hidden>
+      <section class="panel update-modal-card">
+        <div class="updates-header">
+          <h2 id="site-content-modal-title">Bereich bearbeiten</h2>
+          <button id="site-content-close-btn" class="ghost-btn" type="button">Schliessen</button>
+        </div>
 
-      <form id="site-content-form" method="POST" action="/site-content/hero" class="form update-form">
-        <label>
-          Ueberschrift
-          <input id="site-content-title-input" name="title" maxlength="120" required />
-        </label>
-
-        <div id="site-content-body-wrap">
-          <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge fuer den Startseitentext">
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="b">B</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="i">I</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="u">U</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="h2">H2</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="left">Links</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="center">Mitte</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="right">Rechts</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="quote">Zitat</button>
-            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-link>Link</button>
-          </div>
-
+        <form id="site-content-form" method="POST" action="/site-content/hero" class="form update-form">
           <label>
-            Inhalt (BBCode)
-            <textarea id="site-content-body-input" name="body" rows="6" maxlength="2000"></textarea>
+            Ueberschrift
+            <input id="site-content-title-input" name="title" maxlength="120" required />
           </label>
 
-          <details class="bbcode-help">
-            <summary>BBCode Hilfe</summary>
-            <div class="bbcode-help-content">
-              <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
-              <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
-              <p><code>[right]Rechts[/right]</code> <code>[quote]Zitat[/quote]</code></p>
-              <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
+          <div id="site-content-body-wrap">
+            <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge fuer den Startseitentext">
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="b">B</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="i">I</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="u">U</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="h2">H2</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="left">Links</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="center">Mitte</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="right">Rechts</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="quote">Zitat</button>
+              <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-link>Link</button>
             </div>
-          </details>
-        </div>
 
-        <div class="update-form-actions">
-          <button id="site-content-submit-btn" type="submit" class="btn">Speichern</button>
-        </div>
-      </form>
-    </section>
-  </div>
+            <label>
+              Inhalt (BBCode)
+              <textarea id="site-content-body-input" name="body" rows="6" maxlength="2000"></textarea>
+            </label>
+
+            <details class="bbcode-help">
+              <summary>BBCode Hilfe</summary>
+              <div class="bbcode-help-content">
+                <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
+                <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
+                <p><code>[right]Rechts[/right]</code> <code>[quote]Zitat[/quote]</code></p>
+                <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
+              </div>
+            </details>
+          </div>
+
+          <div class="update-form-actions">
+            <button id="site-content-submit-btn" type="submit" class="btn">Speichern</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  <% } %>
 <% } %>
 
 <script src="/updates.js"></script>
