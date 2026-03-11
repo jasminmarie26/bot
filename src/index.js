@@ -410,6 +410,9 @@ function renderAuthPage(req, res, options = {}) {
     title: options.title || pageTitles[mode] || "Login",
     mode,
     error: options.error || null,
+    success: options.success || null,
+    recoveredUsername: options.recoveredUsername || "",
+    resetUrl: options.resetUrl || "",
     values,
     registrationGuardToken: "",
     resetToken: options.resetToken || ""
@@ -582,8 +585,8 @@ async function sendVerificationEmail(req, payload) {
   const text = [
     `Hallo ${payload.username},`,
     "",
-    "danke für deine Registrierung bei Heldenhaft Reisen.",
-    "Bitte bestätige deine E-Mail-Adresse über diesen Link:",
+    "danke fuer deine Registrierung bei Heldenhafte Reisen.",
+    "Bitte bestaetige deine E-Mail-Adresse ueber diesen Link:",
     verifyUrl,
     "",
     "Danach kannst du dich ganz normal einloggen."
@@ -592,7 +595,7 @@ async function sendVerificationEmail(req, payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: payload.email,
-    subject: "Bitte bestätige deine E-Mail bei Heldenhaft Reisen",
+    subject: "Bitte bestaetige deine E-Mail bei Heldenhafte Reisen",
     text
   });
 }
@@ -608,7 +611,7 @@ async function sendAccountDeletionEmail(payload) {
   const text = [
     `Hallo ${username},`,
     "",
-    "dein Account bei Heldenhaft Reisen wurde soeben gelöscht.",
+    "dein Account bei Heldenhafte Reisen wurde soeben geloescht.",
     "Falls du das nicht selbst warst, kontaktiere bitte umgehend den Support.",
     "",
     "Hinweis: Diese E-Mail wurde automatisch versendet."
@@ -617,7 +620,7 @@ async function sendAccountDeletionEmail(payload) {
   await transporter.sendMail({
     from: MAIL_FROM,
     to: email,
-    subject: "Bestätigung: Dein Account wurde gelöscht",
+    subject: "Bestaetigung: Dein Account wurde geloescht",
     text
   });
 
@@ -653,6 +656,16 @@ async function sendUsernameReminderEmail(payload) {
   });
 }
 
+function getPasswordResetPath(resetToken) {
+  return `/reset-password?token=${encodeURIComponent(String(resetToken || "").trim())}`;
+}
+
+function getPasswordResetUrl(req, resetToken) {
+  const resetPath = getPasswordResetPath(resetToken);
+  const baseUrl = getPublicBaseUrl(req);
+  return baseUrl ? `${baseUrl}${resetPath}` : resetPath;
+}
+
 async function sendPasswordResetEmail(req, payload) {
   const transporter = getVerificationMailer();
   if (!transporter) {
@@ -665,12 +678,10 @@ async function sendPasswordResetEmail(req, payload) {
     throw new Error("Password reset payload incomplete");
   }
 
-  const baseUrl = getPublicBaseUrl(req);
-  if (!baseUrl) {
+  const resetUrl = getPasswordResetUrl(req, payload.resetToken);
+  if (!/^https?:\/\//i.test(resetUrl)) {
     throw new Error("Public base URL missing");
   }
-
-  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(payload.resetToken)}`;
   const text = [
     `Hallo ${username},`,
     "",
@@ -1493,9 +1504,12 @@ app.get("/register", (req, res) => {
 app.post("/register", async (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
+  const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const birthDate = normalizeBirthDate(rawBirthDate);
   const password = req.body.password || "";
   const submittedToken = String(req.body.form_token || "").trim();
   const honeypotValue = String(req.body.website || "").trim();
+  const values = { username, email, birth_date: rawBirthDate };
   const blockReason = getRegistrationBlockReason(req, {
     username,
     email,
@@ -1513,8 +1527,8 @@ app.post("/register", async (req, res) => {
     });
     return renderRegisterPage(req, res, {
       status: 429,
-      error: "Registrierung im Moment nicht möglich. Bitte versuche es in ein paar Minuten erneut.",
-      values: { username, email }
+      error: "Registrierung im Moment nicht moeglich. Bitte versuche es in ein paar Minuten erneut.",
+      values
     });
   }
 
@@ -1522,15 +1536,23 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 400,
       error: "Username nur mit Buchstaben, Zahlen, Leerzeichen und . _ + - (3-24 Zeichen).",
-      values: { username, email }
+      values
     });
   }
 
   if (!EMAIL_PATTERN.test(email)) {
     return renderRegisterPage(req, res, {
       status: 400,
-      error: "Bitte gib eine gültige E-Mail-Adresse ein.",
-      values: { username, email }
+      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      values
+    });
+  }
+
+  if (!birthDate) {
+    return renderRegisterPage(req, res, {
+      status: 400,
+      error: "Bitte gib ein gueltiges Geburtsdatum ein.",
+      values
     });
   }
 
@@ -1544,8 +1566,8 @@ app.post("/register", async (req, res) => {
     });
     return renderRegisterPage(req, res, {
       status: 400,
-      error: "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.",
-      values: { username, email }
+      error: "Wegwerf-E-Mail-Adressen sind fuer die Registrierung nicht erlaubt.",
+      values
     });
   }
 
@@ -1553,7 +1575,7 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 400,
       error: "Passwort muss mindestens 6 Zeichen lang sein.",
-      values: { username, email }
+      values
     });
   }
 
@@ -1564,7 +1586,7 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 400,
       error: "Dieser Username ist bereits vergeben.",
-      values: { username, email }
+      values
     });
   }
 
@@ -1573,7 +1595,7 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 400,
       error: "Diese E-Mail-Adresse wird bereits verwendet.",
-      values: { username, email }
+      values
     });
   }
 
@@ -1581,8 +1603,8 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 503,
       error:
-        "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
-      values: { username, email }
+        "Registrierung ist derzeit nicht verfuegbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
+      values
     });
   }
 
@@ -1606,8 +1628,8 @@ app.post("/register", async (req, res) => {
     const info = db
       .prepare(
         `INSERT INTO users
-         (username, password_hash, is_admin, theme, email, email_verified, email_verification_token, last_login_ip, last_login_at)
-         VALUES (?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)`
+         (username, password_hash, is_admin, theme, email, birth_date, email_verified, email_verification_token, last_login_ip, last_login_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)`
       )
       .run(
         username,
@@ -1615,6 +1637,7 @@ app.post("/register", async (req, res) => {
         isAdmin,
         DEFAULT_THEME,
         email,
+        birthDate,
         verificationToken,
         getRequestIp(req)
       );
@@ -1633,8 +1656,8 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 500,
       error:
-        "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
-      values: { username, email }
+        "Die Bestaetigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es in ein paar Minuten erneut.",
+      values
     });
   }
 
@@ -1649,7 +1672,7 @@ app.post("/register", async (req, res) => {
   setFlash(
     req,
     "success",
-    "Account erstellt. Bitte bestätige jetzt deine E-Mail über den Link aus der Nachricht."
+    "Account erstellt. Bitte bestaetige jetzt deine E-Mail ueber den Link aus der Nachricht."
   );
   return res.redirect("/login");
 });
@@ -1658,7 +1681,7 @@ app.get("/verify-email", (req, res) => {
   const token = String(req.query.token || "").trim();
 
   if (!/^[a-f0-9]{64}$/i.test(token)) {
-    setFlash(req, "error", "Der Bestätigungslink ist ungültig.");
+    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig.");
     return res.redirect("/login");
   }
 
@@ -1668,7 +1691,7 @@ app.get("/verify-email", (req, res) => {
     )
     .get(token);
   if (!user) {
-    setFlash(req, "error", "Der Bestätigungslink ist ungültig oder bereits verwendet.");
+    setFlash(req, "error", "Der Bestaetigungslink ist ungueltig oder bereits verwendet.");
     return res.redirect("/login");
   }
 
@@ -1680,17 +1703,12 @@ app.get("/verify-email", (req, res) => {
     db.prepare("UPDATE users SET email_verification_token = '' WHERE id = ?").run(user.id);
   }
 
-  setFlash(req, "success", "E-Mail bestätigt. Du kannst dich jetzt einloggen.");
+  setFlash(req, "success", "E-Mail bestaetigt. Du kannst dich jetzt einloggen.");
   return res.redirect("/login");
 });
 
 app.get("/login", (req, res) => {
-  res.render("auth", {
-    title: "Login",
-    mode: "login",
-    error: null,
-    values: { username: "" }
-  });
+  return renderLoginPage(req, res);
 });
 
 app.post("/login", (req, res) => {
@@ -1706,20 +1724,18 @@ app.post("/login", (req, res) => {
     .get(username);
 
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).render("auth", {
-      title: "Login",
-      mode: "login",
-      error: "Ungültige Zugangsdaten.",
+    return renderLoginPage(req, res, {
+      status: 401,
+      error: "Ungueltige Zugangsdaten.",
       values: { username }
     });
   }
 
   if (user.email_verified !== 1) {
-    return res.status(403).render("auth", {
-      title: "Login",
-      mode: "login",
+    return renderLoginPage(req, res, {
+      status: 403,
       error:
-        "Bitte bestätige zuerst deine E-Mail-Adresse über den Link aus der Willkommensmail.",
+        "Bitte bestaetige zuerst deine E-Mail-Adresse ueber den Link aus der Willkommensmail.",
       values: { username }
     });
   }
@@ -1728,6 +1744,158 @@ app.post("/login", (req, res) => {
   req.session.user = toSessionUser(user);
   setFlash(req, "success", "Erfolgreich eingeloggt.");
   return res.redirect("/dashboard");
+});
+
+app.get("/forgot-username", (req, res) => {
+  return renderForgotUsernamePage(req, res);
+});
+
+app.post("/forgot-username", async (req, res) => {
+  const email = normalizeEmail(req.body.email || "");
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return renderForgotUsernamePage(req, res, {
+      status: 400,
+      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      values: { email }
+    });
+  }
+
+  const user = db
+    .prepare("SELECT username, email FROM users WHERE email = ?")
+    .get(email);
+
+  if (!user) {
+    return renderForgotUsernamePage(req, res, {
+      status: 404,
+      error: "Zu dieser E-Mail-Adresse wurde kein Benutzer gefunden.",
+      values: { email }
+    });
+  }
+
+  let success = "Der Benutzername zu dieser E-Mail-Adresse wurde gefunden.";
+  if (EMAIL_VERIFICATION_MAIL_ENABLED) {
+    try {
+      await sendUsernameReminderEmail(user);
+      success = "Der Benutzername wurde angezeigt und zusaetzlich per E-Mail gesendet.";
+    } catch (error) {
+      console.error("Konnte Username-Erinnerung nicht senden:", error);
+    }
+  }
+
+  return renderForgotUsernamePage(req, res, {
+    success,
+    recoveredUsername: user.username,
+    values: { email }
+  });
+});
+
+app.get("/forgot-password", (req, res) => {
+  return renderForgotPasswordPage(req, res);
+});
+
+app.post("/forgot-password", async (req, res) => {
+  const email = normalizeEmail(req.body.email || "");
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return renderForgotPasswordPage(req, res, {
+      status: 400,
+      error: "Bitte gib eine gueltige E-Mail-Adresse ein.",
+      values: { email }
+    });
+  }
+
+  const user = db
+    .prepare("SELECT id, username, email FROM users WHERE email = ?")
+    .get(email);
+
+  if (!user) {
+    return renderForgotPasswordPage(req, res, {
+      status: 404,
+      error: "Zu dieser E-Mail-Adresse wurde kein Account gefunden.",
+      values: { email }
+    });
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  db.prepare(
+    `UPDATE users
+     SET password_reset_token = ?, password_reset_sent_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(resetToken, user.id);
+
+  const resetUrl = getPasswordResetUrl(req, resetToken);
+  let success = "Klicke auf den Link unten, um dein neues Passwort festzulegen.";
+  if (EMAIL_VERIFICATION_MAIL_ENABLED) {
+    try {
+      await sendPasswordResetEmail(req, {
+        email: user.email,
+        username: user.username,
+        resetToken
+      });
+      success = "Der Passwort-Link wurde erstellt. Du kannst ihn unten direkt anklicken.";
+    } catch (error) {
+      console.error("Konnte Passwort-Reset-E-Mail nicht senden:", error);
+    }
+  }
+
+  return renderForgotPasswordPage(req, res, {
+    success,
+    resetUrl,
+    values: { email }
+  });
+});
+
+app.get("/reset-password", (req, res) => {
+  const token = String(req.query.token || "").trim();
+  const user = getValidPasswordResetUser(token);
+
+  if (!user) {
+    setFlash(req, "error", "Der Passwort-Link ist ungueltig oder abgelaufen.");
+    return res.redirect("/forgot-password");
+  }
+
+  return renderResetPasswordPage(req, res, {
+    resetToken: token
+  });
+});
+
+app.post("/reset-password", (req, res) => {
+  const token = String(req.body.token || "").trim();
+  const password = String(req.body.password || "");
+  const passwordConfirm = String(req.body.password_confirm || "");
+  const user = getValidPasswordResetUser(token);
+
+  if (!user) {
+    setFlash(req, "error", "Der Passwort-Link ist ungueltig oder abgelaufen.");
+    return res.redirect("/forgot-password");
+  }
+
+  if (password.length < 6) {
+    return renderResetPasswordPage(req, res, {
+      status: 400,
+      error: "Das neue Passwort muss mindestens 6 Zeichen lang sein.",
+      resetToken: token
+    });
+  }
+
+  if (password !== passwordConfirm) {
+    return renderResetPasswordPage(req, res, {
+      status: 400,
+      error: "Die beiden Passwoerter stimmen nicht ueberein.",
+      resetToken: token
+    });
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 10);
+  db.prepare(
+    `UPDATE users
+     SET password_hash = ?, password_reset_token = '', password_reset_sent_at = ''
+     WHERE id = ?`
+  ).run(passwordHash, user.id);
+
+  setFlash(req, "success", "Passwort gespeichert. Du kannst dich jetzt mit dem neuen Passwort einloggen.");
+  return res.redirect("/login");
 });
 
 app.get("/auth/google", (req, res, next) => {
@@ -2828,6 +2996,9 @@ app.get("/chat", requireAuth, (req, res) => {
 function getAdminUsersOverview() {
   const userColumns = getUsersTableColumnSet();
   const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
+  const birthDateExpr = userColumns.has("birth_date")
+    ? "u.birth_date"
+    : "'' AS birth_date";
   const loginIpExpr = userColumns.has("last_login_ip")
     ? "u.last_login_ip"
     : "'' AS last_login_ip";
@@ -2837,7 +3008,7 @@ function getAdminUsersOverview() {
 
   return db
     .prepare(
-      `SELECT u.id, u.username, ${emailExpr}, ${loginIpExpr}, ${loginAtExpr},
+      `SELECT u.id, u.username, ${emailExpr}, ${birthDateExpr}, ${loginIpExpr}, ${loginAtExpr},
               u.is_admin, u.is_moderator, u.created_at,
               (
                 SELECT COUNT(*)

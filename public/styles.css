@@ -687,6 +687,37 @@ a:hover {
   margin-top: 0.9rem;
 }
 
+.auth-helper-links,
+.auth-secondary-links {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.auth-helper-links {
+  margin-top: 0.85rem;
+}
+
+.field-hint {
+  margin: -0.35rem 0 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.auth-result {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.8rem;
+}
+
+.auth-result p {
+  margin: 0;
+}
+
+.auth-result-link {
+  justify-self: start;
+}
+
 .oauth-buttons {
   display: grid;
   gap: 0.55rem;
@@ -811,8 +842,7 @@ a:hover {
 }
 
 .admin-user-link {
-  display: inline-flex;
-  align-items: center;
+  display: grid;
   gap: 0.45rem;
   padding: 0.68rem 0.9rem;
   border-radius: 14px;
@@ -834,6 +864,21 @@ a:hover {
 
 .admin-user-link-name {
   font-weight: 700;
+}
+
+.admin-user-link-top,
+.admin-user-link-badges {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-user-link-details {
+  display: grid;
+  gap: 0.14rem;
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .admin-user-link-meta {
@@ -1895,6 +1940,13 @@ select:focus {
   margin-bottom: 0.8rem;
 }
 
+.inline-success {
+  background: var(--success-bg);
+  border: 1px solid var(--success-edge);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+}
+
 .bot-trap {
   position: absolute;
   left: -10000px;
@@ -2384,7 +2436,6 @@ select:focus {
 
   .admin-user-link {
     width: 100%;
-    justify-content: space-between;
   }
 
   .admin-user-summary {

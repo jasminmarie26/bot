@@ -29,8 +29,11 @@
 
 <% if (suspiciousUsers && suspiciousUsers.length) { %>
   <section class="panel">
-    <h2>Verdächtige Accounts</h2>
-    <p class="muted">Hier siehst du auffällige Accounts gesammelt, damit du sie schnell prüfen oder löschen kannst.</p>
+    <h2>Verdaechtige Accounts</h2>
+    <p class="muted">
+      Hier siehst du auffaellige Accounts gesammelt, damit du sie schnell pruefen oder
+      loeschen kannst.
+    </p>
 
     <div class="list">
       <% suspiciousUsers.forEach((user) => { %>
@@ -38,8 +41,9 @@
           <div class="admin-user-meta">
             <strong><%= user.username %></strong>
             <span>E-Mail: <%= user.email || "-" %></span>
+            <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
             <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
-            <span>Gründe: <%= user.suspicion_reasons.join(", ") %></span>
+            <span>Gruende: <%= user.suspicion_reasons.join(", ") %></span>
           </div>
           <div class="dashboard-server-actions">
             <a
@@ -48,11 +52,11 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              Prüfen
+              Pruefen
             </a>
             <% if (user.id !== currentUser.id) { %>
               <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                <button class="btn btn-danger" type="submit">Löschen</button>
+                <button class="btn btn-danger" type="submit">Loeschen</button>
               </form>
             <% } %>
           </div>
@@ -66,7 +70,10 @@
   <div class="header-line">
     <div>
       <h2>Benutzerverwaltung</h2>
-      <p class="muted">Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab, dort findest du unten auch die Charaktere und Gästebücher.</p>
+      <p class="muted">
+        Klicke auf einen Namen. Die Details oeffnen sich in einem neuen Tab, dort
+        findest du unten auch die Charaktere und Gaestebuecher.
+      </p>
     </div>
   </div>
 
@@ -77,7 +84,7 @@
         id="admin-user-search"
         class="admin-search-input"
         type="search"
-        placeholder="Name, E-Mail oder IP"
+        placeholder="Name, E-Mail, Geburtsdatum oder IP"
         autocomplete="off"
       />
     </label>
@@ -112,6 +119,7 @@
                 const searchValues = [
                   user.username,
                   user.email,
+                  user.birth_date,
                   user.last_login_ip,
                   user.created_at
                 ]
@@ -126,16 +134,24 @@
                 data-user-link
                 data-search="<%= searchValues %>"
               >
-                <span class="admin-user-link-name"><%= user.username %></span>
-                <span class="admin-user-link-meta">#<%= user.account_number %></span>
-                <% if (user.is_admin) { %>
-                  <span class="admin-role-badge is-admin">Admin</span>
-                <% } else if (user.is_moderator) { %>
-                  <span class="admin-role-badge is-moderator">Moderator</span>
-                <% } %>
-                <% if (user.is_suspicious) { %>
-                  <span class="admin-role-badge is-suspicious">Verdächtig</span>
-                <% } %>
+                <span class="admin-user-link-top">
+                  <span class="admin-user-link-name"><%= user.username %></span>
+                  <span class="admin-user-link-meta">#<%= user.account_number %></span>
+                </span>
+                <span class="admin-user-link-details">
+                  <span>E-Mail: <%= user.email || "-" %></span>
+                  <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
+                </span>
+                <span class="admin-user-link-badges">
+                  <% if (user.is_admin) { %>
+                    <span class="admin-role-badge is-admin">Admin</span>
+                  <% } else if (user.is_moderator) { %>
+                    <span class="admin-role-badge is-moderator">Moderator</span>
+                  <% } %>
+                  <% if (user.is_suspicious) { %>
+                    <span class="admin-role-badge is-suspicious">Verdaechtig</span>
+                  <% } %>
+                </span>
               </a>
             <% }) %>
           </div>

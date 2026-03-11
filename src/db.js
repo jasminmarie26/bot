@@ -22,8 +22,11 @@ db.exec(`
     is_moderator INTEGER NOT NULL DEFAULT 0,
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
     email TEXT DEFAULT '',
+    birth_date TEXT DEFAULT '',
     email_verified INTEGER NOT NULL DEFAULT 1,
     email_verification_token TEXT DEFAULT '',
+    password_reset_token TEXT DEFAULT '',
+    password_reset_sent_at TEXT DEFAULT '',
     google_id TEXT DEFAULT '',
     facebook_id TEXT DEFAULT '',
     last_login_ip TEXT DEFAULT '',
@@ -199,12 +202,24 @@ if (!userColumns.includes("email")) {
   db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''");
 }
 
+if (!userColumns.includes("birth_date")) {
+  db.exec("ALTER TABLE users ADD COLUMN birth_date TEXT DEFAULT ''");
+}
+
 if (!userColumns.includes("email_verified")) {
   db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1");
 }
 
 if (!userColumns.includes("email_verification_token")) {
   db.exec("ALTER TABLE users ADD COLUMN email_verification_token TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("password_reset_token")) {
+  db.exec("ALTER TABLE users ADD COLUMN password_reset_token TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("password_reset_sent_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN password_reset_sent_at TEXT DEFAULT ''");
 }
 
 if (!userColumns.includes("google_id")) {
@@ -277,8 +292,11 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(ch
 db.prepare("UPDATE users SET theme = 'glass-aurora' WHERE theme IS NULL OR theme = ''").run();
 db.prepare("UPDATE users SET is_moderator = 0 WHERE is_moderator IS NULL").run();
 db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
+db.prepare("UPDATE users SET birth_date = '' WHERE birth_date IS NULL").run();
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();
+db.prepare("UPDATE users SET password_reset_token = '' WHERE password_reset_token IS NULL").run();
+db.prepare("UPDATE users SET password_reset_sent_at = '' WHERE password_reset_sent_at IS NULL").run();
 db.prepare("UPDATE users SET google_id = '' WHERE google_id IS NULL").run();
 db.prepare("UPDATE users SET facebook_id = '' WHERE facebook_id IS NULL").run();
 db.prepare("UPDATE users SET last_login_ip = '' WHERE last_login_ip IS NULL").run();
@@ -370,6 +388,10 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_verification_token_unique
   ON users(email_verification_token)
   WHERE email_verification_token IS NOT NULL AND email_verification_token != '';
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_password_reset_token_unique
+  ON users(password_reset_token)
+  WHERE password_reset_token IS NOT NULL AND password_reset_token != '';
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id_unique
   ON users(google_id)
