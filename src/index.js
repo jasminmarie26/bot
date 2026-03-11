@@ -69,19 +69,101 @@ const DEFAULT_HOME_HERO_BODY =
   "Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
-const GOOGLE_AUTH_ENABLED = Boolean(
-  process.env.GOOGLE_CLIENT_ID &&
-    process.env.GOOGLE_CLIENT_SECRET &&
-    process.env.GOOGLE_CALLBACK_URL
-);
-const FACEBOOK_AUTH_ENABLED = Boolean(
-  process.env.FACEBOOK_APP_ID &&
-    process.env.FACEBOOK_APP_SECRET &&
-    process.env.FACEBOOK_CALLBACK_URL
-);
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
+const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
+const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim();
+const GOOGLE_CALLBACK_PATH = "/auth/google/callback";
+const FACEBOOK_CALLBACK_PATH = "/auth/facebook/callback";
+
+function normalizeOAuthCallbackUrl(value, fallbackPath) {
+  const rawValue = String(value || "").trim();
+  const candidate = rawValue || fallbackPath;
+  if (!candidate) return "";
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate.replace(/\/+$/, "");
+  }
+
+  if (candidate.startsWith("/")) {
+    return candidate;
+  }
+
+  return `/${candidate.replace(/^\/+/, "")}`;
+}
+
+function getOAuthDisplayCallbackUrl(callbackUrl) {
+  const normalized = String(callbackUrl || "").trim();
+  if (!normalized) return "";
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (!APP_BASE_URL) return normalized;
+  return `${APP_BASE_URL}${normalized}`;
+}
+
+function buildOAuthProviderStatus(label, clientId, clientSecret, callbackUrl) {
+  const missing = [];
+  if (!clientId) missing.push("Client ID");
+  if (!clientSecret) missing.push("Client Secret");
+
+  return {
+    label,
+    enabled: Boolean(clientId && clientSecret),
+    callbackUrl,
+    displayCallbackUrl: getOAuthDisplayCallbackUrl(callbackUrl),
+    missing
+  };
+}
+
+function formatOAuthMissingFields(missingFields) {
+  if (!Array.isArray(missingFields) || missingFields.length === 0) {
+    return "";
+  }
+
+  if (missingFields.length === 1) {
+    return missingFields[0];
+  }
+
+  if (missingFields.length === 2) {
+    return `${missingFields[0]} und ${missingFields[1]}`;
+  }
+
+  return `${missingFields.slice(0, -1).join(", ")} und ${missingFields[missingFields.length - 1]}`;
+}
+
+function getOAuthDisabledMessage(providerStatus) {
+  if (!providerStatus?.missing?.length) {
+    return `${providerStatus?.label || "OAuth"} Login ist noch nicht eingerichtet.`;
+  }
+
+  return `${providerStatus.label} Login ist noch nicht eingerichtet. Es fehlen ${formatOAuthMissingFields(providerStatus.missing)}.`;
+}
+
+const GOOGLE_CALLBACK_URL = normalizeOAuthCallbackUrl(
+  process.env.GOOGLE_CALLBACK_URL,
+  GOOGLE_CALLBACK_PATH
+);
+const FACEBOOK_CALLBACK_URL = normalizeOAuthCallbackUrl(
+  process.env.FACEBOOK_CALLBACK_URL,
+  FACEBOOK_CALLBACK_PATH
+);
+const OAUTH_PROVIDERS = {
+  google: buildOAuthProviderStatus(
+    "Google",
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_CALLBACK_URL
+  ),
+  facebook: buildOAuthProviderStatus(
+    "Facebook",
+    FACEBOOK_APP_ID,
+    FACEBOOK_APP_SECRET,
+    FACEBOOK_CALLBACK_URL
+  )
+};
+const GOOGLE_AUTH_ENABLED = OAUTH_PROVIDERS.google.enabled;
+const FACEBOOK_AUTH_ENABLED = OAUTH_PROVIDERS.facebook.enabled;
 const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
@@ -877,9 +959,9 @@ if (GOOGLE_AUTH_ENABLED) {
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL
+        clientID: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
+        callbackURL: GOOGLE_CALLBACK_URL
       },
       (accessToken, refreshToken, profile, done) => {
         return done(null, profile);
@@ -892,15 +974,28 @@ if (FACEBOOK_AUTH_ENABLED) {
   passport.use(
     new FacebookStrategy(
       {
-        clientID: process.env.FACEBOOK_APP_ID,
-        clientSecret: process.env.FACEBOOK_APP_SECRET,
-        callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+        clientID: FACEBOOK_APP_ID,
+        clientSecret: FACEBOOK_APP_SECRET,
+        callbackURL: FACEBOOK_CALLBACK_URL,
         profileFields: ["id", "displayName", "emails"]
       },
       (accessToken, refreshToken, profile, done) => {
         return done(null, profile);
       }
     )
+  );
+}
+
+for (const providerStatus of Object.values(OAUTH_PROVIDERS)) {
+  if (providerStatus.enabled) {
+    console.log(
+      `[auth] ${providerStatus.label} Login aktiv (${providerStatus.displayCallbackUrl || providerStatus.callbackUrl}).`
+    );
+    continue;
+  }
+
+  console.warn(
+    `[auth] ${providerStatus.label} Login deaktiviert. Fehlt: ${formatOAuthMissingFields(providerStatus.missing)}.`
   );
 }
 
@@ -1469,6 +1564,7 @@ app.use((req, res, next) => {
     google: GOOGLE_AUTH_ENABLED,
     facebook: FACEBOOK_AUTH_ENABLED
   };
+  res.locals.oauthProviders = OAUTH_PROVIDERS;
   res.locals.availableThemes = THEME_OPTIONS;
   res.locals.serverOptions = SERVER_OPTIONS;
   res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
@@ -1900,7 +1996,7 @@ app.post("/reset-password", (req, res) => {
 
 app.get("/auth/google", (req, res, next) => {
   if (!GOOGLE_AUTH_ENABLED) {
-    setFlash(req, "error", "Google Login ist noch nicht konfiguriert.");
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.google));
     return res.redirect("/login");
   }
 
@@ -1912,7 +2008,7 @@ app.get("/auth/google", (req, res, next) => {
 
 app.get("/auth/google/callback", (req, res, next) => {
   if (!GOOGLE_AUTH_ENABLED) {
-    setFlash(req, "error", "Google Login ist noch nicht konfiguriert.");
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.google));
     return res.redirect("/login");
   }
 
@@ -1952,7 +2048,7 @@ app.get("/auth/google/callback", (req, res, next) => {
 
 app.get("/auth/facebook", (req, res, next) => {
   if (!FACEBOOK_AUTH_ENABLED) {
-    setFlash(req, "error", "Facebook Login ist noch nicht konfiguriert.");
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.facebook));
     return res.redirect("/login");
   }
 
@@ -1964,7 +2060,7 @@ app.get("/auth/facebook", (req, res, next) => {
 
 app.get("/auth/facebook/callback", (req, res, next) => {
   if (!FACEBOOK_AUTH_ENABLED) {
-    setFlash(req, "error", "Facebook Login ist noch nicht konfiguriert.");
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.facebook));
     return res.redirect("/login");
   }
 
@@ -2204,7 +2300,6 @@ app.post("/settings/theme", (req, res) => {
   if (req.session.user) {
     db.prepare("UPDATE users SET theme = ? WHERE id = ?").run(theme, req.session.user.id);
     req.session.user.theme = theme;
-    setFlash(req, "success", "Design aktualisiert.");
   } else {
     req.session.guest_theme = theme;
   }

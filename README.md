@@ -30,12 +30,11 @@ npm install
 ```env
 PORT=3000
 SESSION_SECRET=bitte-langes-zufaelliges-geheimnis-eintragen
+APP_BASE_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 FACEBOOK_APP_ID=
 FACEBOOK_APP_SECRET=
-FACEBOOK_CALLBACK_URL=http://localhost:3000/auth/facebook/callback
 ```
 
 3. Starten:
@@ -58,17 +57,21 @@ npm start
 
 Google (Gmail):
 - In der Google Cloud Console OAuth-Client erstellen.
-- Als Redirect URL setzen: `http://localhost:3000/auth/google/callback`
-- `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` in `.env` eintragen.
+- Als Redirect URL setzen: `https://heldenhaftereisen.net/auth/google/callback`
+- Lokal zum Testen kannst du stattdessen `http://localhost:3000/auth/google/callback` verwenden.
+- `APP_BASE_URL`, `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` in `.env` eintragen.
+- `GOOGLE_CALLBACK_URL` kann leer bleiben, wenn `APP_BASE_URL` gesetzt ist.
 
 Facebook:
 - In Meta for Developers eine App erstellen.
 - Facebook Login Produkt aktivieren.
-- Als Redirect URL setzen: `http://localhost:3000/auth/facebook/callback`
-- `FACEBOOK_APP_ID` und `FACEBOOK_APP_SECRET` in `.env` eintragen.
+- Als Redirect URL setzen: `https://heldenhaftereisen.net/auth/facebook/callback`
+- Lokal zum Testen kannst du stattdessen `http://localhost:3000/auth/facebook/callback` verwenden.
+- `APP_BASE_URL`, `FACEBOOK_APP_ID` und `FACEBOOK_APP_SECRET` in `.env` eintragen.
+- `FACEBOOK_CALLBACK_URL` kann leer bleiben, wenn `APP_BASE_URL` gesetzt ist.
 
 Hinweis:
-- Wenn die Werte in `.env` fehlen, werden die Buttons angezeigt, aber als "nicht eingerichtet" markiert.
+- Wenn Client ID oder Secret fehlen, bleibt der jeweilige Login deaktiviert.
 
 ## Admin
 

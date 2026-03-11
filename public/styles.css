@@ -878,6 +878,10 @@ a:hover {
   font-size: 0.9rem;
 }
 
+.oauth-hint {
+  margin: -0.15rem 0 0;
+}
+
 .header-line {
   display: flex;
   gap: 1rem;

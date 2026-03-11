@@ -6,6 +6,8 @@
   const isForgotUsername = mode === "forgot-username";
   const isForgotPassword = mode === "forgot-password";
   const isResetPassword = mode === "reset-password";
+  const googleOAuth = oauthProviders?.google || { enabled: oauthEnabled.google };
+  const facebookOAuth = oauthProviders?.facebook || { enabled: oauthEnabled.facebook };
 
   const heading = isRegister
     ? "Registrieren"
@@ -150,16 +152,22 @@
       <div class="oauth-section">
         <p class="muted">Oder mit Social Login:</p>
         <div class="oauth-buttons">
-          <% if (oauthEnabled.google) { %>
+          <% if (googleOAuth.enabled) { %>
             <a class="btn btn-secondary oauth-btn" href="/auth/google">Mit Google einloggen</a>
           <% } else { %>
-            <span class="oauth-disabled">Google Login nicht eingerichtet</span>
+            <span class="oauth-disabled">Google Login noch nicht eingerichtet</span>
+            <p class="field-hint oauth-hint">
+              Wird aktiv, sobald Google Client ID und Client Secret eingetragen sind.
+            </p>
           <% } %>
 
-          <% if (oauthEnabled.facebook) { %>
+          <% if (facebookOAuth.enabled) { %>
             <a class="btn btn-secondary oauth-btn" href="/auth/facebook">Mit Facebook einloggen</a>
           <% } else { %>
-            <span class="oauth-disabled">Facebook Login nicht eingerichtet</span>
+            <span class="oauth-disabled">Facebook Login noch nicht eingerichtet</span>
+            <p class="field-hint oauth-hint">
+              Wird aktiv, sobald Facebook App ID und App Secret eingetragen sind.
+            </p>
           <% } %>
         </div>
       </div>
