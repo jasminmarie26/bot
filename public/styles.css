@@ -368,6 +368,14 @@ a:hover {
   margin: 0;
 }
 
+.updates-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .hero-update-actions {
   position: absolute;
   right: 1rem;
@@ -391,6 +399,13 @@ a:hover {
 .update-pen-btn {
   border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
   color: var(--link);
+}
+
+.update-create-btn {
+  border-color: color-mix(in srgb, var(--accent-2) 58%, var(--field-edge));
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .site-updates-list {
@@ -559,7 +574,18 @@ a:hover {
   justify-content: center;
 }
 
-.hero.has-update-actions p {
+.hero-copy {
+  margin: 0 auto;
+  text-align: center;
+  max-width: 860px;
+}
+
+.hero-copy.guestbook-entry-body {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.5;
+}
+
+.hero.has-update-actions .hero-copy {
   padding-right: 3.4rem;
 }
 
@@ -2315,7 +2341,7 @@ select:focus {
     max-height: 180px;
   }
 
-  .hero.has-update-actions p {
+  .hero.has-update-actions .hero-copy {
     padding-right: 0;
   }
 }
@@ -2336,6 +2362,10 @@ select:focus {
   .update-meta-right {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .updates-header-actions {
+    justify-content: flex-start;
   }
 
   .update-item-actions {

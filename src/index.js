@@ -64,6 +64,10 @@ const DEFAULT_THEME = "glass-aurora";
 const ALLOWED_THEME_IDS = new Set(THEME_OPTIONS.map((theme) => theme.id));
 const DEFAULT_SERVER_ID = "free-rp";
 const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
+const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
+const DEFAULT_HOME_HERO_BODY =
+  "Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.";
+const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
 const GOOGLE_AUTH_ENABLED = Boolean(
   process.env.GOOGLE_CLIENT_ID &&
@@ -1138,6 +1142,40 @@ function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin
   return Number(userId) === Number(characterOwnerId) || Number(isCharacterPublic) === 1;
 }
 
+function normalizeHomeSectionTitle(rawTitle) {
+  return String(rawTitle || "").trim().slice(0, 120);
+}
+
+function normalizeHomeSectionBody(rawBody) {
+  return String(rawBody || "").trim().slice(0, 2000);
+}
+
+function decorateHomeContent(homeContent) {
+  const heroTitle = normalizeHomeSectionTitle(homeContent?.hero_title || "") || DEFAULT_HOME_HERO_TITLE;
+  const heroBody = normalizeHomeSectionBody(homeContent?.hero_body || "") || DEFAULT_HOME_HERO_BODY;
+  const updatesTitle =
+    normalizeHomeSectionTitle(homeContent?.updates_title || "") || DEFAULT_UPDATES_TITLE;
+
+  return {
+    hero_title: heroTitle,
+    hero_body: heroBody,
+    hero_body_html: renderGuestbookBbcode(heroBody),
+    updates_title: updatesTitle
+  };
+}
+
+function getHomeContent() {
+  const homeContent = db
+    .prepare(
+      `SELECT hero_title, hero_body, updates_title
+       FROM site_home_settings
+       WHERE id = 1`
+    )
+    .get();
+
+  return decorateHomeContent(homeContent);
+}
+
 function normalizeSiteUpdateContent(rawContent) {
   return String(rawContent || "").trim().slice(0, 1200);
 }
@@ -1256,10 +1294,12 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
+  const homeContent = getHomeContent();
   return res.render("home", {
-    title: "Heldenhaft Reisen",
+    title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
     stats: getLoginStats(),
-    siteUpdates: getRecentSiteUpdates(12)
+    siteUpdates: getRecentSiteUpdates(12),
+    homeContent
   });
 });
 
@@ -1758,6 +1798,52 @@ app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res)
 
   io.emit("site:update:delete", { id: updateId });
   setFlash(req, "success", "Live-Update geloescht.");
+  return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/site-content/hero", requireAuth, requireSiteUpdateEditor, (req, res) => {
+  const heroTitle = normalizeHomeSectionTitle(req.body.title);
+  const heroBody = normalizeHomeSectionBody(req.body.body);
+
+  if (!heroTitle) {
+    setFlash(req, "error", "Die Startseiten-Ueberschrift darf nicht leer sein.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  if (!heroBody) {
+    setFlash(req, "error", "Der Startseitentext darf nicht leer sein.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  db.prepare(
+    `UPDATE site_home_settings
+     SET hero_title = ?, hero_body = ?
+     WHERE id = 1`
+  ).run(heroTitle, heroBody);
+
+  const homeContent = getHomeContent();
+  io.emit("site:home-content:update", homeContent);
+  setFlash(req, "success", "Startseitenbereich aktualisiert.");
+  return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/site-content/updates-title", requireAuth, requireSiteUpdateEditor, (req, res) => {
+  const updatesTitle = normalizeHomeSectionTitle(req.body.title);
+
+  if (!updatesTitle) {
+    setFlash(req, "error", "Die Live-Updates-Ueberschrift darf nicht leer sein.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
+  db.prepare(
+    `UPDATE site_home_settings
+     SET updates_title = ?
+     WHERE id = 1`
+  ).run(updatesTitle);
+
+  const homeContent = getHomeContent();
+  io.emit("site:home-content:update", homeContent);
+  setFlash(req, "success", "Live-Updates-Ueberschrift aktualisiert.");
   return res.redirect(req.get("referer") || "/");
 });
 

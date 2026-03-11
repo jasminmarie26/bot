@@ -1,12 +1,37 @@
 (() => {
   const list = document.getElementById("site-updates-list");
-  const modal = document.getElementById("update-modal");
-  const form = document.getElementById("update-form");
-  const title = document.getElementById("update-modal-title");
-  const submitButton = document.getElementById("update-submit-btn");
-  const closeButton = document.getElementById("update-close-btn");
-  const field = form?.querySelector("textarea[name='content']");
-  const canEditUpdates = Boolean(form);
+
+  const updateModal = document.getElementById("update-modal");
+  const updateForm = document.getElementById("update-form");
+  const updateTitle = document.getElementById("update-modal-title");
+  const updateSubmitButton = document.getElementById("update-submit-btn");
+  const updateCloseButton = document.getElementById("update-close-btn");
+  const updateField = updateForm?.querySelector("textarea[name='content']");
+
+  const siteContentModal = document.getElementById("site-content-modal");
+  const siteContentForm = document.getElementById("site-content-form");
+  const siteContentModalTitle = document.getElementById("site-content-modal-title");
+  const siteContentCloseButton = document.getElementById("site-content-close-btn");
+  const siteContentTitleInput = document.getElementById("site-content-title-input");
+  const siteContentBodyWrap = document.getElementById("site-content-body-wrap");
+  const siteContentBodyInput = document.getElementById("site-content-body-input");
+
+  const heroSection = document.getElementById("home-hero");
+  const heroTitleElement = document.getElementById("home-hero-title");
+  const heroBodyElement = document.getElementById("home-hero-body");
+  const heroTitleSource = document.getElementById("home-hero-title-source");
+  const heroBodySource = document.getElementById("home-hero-body-source");
+  const updatesTitleElement = document.getElementById("updates-section-title");
+  const updatesTitleSource = document.getElementById("updates-section-title-source");
+
+  const canEditUpdates = Boolean(updateForm);
+
+  function syncBodyModalState() {
+    const isAnyModalOpen =
+      (updateModal && !updateModal.hidden) || (siteContentModal && !siteContentModal.hidden);
+
+    document.body.classList.toggle("modal-open", Boolean(isAnyModalOpen));
+  }
 
   function escapeHtml(value) {
     return String(value || "")
@@ -30,6 +55,47 @@
       content: article.dataset.updateContent || "",
       created_at: article.dataset.updateCreatedAt || ""
     };
+  }
+
+  function getHomeContentData() {
+    return {
+      hero_title: heroTitleSource?.value || heroTitleElement?.textContent || "",
+      hero_body: heroBodySource?.value || "",
+      updates_title: updatesTitleSource?.value || updatesTitleElement?.textContent || ""
+    };
+  }
+
+  function applyHomeContent(homeContent) {
+    if (!homeContent || typeof homeContent !== "object") return;
+
+    if (homeContent.hero_title) {
+      document.title = homeContent.hero_title;
+    }
+
+    if (heroTitleSource) {
+      heroTitleSource.value = homeContent.hero_title || "";
+    }
+
+    if (heroBodySource) {
+      heroBodySource.value = homeContent.hero_body || "";
+    }
+
+    if (heroTitleElement) {
+      heroTitleElement.textContent = homeContent.hero_title || "";
+    }
+
+    if (heroBodyElement) {
+      heroBodyElement.innerHTML =
+        homeContent.hero_body_html || buildPlainHtml(homeContent.hero_body || "");
+    }
+
+    if (updatesTitleElement) {
+      updatesTitleElement.textContent = homeContent.updates_title || "";
+    }
+
+    if (updatesTitleSource) {
+      updatesTitleSource.value = homeContent.updates_title || "";
+    }
   }
 
   function removeEmptyState() {
@@ -81,8 +147,8 @@
     editButton.className = "ghost-btn icon-btn update-edit-btn";
     editButton.type = "button";
     editButton.dataset.updateEdit = "";
-    editButton.setAttribute("aria-label", "Update bearbeiten");
-    editButton.title = "Update bearbeiten";
+    editButton.setAttribute("aria-label", "Update-Inhalt bearbeiten");
+    editButton.title = "Update-Inhalt bearbeiten";
     editButton.innerHTML = "&#9998;";
     actions.appendChild(editButton);
 
@@ -164,46 +230,92 @@
     ensureEmptyState();
   }
 
-  function setFormMode(mode, item = null) {
-    if (!form || !field || !title || !submitButton) return;
+  function setUpdateFormMode(mode, item = null) {
+    if (!updateForm || !updateField || !updateTitle || !updateSubmitButton) return;
 
     if (mode === "edit" && item) {
-      form.action = `/updates/${item.id}/edit`;
-      form.dataset.mode = "edit";
-      title.textContent = "Live-Update bearbeiten";
-      submitButton.textContent = "Speichern";
-      field.value = item.content || "";
+      updateForm.action = `/updates/${item.id}/edit`;
+      updateForm.dataset.mode = "edit";
+      updateTitle.textContent = "Live-Update-Inhalt bearbeiten";
+      updateSubmitButton.textContent = "Speichern";
+      updateField.value = item.content || "";
     } else {
-      form.action = "/updates";
-      form.dataset.mode = "create";
-      title.textContent = "Neues Live-Update";
-      submitButton.textContent = "Veroeffentlichen";
-      field.value = "";
+      updateForm.action = "/updates";
+      updateForm.dataset.mode = "create";
+      updateTitle.textContent = "Neues Live-Update";
+      updateSubmitButton.textContent = "Veroeffentlichen";
+      updateField.value = "";
     }
   }
 
-  function openModal(item = null) {
-    if (!modal) return;
-    setFormMode(item ? "edit" : "create", item);
-    modal.hidden = false;
-    modal.classList.add("is-open");
-    document.body.classList.add("modal-open");
-    if (field) {
-      field.focus();
-      field.selectionStart = field.value.length;
-      field.selectionEnd = field.value.length;
+  function openUpdateModal(item = null) {
+    if (!updateModal) return;
+    setUpdateFormMode(item ? "edit" : "create", item);
+    updateModal.hidden = false;
+    updateModal.classList.add("is-open");
+    syncBodyModalState();
+    if (updateField) {
+      updateField.focus();
+      updateField.selectionStart = updateField.value.length;
+      updateField.selectionEnd = updateField.value.length;
     }
   }
 
-  function closeModal() {
-    if (!modal) return;
-    modal.classList.remove("is-open");
-    modal.hidden = true;
-    document.body.classList.remove("modal-open");
-    setFormMode("create");
+  function closeUpdateModal() {
+    if (!updateModal) return;
+    updateModal.classList.remove("is-open");
+    updateModal.hidden = true;
+    setUpdateFormMode("create");
+    syncBodyModalState();
   }
 
-  function insertBbcode(openTag, closeTag, placeholder = "Text") {
+  function openSiteContentModal(target) {
+    if (!siteContentModal || !siteContentForm || !siteContentTitleInput || !siteContentModalTitle) {
+      return;
+    }
+
+    const homeContent = getHomeContentData();
+
+    if (target === "updates-title") {
+      siteContentForm.action = "/site-content/updates-title";
+      siteContentForm.dataset.mode = "updates-title";
+      siteContentModalTitle.textContent = "Live-Updates-Ueberschrift bearbeiten";
+      siteContentTitleInput.value = homeContent.updates_title || "";
+      if (siteContentBodyWrap) {
+        siteContentBodyWrap.hidden = true;
+      }
+      if (siteContentBodyInput) {
+        siteContentBodyInput.value = "";
+        siteContentBodyInput.required = false;
+      }
+    } else {
+      siteContentForm.action = "/site-content/hero";
+      siteContentForm.dataset.mode = "hero";
+      siteContentModalTitle.textContent = "Startseitenbereich bearbeiten";
+      siteContentTitleInput.value = homeContent.hero_title || "";
+      if (siteContentBodyWrap) {
+        siteContentBodyWrap.hidden = false;
+      }
+      if (siteContentBodyInput) {
+        siteContentBodyInput.value = homeContent.hero_body || "";
+        siteContentBodyInput.required = true;
+      }
+    }
+
+    siteContentModal.hidden = false;
+    siteContentModal.classList.add("is-open");
+    syncBodyModalState();
+    siteContentTitleInput.focus();
+  }
+
+  function closeSiteContentModal() {
+    if (!siteContentModal) return;
+    siteContentModal.classList.remove("is-open");
+    siteContentModal.hidden = true;
+    syncBodyModalState();
+  }
+
+  function insertBbcodeInto(field, openTag, closeTag, placeholder = "Text") {
     if (!field) return;
 
     const start = field.selectionStart ?? 0;
@@ -221,7 +333,16 @@
     field.selectionEnd = innerEnd;
   }
 
-  function insertLinkBbcode() {
+  function resolveBbcodeField(button) {
+    if (!button) return null;
+    const target = button.dataset.bbcodeTarget || "";
+    if (target === "site-content-body") {
+      return siteContentBodyInput;
+    }
+    return updateField;
+  }
+
+  function insertLinkBbcode(field) {
     if (!field) return;
 
     const rawUrl = window.prompt("Link eingeben:", "https://");
@@ -233,42 +354,66 @@
       return;
     }
 
-    insertBbcode(`[url=${cleanedUrl}]`, "[/url]", "Linktext");
+    insertBbcodeInto(field, `[url=${cleanedUrl}]`, "[/url]", "Linktext");
   }
 
-  if (modal) {
+  if (updateModal) {
     document.querySelectorAll("[data-update-open]").forEach((button) => {
-      button.addEventListener("click", () => openModal());
+      button.addEventListener("click", () => openUpdateModal());
     });
 
-    if (closeButton) {
-      closeButton.addEventListener("click", closeModal);
+    if (updateCloseButton) {
+      updateCloseButton.addEventListener("click", closeUpdateModal);
     }
 
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        closeModal();
+    updateModal.addEventListener("click", (event) => {
+      if (event.target === updateModal) {
+        closeUpdateModal();
       }
     });
+  }
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !modal.hidden) {
-        closeModal();
-      }
-    });
-
-    modal.querySelectorAll("[data-bbcode-tag]").forEach((button) => {
+  if (siteContentModal) {
+    document.querySelectorAll("[data-site-content-open]").forEach((button) => {
       button.addEventListener("click", () => {
-        const tag = button.dataset.bbcodeTag;
-        if (!tag) return;
-        insertBbcode(`[${tag}]`, `[/${tag}]`);
+        openSiteContentModal(button.dataset.siteContentOpen || "hero");
       });
     });
 
-    modal.querySelectorAll("[data-bbcode-link]").forEach((button) => {
-      button.addEventListener("click", insertLinkBbcode);
+    if (siteContentCloseButton) {
+      siteContentCloseButton.addEventListener("click", closeSiteContentModal);
+    }
+
+    siteContentModal.addEventListener("click", (event) => {
+      if (event.target === siteContentModal) {
+        closeSiteContentModal();
+      }
     });
   }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (updateModal && !updateModal.hidden) {
+      closeUpdateModal();
+    }
+    if (siteContentModal && !siteContentModal.hidden) {
+      closeSiteContentModal();
+    }
+  });
+
+  document.querySelectorAll("[data-bbcode-tag]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const tag = button.dataset.bbcodeTag;
+      if (!tag) return;
+      insertBbcodeInto(resolveBbcodeField(button), `[${tag}]`, `[/${tag}]`);
+    });
+  });
+
+  document.querySelectorAll("[data-bbcode-link]").forEach((button) => {
+    button.addEventListener("click", () => {
+      insertLinkBbcode(resolveBbcodeField(button));
+    });
+  });
 
   if (list) {
     list.addEventListener("click", (event) => {
@@ -278,7 +423,7 @@
       const article = editButton.closest(".update-item");
       const item = getUpdateItemData(article);
       if (item && Number.isInteger(item.id) && item.id > 0) {
-        openModal(item);
+        openUpdateModal(item);
       }
     });
   }
@@ -300,5 +445,9 @@
     if (Number.isInteger(updateId) && updateId > 0) {
       deleteUpdate(updateId);
     }
+  });
+
+  socket.on("site:home-content:update", (homeContent) => {
+    applyHomeContent(homeContent);
   });
 })();

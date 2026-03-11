@@ -125,6 +125,13 @@ db.exec(`
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS site_home_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
+    hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.',
+    updates_title TEXT NOT NULL DEFAULT 'Live Updates'
+  );
+
   CREATE TABLE IF NOT EXISTS registration_guard_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ip TEXT NOT NULL,
@@ -168,6 +175,11 @@ const chatRoomColumns = db
 
 const chatMessageColumns = db
   .prepare("PRAGMA table_info(chat_messages)")
+  .all()
+  .map((column) => column.name);
+
+const siteHomeSettingsColumns = db
+  .prepare("PRAGMA table_info(site_home_settings)")
   .all()
   .map((column) => column.name);
 
@@ -229,6 +241,20 @@ if (!chatMessageColumns.includes("room_id")) {
 
 if (!chatMessageColumns.includes("server_id")) {
   db.exec("ALTER TABLE chat_messages ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
+}
+
+if (!siteHomeSettingsColumns.includes("hero_title")) {
+  db.exec("ALTER TABLE site_home_settings ADD COLUMN hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen'");
+}
+
+if (!siteHomeSettingsColumns.includes("hero_body")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
+  );
+}
+
+if (!siteHomeSettingsColumns.includes("updates_title")) {
+  db.exec("ALTER TABLE site_home_settings ADD COLUMN updates_title TEXT NOT NULL DEFAULT 'Live Updates'");
 }
 
 if (!guestbookEntryColumns.includes("guestbook_page_id")) {
@@ -314,8 +340,26 @@ db.prepare(
    WHERE NOT EXISTS (
      SELECT 1
      FROM guestbook_settings gs
-     WHERE gs.character_id = c.id
+      WHERE gs.character_id = c.id
+    )`
+).run();
+db.prepare(
+  `INSERT INTO site_home_settings (id)
+   SELECT 1
+   WHERE NOT EXISTS (
+     SELECT 1
+     FROM site_home_settings shs
+     WHERE shs.id = 1
    )`
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_title = 'Heldenhaft Reisen' WHERE hero_title IS NULL OR trim(hero_title) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"
 ).run();
 
 db.exec(`
