@@ -288,6 +288,67 @@ body.theme-sith .brand {
   text-shadow: 0 0 18px rgba(255, 76, 76, 0.16);
 }
 
+body.theme-sith .hero {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(9, 4, 6, 0.96) 0%,
+      rgba(16, 4, 8, 0.94) 36%,
+      rgba(14, 4, 7, 0.72) 58%,
+      rgba(8, 4, 6, 0.28) 100%
+    ),
+    url("/sith-wallpaper.svg") right center / 62% auto no-repeat,
+    linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
+  border-color: rgba(255, 78, 78, 0.28);
+}
+
+body.theme-sith .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 76% 38%, rgba(255, 82, 82, 0.18), transparent 18%),
+    radial-gradient(circle at 80% 50%, rgba(0, 0, 0, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 42%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-sith .hero::after {
+  right: 10%;
+  top: 50%;
+  width: 360px;
+  height: 360px;
+  transform: translateY(-50%);
+  background:
+    radial-gradient(circle, rgba(255, 236, 236, 0.2) 0%, rgba(255, 87, 87, 0.12) 28%, transparent 68%);
+  opacity: 0.28;
+}
+
+body.theme-sith .hero h1,
+body.theme-sith .hero-copy,
+body.theme-sith .hero-actions {
+  position: relative;
+  z-index: 1;
+  width: min(52%, 760px);
+  margin-left: 0;
+  text-align: left;
+}
+
+body.theme-sith .hero-actions {
+  justify-content: flex-start;
+}
+
+body.theme-sith .hero-copy.guestbook-entry-body {
+  font-size: clamp(1.08rem, 2vw, 1.42rem);
+}
+
 a {
   color: var(--link);
   text-decoration: none;
@@ -2592,6 +2653,25 @@ select:focus {
   .hero.has-update-actions .hero-copy {
     padding-right: 0;
   }
+
+  body.theme-sith .hero {
+    min-height: 300px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(9, 4, 6, 0.94) 0%,
+        rgba(12, 4, 7, 0.76) 42%,
+        rgba(8, 4, 6, 0.3) 100%
+      ),
+      url("/sith-wallpaper.svg") 86% center / 84% auto no-repeat,
+      linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
+  }
+
+  body.theme-sith .hero h1,
+  body.theme-sith .hero-copy,
+  body.theme-sith .hero-actions {
+    width: min(60%, 680px);
+  }
 }
 
 @media (max-width: 640px) {
@@ -2670,5 +2750,40 @@ select:focus {
 
   .character-mini-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  body.theme-sith .hero {
+    min-height: 0;
+    align-items: center;
+    text-align: center;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(9, 4, 6, 0.84) 0%,
+        rgba(12, 4, 7, 0.68) 44%,
+        rgba(8, 4, 6, 0.24) 100%
+      ),
+      url("/sith-wallpaper.svg") 88% top / 128% auto no-repeat,
+      linear-gradient(145deg, rgba(14, 4, 7, 0.94), rgba(8, 4, 6, 0.82));
+  }
+
+  body.theme-sith .hero h1,
+  body.theme-sith .hero-copy,
+  body.theme-sith .hero-actions {
+    width: 100%;
+    text-align: center;
+  }
+
+  body.theme-sith .hero-actions {
+    justify-content: center;
+  }
+
+  body.theme-sith .hero::after {
+    right: -30px;
+    top: -20px;
+    width: 220px;
+    height: 220px;
+    transform: none;
+    opacity: 0.2;
   }
 }
