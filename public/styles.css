@@ -2408,7 +2408,8 @@ a:hover {
 
 .rp-room-link-standard {
   background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
-  width: min(100%, 420px);
+  width: min(100%, 560px);
+  gap: 0.22rem;
 }
 
 .rp-room-link-name {
@@ -2431,7 +2432,7 @@ a:hover {
 }
 
 .rp-room-link-standard .rp-room-link-name {
-  white-space: normal;
+  white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
 }
@@ -2450,7 +2451,7 @@ a:hover {
 
 .rp-room-link-standard .rp-room-link-meta small:last-child {
   font-style: italic;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .rp-room-occupants {
