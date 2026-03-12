@@ -72,8 +72,12 @@
 
   <section class="rp-room-panel <%= activeRoom ? 'is-room-chat' : 'is-server-chat' %>">
     <% if (!activeRoom) { %>
-      <h1><%= `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat` %></h1>
-      <p class="muted">Echtzeit-Chat f&uuml;r alle eingeloggten User im <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %>-Server.</p>
+      <h1><%= standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat` %></h1>
+      <p class="muted">
+        <%= standardRoom
+          ? "Fester Treffpunkt fuer lockeren Austausch auf diesem Server."
+          : `Echtzeit-Chat fuer alle eingeloggten User im ${activeServerId === "erp" ? "ERP" : "FREE-RP"}-Server.` %>
+      </p>
     <% } %>
 
     <div class="chat-layout">

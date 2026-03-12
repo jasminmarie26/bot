@@ -1190,6 +1190,39 @@ function toRoomNameKey(roomName) {
   return normalizeRoomName(roomName).toLowerCase();
 }
 
+const STANDARD_ROOM_DEFINITIONS = Object.freeze({
+  "free-rp": [
+    {
+      id: "zwischenwelten-foyer",
+      name: "Zwischenwelten-Foyer",
+      teaser: "Locker reden, planen und ankommen."
+    }
+  ],
+  erp: [
+    {
+      id: "zwischenwelten-foyer",
+      name: "Zwischenwelten-Foyer",
+      teaser: "Locker reden, planen und ankommen."
+    }
+  ]
+});
+
+function getStandardRoomsForServer(serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  return Array.isArray(STANDARD_ROOM_DEFINITIONS[normalizedServerId])
+    ? STANDARD_ROOM_DEFINITIONS[normalizedServerId]
+    : [];
+}
+
+function getStandardRoomForServer(serverId, roomId) {
+  const normalizedRoomId = String(roomId || "").trim().toLowerCase();
+  if (!normalizedRoomId) return null;
+  return (
+    getStandardRoomsForServer(serverId).find((room) => room.id === normalizedRoomId) ||
+    null
+  );
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -2628,6 +2661,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
        ORDER BY lower(name) ASC`
     )
     .all(req.session.user.id, id);
+  const standardRooms = getStandardRoomsForServer(character.server_id);
 
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
@@ -2653,6 +2687,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     title: character.name,
     character,
     isOwner,
+    standardRooms,
     rooms,
     guestbookEntries,
     guestbookPages,
@@ -3185,10 +3220,12 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
 
 app.get("/chat", requireAuth, (req, res) => {
   const requestedServerId = normalizeServer(req.query.server);
+  const requestedStandardRoomId = String(req.query.standard_room || "").trim().toLowerCase();
   const roomId = Number(req.query.room_id);
   let activeServerId = requestedServerId;
   let activeRoom = null;
   let activeCharacter = null;
+  let standardRoom = null;
 
   if (Number.isInteger(roomId) && roomId > 0) {
     const room = getRoomWithCharacter(roomId);
@@ -3247,6 +3284,10 @@ app.get("/chat", requireAuth, (req, res) => {
     }
   }
 
+  if (!activeRoom) {
+    standardRoom = getStandardRoomForServer(activeServerId, requestedStandardRoomId);
+  }
+
   const messages = activeRoom
     ? db
         .prepare(
@@ -3277,11 +3318,14 @@ app.get("/chat", requireAuth, (req, res) => {
   return res.render("chat", {
     title: activeRoom
       ? `${getServerLabel(activeServerId)} Raum: ${activeRoom.name}`
-      : `${getServerLabel(activeServerId)} Chat`,
+      : standardRoom
+        ? `${getServerLabel(activeServerId)} Raum: ${standardRoom.name}`
+        : `${getServerLabel(activeServerId)} Chat`,
     messages,
     activeRoom,
     activeCharacter,
     activeServerId,
+    standardRoom,
     onlineCharacters
   });
 });

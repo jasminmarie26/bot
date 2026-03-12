@@ -78,26 +78,49 @@
     </form>
 
     <div class="rp-room-list-wrap">
-      <h2>R&auml;ume</h2>
-      <% if (!rooms || !rooms.length) { %>
-        <p class="muted">Noch keine R&auml;ume vorhanden.</p>
-      <% } else { %>
-        <div class="rp-room-list">
-          <% rooms.forEach((room) => { %>
-            <a
-              class="rp-room-link"
-              href="/chat?room_id=<%= room.id %>"
-              title="Raum betreten"
-            >
-              <span class="rp-room-link-name"><%= room.name %></span>
-              <div class="rp-room-link-meta">
-                <small>Betreten</small>
-                <small><%= room.has_room_rights ? "Raumrechte" : `Leitung: ${room.creator_name}` %></small>
-              </div>
-            </a>
-          <% }) %>
-        </div>
+      <% if (standardRooms && standardRooms.length) { %>
+        <section class="rp-room-section rp-room-section-standard">
+          <h2>Gemeinsamer Treffpunkt</h2>
+          <div class="rp-room-list rp-room-list-standard">
+            <% standardRooms.forEach((standardRoom) => { %>
+              <a
+                class="rp-room-link rp-room-link-standard"
+                href="/chat?server=<%= character.server_id %>&standard_room=<%= standardRoom.id %>"
+                title="Treffpunkt betreten"
+              >
+                <span class="rp-room-link-name"><%= standardRoom.name %></span>
+                <div class="rp-room-link-meta">
+                  <small>Offplay</small>
+                  <small><%= standardRoom.teaser %></small>
+                </div>
+              </a>
+            <% }) %>
+          </div>
+        </section>
       <% } %>
+
+      <section class="rp-room-section">
+        <h2>Eigene R&auml;ume</h2>
+        <% if (!rooms || !rooms.length) { %>
+          <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
+        <% } else { %>
+          <div class="rp-room-list">
+            <% rooms.forEach((room) => { %>
+              <a
+                class="rp-room-link"
+                href="/chat?room_id=<%= room.id %>"
+                title="Raum betreten"
+              >
+                <span class="rp-room-link-name"><%= room.name %></span>
+                <div class="rp-room-link-meta">
+                  <small>Betreten</small>
+                  <small><%= room.has_room_rights ? "Raumrechte" : `Leitung: ${room.creator_name}` %></small>
+                </div>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
     </div>
   </section>
 </section>
