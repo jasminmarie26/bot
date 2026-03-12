@@ -1195,14 +1195,14 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      teaser: "Locker ankommen."
+      teaser: "Locker reden, planen und ankommen."
     }
   ],
   erp: [
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      teaser: "Locker ankommen."
+      teaser: "Locker reden, planen und ankommen."
     }
   ]
 });
@@ -2662,6 +2662,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     )
     .all(req.session.user.id, id);
   const standardRooms = getStandardRoomsForServer(character.server_id);
+  const standardRoomUsers = Object.fromEntries(
+    standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
+  );
 
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
@@ -2688,6 +2691,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     character,
     isOwner,
     standardRooms,
+    standardRoomUsers,
     rooms,
     guestbookEntries,
     guestbookPages,
@@ -3889,6 +3893,12 @@ function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
   );
 }
 
+function socketChannelForRoomWatch(roomId, serverId = DEFAULT_SERVER_ID) {
+  const normalizedServerId = normalizeServer(serverId);
+  const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
+  return `watch:${normalizedServerId}:${roomKey}`;
+}
+
 function formatChatTimestamp(date = new Date()) {
   const pad = (value) => String(value).padStart(2, "0");
   return [
@@ -3933,9 +3943,21 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
 }
 
 function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
-  io.to(socketChannelForRoom(roomId, serverId)).emit(
+  const onlineCharacters = getOnlineCharactersForChannel(roomId, serverId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit(
     "chat:online-characters",
-    getOnlineCharactersForChannel(roomId, serverId)
+    onlineCharacters
+  );
+  io.to(socketChannelForRoomWatch(normalizedRoomId, normalizedServerId)).emit(
+    "room:watch:update",
+    {
+      roomId: normalizedRoomId,
+      serverId: normalizedServerId,
+      users: onlineCharacters
+    }
   );
 }
 
@@ -4001,6 +4023,7 @@ io.on("connection", (socket) => {
   socket.data.roomId = null;
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
+  socket.data.roomWatchChannels = new Set();
 
   socket.on("presence:set", (payload) => {
     if (!socket.data.user) return;
@@ -4016,6 +4039,30 @@ io.on("connection", (socket) => {
 
     socket.data.presenceServerId = nextPresenceServerId;
     emitHomeStatsUpdate();
+  });
+
+  socket.on("room:watch", (payload) => {
+    if (!socket.data.user) return;
+
+    const rawServerId =
+      payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
+    const rawRoomId = payload && typeof payload === "object" ? payload.roomId : null;
+    const parsedRoomId = Number(rawRoomId);
+    const nextRoomId =
+      Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
+    const nextServerId = normalizeServer(rawServerId);
+    const watcherChannel = socketChannelForRoomWatch(nextRoomId, nextServerId);
+
+    if (!socket.data.roomWatchChannels.has(watcherChannel)) {
+      socket.join(watcherChannel);
+      socket.data.roomWatchChannels.add(watcherChannel);
+    }
+
+    socket.emit("room:watch:update", {
+      roomId: nextRoomId,
+      serverId: nextServerId,
+      users: getOnlineCharactersForChannel(nextRoomId, nextServerId)
+    });
   });
 
   socket.on("chat:join", (payload) => {

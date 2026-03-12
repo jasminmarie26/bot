@@ -83,17 +83,41 @@
           <h2>Gemeinsamer Treffpunkt</h2>
           <div class="rp-room-list rp-room-list-standard">
             <% standardRooms.forEach((standardRoom) => { %>
-              <a
-                class="rp-room-link rp-room-link-standard"
-                href="/chat?server=<%= character.server_id %>&standard_room=<%= standardRoom.id %>"
-                title="Treffpunkt betreten"
-              >
-                <span class="rp-room-link-name"><%= standardRoom.name %></span>
-                <div class="rp-room-link-meta">
-                  <small>Offplay</small>
-                  <small><%= standardRoom.teaser %></small>
+              <% const activeUsers = Array.isArray(standardRoomUsers?.[standardRoom.id]) ? standardRoomUsers[standardRoom.id] : []; %>
+              <div class="rp-room-standard-card">
+                <a
+                  class="rp-room-link rp-room-link-standard"
+                  href="/chat?server=<%= character.server_id %>&standard_room=<%= standardRoom.id %>"
+                  title="Treffpunkt betreten"
+                >
+                  <span class="rp-room-link-name"><%= standardRoom.name %></span>
+                  <div class="rp-room-link-meta">
+                    <small>Offplay</small>
+                    <small><%= standardRoom.teaser %></small>
+                  </div>
+                </a>
+                <div
+                  class="rp-room-occupants"
+                  data-room-watch-target
+                  data-room-watch-room=""
+                  data-room-watch-server="<%= character.server_id %>"
+                >
+                  <% if (activeUsers.length) { %>
+                    <% activeUsers.forEach((entry, index) => { %>
+                      <% if (entry.character_id) { %>
+                        <a class="rp-room-occupant" href="/characters/<%= entry.character_id %>/guestbook"><%= entry.name %></a>
+                      <% } else { %>
+                        <span class="rp-room-occupant"><%= entry.name %></span>
+                      <% } %>
+                      <% if (index < activeUsers.length - 1) { %>
+                        <span class="rp-room-occupant-separator">, </span>
+                      <% } %>
+                    <% }) %>
+                  <% } else { %>
+                    <span class="muted">Gerade niemand dort.</span>
+                  <% } %>
                 </div>
-              </a>
+              </div>
             <% }) %>
           </div>
         </section>
