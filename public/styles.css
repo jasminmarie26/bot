@@ -3145,13 +3145,14 @@ select:focus {
   display: flex;
   min-height: 0;
   height: 100%;
-  padding-bottom: 0.55rem;
+  padding-top: 0.78rem;
+  padding-bottom: 0.22rem;
 }
 
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
   flex: 1 1 auto;
-  min-height: min(100%, calc(100dvh - 8.9rem));
-  height: min(100%, calc(100dvh - 8.9rem));
+  min-height: min(100%, calc(100dvh - 8.15rem));
+  height: min(100%, calc(100dvh - 8.15rem));
 }
 
 .chat-online-panel {
@@ -3180,32 +3181,34 @@ select:focus {
 
 .page-chat .chat-room-title {
   margin: 0;
-  font-size: clamp(0.96rem, 1.05vw + 0.34rem, 1.48rem);
-  line-height: 1.04;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  font-size: 1.26rem;
+  line-height: 1.06;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   max-width: 100%;
 }
 
 .page-chat .chat-room-heading {
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.45rem;
+  padding-right: 0.12rem;
 }
 
 .page-chat .chat-room-description {
-  margin: 0.28rem 0 0;
-  font-size: clamp(0.72rem, 0.86vw, 0.82rem);
-  line-height: 1.22;
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.15;
   color: var(--muted);
   font-style: italic;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-chat .chat-room-divider {
   height: 1px;
-  margin-top: 0.48rem;
+  margin-top: 0.38rem;
   background: color-mix(in srgb, var(--panel-edge) 68%, transparent);
 }
 
@@ -3386,8 +3389,9 @@ select:focus {
 }
 
 .page-chat .chat-main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.56rem;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -3415,7 +3419,7 @@ select:focus {
 }
 
 .page-chat .chat-form {
-  margin-top: 0.7rem;
+  margin-top: 0;
   margin-bottom: 0;
 }
 
