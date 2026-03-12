@@ -3071,8 +3071,9 @@ select:focus {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  padding: 0.2rem 0 0;
-  border: none;
+  padding: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
+  border-radius: 14px;
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
