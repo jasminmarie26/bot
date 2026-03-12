@@ -504,6 +504,10 @@ function getLoginStats() {
   };
 }
 
+function emitHomeStatsUpdate() {
+  io.emit("site:stats:update", getLoginStats());
+}
+
 function normalizeEmail(value) {
   if (typeof value !== "string") return "";
   return value.trim().toLowerCase().slice(0, 255);
@@ -2583,6 +2587,7 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.is_public
     );
 
+  emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gespeichert.");
   return res.redirect("/dashboard");
 });
@@ -2742,6 +2747,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     id
   );
 
+  emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter aktualisiert.");
   return res.redirect(`/characters/${id}`);
 });
@@ -2762,6 +2768,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   }
 
   db.prepare("DELETE FROM characters WHERE id = ?").run(id);
+  emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gelöscht.");
   return res.redirect("/dashboard");
 });

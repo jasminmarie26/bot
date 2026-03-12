@@ -23,6 +23,15 @@
   const heroBodySource = document.getElementById("home-hero-body-source");
   const updatesTitleElement = document.getElementById("updates-section-title");
   const updatesTitleSource = document.getElementById("updates-section-title-source");
+  const accountCountElement = document.getElementById("home-account-count");
+  const loggedInCountElement = document.getElementById("home-logged-in-count");
+  const staffCountElement = document.getElementById("home-staff-online-count");
+  const rpCharacterCountElement = document.getElementById("home-rp-character-count");
+  const freeRpOnlineCountElement = document.getElementById("home-free-rp-online-count");
+  const erpOnlineCountElement = document.getElementById("home-erp-online-count");
+  const larpCharacterCountElement = document.getElementById("home-larp-character-count");
+  const larpOnlineCountElement = document.getElementById("home-larp-online-count");
+  const staffCardElement = staffCountElement?.closest(".home-stat") || null;
 
   const canEditUpdates = Boolean(updateForm);
 
@@ -63,6 +72,87 @@
       hero_body: heroBodySource?.value || "",
       updates_title: updatesTitleSource?.value || updatesTitleElement?.textContent || ""
     };
+  }
+
+  function setTextContent(element, value) {
+    if (!element) return;
+    element.textContent = String(value ?? 0);
+  }
+
+  function getOrCreateStaffNamesElement() {
+    let element = document.getElementById("home-staff-online-names");
+    if (!element && staffCardElement) {
+      element = document.createElement("small");
+      element.id = "home-staff-online-names";
+      element.className = "home-stat-names";
+      staffCardElement.appendChild(element);
+    }
+    return element;
+  }
+
+  function getOrCreateStaffEmptyElement() {
+    let element = document.getElementById("home-staff-online-empty");
+    if (!element && staffCardElement) {
+      element = document.createElement("small");
+      element.id = "home-staff-online-empty";
+      element.className = "home-stat-empty";
+      element.textContent = "Niemand gerade online.";
+      staffCardElement.appendChild(element);
+    }
+    return element;
+  }
+
+  function renderStaffNames(stats) {
+    const adminNames = Array.isArray(stats?.adminOnlineNames) ? stats.adminOnlineNames : [];
+    const moderatorNames = Array.isArray(stats?.moderatorOnlineNames)
+      ? stats.moderatorOnlineNames
+      : [];
+    const entries = [
+      ...adminNames.map((name) => ({ role: "admin", label: `${name} (A)` })),
+      ...moderatorNames.map((name) => ({ role: "moderator", label: `${name} (M)` }))
+    ];
+    const namesElement = getOrCreateStaffNamesElement();
+    const emptyElement = getOrCreateStaffEmptyElement();
+
+    if (!namesElement || !emptyElement) return;
+
+    namesElement.replaceChildren();
+    if (!entries.length) {
+      namesElement.hidden = true;
+      emptyElement.hidden = false;
+      return;
+    }
+
+    entries.forEach((entry, index) => {
+      const nameElement = document.createElement("span");
+      nameElement.className =
+        entry.role === "admin" ? "staff-name-admin" : "staff-name-moderator";
+      nameElement.textContent = entry.label;
+      namesElement.appendChild(nameElement);
+      if (index < entries.length - 1) {
+        namesElement.appendChild(document.createTextNode(", "));
+      }
+    });
+
+    namesElement.hidden = false;
+    emptyElement.hidden = true;
+  }
+
+  function applyHomeStats(stats) {
+    if (!stats || typeof stats !== "object") return;
+
+    setTextContent(accountCountElement, stats.accountCount);
+    setTextContent(loggedInCountElement, stats.loggedInUserCount);
+    setTextContent(
+      staffCountElement,
+      Number(stats.adminOnlineCount || 0) + Number(stats.moderatorOnlineCount || 0)
+    );
+    setTextContent(rpCharacterCountElement, stats.rpServerCount);
+    setTextContent(freeRpOnlineCountElement, stats.freeRpOnlineCount);
+    setTextContent(erpOnlineCountElement, stats.erpOnlineCount);
+    setTextContent(larpCharacterCountElement, stats.larpServerCount);
+    setTextContent(larpOnlineCountElement, stats.larpOnlineCount);
+    renderStaffNames(stats);
   }
 
   function applyHomeContent(homeContent) {
@@ -428,26 +518,32 @@
     });
   }
 
-  if (!list || typeof io !== "function") return;
+  if (typeof io !== "function") return;
 
   const socket = io();
 
-  socket.on("site:update:create", (item) => {
-    renderOrReplaceUpdate(item, { prepend: true });
-  });
+  if (list) {
+    socket.on("site:update:create", (item) => {
+      renderOrReplaceUpdate(item, { prepend: true });
+    });
 
-  socket.on("site:update:update", (item) => {
-    renderOrReplaceUpdate(item);
-  });
+    socket.on("site:update:update", (item) => {
+      renderOrReplaceUpdate(item);
+    });
 
-  socket.on("site:update:delete", (payload) => {
-    const updateId = Number.parseInt(payload?.id, 10);
-    if (Number.isInteger(updateId) && updateId > 0) {
-      deleteUpdate(updateId);
-    }
-  });
+    socket.on("site:update:delete", (payload) => {
+      const updateId = Number.parseInt(payload?.id, 10);
+      if (Number.isInteger(updateId) && updateId > 0) {
+        deleteUpdate(updateId);
+      }
+    });
+  }
 
   socket.on("site:home-content:update", (homeContent) => {
     applyHomeContent(homeContent);
+  });
+
+  socket.on("site:stats:update", (stats) => {
+    applyHomeStats(stats);
   });
 })();
