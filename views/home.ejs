@@ -18,6 +18,38 @@
         </div>
       </article>
 
+      <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+        <div class="home-stat-detail-list" aria-label="Admins und Moderatoren">
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Admins &amp; Moderatoren:</span>
+            <strong class="home-stat-detail-value"><%= stats.adminOnlineCount + stats.moderatorOnlineCount %></strong>
+          </div>
+        </div>
+        <% if (
+          (stats.adminOnlineNames && stats.adminOnlineNames.length) ||
+          (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length)
+        ) { %>
+          <small class="home-stat-names">
+            <% const staffNames = []; %>
+            <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
+              <% stats.adminOnlineNames.forEach((name) => { %>
+                <% staffNames.push({ role: "admin", label: `${name} (A)` }); %>
+              <% }) %>
+            <% } %>
+            <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
+              <% stats.moderatorOnlineNames.forEach((name) => { %>
+                <% staffNames.push({ role: "moderator", label: `${name} (M)` }); %>
+              <% }) %>
+            <% } %>
+            <% staffNames.forEach((entry, index) => { %>
+              <span class="<%= entry.role === 'admin' ? 'staff-name-admin' : 'staff-name-moderator' %>"><%= entry.label %></span><%= index < staffNames.length - 1 ? ", " : "" %>
+            <% }) %>
+          </small>
+        <% } else { %>
+          <small class="home-stat-empty">Niemand gerade online.</small>
+        <% } %>
+      </article>
+
       <div class="home-stat-divider" aria-hidden="true"></div>
 
       <section class="home-stat-group">
@@ -57,35 +89,6 @@
       </section>
 
       <div class="home-stat-divider" aria-hidden="true"></div>
-
-      <div class="home-stat-grid">
-        <article class="home-stat">
-          <strong><%= stats.characterCount %></strong>
-          <span>Erstellte Charaktere</span>
-        </article>
-        <article class="home-stat">
-          <strong><%= stats.adminOnlineCount %></strong>
-          <span>Admins online</span>
-          <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
-            <small class="home-stat-names">
-              <% stats.adminOnlineNames.forEach((name, index) => { %>
-                <span class="staff-name-admin"><%= name %></span><%= index < stats.adminOnlineNames.length - 1 ? ", " : "" %>
-              <% }) %>
-            </small>
-          <% } %>
-        </article>
-        <article class="home-stat">
-          <strong><%= stats.moderatorOnlineCount %></strong>
-          <span>Moderatoren online</span>
-          <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
-            <small class="home-stat-names">
-              <% stats.moderatorOnlineNames.forEach((name, index) => { %>
-                <span class="staff-name-moderator"><%= name %></span><%= index < stats.moderatorOnlineNames.length - 1 ? ", " : "" %>
-              <% }) %>
-            </small>
-          <% } %>
-        </article>
-      </div>
     </div>
   </aside>
 
