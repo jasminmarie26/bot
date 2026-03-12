@@ -3222,9 +3222,31 @@ app.get("/chat", requireAuth, (req, res) => {
     activeCharacter = {
       id: room.character_id,
       name: room.character_name,
-      is_owner: room.character_owner_id === req.session.user.id
+      is_owner: room.character_owner_id === req.session.user.id,
+      server_id: normalizeServer(room.character_server_id)
     };
     activeServerId = normalizeServer(room.character_server_id);
+  }
+
+  if (!activeCharacter) {
+    const preferredCharacter = db
+      .prepare(
+        `SELECT id, name, server_id
+         FROM characters
+         WHERE user_id = ? AND server_id = ?
+         ORDER BY lower(name) ASC, id ASC
+         LIMIT 1`
+      )
+      .get(req.session.user.id, activeServerId);
+
+    if (preferredCharacter) {
+      activeCharacter = {
+        id: preferredCharacter.id,
+        name: preferredCharacter.name,
+        is_owner: true,
+        server_id: normalizeServer(preferredCharacter.server_id)
+      };
+    }
   }
 
   const messages = activeRoom
