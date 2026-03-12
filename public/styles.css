@@ -976,12 +976,14 @@ a:hover {
   max-width: min(1860px, calc(100vw - 0.55rem));
   padding: 0.45rem 0.55rem 1rem;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
 .page-rp-screen .rp-shell {
   min-height: calc(100vh - 0.95rem);
+  min-height: calc(100dvh - 0.95rem);
   flex: 1 1 auto;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -995,10 +997,21 @@ a:hover {
 
 .page-chat .rp-room-panel {
   grid-template-rows: auto auto minmax(0, 1fr);
+  row-gap: 0.7rem;
 }
 
 .page-roomlist .rp-room-panel {
   grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 0.85rem;
+}
+
+.page-chat .rp-room-panel > h1,
+.page-roomlist .rp-room-panel > h1 {
+  margin: 0;
+}
+
+.page-chat .rp-room-panel > .muted {
+  margin: 0;
 }
 
 .flash {
@@ -2268,6 +2281,8 @@ a:hover {
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
 }
 
 .rp-guestbook-wrap {
@@ -2333,6 +2348,7 @@ a:hover {
 
 .page-roomlist .rp-room-list {
   min-height: 0;
+  height: 100%;
   overflow-y: auto;
   align-content: start;
   grid-auto-rows: min-content;
@@ -3027,8 +3043,9 @@ select:focus {
   grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
-  min-height: 0;
-  height: 100%;
+  min-height: 560px;
+  height: calc(100vh - 12.2rem);
+  height: calc(100dvh - 12.2rem);
 }
 
 .chat-online-panel {
@@ -3045,6 +3062,8 @@ select:focus {
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
+  padding: 0.7rem;
 }
 
 .chat-online-panel h2 {
@@ -3067,6 +3086,10 @@ select:focus {
   max-height: none;
   min-height: 0;
   overflow-y: auto;
+  border: 1px solid var(--field-edge);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
+  padding: 0.34rem;
 }
 
 .chat-online-item {
@@ -3096,6 +3119,16 @@ select:focus {
   text-align: left;
   font: inherit;
   cursor: pointer;
+}
+
+.page-chat .chat-online-item {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  border-radius: 8px;
+  padding: 0.65rem 0.72rem;
 }
 
 .online-actions-menu {
@@ -3212,6 +3245,7 @@ select:focus {
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .chat-box {
@@ -3229,8 +3263,12 @@ select:focus {
 }
 
 .page-chat .chat-box {
-  height: auto;
+  height: 100%;
   min-height: 0;
+}
+
+.page-chat .chat-form {
+  margin-top: 0.7rem;
 }
 
 .chat-message {
@@ -3446,6 +3484,7 @@ select:focus {
   .page-rp-screen .rp-room-panel,
   .page-chat .chat-layout {
     min-height: 0;
+    height: auto;
   }
 
   .page-rp-screen .container {

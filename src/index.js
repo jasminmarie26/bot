@@ -2807,33 +2807,31 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   const roomNameKey = toRoomNameKey(roomName);
-  const existingRoom = db
-    .prepare(
-      `SELECT id, name
-       FROM chat_rooms
-       WHERE character_id = ? AND name_key = ?`
-    )
-    .get(character.id, roomNameKey);
+    const existingRoom = db
+      .prepare(
+        `SELECT id, name
+         FROM chat_rooms
+         WHERE character_id = ? AND name_key = ?`
+      )
+      .get(character.id, roomNameKey);
 
-  if (existingRoom) {
-    setFlash(req, "success", `Raum ${existingRoom.name} existiert bereits.`);
-    return res.redirect(`/chat?room_id=${existingRoom.id}`);
-  }
+    if (existingRoom) {
+      return res.redirect(`/chat?room_id=${existingRoom.id}`);
+    }
 
   const info = db.prepare(
     `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, server_id)
      VALUES (?, ?, ?, ?, ?)`
-  ).run(
-    character.id,
-    req.session.user.id,
-    roomName,
-    roomNameKey,
-    normalizeServer(character.server_id)
-  );
+    ).run(
+      character.id,
+      req.session.user.id,
+      roomName,
+      roomNameKey,
+      normalizeServer(character.server_id)
+    );
 
-  setFlash(req, "success", `Raum ${roomName} wurde angelegt.`);
-  return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
-});
+    return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
+  });
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const id = Number(req.params.id);
