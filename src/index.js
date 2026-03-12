@@ -437,11 +437,26 @@ function getLoginStats() {
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
   const characterCount =
     db.prepare("SELECT COUNT(*) AS count FROM characters").get()?.count || 0;
+  const serverCharacterRows = db
+    .prepare(
+      `SELECT server_id, COUNT(*) AS count
+       FROM characters
+       GROUP BY server_id`
+    )
+    .all();
   const staffStats = getOnlineStaffStats(activeUserIds);
+  const freeRpCharacterCount =
+    serverCharacterRows.find((row) => normalizeServer(row.server_id) === "free-rp")?.count || 0;
+  const erpCharacterCount =
+    serverCharacterRows.find((row) => normalizeServer(row.server_id) === "erp")?.count || 0;
 
   return {
     accountCount,
     characterCount,
+    rpServerCount: freeRpCharacterCount + erpCharacterCount,
+    freeRpCharacterCount,
+    erpCharacterCount,
+    larpServerCount: 0,
     loggedInUserCount: getLoggedInUsersCount(activeUserIds),
     adminOnlineCount: staffStats.adminOnlineCount,
     adminOnlineNames: staffStats.adminOnlineNames,

@@ -11,6 +11,18 @@
       <span>Erstellte Charaktere</span>
     </article>
     <article class="home-stat">
+      <strong><%= stats.rpServerCount %></strong>
+      <span>RP SERVER</span>
+      <small class="home-stat-empty">
+        Free - RP: <%= stats.freeRpCharacterCount %> | ERP: <%= stats.erpCharacterCount %>
+      </small>
+    </article>
+    <article class="home-stat">
+      <strong><%= stats.larpServerCount %></strong>
+      <span>LARP SERVER</span>
+      <small class="home-stat-empty">Noch keine Bereiche angelegt.</small>
+    </article>
+    <article class="home-stat">
       <strong><%= stats.loggedInUserCount %></strong>
       <span>Gerade eingeloggt</span>
     </article>
