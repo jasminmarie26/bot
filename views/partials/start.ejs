@@ -40,7 +40,9 @@
     <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>
     <link rel="stylesheet" href="/styles.css?v=<%= staticAssetVersion %>" />
   </head>
-  <body class="theme-<%= activeTheme %>">
+    <% const bodyClassNames = [`theme-${activeTheme}`]; %>
+    <% if (typeof pageClass !== "undefined" && pageClass) { bodyClassNames.push(pageClass); } %>
+  <body class="<%= bodyClassNames.join(' ') %>">
     <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
     <% const showAccountDeleteControl = Boolean(
       currentUser &&

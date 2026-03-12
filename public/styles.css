@@ -968,6 +968,21 @@ a:hover {
   z-index: 1;
 }
 
+.page-chat .container {
+  max-width: min(1860px, calc(100vw - 0.55rem));
+  padding: 0.45rem 0.55rem 1rem;
+}
+
+.page-chat .rp-shell {
+  min-height: calc(100vh - 0.95rem);
+}
+
+.page-chat .rp-room-panel {
+  min-height: calc(100vh - 6.95rem);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .flash {
   border-radius: 13px;
   padding: 0.8rem 1rem;
@@ -2976,6 +2991,13 @@ select:focus {
   align-items: start;
 }
 
+.page-chat .chat-layout {
+  grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  min-height: calc(100vh - 13.6rem);
+}
+
 .chat-online-panel {
   border: 1px solid var(--panel-edge);
   border-radius: 14px;
@@ -2983,6 +3005,12 @@ select:focus {
   padding: 0.62rem;
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.page-chat .chat-online-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .chat-online-panel h2 {
@@ -2996,6 +3024,12 @@ select:focus {
   max-height: 420px;
   overflow-y: auto;
   padding-right: 0.12rem;
+}
+
+.page-chat .chat-online-list {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
 }
 
 .chat-online-item {
@@ -3136,6 +3170,12 @@ select:focus {
   min-width: 0;
 }
 
+.page-chat .chat-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
 .chat-box {
   border-radius: 14px;
   height: 420px;
@@ -3148,6 +3188,11 @@ select:focus {
   color: #1a1c20;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.page-chat .chat-box {
+  height: calc(100vh - 16.8rem);
+  min-height: 600px;
 }
 
 .chat-message {
@@ -3347,6 +3392,22 @@ select:focus {
 
   .chat-layout {
     grid-template-columns: 1fr;
+  }
+
+  .page-chat .container {
+    max-width: 100%;
+    padding: 0.55rem 0.65rem 1rem;
+  }
+
+  .page-chat .rp-shell,
+  .page-chat .rp-room-panel,
+  .page-chat .chat-layout {
+    min-height: 0;
+  }
+
+  .page-chat .chat-box {
+    height: 64vh;
+    min-height: 420px;
   }
 
   .chat-online-list {
