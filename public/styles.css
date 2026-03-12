@@ -999,8 +999,13 @@ a:hover {
   overflow: hidden;
 }
 
-.page-chat .rp-room-panel {
+.page-chat .rp-room-panel.is-server-chat {
   grid-template-rows: auto auto minmax(0, 1fr);
+  row-gap: 0.7rem;
+}
+
+.page-chat .rp-room-panel.is-room-chat {
+  grid-template-rows: auto minmax(0, 1fr);
   row-gap: 0.7rem;
 }
 

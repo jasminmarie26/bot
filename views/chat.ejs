@@ -54,7 +54,7 @@
     </details>
   </header>
 
-  <section class="rp-room-panel">
+  <section class="rp-room-panel <%= activeRoom ? 'is-room-chat' : 'is-server-chat' %>">
     <h1><%= activeRoom ? activeRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat` %></h1>
     <% if (!activeRoom) { %>
       <p class="muted">Echtzeit-Chat f&uuml;r alle eingeloggten User im <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %>-Server.</p>
