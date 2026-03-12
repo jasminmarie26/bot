@@ -63,6 +63,8 @@ const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
 );
 const DEFAULT_THEME = "glass-aurora";
 const ALLOWED_THEME_IDS = new Set(THEME_OPTIONS.map((theme) => theme.id));
+const THEME_COOKIE_NAME = "theme_preference";
+const THEME_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 365 * 2;
 const DEFAULT_SERVER_ID = "free-rp";
 const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
 const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
@@ -215,6 +217,44 @@ for (const extraDomain of String(process.env.BLOCKED_EMAIL_DOMAINS || "").split(
 function normalizeTheme(themeValue) {
   const input = (themeValue || "").trim().toLowerCase();
   return ALLOWED_THEME_IDS.has(input) ? input : DEFAULT_THEME;
+}
+
+function getCookieValue(req, cookieName) {
+  const rawCookieHeader = String(req.headers.cookie || "");
+  if (!rawCookieHeader) return "";
+
+  for (const cookieChunk of rawCookieHeader.split(";")) {
+    const trimmedChunk = cookieChunk.trim();
+    if (!trimmedChunk) continue;
+
+    const separatorIndex = trimmedChunk.indexOf("=");
+    if (separatorIndex < 0) continue;
+
+    const name = trimmedChunk.slice(0, separatorIndex).trim();
+    if (name !== cookieName) continue;
+
+    const value = trimmedChunk.slice(separatorIndex + 1).trim();
+    try {
+      return decodeURIComponent(value);
+    } catch (error) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function getThemeCookie(req) {
+  const themeValue = (getCookieValue(req, THEME_COOKIE_NAME) || "").trim().toLowerCase();
+  return ALLOWED_THEME_IDS.has(themeValue) ? themeValue : "";
+}
+
+function setThemeCookie(res, theme) {
+  res.cookie(THEME_COOKIE_NAME, theme, {
+    httpOnly: false,
+    maxAge: THEME_COOKIE_MAX_AGE_MS,
+    sameSite: "lax"
+  });
 }
 
 function normalizeServer(serverValue) {
@@ -1546,6 +1586,8 @@ function requireSiteUpdateEditor(req, res, next) {
 }
 
 app.use((req, res, next) => {
+  const cookieTheme = getThemeCookie(req);
+
   if (req.session.guest_theme) {
     req.session.guest_theme = normalizeTheme(req.session.guest_theme);
   }
@@ -1575,9 +1617,15 @@ app.use((req, res, next) => {
       ? currentPath
       : "/";
   res.locals.activeTheme =
+    cookieTheme ||
     req.session.user?.theme ||
     req.session.guest_theme ||
     DEFAULT_THEME;
+
+  if (cookieTheme !== res.locals.activeTheme) {
+    setThemeCookie(res, res.locals.activeTheme);
+  }
+
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   delete req.session.flash;
@@ -2304,6 +2352,8 @@ app.post("/settings/theme", (req, res) => {
   } else {
     req.session.guest_theme = theme;
   }
+
+  setThemeCookie(res, theme);
 
   const returnTo = String(req.body.return_to || "").trim();
   if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
