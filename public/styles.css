@@ -3134,6 +3134,7 @@ select:focus {
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   height: 100%;
+  align-content: start;
 }
 
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
@@ -3165,9 +3166,12 @@ select:focus {
 }
 
 .page-chat .chat-room-title {
-  margin: 0 0 0.55rem;
-  font-size: clamp(1.25rem, 2vw, 1.9rem);
-  line-height: 1.08;
+  margin: 0 0 0.45rem;
+  font-size: clamp(1rem, 1.65vw, 1.6rem);
+  line-height: 1.06;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-online-panel h2 {
