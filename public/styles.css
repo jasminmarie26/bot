@@ -1824,8 +1824,9 @@ a:hover {
 }
 
 .admin-user-stack {
-  display: grid;
-  gap: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .admin-user-link {
@@ -3302,31 +3303,32 @@ select:focus {
   margin-top: 0.7rem;
 }
 
-.chat-message {
-  background: #ffffff;
-  border: 1px solid #d9dee6;
+.chat-box .chat-message {
+  background: transparent;
+  border: 0;
   color: #17191d;
-  box-shadow: 0 6px 18px -14px rgba(0, 0, 0, 0.28);
+  box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  border-radius: 0;
+  padding: 0;
 }
 
-.chat-message p {
+.chat-box .chat-message p {
   margin: 0;
   white-space: pre-wrap;
 }
 
-.chat-whisper {
-  border-style: dashed;
-  border-width: 1px;
+.chat-box .chat-whisper {
+  border: 0;
 }
 
-.chat-whisper.is-outgoing {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--field-edge));
+.chat-box .chat-whisper.is-outgoing {
+  color: color-mix(in srgb, #17191d 82%, var(--accent));
 }
 
-.chat-whisper.is-incoming {
-  border-color: color-mix(in srgb, var(--link) 58%, var(--field-edge));
+.chat-box .chat-whisper.is-incoming {
+  color: color-mix(in srgb, #17191d 82%, var(--link));
 }
 
 .chat-form {
