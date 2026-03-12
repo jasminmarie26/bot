@@ -33,7 +33,9 @@
             </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook">G&auml;stebuch</a>
-          <a href="/characters/<%= character.id %>#roomlist">Extras</a>
+          <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
+            <a href="/characters/<%= character.id %>#roomlist">Festplays</a>
+          <% } %>
           <a href="/dashboard">Hilfe</a>
         </nav>
 
