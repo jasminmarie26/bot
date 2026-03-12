@@ -23,6 +23,8 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/dashboard">Dashboard</a>
+          <a href="/characters/<%= character.id %>#roomlist">Extras</a>
+          <a href="/dashboard">Hilfe</a>
           <% if (isOwner) { %>
             <a
               href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
@@ -33,8 +35,6 @@
             </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook">G&auml;stebuch</a>
-          <a href="/characters/<%= character.id %>#roomlist">Extras</a>
-          <a href="/dashboard">Hilfe</a>
         </nav>
 
         <form method="POST" action="/logout" class="inline-form rp-user-menu-form">

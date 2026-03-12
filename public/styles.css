@@ -870,6 +870,8 @@ a:hover {
   top: calc(100% + 0.55rem);
   right: 0;
   width: min(18rem, calc(100vw - 2rem));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
   padding: 0.6rem;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--link) 22%, var(--panel-edge));
@@ -2013,7 +2015,7 @@ a:hover {
 .rp-shell {
   margin-bottom: 1rem;
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--panel-edge);
   background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
   color: var(--text);
@@ -2023,6 +2025,8 @@ a:hover {
 }
 
 .rp-topline {
+  position: relative;
+  z-index: 3;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--panel-bg) 80%, var(--accent) 20%) 0%,
@@ -2160,6 +2164,7 @@ a:hover {
 .rp-room-panel {
   padding: 1rem;
   background: color-mix(in srgb, var(--panel-bg) 95%, transparent);
+  border-radius: 0 0 16px 16px;
 }
 
 .rp-room-form {
