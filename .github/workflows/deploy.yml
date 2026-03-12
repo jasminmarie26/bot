@@ -37,7 +37,7 @@ jobs:
             LIVE_DIR="/opt/eigene-rp-seite"
             STAGE_DIR="${LIVE_DIR}/.deploy-stage"
             LOCKSUM_FILE="${LIVE_DIR}/.deployed-package-lock.sha256"
-            HEALTH_PATH="/healthz"
+            HEALTH_URL="http://127.0.0.1:3000/healthz"
             cd "$LIVE_DIR"
             export PATH="/usr/bin:/bin:${PATH}"
 
@@ -119,35 +119,18 @@ jobs:
               "$PM2_BIN" start src/index.js --name rp-chat --cwd /opt/eigene-rp-seite --interpreter /usr/bin/node
             fi
 
-            APP_PID="$("$PM2_BIN" pid rp-chat | tr -d '[:space:]')"
-            APP_PORT=""
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              APP_PORT="$(ss -ltnp 2>/dev/null | awk -v pid="$APP_PID" '$1=="LISTEN" && index($0, "pid=" pid ",") { count = split($4, parts, ":"); print parts[count]; exit }')"
-              if [ -n "$APP_PORT" ]; then
+            HEALTH_OK=0
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+              if HEALTH_URL="$HEALTH_URL" /usr/bin/python3 -c "import os, sys, urllib.request; url = os.environ['HEALTH_URL']; req = urllib.request.Request(url, method='GET'); urllib.request.urlopen(req, timeout=3); sys.exit(0)" >/dev/null 2>&1; then
+                HEALTH_OK=1
                 break
               fi
               sleep 1
-            done
-            if [ -z "$APP_PORT" ]; then
-              APP_PORT="3000"
-            fi
-
-            HEALTH_OK=0
-            for host in 127.0.0.1 localhost; do
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-                if HEALTH_URL="http://${host}:${APP_PORT}${HEALTH_PATH}" /usr/bin/python3 -c "import os, sys, urllib.request; url = os.environ['HEALTH_URL']; req = urllib.request.Request(url, method='GET'); urllib.request.urlopen(req, timeout=3); sys.exit(0)" >/dev/null 2>&1; then
-                  HEALTH_OK=1
-                  break 2
-                fi
-                sleep 1
-              done
             done
 
             APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
             if [ "$APP_STATUS" != "online" ] || [ "$HEALTH_OK" -ne 1 ]; then
               echo "New release unhealthy. Rolling back node_modules."
-              echo "rp-chat pid is ${APP_PID:-missing}"
-              echo "rp-chat port is ${APP_PORT:-missing}"
               if [ -d "$LIVE_DIR/node_modules.prev" ] && [ -n "$PREVIOUS_ABI" ] && [ "$PREVIOUS_ABI" = "$NODE_ABI" ]; then
                 rm -rf "$LIVE_DIR/node_modules"
                 mv "$LIVE_DIR/node_modules.prev" "$LIVE_DIR/node_modules"
