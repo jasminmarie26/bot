@@ -3056,6 +3056,10 @@ select:focus {
   height: 100%;
 }
 
+.page-chat .rp-room-panel.is-room-chat .chat-layout {
+  margin-top: 0;
+}
+
 .chat-online-panel {
   border: 1px solid var(--panel-edge);
   border-radius: 14px;
@@ -3074,10 +3078,16 @@ select:focus {
   padding: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
   border-radius: 14px;
-  background: transparent;
+  background: color-mix(in srgb, var(--field-bg) 74%, white 8%);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.page-chat .chat-room-title {
+  margin: 0 0 0.6rem;
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  line-height: 1;
 }
 
 .chat-online-panel h2 {
