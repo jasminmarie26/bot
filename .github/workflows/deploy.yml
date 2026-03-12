@@ -36,6 +36,7 @@ jobs:
             set -e
             LIVE_DIR="/opt/eigene-rp-seite"
             STAGE_DIR="${LIVE_DIR}/.deploy-stage"
+            LOCKSUM_FILE="${LIVE_DIR}/.deployed-package-lock.sha256"
             cd "$LIVE_DIR"
             export PATH="/usr/bin:/bin:${PATH}"
 
@@ -55,41 +56,50 @@ jobs:
               exit 1
             fi
 
+            NEW_LOCKSUM="$(sha256sum "$LIVE_DIR/package-lock.json" | awk '{print $1}')"
+            SHOULD_REBUILD=1
+            if [ -d "$LIVE_DIR/node_modules" ] && [ -f "$LOCKSUM_FILE" ]; then
+              PREVIOUS_LOCKSUM="$(cat "$LOCKSUM_FILE" 2>/dev/null || true)"
+              if [ "$PREVIOUS_LOCKSUM" = "$NEW_LOCKSUM" ]; then
+                SHOULD_REBUILD=0
+              fi
+            fi
+
             build_stage() {
               rm -rf "$STAGE_DIR"
               mkdir -p "$STAGE_DIR"
               cp "$LIVE_DIR/package.json" "$STAGE_DIR/package.json"
               cp "$LIVE_DIR/package-lock.json" "$STAGE_DIR/package-lock.json"
-              rm -rf /root/.cache/node-gyp/18.19.1 || true
-              export npm_config_build_from_source=true
-              export npm_config_nodedir=/usr
-              export npm_config_jobs=1
               cd "$STAGE_DIR"
-              /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
+              /usr/bin/npm ci --omit=dev --foreground-scripts
               /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
               cd "$LIVE_DIR"
             }
 
-            ATTEMPT=1
-            MAX_ATTEMPTS=3
-            until build_stage; do
-              if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
-                echo "Build failed after ${MAX_ATTEMPTS} attempts"
-                exit 1
-              fi
-              ATTEMPT=$((ATTEMPT + 1))
-              echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
-              rm -rf "$STAGE_DIR"
-              /usr/bin/npm cache verify || true
-              sleep 2
-            done
+            if [ "$SHOULD_REBUILD" -eq 1 ]; then
+              ATTEMPT=1
+              MAX_ATTEMPTS=3
+              until build_stage; do
+                if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                  echo "Build failed after ${MAX_ATTEMPTS} attempts"
+                  exit 1
+                fi
+                ATTEMPT=$((ATTEMPT + 1))
+                echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
+                rm -rf "$STAGE_DIR"
+                /usr/bin/npm cache verify || true
+                sleep 2
+              done
 
-            rm -rf "$LIVE_DIR/node_modules.prev"
-            if [ -d "$LIVE_DIR/node_modules" ]; then
-              mv "$LIVE_DIR/node_modules" "$LIVE_DIR/node_modules.prev"
+              rm -rf "$LIVE_DIR/node_modules.prev"
+              if [ -d "$LIVE_DIR/node_modules" ]; then
+                mv "$LIVE_DIR/node_modules" "$LIVE_DIR/node_modules.prev"
+              fi
+              mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
+              rm -rf "$STAGE_DIR"
+            else
+              echo "package-lock.json unchanged; reusing existing node_modules"
             fi
-            mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
-            rm -rf "$STAGE_DIR"
 
             if "$PM2_BIN" describe rp-chat >/dev/null 2>&1; then
               "$PM2_BIN" restart rp-chat --update-env
@@ -122,3 +132,4 @@ jobs:
             fi
 
             rm -rf "$LIVE_DIR/node_modules.prev"
+            printf '%s\n' "$NEW_LOCKSUM" > "$LOCKSUM_FILE"
