@@ -1726,6 +1726,10 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/healthz", (req, res) => {
+  res.type("text/plain").status(200).send("ok");
+});
+
 app.get("/register", (req, res) => {
   return renderRegisterPage(req, res);
 });
