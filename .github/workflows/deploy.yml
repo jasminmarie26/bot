@@ -37,7 +37,6 @@ jobs:
             LIVE_DIR="/opt/eigene-rp-seite"
             STAGE_DIR="${LIVE_DIR}/.deploy-stage"
             LOCKSUM_FILE="${LIVE_DIR}/.deployed-package-lock.sha256"
-            HEALTH_URL="http://127.0.0.1:3000/healthz"
             cd "$LIVE_DIR"
             export PATH="/usr/bin:/bin:${PATH}"
 
@@ -57,25 +56,11 @@ jobs:
               exit 1
             fi
 
-            NODE_ABI="$("/usr/bin/node" -p "process.versions.modules")"
             NEW_LOCKSUM="$(sha256sum "$LIVE_DIR/package-lock.json" | awk '{print $1}')"
-            DEPLOY_SIGNATURE="${NEW_LOCKSUM}:${NODE_ABI}"
             SHOULD_REBUILD=1
-            PREVIOUS_SIGNATURE=""
-            PREVIOUS_LOCKSUM=""
-            PREVIOUS_ABI=""
             if [ -d "$LIVE_DIR/node_modules" ] && [ -f "$LOCKSUM_FILE" ]; then
-              PREVIOUS_SIGNATURE="$(cat "$LOCKSUM_FILE" 2>/dev/null || true)"
-              case "$PREVIOUS_SIGNATURE" in
-                *:*)
-                  PREVIOUS_LOCKSUM="${PREVIOUS_SIGNATURE%%:*}"
-                  PREVIOUS_ABI="${PREVIOUS_SIGNATURE##*:}"
-                  ;;
-                *)
-                  PREVIOUS_LOCKSUM="$PREVIOUS_SIGNATURE"
-                  ;;
-              esac
-              if [ "$PREVIOUS_LOCKSUM" = "$NEW_LOCKSUM" ] && [ "$PREVIOUS_ABI" = "$NODE_ABI" ]; then
+              PREVIOUS_LOCKSUM="$(cat "$LOCKSUM_FILE" 2>/dev/null || true)"
+              if [ "$PREVIOUS_LOCKSUM" = "$NEW_LOCKSUM" ]; then
                 SHOULD_REBUILD=0
               fi
             fi
@@ -121,12 +106,12 @@ jobs:
             else
               "$PM2_BIN" start src/index.js --name rp-chat --cwd /opt/eigene-rp-seite --interpreter /usr/bin/node
             fi
+            "$PM2_BIN" save
 
+            sleep 2
             HEALTH_OK=0
-            HEALTH_RESPONSE=""
-            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-              HEALTH_RESPONSE="$(curl -fsS "$HEALTH_URL" 2>/dev/null || true)"
-              if [ "$HEALTH_RESPONSE" = "ok" ]; then
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS http://127.0.0.1:3000 >/dev/null 2>&1; then
                 HEALTH_OK=1
                 break
               fi
@@ -136,19 +121,15 @@ jobs:
             APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
             if [ "$APP_STATUS" != "online" ] || [ "$HEALTH_OK" -ne 1 ]; then
               echo "New release unhealthy. Rolling back node_modules."
-              echo "Health check response: ${HEALTH_RESPONSE:-<empty>}"
-              if [ -d "$LIVE_DIR/node_modules.prev" ] && [ -n "$PREVIOUS_ABI" ] && [ "$PREVIOUS_ABI" = "$NODE_ABI" ]; then
+              if [ -d "$LIVE_DIR/node_modules.prev" ]; then
                 rm -rf "$LIVE_DIR/node_modules"
                 mv "$LIVE_DIR/node_modules.prev" "$LIVE_DIR/node_modules"
                 "$PM2_BIN" restart rp-chat --update-env || true
-              else
-                echo "Skipping node_modules rollback because no ABI-compatible backup was found."
               fi
               echo "rp-chat status is $APP_STATUS"
               "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
               exit 1
             fi
 
-            "$PM2_BIN" save
             rm -rf "$LIVE_DIR/node_modules.prev"
-            printf '%s\n' "$DEPLOY_SIGNATURE" > "$LOCKSUM_FILE"
+            printf '%s\n' "$NEW_LOCKSUM" > "$LOCKSUM_FILE"
