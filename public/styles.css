@@ -1128,6 +1128,7 @@ a:hover {
   justify-content: space-between;
   align-items: center;
   padding: 1.15rem 1.2rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
   cursor: pointer;
 }
 
