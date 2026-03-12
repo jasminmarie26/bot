@@ -3049,7 +3049,7 @@ select:focus {
 }
 
 .page-chat .chat-layout {
-  grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
+  grid-template-columns: minmax(185px, 230px) minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
   min-height: 0;
@@ -3071,12 +3071,19 @@ select:focus {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  padding: 0.7rem;
+  padding: 0.2rem 0 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .chat-online-panel h2 {
   margin: 0 0 0.48rem;
   font-size: 1rem;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .chat-online-list {
@@ -3094,10 +3101,10 @@ select:focus {
   max-height: none;
   min-height: 0;
   overflow-y: auto;
-  border: 1px solid var(--field-edge);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
-  padding: 0.34rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .chat-online-item {
