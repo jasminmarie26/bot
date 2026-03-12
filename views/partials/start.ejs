@@ -4,6 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><%= title %></title>
+    <script>
+      (() => {
+        const isEdgeBrowser = /\bEdg\//.test(window.navigator.userAgent);
+        if (!isEdgeBrowser) return;
+
+        if ("scrollRestoration" in window.history) {
+          window.history.scrollRestoration = "manual";
+        }
+
+        const navigationEntry = window.performance.getEntriesByType?.("navigation")?.[0];
+        const navigationType =
+          navigationEntry?.type ||
+          (window.performance.navigation?.type === 1 ? "reload" : "");
+
+        if (navigationType !== "reload") return;
+
+        const scrollToTop = () => {
+          window.scrollTo(0, 0);
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+        };
+
+        window.addEventListener(
+          "load",
+          () => {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(scrollToTop);
+            });
+          },
+          { once: true }
+        );
+      })();
+    </script>
     <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>
     <link rel="stylesheet" href="/styles.css?v=<%= staticAssetVersion %>" />
   </head>

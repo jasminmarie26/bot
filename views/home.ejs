@@ -5,14 +5,17 @@
     <div class="home-stats-shell">
       <h2 class="home-stat-group-title home-stats-title">Server Gesamt&uuml;bersicht</h2>
 
-      <article class="home-stat home-stat-highlight">
-        <strong><%= stats.accountCount %></strong>
-        <span>Registrierte Accounts</span>
-      </article>
-
-      <article class="home-stat home-stat-highlight">
-        <strong><%= stats.loggedInUserCount %></strong>
-        <span>Gerade eingeloggt</span>
+      <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+        <div class="home-stat-detail-list" aria-label="Server Gesamtuebersicht Details">
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Registrierte Accounts:</span>
+            <strong class="home-stat-detail-value"><%= stats.accountCount %></strong>
+          </div>
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Gerade eingeloggt:</span>
+            <strong class="home-stat-detail-value"><%= stats.loggedInUserCount %></strong>
+          </div>
+        </div>
       </article>
 
       <div class="home-stat-divider" aria-hidden="true"></div>
@@ -39,10 +42,17 @@
 
       <section class="home-stat-group">
         <h3 class="home-stat-group-title">LARP SERVER</h3>
-        <article class="home-stat home-stat-highlight">
-          <strong><%= stats.larpOnlineCount %></strong>
-          <span>Gerade auf dem Server eingeloggt</span>
-          <small class="home-stat-empty">Noch keine Bereiche angelegt.</small>
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+          <div class="home-stat-detail-list" aria-label="LARP Server Details">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Charaktere:</span>
+              <strong class="home-stat-detail-value"><%= stats.larpServerCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">LARP online:</span>
+              <strong class="home-stat-detail-value"><%= stats.larpOnlineCount %></strong>
+            </div>
+          </div>
         </article>
       </section>
 

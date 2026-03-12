@@ -1235,6 +1235,7 @@ a:hover {
 
 .home-stat-highlight .home-stat-detail-value {
   font-size: 0.98rem;
+  font-weight: 400;
   line-height: 1;
   text-align: right;
   font-variant-numeric: tabular-nums;
