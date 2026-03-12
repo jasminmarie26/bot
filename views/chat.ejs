@@ -113,11 +113,7 @@
         >
           <% messages.forEach((msg) => { %>
             <article class="chat-message">
-              <header>
-                <strong><%= msg.username %></strong>
-                <small><%= msg.created_at %></small>
-              </header>
-              <p><%= msg.content %></p>
+              <p><strong><%= msg.username %>:</strong> <span><%= msg.content %></span></p>
             </article>
           <% }) %>
         </div>

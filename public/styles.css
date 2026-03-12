@@ -3031,8 +3031,7 @@ select:focus {
   padding: 0.7rem;
 }
 
-.guestbook-item header,
-.chat-message header {
+.guestbook-item header {
   display: flex;
   justify-content: space-between;
   gap: 0.8rem;
@@ -3312,13 +3311,9 @@ select:focus {
   -webkit-backdrop-filter: none;
 }
 
-.chat-message header small {
-  color: #5e6570;
-}
-
 .chat-message p {
-  margin: 0.35rem 0 0;
-  white-space: pre-line;
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 .chat-whisper {

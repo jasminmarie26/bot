@@ -34,19 +34,15 @@
     const article = document.createElement("article");
     article.className = "chat-message";
 
-    const header = document.createElement("header");
+    const line = document.createElement("p");
     const strong = document.createElement("strong");
-    strong.textContent = msg.username;
-    const small = document.createElement("small");
-    small.textContent = msg.created_at;
-    header.appendChild(strong);
-    header.appendChild(small);
+    const body = document.createElement("span");
+    strong.textContent = `${msg.username}:`;
+    body.textContent = ` ${msg.content}`;
+    line.appendChild(strong);
+    line.appendChild(body);
 
-    const body = document.createElement("p");
-    body.textContent = msg.content;
-
-    article.appendChild(header);
-    article.appendChild(body);
+    article.appendChild(line);
     chatBox.appendChild(article);
 
     while (chatBox.children.length > 150) {
@@ -60,21 +56,17 @@
     const article = document.createElement("article");
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
 
-    const header = document.createElement("header");
+    const line = document.createElement("p");
     const strong = document.createElement("strong");
+    const body = document.createElement("span");
     strong.textContent = msg?.outgoing
-      ? `Flüstern an ${msg?.to_name || "Unbekannt"}`
-      : `Flüstern von ${msg?.from_name || "Unbekannt"}`;
-    const small = document.createElement("small");
-    small.textContent = msg?.created_at || "";
-    header.appendChild(strong);
-    header.appendChild(small);
+      ? `Fluestern an ${msg?.to_name || "Unbekannt"}:`
+      : `Fluestern von ${msg?.from_name || "Unbekannt"}:`;
+    body.textContent = ` ${String(msg?.content || "")}`;
+    line.appendChild(strong);
+    line.appendChild(body);
 
-    const body = document.createElement("p");
-    body.textContent = String(msg?.content || "");
-
-    article.appendChild(header);
-    article.appendChild(body);
+    article.appendChild(line);
     chatBox.appendChild(article);
 
     while (chatBox.children.length > 150) {
@@ -103,7 +95,7 @@
     if (!entry?.userId) return;
 
     whisperTargetUserIdInput.value = String(entry.userId);
-    whisperModalTitle.textContent = `Flüstern an ${entry.name}`;
+    whisperModalTitle.textContent = `Fluestern an ${entry.name}`;
     whisperModal.hidden = false;
     whisperModal.classList.add("is-open");
     whisperInput.focus();
