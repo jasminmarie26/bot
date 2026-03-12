@@ -3285,8 +3285,9 @@ select:focus {
   height: 420px;
   overflow-y: auto;
   padding: 0.8rem;
-  display: grid;
-  gap: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   background: #ffffff;
   border-color: #d3d8df;
   color: #1a1c20;
@@ -3312,6 +3313,7 @@ select:focus {
   -webkit-backdrop-filter: none;
   border-radius: 0;
   padding: 0;
+  margin: 0;
 }
 
 .chat-box .chat-message p {
