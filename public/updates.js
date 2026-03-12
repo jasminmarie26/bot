@@ -23,6 +23,16 @@
   const heroBodySource = document.getElementById("home-hero-body-source");
   const updatesTitleElement = document.getElementById("updates-section-title");
   const updatesTitleSource = document.getElementById("updates-section-title-source");
+  const homeStatAccountCount = document.getElementById("home-stat-account-count");
+  const homeStatLoggedInCount = document.getElementById("home-stat-logged-in-count");
+  const homeStatStaffCount = document.getElementById("home-stat-staff-count");
+  const homeStatStaffNames = document.getElementById("home-stat-staff-names");
+  const homeStatStaffEmpty = document.getElementById("home-stat-staff-empty");
+  const homeStatRpCharacters = document.getElementById("home-stat-rp-characters");
+  const homeStatFreeRpOnline = document.getElementById("home-stat-free-rp-online");
+  const homeStatErpOnline = document.getElementById("home-stat-erp-online");
+  const homeStatLarpCharacters = document.getElementById("home-stat-larp-characters");
+  const homeStatLarpOnline = document.getElementById("home-stat-larp-online");
 
   const canEditUpdates = Boolean(updateForm);
 
@@ -96,6 +106,80 @@
     if (updatesTitleSource) {
       updatesTitleSource.value = homeContent.updates_title || "";
     }
+  }
+
+  function renderStaffNames(stats) {
+    if (!homeStatStaffNames && !homeStatStaffEmpty) return;
+
+    const staffNames = [];
+    const adminNames = Array.isArray(stats?.adminOnlineNames) ? stats.adminOnlineNames : [];
+    const moderatorNames = Array.isArray(stats?.moderatorOnlineNames)
+      ? stats.moderatorOnlineNames
+      : [];
+
+    adminNames.forEach((name) => {
+      staffNames.push({ role: "admin", label: `${name} (A)` });
+    });
+    moderatorNames.forEach((name) => {
+      staffNames.push({ role: "moderator", label: `${name} (M)` });
+    });
+
+    if (homeStatStaffNames) {
+      if (!staffNames.length) {
+        homeStatStaffNames.hidden = true;
+        homeStatStaffNames.innerHTML = "";
+      } else {
+        homeStatStaffNames.hidden = false;
+        homeStatStaffNames.innerHTML = "";
+        staffNames.forEach((entry, index) => {
+          const span = document.createElement("span");
+          span.className =
+            entry.role === "admin" ? "staff-name-admin" : "staff-name-moderator";
+          span.textContent = entry.label;
+          homeStatStaffNames.appendChild(span);
+          if (index < staffNames.length - 1) {
+            homeStatStaffNames.append(", ");
+          }
+        });
+      }
+    }
+
+    if (homeStatStaffEmpty) {
+      homeStatStaffEmpty.hidden = Boolean(staffNames.length);
+    }
+  }
+
+  function applyHomeStats(stats) {
+    if (!stats || typeof stats !== "object") return;
+
+    if (homeStatAccountCount) {
+      homeStatAccountCount.textContent = String(stats.accountCount ?? 0);
+    }
+    if (homeStatLoggedInCount) {
+      homeStatLoggedInCount.textContent = String(stats.loggedInUserCount ?? 0);
+    }
+    if (homeStatStaffCount) {
+      const combinedStaffCount =
+        Number(stats.adminOnlineCount || 0) + Number(stats.moderatorOnlineCount || 0);
+      homeStatStaffCount.textContent = String(combinedStaffCount);
+    }
+    if (homeStatRpCharacters) {
+      homeStatRpCharacters.textContent = String(stats.rpServerCount ?? 0);
+    }
+    if (homeStatFreeRpOnline) {
+      homeStatFreeRpOnline.textContent = String(stats.freeRpOnlineCount ?? 0);
+    }
+    if (homeStatErpOnline) {
+      homeStatErpOnline.textContent = String(stats.erpOnlineCount ?? 0);
+    }
+    if (homeStatLarpCharacters) {
+      homeStatLarpCharacters.textContent = String(stats.larpServerCount ?? 0);
+    }
+    if (homeStatLarpOnline) {
+      homeStatLarpOnline.textContent = String(stats.larpOnlineCount ?? 0);
+    }
+
+    renderStaffNames(stats);
   }
 
   function removeEmptyState() {
@@ -449,5 +533,9 @@
 
   socket.on("site:home-content:update", (homeContent) => {
     applyHomeContent(homeContent);
+  });
+
+  socket.on("site:stats:update", (stats) => {
+    applyHomeStats(stats);
   });
 })();

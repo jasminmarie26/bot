@@ -9,11 +9,11 @@
         <div class="home-stat-detail-list" aria-label="Server Gesamtuebersicht Details">
           <div class="home-stat-detail-row">
             <span class="home-stat-detail-label">Registrierte Accounts:</span>
-            <strong class="home-stat-detail-value"><%= stats.accountCount %></strong>
+            <strong id="home-stat-account-count" class="home-stat-detail-value"><%= stats.accountCount %></strong>
           </div>
           <div class="home-stat-detail-row">
             <span class="home-stat-detail-label">Gerade eingeloggt:</span>
-            <strong class="home-stat-detail-value"><%= stats.loggedInUserCount %></strong>
+            <strong id="home-stat-logged-in-count" class="home-stat-detail-value"><%= stats.loggedInUserCount %></strong>
           </div>
         </div>
       </article>
@@ -22,32 +22,26 @@
         <div class="home-stat-detail-list" aria-label="Admins und Moderatoren">
           <div class="home-stat-detail-row">
             <span class="home-stat-detail-label">Admins &amp; Moderatoren:</span>
-            <strong class="home-stat-detail-value"><%= stats.adminOnlineCount + stats.moderatorOnlineCount %></strong>
+            <strong id="home-stat-staff-count" class="home-stat-detail-value"><%= stats.adminOnlineCount + stats.moderatorOnlineCount %></strong>
           </div>
         </div>
-        <% if (
-          (stats.adminOnlineNames && stats.adminOnlineNames.length) ||
-          (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length)
-        ) { %>
-          <small class="home-stat-names">
-            <% const staffNames = []; %>
-            <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
-              <% stats.adminOnlineNames.forEach((name) => { %>
-                <% staffNames.push({ role: "admin", label: `${name} (A)` }); %>
-              <% }) %>
-            <% } %>
-            <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
-              <% stats.moderatorOnlineNames.forEach((name) => { %>
-                <% staffNames.push({ role: "moderator", label: `${name} (M)` }); %>
-              <% }) %>
-            <% } %>
-            <% staffNames.forEach((entry, index) => { %>
-              <span class="<%= entry.role === 'admin' ? 'staff-name-admin' : 'staff-name-moderator' %>"><%= entry.label %></span><%= index < staffNames.length - 1 ? ", " : "" %>
-            <% }) %>
-          </small>
-        <% } else { %>
-          <small class="home-stat-empty">Niemand gerade online.</small>
+        <% const staffNames = []; %>
+        <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
+          <% stats.adminOnlineNames.forEach((name) => { %>
+            <% staffNames.push({ role: "admin", label: `${name} (A)` }); %>
+          <% }) %>
         <% } %>
+        <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
+          <% stats.moderatorOnlineNames.forEach((name) => { %>
+            <% staffNames.push({ role: "moderator", label: `${name} (M)` }); %>
+          <% }) %>
+        <% } %>
+        <small id="home-stat-staff-names" class="home-stat-names" <%= staffNames.length ? "" : "hidden" %>>
+          <% staffNames.forEach((entry, index) => { %>
+            <span class="<%= entry.role === 'admin' ? 'staff-name-admin' : 'staff-name-moderator' %>"><%= entry.label %></span><%= index < staffNames.length - 1 ? ", " : "" %>
+          <% }) %>
+        </small>
+        <small id="home-stat-staff-empty" class="home-stat-empty" <%= staffNames.length ? "hidden" : "" %>>Niemand gerade online.</small>
       </article>
 
       <div class="home-stat-divider" aria-hidden="true"></div>
@@ -58,15 +52,15 @@
           <div class="home-stat-detail-list" aria-label="RP Server Details">
             <div class="home-stat-detail-row">
               <span class="home-stat-detail-label">Charaktere:</span>
-              <strong class="home-stat-detail-value"><%= stats.rpServerCount %></strong>
+              <strong id="home-stat-rp-characters" class="home-stat-detail-value"><%= stats.rpServerCount %></strong>
             </div>
             <div class="home-stat-detail-row">
               <span class="home-stat-detail-label">Free - RP online:</span>
-              <strong class="home-stat-detail-value"><%= stats.freeRpOnlineCount %></strong>
+              <strong id="home-stat-free-rp-online" class="home-stat-detail-value"><%= stats.freeRpOnlineCount %></strong>
             </div>
             <div class="home-stat-detail-row">
               <span class="home-stat-detail-label">ERP online:</span>
-              <strong class="home-stat-detail-value"><%= stats.erpOnlineCount %></strong>
+              <strong id="home-stat-erp-online" class="home-stat-detail-value"><%= stats.erpOnlineCount %></strong>
             </div>
           </div>
         </article>
@@ -78,11 +72,11 @@
           <div class="home-stat-detail-list" aria-label="LARP Server Details">
             <div class="home-stat-detail-row">
               <span class="home-stat-detail-label">Charaktere:</span>
-              <strong class="home-stat-detail-value"><%= stats.larpServerCount %></strong>
+              <strong id="home-stat-larp-characters" class="home-stat-detail-value"><%= stats.larpServerCount %></strong>
             </div>
             <div class="home-stat-detail-row">
               <span class="home-stat-detail-label">LARP online:</span>
-              <strong class="home-stat-detail-value"><%= stats.larpOnlineCount %></strong>
+              <strong id="home-stat-larp-online" class="home-stat-detail-value"><%= stats.larpOnlineCount %></strong>
             </div>
           </div>
         </article>
