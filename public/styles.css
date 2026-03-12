@@ -1005,8 +1005,7 @@ a:hover {
 }
 
 .page-chat .rp-room-panel.is-room-chat {
-  grid-template-rows: auto minmax(0, 1fr);
-  row-gap: 0.7rem;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .page-roomlist .rp-room-panel {
@@ -3056,6 +3055,13 @@ select:focus {
   height: 100%;
 }
 
+.page-chat .chat-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
   margin-top: 0;
 }
@@ -3085,9 +3091,9 @@ select:focus {
 }
 
 .page-chat .chat-room-title {
-  margin: 0 0 0.6rem;
-  font-size: clamp(2rem, 4vw, 2.9rem);
-  line-height: 1;
+  margin: 0 0 0.55rem;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
+  line-height: 1.08;
 }
 
 .chat-online-panel h2 {

@@ -61,29 +61,32 @@
     <% } %>
 
     <div class="chat-layout">
-      <aside class="chat-online-panel">
+      <div class="chat-sidebar">
         <% if (activeRoom) { %>
           <h1 class="chat-room-title"><%= activeRoom.name %></h1>
         <% } %>
-        <h2>Online Charaktere:</h2>
-        <div id="online-char-list" class="chat-online-list">
-          <% if (onlineCharacters && onlineCharacters.length) { %>
-            <% onlineCharacters.forEach((entry) => { %>
-              <button
-                class="chat-online-item chat-online-trigger"
-                type="button"
-                data-user-id="<%= entry.user_id %>"
-                data-character-id="<%= entry.character_id || '' %>"
-                data-name="<%= entry.name %>"
-              >
-                <%= entry.name %>
-              </button>
-            <% }) %>
-          <% } else { %>
-            <p class="muted">Niemand online.</p>
-          <% } %>
-        </div>
-      </aside>
+
+        <aside class="chat-online-panel">
+          <h2>Online Charaktere:</h2>
+          <div id="online-char-list" class="chat-online-list">
+            <% if (onlineCharacters && onlineCharacters.length) { %>
+              <% onlineCharacters.forEach((entry) => { %>
+                <button
+                  class="chat-online-item chat-online-trigger"
+                  type="button"
+                  data-user-id="<%= entry.user_id %>"
+                  data-character-id="<%= entry.character_id || '' %>"
+                  data-name="<%= entry.name %>"
+                >
+                  <%= entry.name %>
+                </button>
+              <% }) %>
+            <% } else { %>
+              <p class="muted">Niemand online.</p>
+            <% } %>
+          </div>
+        </aside>
+      </div>
 
       <div class="chat-main">
         <div
