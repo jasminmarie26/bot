@@ -18,7 +18,7 @@
       </button>
 
       <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
-        <button class="btn btn-secondary" type="submit">Seite hinzufügen</button>
+        <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
       </form>
 
       <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
@@ -26,19 +26,36 @@
         <button
           class="btn btn-danger"
           type="submit"
-          onclick="return confirm('Aktuelle Seite wirklich löschen?')"
+          onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
         >
-          Aktuelle Seite löschen
+          Aktuelle Seite l&ouml;schen
         </button>
       </form>
     </div>
+
+    <form method="POST" action="/settings/theme" class="inline-form theme-form">
+      <label for="gb-theme-select">Design</label>
+      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+      <select
+        id="gb-theme-select"
+        name="theme"
+        class="theme-select"
+        onchange="this.form.elements.return_to.value = this.form.elements.return_to.value.split('#')[0] + window.location.hash; this.form.submit();"
+      >
+        <% availableThemes.forEach((theme) => { %>
+          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <%= theme.label %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
 
     <form method="POST" action="/logout" class="inline-form">
       <button type="submit" class="ghost-btn">Logout</button>
     </form>
   </header>
 
-  <nav class="gb-editor-tabs" aria-label="Gästebuch Seiten">
+  <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
     <% pages.forEach((page) => { %>
       <a
         class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
@@ -87,7 +104,7 @@
     </label>
 
     <label>
-      Gästebuch Seiten Stil
+      G&auml;stebuch Seiten Stil
       <div class="gb-radio-list">
         <label><input type="radio" name="page_style" value="scroll" <%= settings.page_style === "scroll" ? "checked" : "" %> /> Scroll</label>
         <label><input type="radio" name="page_style" value="book" <%= settings.page_style === "book" ? "checked" : "" %> /> Buch</label>
@@ -130,7 +147,7 @@
         <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
         <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
         <p><code>[img float=right]https://...[/img]Text</code></p>
-        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gästebuch[/url]</code></p>
+        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]G&auml;stebuch[/url]</code></p>
         <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
         <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
       </div>

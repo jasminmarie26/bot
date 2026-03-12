@@ -10,6 +10,22 @@
         <a href="/dashboard">Dashboard</a>
       <% } %>
     </nav>
+    <form method="POST" action="/settings/theme" class="inline-form theme-form">
+      <label for="rp-theme-select-chat">Design</label>
+      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+      <select
+        id="rp-theme-select-chat"
+        name="theme"
+        class="theme-select"
+        onchange="this.form.elements.return_to.value = this.form.elements.return_to.value.split('#')[0] + window.location.hash; this.form.submit();"
+      >
+        <% availableThemes.forEach((theme) => { %>
+          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <%= theme.label %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
     <details class="rp-user-menu">
       <summary
         class="rp-user-menu-toggle"
