@@ -3078,7 +3078,7 @@ select:focus {
   padding: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--field-bg) 74%, white 8%);
+  background: color-mix(in srgb, var(--field-bg) 56%, white 20%);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
