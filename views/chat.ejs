@@ -73,11 +73,17 @@
   <section class="rp-room-panel <%= activeRoom ? 'is-room-chat' : 'is-server-chat' %>">
     <div class="chat-layout">
       <div class="chat-sidebar">
-        <h1 class="chat-room-title">
-          <%= activeRoom
-            ? activeRoom.name
-            : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
-        </h1>
+        <div class="chat-room-heading">
+          <h1 class="chat-room-title">
+            <%= activeRoom
+              ? activeRoom.name
+              : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
+          </h1>
+          <% if (standardRoom && standardRoom.teaser) { %>
+            <p class="chat-room-description"><%= standardRoom.teaser %></p>
+          <% } %>
+          <div class="chat-room-divider" aria-hidden="true"></div>
+        </div>
 
         <aside class="chat-online-panel">
           <h2>Online Charaktere:</h2>
