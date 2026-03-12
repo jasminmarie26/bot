@@ -122,7 +122,7 @@ jobs:
             HEALTH_OK=0
             HEALTH_RESPONSE=""
             for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-              HEALTH_RESPONSE="$(HEALTH_URL="$HEALTH_URL" /usr/bin/node -e "const http=require('http'); const https=require('https'); const target=new URL(process.env.HEALTH_URL); const client=target.protocol==='https:'?https:http; const req=client.get(target,{timeout:3000},(res)=>{let body=''; res.on('data',(chunk)=>body+=chunk); res.on('end',()=>{if(res.statusCode===200){process.stdout.write(body.trim()); process.exit(0);} process.exit(1);});}); req.on('error',()=>process.exit(1)); req.on('timeout',()=>{req.destroy(); process.exit(1);});" 2>/dev/null || true)"
+              HEALTH_RESPONSE="$(HEALTH_URL="$HEALTH_URL" /usr/bin/node -e "fetch(process.env.HEALTH_URL).then(async (res) => { if (!res.ok) { process.exitCode = 1; return; } process.stdout.write((await res.text()).trim()); }).catch(() => { process.exitCode = 1; });" 2>/dev/null || true)"
               if [ "$HEALTH_RESPONSE" = "ok" ]; then
                 HEALTH_OK=1
                 break
