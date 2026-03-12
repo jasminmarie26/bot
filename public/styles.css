@@ -1119,6 +1119,11 @@ a:hover {
 
 .home-stats-title {
   margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .home-stat-group {
