@@ -969,21 +969,24 @@ a:hover {
 }
 
 .page-rp-screen {
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
 .page-rp-screen .container {
   max-width: min(1860px, calc(100vw - 0.55rem));
-  padding: 0.45rem 0.55rem 1rem;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
+  padding: 0.45rem 0.55rem;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .page-rp-screen .rp-shell {
-  min-height: calc(100vh - 0.95rem);
-  min-height: calc(100dvh - 0.95rem);
+  height: 100%;
+  min-height: 0;
   flex: 1 1 auto;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -991,6 +994,7 @@ a:hover {
 
 .page-rp-screen .rp-room-panel {
   min-height: 0;
+  height: 100%;
   display: grid;
   overflow: hidden;
 }
@@ -3043,9 +3047,8 @@ select:focus {
   grid-template-columns: minmax(230px, 290px) minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
-  min-height: 560px;
-  height: calc(100vh - 12.2rem);
-  height: calc(100dvh - 12.2rem);
+  min-height: 0;
+  height: 100%;
 }
 
 .chat-online-panel {
@@ -3476,26 +3479,6 @@ select:focus {
     min-height: auto;
   }
 
-  .page-rp-screen {
-    overflow-y: auto;
-  }
-
-  .page-rp-screen .rp-shell,
-  .page-rp-screen .rp-room-panel,
-  .page-chat .chat-layout {
-    min-height: 0;
-    height: auto;
-  }
-
-  .page-rp-screen .container {
-    display: block;
-  }
-
-  .page-chat .chat-box {
-    height: 64vh;
-    min-height: 420px;
-  }
-
   .chat-online-list {
     max-height: 180px;
   }
@@ -3548,6 +3531,32 @@ select:focus {
 }
 
 @media (max-width: 640px) {
+  .page-rp-screen {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .page-rp-screen .container {
+    display: block;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .page-rp-screen .rp-shell,
+  .page-rp-screen .rp-room-panel,
+  .page-chat .chat-layout {
+    min-height: 0;
+    height: auto;
+  }
+
+  .page-chat .chat-box {
+    height: 64vh;
+    min-height: 420px;
+  }
+
   .home-stats {
     grid-template-columns: 1fr;
   }
