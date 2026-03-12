@@ -2408,6 +2408,7 @@ a:hover {
 
 .rp-room-link-standard {
   background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
+  width: min(100%, 420px);
 }
 
 .rp-room-link-name {
@@ -2427,6 +2428,29 @@ a:hover {
   display: flex;
   justify-content: space-between;
   gap: 0.45rem;
+}
+
+.rp-room-link-standard .rp-room-link-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.rp-room-link-standard .rp-room-link-meta {
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: nowrap;
+}
+
+.rp-room-link-standard .rp-room-link-meta small:first-child {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rp-room-link-standard .rp-room-link-meta small:last-child {
+  font-style: italic;
+  white-space: normal;
 }
 
 .rp-room-occupants {
