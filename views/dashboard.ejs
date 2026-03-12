@@ -3,7 +3,7 @@
 <section class="header-line dashboard-page-header">
   <div>
     <h1>Dashboard</h1>
-    <p class="muted">Deine Charaktere, Bereiche und nächsten Welten auf einen Blick.</p>
+    <p class="muted">Deine Charaktere, Bereiche und nÃ¤chsten Welten auf einen Blick.</p>
   </div>
   <div class="dashboard-server-actions">
     <% if (currentUser && currentUser.is_admin) { %>
@@ -16,65 +16,77 @@
       aria-haspopup="dialog"
       aria-controls="account-delete-modal"
     >
-      Account löschen
+      Account lÃ¶schen
     </button>
   </div>
 </section>
 
-<section class="dashboard-block">
-  <div class="dashboard-block-head">
-    <span class="dashboard-kicker">RP-Server</span>
-    <h2>Free - RP & ERP</h2>
-    <p class="muted">Hier liegen deine laufenden Charaktere für beide RP-Bereiche.</p>
-  </div>
+<section class="dashboard-block dashboard-accordion-stack">
+  <details class="dashboard-accordion" open>
+    <summary class="dashboard-accordion-summary">
+      <div class="dashboard-accordion-copy">
+        <span class="dashboard-kicker">Charakter-Bereiche</span>
+        <h2>FREE - RP & ERP SERVER</h2>
+        <p class="muted">Hier liegen deine laufenden Charaktere fÃ¼r beide RP-Bereiche.</p>
+      </div>
+      <span class="dashboard-accordion-icon" aria-hidden="true"></span>
+    </summary>
 
-  <div class="dashboard-server-list">
-    <% serverSections.forEach((section) => { %>
-      <section class="panel dashboard-server-panel">
-        <div class="header-line">
-          <div>
-            <h3><%= section.dashboard_label || section.label %></h3>
-            <p class="muted dashboard-section-copy"><%= section.dashboard_caption %></p>
-          </div>
-          <div class="dashboard-server-actions">
-            <a class="btn" href="/characters/new?server=<%= section.id %>">+ Charakter</a>
-          </div>
-        </div>
+    <div class="dashboard-accordion-body">
+      <div class="dashboard-server-list">
+        <% serverSections.forEach((section) => { %>
+          <section class="panel dashboard-server-panel dashboard-subpanel">
+            <div class="header-line">
+              <div>
+                <h3><%= section.dashboard_label || section.label %></h3>
+                <p class="muted dashboard-section-copy"><%= section.dashboard_caption %></p>
+              </div>
+              <div class="dashboard-server-actions">
+                <a class="btn" href="/characters/new?server=<%= section.id %>">+ Charakter</a>
+              </div>
+            </div>
 
-        <% if (!section.characters.length) { %>
-          <p class="muted">Noch keine Charaktere im Bereich <%= section.dashboard_label || section.label %>.</p>
-        <% } else { %>
-          <div class="character-mini-grid">
-            <% section.characters.forEach((char) => { %>
-              <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                <span class="character-mini-name"><%= char.name %></span>
-                <% if (char.festplay_name) { %>
-                  <span class="character-mini-meta"><%= char.festplay_name %></span>
-                <% } %>
-              </a>
-            <% }) %>
-          </div>
-        <% } %>
-      </section>
-    <% }) %>
-  </div>
-</section>
-
-<section class="dashboard-block dashboard-larp-block">
-  <div class="dashboard-block-head">
-    <span class="dashboard-kicker">LARP-Bereich</span>
-    <h2><%= larpSection.title %></h2>
-    <p class="muted"><%= larpSection.description %></p>
-  </div>
-
-  <section class="panel dashboard-larp-panel">
-    <div class="dashboard-larp-orb" aria-hidden="true"></div>
-    <div class="dashboard-larp-copy">
-      <span class="dashboard-status-pill">In Planung</span>
-      <h3>Wegmarken für deine nächste Reise</h3>
-      <p class="muted"><%= larpSection.note %></p>
+            <% if (!section.characters.length) { %>
+              <p class="muted">Noch keine Charaktere im Bereich <%= section.dashboard_label || section.label %>.</p>
+            <% } else { %>
+              <div class="character-mini-grid">
+                <% section.characters.forEach((char) => { %>
+                  <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                    <span class="character-mini-name"><%= char.name %></span>
+                    <% if (char.festplay_name) { %>
+                      <span class="character-mini-meta"><%= char.festplay_name %></span>
+                    <% } %>
+                  </a>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+        <% }) %>
+      </div>
     </div>
-  </section>
+  </details>
+
+  <details class="dashboard-accordion dashboard-larp-accordion" open>
+    <summary class="dashboard-accordion-summary">
+      <div class="dashboard-accordion-copy">
+        <span class="dashboard-kicker">Welten & Cons</span>
+        <h2>WELTEN & CONS SERVER</h2>
+        <p class="muted"><%= larpSection.description %></p>
+      </div>
+      <span class="dashboard-accordion-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="dashboard-accordion-body">
+      <section class="panel dashboard-larp-panel dashboard-subpanel">
+        <div class="dashboard-larp-orb" aria-hidden="true"></div>
+        <div class="dashboard-larp-copy">
+          <span class="dashboard-status-pill">In Planung</span>
+          <h3>Wegmarken fÃ¼r deine nÃ¤chste Reise</h3>
+          <p class="muted"><%= larpSection.note %></p>
+        </div>
+      </section>
+    </div>
+  </details>
 </section>
 
 <%- include("partials/end") %>

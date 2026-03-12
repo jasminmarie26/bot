@@ -1073,6 +1073,10 @@ a:hover {
   margin-top: 1rem;
 }
 
+.dashboard-accordion-stack {
+  gap: 1.15rem;
+}
+
 .dashboard-block-head {
   display: grid;
   gap: 0.3rem;
@@ -1100,7 +1104,75 @@ a:hover {
 
 .dashboard-server-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
+}
+
+.dashboard-accordion {
+  border: 1px solid var(--panel-edge);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, color-mix(in srgb, var(--panel-bg) 88%, black 12%) 100%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+
+.dashboard-accordion[open] {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--panel-edge) 72%);
+}
+
+.dashboard-accordion-summary {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.15rem 1.2rem;
+  cursor: pointer;
+}
+
+.dashboard-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-accordion-copy {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.dashboard-accordion-copy h2 {
+  margin: 0;
+}
+
+.dashboard-accordion-copy p {
+  margin: 0;
+  max-width: 48rem;
+}
+
+.dashboard-accordion-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: color-mix(in srgb, var(--accent) 70%, white 30%);
+  transform: rotate(45deg);
+  transition: transform 180ms ease;
+  margin-right: 0.35rem;
+}
+
+.dashboard-accordion[open] .dashboard-accordion-icon {
+  transform: rotate(225deg);
+}
+
+.dashboard-accordion-body {
+  padding: 0 1.2rem 1.2rem;
+}
+
+.dashboard-subpanel {
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 92%, white 8%) 0%, color-mix(in srgb, var(--panel-bg) 85%, black 15%) 100%);
 }
 
 .dashboard-server-panel .header-line {
@@ -2914,9 +2986,18 @@ select:focus {
   }
 
   .dashboard-page-header,
-  .dashboard-server-panel .header-line {
+  .dashboard-server-panel .header-line,
+  .dashboard-accordion-summary {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-accordion-summary {
+    padding: 1rem;
+  }
+
+  .dashboard-accordion-body {
+    padding: 0 1rem 1rem;
   }
 
   .admin-user-summary {
@@ -2949,6 +3030,10 @@ select:focus {
 
   .character-mini-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .dashboard-server-list {
+    grid-template-columns: 1fr;
   }
 
   body.theme-sith .hero {
