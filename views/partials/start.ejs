@@ -47,6 +47,19 @@
       currentPath &&
       currentPath === "/dashboard"
     ); %>
+    <% const menuCharacter =
+      typeof activeCharacter !== "undefined" && activeCharacter
+        ? activeCharacter
+        : typeof character !== "undefined" && character
+          ? character
+          : null; %>
+    <% const canEditMenuCharacter = Boolean(
+      menuCharacter &&
+      (
+        (typeof isOwner !== "undefined" && isOwner) ||
+        menuCharacter.is_owner
+      )
+    ); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
@@ -78,10 +91,40 @@
               </select>
             </form>
             <% if (currentUser) { %>
-              <span class="account-chip">Account Nr. : <%= currentUser.account_number %></span>
-              <form method="POST" action="/logout" class="inline-form">
-                <button type="submit" class="ghost-btn">Logout (<%= currentUser.username %>)</button>
-              </form>
+              <details class="topbar-user-menu">
+                <summary
+                  class="topbar-user-menu-toggle"
+                  aria-label="Benutzermen&uuml; &ouml;ffnen"
+                  title="Benutzermen&uuml;"
+                >
+                  <span class="topbar-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+                </summary>
+                <div class="topbar-user-menu-panel">
+                  <div class="topbar-user-menu-meta">
+                    <strong><%= currentUser.username %></strong>
+                    <span>Account Nr.: <%= currentUser.account_number %></span>
+                    <% if (menuCharacter) { %>
+                      <span>Charakter: <%= menuCharacter.name %></span>
+                      <span>Server: <%= menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+                    <% } %>
+                  </div>
+
+                  <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
+                    <a href="/dashboard">Account</a>
+                    <% if (menuCharacter) { %>
+                      <a href="/characters/<%= menuCharacter.id %>">Charakter</a>
+                      <% if (canEditMenuCharacter) { %>
+                        <a href="/characters/<%= menuCharacter.id %>/edit">Charakter editieren</a>
+                      <% } %>
+                      <a href="/characters/<%= menuCharacter.id %>/guestbook">G&auml;stebuch</a>
+                    <% } %>
+                  </nav>
+
+                  <form method="POST" action="/logout" class="inline-form topbar-user-menu-form">
+                    <button type="submit" class="topbar-user-menu-logout">Logout</button>
+                  </form>
+                </div>
+              </details>
             <% } %>
           </nav>
         </div>

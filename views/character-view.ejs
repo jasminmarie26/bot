@@ -2,14 +2,31 @@
 
 <section class="rp-shell">
   <header class="rp-topline">
-  <a class="rp-logo" href="/">Heldenhafte Reisen</a>
+    <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
-      <a href="/dashboard">Account</a>
       <a href="#roomlist">Raumliste</a>
-      <% if (isOwner) { %>
-        <div class="rp-dropdown">
-          <button class="rp-dropdown-toggle" type="button">Charakter</button>
-          <div class="rp-dropdown-menu">
+      <a href="/characters/<%= character.id %>#roomlist">Extras</a>
+      <a href="/dashboard">Hilfe</a>
+    </nav>
+    <details class="rp-user-menu">
+      <summary
+        class="rp-user-menu-toggle"
+        aria-label="Benutzermen&uuml; &ouml;ffnen"
+        title="Benutzermen&uuml;"
+      >
+        <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+      </summary>
+      <div class="rp-user-menu-panel">
+        <div class="rp-user-menu-meta">
+          <strong><%= currentUser ? currentUser.username : character.name %></strong>
+          <span>Charakter: <%= character.name %></span>
+          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+        </div>
+
+        <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+          <a href="/dashboard">Account</a>
+          <a href="/characters/<%= character.id %>">Charakter</a>
+          <% if (isOwner) { %>
             <a
               href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
               target="_blank"
@@ -17,21 +34,16 @@
             >
               Charakter editieren
             </a>
-          </div>
-        </div>
-      <% } else { %>
-        <a href="/characters/<%= character.id %>">Charakter</a>
-      <% } %>
-      <a href="/characters/<%= character.id %>#roomlist">Extras</a>
-      <a href="/dashboard">Hilfe</a>
-    </nav>
-    <div class="rp-userline">
-      <span>Charakter: <strong><%= character.name %></strong></span>
-      <span>Server: <strong><%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></strong></span>
-      <form method="POST" action="/logout" class="inline-form">
-        <button type="submit" class="rp-logout">Logout</button>
-      </form>
-    </div>
+          <% } %>
+          <a href="/characters/<%= character.id %>/guestbook">G&auml;stebuch</a>
+          <a href="/characters/<%= character.id %>#roomlist">Extras</a>
+        </nav>
+
+        <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
+          <button type="submit" class="rp-user-menu-logout">Logout</button>
+        </form>
+      </div>
+    </details>
   </header>
 
   <section class="rp-room-panel" id="roomlist">
@@ -50,9 +62,9 @@
     </form>
 
     <div class="rp-room-list-wrap">
-      <h2>Räume</h2>
+      <h2>R&auml;ume</h2>
       <% if (!rooms || !rooms.length) { %>
-        <p class="muted">Noch keine Räume vorhanden.</p>
+        <p class="muted">Noch keine R&auml;ume vorhanden.</p>
       <% } else { %>
         <div class="rp-room-list">
           <% rooms.forEach((room) => { %>
@@ -71,7 +83,6 @@
         </div>
       <% } %>
     </div>
-
   </section>
 </section>
 
@@ -79,4 +90,3 @@
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>
-
