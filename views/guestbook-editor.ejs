@@ -162,4 +162,7 @@
   })();
 </script>
 
+<div data-server-presence="<%= character.server_id %>" hidden></div>
+<script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
+
 <%- include("partials/end") %>

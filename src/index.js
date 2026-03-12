@@ -453,8 +453,13 @@ function getOnlineUserCountForServers(serverIds) {
   const userIds = new Set();
   for (const socket of sockets.values()) {
     const userId = Number(socket?.data?.user?.id);
-    const serverId = normalizeServer(socket?.data?.serverId);
-    if (!Number.isInteger(userId) || userId < 1 || !normalizedServerIds.has(serverId)) {
+    const rawPresenceServerId = String(socket?.data?.presenceServerId || "").trim().toLowerCase();
+    if (
+      !Number.isInteger(userId) ||
+      userId < 1 ||
+      !ALLOWED_SERVER_IDS.has(rawPresenceServerId) ||
+      !normalizedServerIds.has(rawPresenceServerId)
+    ) {
       continue;
     }
     userIds.add(userId);
@@ -3930,8 +3935,24 @@ function pruneEmptyRooms() {
 
 io.on("connection", (socket) => {
   socket.data.roomId = null;
-  socket.data.serverId = DEFAULT_SERVER_ID;
-  socket.join(socketChannelForRoom(null, socket.data.serverId));
+  socket.data.serverId = null;
+  socket.data.presenceServerId = null;
+
+  socket.on("presence:set", (payload) => {
+    if (!socket.data.user) return;
+
+    const nextPresenceServerId = String(payload?.serverId || "").trim().toLowerCase();
+    if (!ALLOWED_SERVER_IDS.has(nextPresenceServerId)) {
+      return;
+    }
+
+    if (socket.data.presenceServerId === nextPresenceServerId) {
+      return;
+    }
+
+    socket.data.presenceServerId = nextPresenceServerId;
+    emitHomeStatsUpdate();
+  });
 
   socket.on("chat:join", (payload) => {
     if (!socket.data.user) return;
@@ -3966,19 +3987,30 @@ io.on("connection", (socket) => {
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
         ? socket.data.roomId
         : null;
-    const previousServerId = normalizeServer(socket.data.serverId);
-    socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+    const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
+      ? normalizeServer(socket.data.serverId)
+      : null;
+    if (previousServerId) {
+      socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+    }
 
     socket.data.roomId = nextRoomId;
     socket.data.serverId = nextServerId;
+    const previousPresenceServerId = socket.data.presenceServerId;
+    socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     clearPendingRoomDeletion(nextRoomId);
 
-    const previousRoomWasRemoved = maybeRemoveEmptyRoom(previousRoomId);
-    if (!previousRoomWasRemoved) {
+    const previousRoomWasRemoved = previousServerId
+      ? maybeRemoveEmptyRoom(previousRoomId)
+      : false;
+    if (previousServerId && !previousRoomWasRemoved) {
       emitOnlineCharacters(previousRoomId, previousServerId);
     }
     emitOnlineCharacters(nextRoomId, nextServerId);
+    if (previousPresenceServerId !== nextServerId) {
+      emitHomeStatsUpdate();
+    }
   });
 
   socket.on("chat:message", (rawMessage) => {
@@ -4110,9 +4142,16 @@ io.on("connection", (socket) => {
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
         ? socket.data.roomId
         : null;
-    const previousServerId = normalizeServer(socket.data.serverId);
-    emitOnlineCharacters(previousRoomId, previousServerId);
-    scheduleRoomDeletion(previousRoomId);
+    const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
+      ? normalizeServer(socket.data.serverId)
+      : null;
+    if (previousServerId) {
+      emitOnlineCharacters(previousRoomId, previousServerId);
+      scheduleRoomDeletion(previousRoomId);
+    }
+    if (socket.data.presenceServerId) {
+      emitHomeStatsUpdate();
+    }
   });
 });
 
