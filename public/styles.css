@@ -5,6 +5,10 @@
   --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -37,12 +41,14 @@ body {
   min-height: 100vh;
   color: var(--text);
   font-family: var(--font-ui);
+  overflow-x: clip;
   background:
     radial-gradient(700px 400px at 8% 10%, var(--orb-1), transparent 70%),
     radial-gradient(800px 500px at 88% 15%, var(--orb-2), transparent 72%),
     radial-gradient(700px 480px at 75% 92%, var(--orb-3), transparent 70%),
     var(--bg-base);
   position: relative;
+  isolation: isolate;
 }
 
 body::before {
@@ -60,6 +66,8 @@ body::before {
   mix-blend-mode: screen;
   opacity: 0.35;
   animation: haze-drift 18s ease-in-out infinite alternate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   z-index: 0;
 }
 
@@ -74,6 +82,8 @@ body::after {
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.18), transparent 70%);
   filter: blur(12px);
   pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   z-index: 0;
 }
 
@@ -382,7 +392,7 @@ body.theme-sith {
     linear-gradient(180deg, transparent 56%, rgba(13, 6, 9, 0.18) 76%, rgba(7, 3, 5, 0.48) 100%),
     url("/sith-wallpaper-user.png") center 8% / cover no-repeat,
     linear-gradient(145deg, #05060a 0%, #12070d 40%, #17070b 70%, #05060a 100%);
-  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed;
+  background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
 }
 
 body.theme-sith::before {
@@ -550,7 +560,7 @@ body.theme-jedi {
     linear-gradient(180deg, transparent 56%, rgba(7, 12, 20, 0.18) 76%, rgba(4, 7, 13, 0.5) 100%),
     url("/Jedi design.png") center 8% / cover no-repeat,
     linear-gradient(145deg, #050912 0%, #0a1522 40%, #10213a 70%, #050912 100%);
-  background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed;
+  background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
 }
 
 body.theme-jedi::before {
