@@ -66,12 +66,15 @@ jobs:
             PREVIOUS_ABI=""
             if [ -d "$LIVE_DIR/node_modules" ] && [ -f "$LOCKSUM_FILE" ]; then
               PREVIOUS_SIGNATURE="$(cat "$LOCKSUM_FILE" 2>/dev/null || true)"
-              PREVIOUS_LOCKSUM="${PREVIOUS_SIGNATURE%%:*}"
-              if [ "$PREVIOUS_LOCKSUM" = "$PREVIOUS_SIGNATURE" ]; then
-                PREVIOUS_ABI=""
-              else
-                PREVIOUS_ABI="${PREVIOUS_SIGNATURE##*:}"
-              fi
+              case "$PREVIOUS_SIGNATURE" in
+                *:*)
+                  PREVIOUS_LOCKSUM="${PREVIOUS_SIGNATURE%%:*}"
+                  PREVIOUS_ABI="${PREVIOUS_SIGNATURE##*:}"
+                  ;;
+                *)
+                  PREVIOUS_LOCKSUM="$PREVIOUS_SIGNATURE"
+                  ;;
+              esac
               if [ "$PREVIOUS_LOCKSUM" = "$NEW_LOCKSUM" ] && [ "$PREVIOUS_ABI" = "$NODE_ABI" ]; then
                 SHOULD_REBUILD=0
               fi
