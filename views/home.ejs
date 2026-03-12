@@ -19,13 +19,21 @@
 
       <section class="home-stat-group">
         <h3 class="home-stat-group-title">RP SERVER</h3>
-        <article class="home-stat home-stat-highlight">
-          <strong><%= stats.rpOnlineCount %></strong>
-          <span>Gerade auf den Servern eingeloggt</span>
-          <small class="home-stat-meta">
-            Free - RP online: <%= stats.freeRpOnlineCount %> | ERP online: <%= stats.erpOnlineCount %>
-          </small>
-          <small class="home-stat-empty">Charaktere: <%= stats.rpServerCount %> gesamt</small>
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+          <div class="home-stat-detail-list" aria-label="RP Server Details">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Charaktere:</span>
+              <strong class="home-stat-detail-value"><%= stats.rpServerCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Free - RP online:</span>
+              <strong class="home-stat-detail-value"><%= stats.freeRpOnlineCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">ERP online:</span>
+              <strong class="home-stat-detail-value"><%= stats.erpOnlineCount %></strong>
+            </div>
+          </div>
         </article>
       </section>
 
