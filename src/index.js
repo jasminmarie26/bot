@@ -1058,6 +1058,32 @@ function normalizeCharacterInput(body) {
   };
 }
 
+function findCharacterWithSameName(name, excludedCharacterId = null) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+
+  if (Number.isInteger(excludedCharacterId) && excludedCharacterId > 0) {
+    return db
+      .prepare(
+        `SELECT id, name
+         FROM characters
+         WHERE lower(trim(name)) = lower(trim(?))
+           AND id != ?
+         LIMIT 1`
+      )
+      .get(normalizedName, excludedCharacterId);
+  }
+
+  return db
+    .prepare(
+      `SELECT id, name
+       FROM characters
+       WHERE lower(trim(name)) = lower(trim(?))
+       LIMIT 1`
+    )
+    .get(normalizedName);
+}
+
 function isAvatarUrlValid(url) {
   if (!url) return true;
   return /^https?:\/\/.+/i.test(url);
@@ -2473,6 +2499,17 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
+  if (findCharacterWithSameName(payload.name)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Dieser Charaktername ist bereits vergeben.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: payload
+    });
+  }
+
   const info = db
     .prepare(
       `INSERT INTO characters
@@ -2617,6 +2654,17 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       title: `Bearbeiten: ${character.name}`,
       mode: "edit",
       error: "Bitte ein gültiges Festplay auswählen.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      character: { ...character, ...payload }
+    });
+  }
+
+  if (findCharacterWithSameName(payload.name, id)) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: "Dieser Charaktername ist bereits vergeben.",
       festplays,
       serverOptions: SERVER_OPTIONS,
       character: { ...character, ...payload }

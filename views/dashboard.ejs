@@ -50,12 +50,26 @@
             <% } else { %>
               <div class="character-mini-grid">
                 <% section.characters.forEach((char) => { %>
-                  <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                    <span class="character-mini-name"><%= char.name %></span>
-                    <% if (char.festplay_name) { %>
-                      <span class="character-mini-meta"><%= char.festplay_name %></span>
-                    <% } %>
-                  </a>
+                  <article class="character-mini-card">
+                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                      <span class="character-mini-name"><%= char.name %></span>
+                    </a>
+                    <form
+                      method="POST"
+                      action="/characters/<%= char.id %>/delete"
+                      class="character-mini-delete-form"
+                      onsubmit="return confirm('Charakter wirklich loeschen?')"
+                    >
+                      <button
+                        type="submit"
+                        class="character-mini-delete-btn"
+                        aria-label="Charakter loeschen"
+                        title="Charakter loeschen"
+                      >
+                        X
+                      </button>
+                    </form>
+                  </article>
                 <% }) %>
               </div>
             <% } %>
