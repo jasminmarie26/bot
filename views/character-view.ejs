@@ -5,8 +5,6 @@
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
       <a href="#roomlist">Raumliste</a>
-      <a href="/characters/<%= character.id %>#roomlist">Extras</a>
-      <a href="/dashboard">Hilfe</a>
     </nav>
     <details class="rp-user-menu">
       <summary
@@ -25,7 +23,6 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/dashboard">Dashboard</a>
-          <a href="/characters/<%= character.id %>">Charakter</a>
           <% if (isOwner) { %>
             <a
               href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
@@ -37,6 +34,7 @@
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook">G&auml;stebuch</a>
           <a href="/characters/<%= character.id %>#roomlist">Extras</a>
+          <a href="/dashboard">Hilfe</a>
         </nav>
 
         <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
