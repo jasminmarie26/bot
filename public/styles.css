@@ -2307,6 +2307,12 @@ a:hover {
   background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
 }
 
+.rp-room-section-standard h2 {
+  margin: 0;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
+}
+
 .rp-guestbook-wrap {
   margin-top: 1rem;
   padding-top: 0.85rem;
@@ -2378,8 +2384,10 @@ a:hover {
 }
 
 .rp-room-list-standard {
+  grid-template-columns: minmax(250px, 320px);
   overflow: visible;
   padding-right: 0;
+  margin-top: 0.2rem;
 }
 
 .rp-room-link {
@@ -2413,6 +2421,12 @@ a:hover {
   text-overflow: ellipsis;
 }
 
+.rp-room-link-standard .rp-room-link-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .rp-room-link small {
   color: var(--muted);
   font-size: 0.74rem;
@@ -2422,6 +2436,16 @@ a:hover {
   display: flex;
   justify-content: space-between;
   gap: 0.45rem;
+}
+
+.rp-room-link-standard .rp-room-link-meta {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rp-room-link-standard .rp-room-link-meta small {
+  font-style: italic;
 }
 
 .guestbook-page-tabs {

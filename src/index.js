@@ -1195,14 +1195,14 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      teaser: "Locker reden, planen und ankommen."
+      teaser: "Locker ankommen."
     }
   ],
   erp: [
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      teaser: "Locker reden, planen und ankommen."
+      teaser: "Locker ankommen."
     }
   ]
 });
