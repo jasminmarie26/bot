@@ -21,6 +21,8 @@ const THEME_OPTIONS = [
   { id: "glass-noir", label: "Glass Noir" },
   { id: "glass-sunset", label: "Glass Sunset" },
   { id: "paper-ink", label: "Paper Ink" },
+  { id: "windows-xp", label: "Windows XP" },
+  { id: "atari", label: "Atari" },
   { id: "sith", label: "Sith" },
   { id: "jedi", label: "Jedi" }
 ];
@@ -431,6 +433,36 @@ function getOnlineStaffStats(activeUserIds = null) {
   };
 }
 
+function getOnlineUserCountForServers(serverIds) {
+  const requestedServerIds = Array.isArray(serverIds) ? serverIds : [serverIds];
+  const normalizedServerIds = new Set(
+    requestedServerIds
+      .map((serverId) => String(serverId || "").trim().toLowerCase())
+      .filter((serverId) => serverId.length > 0)
+  );
+
+  if (!normalizedServerIds.size) {
+    return 0;
+  }
+
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return 0;
+  }
+
+  const userIds = new Set();
+  for (const socket of sockets.values()) {
+    const userId = Number(socket?.data?.user?.id);
+    const serverId = normalizeServer(socket?.data?.serverId);
+    if (!Number.isInteger(userId) || userId < 1 || !normalizedServerIds.has(serverId)) {
+      continue;
+    }
+    userIds.add(userId);
+  }
+
+  return userIds.size;
+}
+
 function getLoginStats() {
   const activeUserIds = getActiveSessionUserIds();
   const accountCount =
@@ -449,6 +481,9 @@ function getLoginStats() {
     serverCharacterRows.find((row) => normalizeServer(row.server_id) === "free-rp")?.count || 0;
   const erpCharacterCount =
     serverCharacterRows.find((row) => normalizeServer(row.server_id) === "erp")?.count || 0;
+  const freeRpOnlineCount = getOnlineUserCountForServers("free-rp");
+  const erpOnlineCount = getOnlineUserCountForServers("erp");
+  const rpOnlineCount = getOnlineUserCountForServers(["free-rp", "erp"]);
 
   return {
     accountCount,
@@ -457,6 +492,10 @@ function getLoginStats() {
     freeRpCharacterCount,
     erpCharacterCount,
     larpServerCount: 0,
+    freeRpOnlineCount,
+    erpOnlineCount,
+    rpOnlineCount,
+    larpOnlineCount: 0,
     loggedInUserCount: getLoggedInUsersCount(activeUserIds),
     adminOnlineCount: staffStats.adminOnlineCount,
     adminOnlineNames: staffStats.adminOnlineNames,
@@ -1067,9 +1106,9 @@ function normalizeCharacterInput(body) {
     species: (body.species || "").trim().slice(0, 80),
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
-    description: (body.description || "").trim().slice(0, 4000),
+    description: "",
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
-    is_public: body.is_public === "on" ? 1 : 0
+    is_public: 1
   };
 }
 
@@ -2545,7 +2584,7 @@ app.post("/characters", requireAuth, (req, res) => {
     );
 
   setFlash(req, "success", "Charakter gespeichert.");
-  return res.redirect(`/characters/${info.lastInsertRowid}`);
+  return res.redirect("/dashboard");
 });
 
 app.get("/characters/:id", requireAuth, (req, res) => {

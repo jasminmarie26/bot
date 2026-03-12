@@ -185,6 +185,171 @@ body.theme-paper-ink {
   --glass-blur: 6px;
 }
 
+body.theme-windows-xp {
+  --bg-base: #2b79d1;
+  --orb-1: rgba(255, 255, 255, 0.18);
+  --orb-2: rgba(95, 181, 255, 0.18);
+  --orb-3: rgba(49, 114, 201, 0.16);
+  --text: #0f2d52;
+  --muted: #35577e;
+  --link: #0057d7;
+  --panel-bg: rgba(242, 247, 255, 0.9);
+  --panel-edge: rgba(82, 132, 201, 0.5);
+  --panel-shadow: rgba(16, 54, 103, 0.28);
+  --field-bg: rgba(255, 255, 255, 0.94);
+  --field-edge: rgba(90, 136, 197, 0.55);
+  --accent: #4da3ff;
+  --accent-2: #1f6fd0;
+  --accent-text: #f7fbff;
+  --danger: #f07e52;
+  --danger-2: #d5552b;
+  --danger-text: #fffaf6;
+  --success-bg: rgba(86, 174, 106, 0.2);
+  --success-edge: rgba(78, 153, 99, 0.45);
+  --error-bg: rgba(217, 110, 72, 0.18);
+  --error-edge: rgba(206, 96, 58, 0.4);
+  --glass-blur: 3px;
+  font-family: Tahoma, Verdana, sans-serif;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(59, 129, 213, 0.24)),
+    radial-gradient(circle at 50% -12%, rgba(255, 255, 255, 0.42), transparent 38%),
+    linear-gradient(180deg, #6fb5ff 0%, #4d97f0 18%, #3579d7 54%, #295fb9 100%);
+}
+
+body.theme-windows-xp::before {
+  inset: 0;
+  opacity: 0.38;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 24%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0 2px,
+      transparent 2px 14px
+    );
+  backdrop-filter: blur(2px) saturate(110%);
+  -webkit-backdrop-filter: blur(2px) saturate(110%);
+}
+
+body.theme-windows-xp .topbar,
+body.theme-windows-xp .panel,
+body.theme-windows-xp .card,
+body.theme-windows-xp .hero,
+body.theme-windows-xp .list-item,
+body.theme-windows-xp .character-mini-item,
+body.theme-windows-xp .guestbook-item,
+body.theme-windows-xp .chat-message,
+body.theme-windows-xp .chat-box {
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 30px -24px rgba(12, 52, 101, 0.45);
+}
+
+body.theme-windows-xp .btn,
+body.theme-windows-xp .ghost-btn {
+  border-color: rgba(63, 120, 191, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 8px 18px -14px rgba(31, 88, 160, 0.45);
+}
+
+body.theme-windows-xp .btn {
+  background: linear-gradient(180deg, #73c2ff 0%, #49a3ff 48%, #2276d5 100%);
+  color: #f7fbff;
+}
+
+body.theme-windows-xp .ghost-btn,
+body.theme-windows-xp .account-chip,
+body.theme-windows-xp .theme-select {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(217, 234, 255, 0.88));
+  color: #10355f;
+}
+
+body.theme-atari {
+  --bg-base: #0b0615;
+  --orb-1: rgba(255, 108, 66, 0.18);
+  --orb-2: rgba(91, 240, 255, 0.14);
+  --orb-3: rgba(255, 228, 92, 0.1);
+  --text: #fff4a6;
+  --muted: #ffb46f;
+  --link: #7dfbff;
+  --panel-bg: rgba(19, 10, 34, 0.86);
+  --panel-edge: rgba(255, 142, 74, 0.42);
+  --panel-shadow: rgba(0, 0, 0, 0.68);
+  --field-bg: rgba(12, 7, 22, 0.9);
+  --field-edge: rgba(123, 246, 255, 0.3);
+  --accent: #ff8b3d;
+  --accent-2: #ff4a4a;
+  --accent-text: #fff9ed;
+  --danger: #ff576f;
+  --danger-2: #c22452;
+  --danger-text: #fff7fb;
+  --success-bg: rgba(42, 132, 150, 0.2);
+  --success-edge: rgba(95, 243, 255, 0.34);
+  --error-bg: rgba(159, 40, 72, 0.26);
+  --error-edge: rgba(255, 108, 132, 0.35);
+  --glass-blur: 0px;
+  font-family: "Courier New", Courier, monospace;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 248, 181, 0.08), transparent 18%),
+    linear-gradient(180deg, rgba(255, 119, 63, 0.08), transparent 28%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035) 0 2px,
+      transparent 2px 6px
+    ),
+    linear-gradient(135deg, #13071f 0%, #1f0b39 36%, #251056 62%, #0b0615 100%);
+}
+
+body.theme-atari::before {
+  inset: 0;
+  opacity: 0.34;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 153, 82, 0.08) 0 3px,
+      transparent 3px 18px
+    ),
+    linear-gradient(180deg, rgba(255, 240, 153, 0.04), rgba(0, 0, 0, 0.18));
+}
+
+body.theme-atari .topbar,
+body.theme-atari .panel,
+body.theme-atari .card,
+body.theme-atari .hero,
+body.theme-atari .list-item,
+body.theme-atari .character-mini-item,
+body.theme-atari .guestbook-item,
+body.theme-atari .chat-message,
+body.theme-atari .chat-box {
+  border-radius: 0;
+  border-width: 2px;
+  box-shadow:
+    0 0 0 1px rgba(255, 236, 150, 0.06),
+    0 20px 34px -28px rgba(0, 0, 0, 0.8);
+}
+
+body.theme-atari .brand,
+body.theme-atari h1,
+body.theme-atari h2,
+body.theme-atari h3 {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(255, 168, 72, 0.12);
+}
+
+body.theme-atari .btn,
+body.theme-atari .ghost-btn,
+body.theme-atari .account-chip,
+body.theme-atari .theme-select {
+  border-radius: 0;
+}
+
+body.theme-atari .btn {
+  background: linear-gradient(180deg, #ffb15a 0%, #ff7a3f 60%, #ff4d4d 100%);
+  color: #fff8ea;
+}
+
 body.theme-sith {
   --bg-base: #06070b;
   --orb-1: rgba(255, 48, 48, 0.28);
@@ -947,6 +1112,48 @@ a:hover {
   top: 5.6rem;
 }
 
+.home-stats-shell {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.home-stats-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-stat-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.home-stat-group-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.home-stat-divider {
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    color-mix(in srgb, var(--panel-edge) 95%, white 5%),
+    rgba(255, 255, 255, 0)
+  );
+}
+
+.home-stat-grid {
+  display: grid;
+  gap: 0.6rem;
+}
+
 .home-stat {
   border: 1px solid var(--panel-edge);
   border-radius: 12px;
@@ -955,6 +1162,20 @@ a:hover {
   text-align: left;
   display: grid;
   gap: 0.15rem;
+}
+
+.home-stat-highlight {
+  padding: 0.95rem 0.9rem;
+  gap: 0.32rem;
+}
+
+.home-stat-highlight strong {
+  font-size: 2rem;
+}
+
+.home-stat-highlight span {
+  font-size: 0.92rem;
+  color: var(--text);
 }
 
 .home-stat strong {
@@ -978,6 +1199,13 @@ a:hover {
   margin-top: 0.2rem;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.home-stat-meta {
+  margin-top: 0.24rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
 }
 
 .staff-name-admin {

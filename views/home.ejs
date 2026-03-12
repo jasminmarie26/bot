@@ -2,52 +2,72 @@
 
 <div class="home-layout">
   <aside class="home-stats" aria-label="Plattform Statistiken">
-    <article class="home-stat">
-      <strong><%= stats.accountCount %></strong>
-      <span>Registrierte Accounts</span>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.characterCount %></strong>
-      <span>Erstellte Charaktere</span>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.rpServerCount %></strong>
-      <span>RP SERVER</span>
-      <small class="home-stat-empty">
-        Free - RP: <%= stats.freeRpCharacterCount %> | ERP: <%= stats.erpCharacterCount %>
-      </small>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.larpServerCount %></strong>
-      <span>LARP SERVER</span>
-      <small class="home-stat-empty">Noch keine Bereiche angelegt.</small>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.loggedInUserCount %></strong>
-      <span>Gerade eingeloggt</span>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.adminOnlineCount %></strong>
-      <span>Admins online</span>
-      <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
-        <small class="home-stat-names">
-          <% stats.adminOnlineNames.forEach((name, index) => { %>
-            <span class="staff-name-admin"><%= name %></span><%= index < stats.adminOnlineNames.length - 1 ? ", " : "" %>
-          <% }) %>
-        </small>
-      <% } %>
-    </article>
-    <article class="home-stat">
-      <strong><%= stats.moderatorOnlineCount %></strong>
-      <span>Moderatoren online</span>
-      <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
-        <small class="home-stat-names">
-          <% stats.moderatorOnlineNames.forEach((name, index) => { %>
-            <span class="staff-name-moderator"><%= name %></span><%= index < stats.moderatorOnlineNames.length - 1 ? ", " : "" %>
-          <% }) %>
-        </small>
-      <% } %>
-    </article>
+    <div class="home-stats-shell">
+      <h2 class="home-stats-title">Heldenhaft Reisen</h2>
+
+      <article class="home-stat home-stat-highlight">
+        <strong><%= stats.loggedInUserCount %></strong>
+        <span>Gerade auf der Seite eingeloggt</span>
+      </article>
+
+      <div class="home-stat-divider" aria-hidden="true"></div>
+
+      <section class="home-stat-group">
+        <h3 class="home-stat-group-title">RP SERVER</h3>
+        <article class="home-stat home-stat-highlight">
+          <strong><%= stats.rpOnlineCount %></strong>
+          <span>Gerade auf den Servern eingeloggt</span>
+          <small class="home-stat-meta">
+            Free - RP online: <%= stats.freeRpOnlineCount %> | ERP online: <%= stats.erpOnlineCount %>
+          </small>
+          <small class="home-stat-empty">Charaktere: <%= stats.rpServerCount %> gesamt</small>
+        </article>
+      </section>
+
+      <section class="home-stat-group">
+        <h3 class="home-stat-group-title">LARP SERVER</h3>
+        <article class="home-stat home-stat-highlight">
+          <strong><%= stats.larpOnlineCount %></strong>
+          <span>Gerade auf dem Server eingeloggt</span>
+          <small class="home-stat-empty">Noch keine Bereiche angelegt.</small>
+        </article>
+      </section>
+
+      <div class="home-stat-divider" aria-hidden="true"></div>
+
+      <div class="home-stat-grid">
+        <article class="home-stat">
+          <strong><%= stats.accountCount %></strong>
+          <span>Registrierte Accounts</span>
+        </article>
+        <article class="home-stat">
+          <strong><%= stats.characterCount %></strong>
+          <span>Erstellte Charaktere</span>
+        </article>
+        <article class="home-stat">
+          <strong><%= stats.adminOnlineCount %></strong>
+          <span>Admins online</span>
+          <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
+            <small class="home-stat-names">
+              <% stats.adminOnlineNames.forEach((name, index) => { %>
+                <span class="staff-name-admin"><%= name %></span><%= index < stats.adminOnlineNames.length - 1 ? ", " : "" %>
+              <% }) %>
+            </small>
+          <% } %>
+        </article>
+        <article class="home-stat">
+          <strong><%= stats.moderatorOnlineCount %></strong>
+          <span>Moderatoren online</span>
+          <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
+            <small class="home-stat-names">
+              <% stats.moderatorOnlineNames.forEach((name, index) => { %>
+                <span class="staff-name-moderator"><%= name %></span><%= index < stats.moderatorOnlineNames.length - 1 ? ", " : "" %>
+              <% }) %>
+            </small>
+          <% } %>
+        </article>
+      </div>
+    </div>
   </aside>
 
   <div class="home-main">
@@ -105,8 +125,8 @@
                 class="ghost-btn icon-btn update-pen-btn"
                 type="button"
                 data-site-content-open="updates-title"
-                aria-label="Live-Updates-Überschrift bearbeiten"
-                title="Live-Updates-Überschrift bearbeiten"
+                aria-label="Live-Updates-&Uuml;berschrift bearbeiten"
+                title="Live-Updates-&Uuml;berschrift bearbeiten"
               >
                 &#9998;
               </button>
@@ -117,7 +137,7 @@
 
       <div id="site-updates-list" class="site-updates-list">
         <% if (!siteUpdates || !siteUpdates.length) { %>
-          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten veröffentlicht.</p>
+          <p id="site-updates-empty" class="muted">Noch keine Neuigkeiten ver&ouml;ffentlicht.</p>
         <% } else { %>
           <% siteUpdates.forEach((item) => { %>
             <article
@@ -146,13 +166,13 @@
                         method="POST"
                         action="/updates/<%= item.id %>/delete"
                         class="inline-form"
-                        onsubmit="return confirm('Update wirklich löschen?')"
+                        onsubmit="return confirm('Update wirklich l&ouml;schen?')"
                       >
                         <button
                           class="ghost-btn icon-btn update-delete-btn"
                           type="submit"
-                          aria-label="Update löschen"
-                          title="Update löschen"
+                          aria-label="Update l&ouml;schen"
+                          title="Update l&ouml;schen"
                         >
                           X
                         </button>
@@ -175,7 +195,7 @@
     <section class="panel update-modal-card">
       <div class="updates-header">
         <h2 id="update-modal-title">Neues Live-Update</h2>
-        <button id="update-close-btn" class="ghost-btn" type="button">Schließen</button>
+        <button id="update-close-btn" class="ghost-btn" type="button">Schlie&szlig;en</button>
       </div>
 
       <form id="update-form" method="POST" action="/updates" class="form update-form">
@@ -202,13 +222,13 @@
           <div class="bbcode-help-content">
             <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
             <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
-            <p><code>[right]Rechts[/right]</code> <code>[block]Einrücken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
+            <p><code>[right]Rechts[/right]</code> <code>[block]Einr&uuml;cken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
             <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
           </div>
         </details>
 
         <div class="update-form-actions">
-          <button id="update-submit-btn" type="submit" class="btn">Veröffentlichen</button>
+          <button id="update-submit-btn" type="submit" class="btn">Ver&ouml;ffentlichen</button>
         </div>
       </form>
     </section>
@@ -219,17 +239,17 @@
       <section class="panel update-modal-card">
         <div class="updates-header">
           <h2 id="site-content-modal-title">Bereich bearbeiten</h2>
-          <button id="site-content-close-btn" class="ghost-btn" type="button">Schließen</button>
+          <button id="site-content-close-btn" class="ghost-btn" type="button">Schlie&szlig;en</button>
         </div>
 
         <form id="site-content-form" method="POST" action="/site-content/hero" class="form update-form">
           <label>
-            Überschrift
+            &Uuml;berschrift
             <input id="site-content-title-input" name="title" maxlength="120" required />
           </label>
 
           <div id="site-content-body-wrap">
-            <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge für den Startseitentext">
+            <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge f&uuml;r den Startseitentext">
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="b">B</button>
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="i">I</button>
               <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="u">U</button>

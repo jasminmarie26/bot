@@ -29,7 +29,7 @@
     <label>
       Festplay
       <select name="festplay_id" required>
-        <option value="">Festplay suchen / auswählen</option>
+        <option value="">Festplay suchen / ausw&auml;hlen</option>
         <% festplays.forEach((festplay) => { %>
           <option
             value="<%= festplay.id %>"
@@ -57,19 +57,8 @@
       <input name="avatar_url" maxlength="500" value="<%= character.avatar_url %>" />
     </label>
 
-    <label>
-      Beschreibung
-      <textarea name="description" rows="8" maxlength="4000"><%= character.description %></textarea>
-    </label>
-
-    <label class="checkbox">
-      <input type="checkbox" name="is_public" <%= character.is_public ? "checked" : "" %> />
-      Öffentlich sichtbar
-    </label>
-
     <button type="submit" class="btn">Speichern</button>
   </form>
 </section>
 
 <%- include("partials/end") %>
-
