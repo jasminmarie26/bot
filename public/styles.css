@@ -3287,7 +3287,7 @@ select:focus {
   padding: 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.18rem;
   background: #ffffff;
   border-color: #d3d8df;
   color: #1a1c20;
@@ -3314,6 +3314,7 @@ select:focus {
   border-radius: 0;
   padding: 0;
   margin: 0;
+  line-height: 1.35;
 }
 
 .chat-box .chat-message p {
