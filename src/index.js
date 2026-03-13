@@ -4624,11 +4624,22 @@ function getRoleColor(roleStyle = "") {
   return "1f2a37";
 }
 
+const ROOM_PRESENCE_SUFFIXES = [
+  " schiebt den Vorhang beiseite und tritt ein.",
+  " taucht zwischen den Gesprächen auf.",
+  " findet den Weg herein und lässt sich nieder.",
+  " erscheint im Raum, als wäre es nie anders gewesen.",
+  " zieht sich leise wieder zurück.",
+  " nickt in die Runde und verschwindet zur Tür hinaus.",
+  " lässt nur ein leises Echo zurück und geht.",
+  " löst sich aus dem Gespräch und verlässt den Raum."
+];
+
 function buildSystemLogRuns(content) {
   const text = String(content || "").trim();
   if (!text) return [];
 
-  const matchingSuffix = systemMessageSuffixes.find((suffix) => text.endsWith(suffix));
+  const matchingSuffix = ROOM_PRESENCE_SUFFIXES.find((suffix) => text.endsWith(suffix));
   if (matchingSuffix) {
     const actorName = text.slice(0, -matchingSuffix.length).trim();
     if (actorName) {
