@@ -2756,9 +2756,33 @@ app.get("/dashboard", requireAuth, (req, res) => {
   });
 });
 
+const HELP_TOPICS = [
+  { slug: "charakter-anlegen", title: "Charakter anlegen" },
+  { slug: "raumliste-raeume", title: "Raumliste & Räume" },
+  { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },
+  { slug: "admin-moderatorname", title: "Admin- und Moderatorname" },
+  { slug: "chat-fluestern", title: "Chat & Flüstern" },
+  { slug: "chat-formatierung", title: "Chat-Formatierung" }
+];
+
 app.get("/help", (req, res) => {
   return res.render("help", {
-    title: "Hilfe"
+    title: "Hilfe",
+    helpTopics: HELP_TOPICS,
+    helpTopic: null
+  });
+});
+
+app.get("/help/:slug", (req, res) => {
+  const helpTopic = HELP_TOPICS.find((topic) => topic.slug === String(req.params.slug || "").trim().toLowerCase());
+  if (!helpTopic) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  return res.render("help", {
+    title: `Hilfe: ${helpTopic.title}`,
+    helpTopics: HELP_TOPICS,
+    helpTopic
   });
 });
 
