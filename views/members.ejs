@@ -1,0 +1,58 @@
+<%- include("partials/start") %>
+
+<section class="panel members-panel">
+  <div class="header-line members-header">
+    <div>
+      <h1>Mitgliederliste</h1>
+      <p class="muted">Suche nach Charakteren und öffne direkt das passende Gästebuch.</p>
+    </div>
+    <div class="members-search-wrap">
+      <label class="members-search-label" for="members-search">Suche</label>
+      <input
+        id="members-search"
+        class="members-search-input"
+        type="search"
+        placeholder="Name, Besitzer oder Server"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <p id="members-search-status" class="muted members-search-status">
+    <%= members.length %> Charaktere gefunden.
+  </p>
+
+  <div id="members-list" class="members-list">
+    <% if (!members.length) { %>
+      <p class="muted">Gerade sind keine sichtbaren Charaktere vorhanden.</p>
+    <% } else { %>
+      <% members.forEach((member) => { %>
+        <article
+          class="members-card"
+          data-member-card
+          data-member-name="<%= member.name.toLowerCase() %>"
+          data-member-owner="<%= String(member.owner_name || '').toLowerCase() %>"
+          data-member-server="<%= String(member.server_label || '').toLowerCase() %>"
+        >
+          <div class="members-card-main">
+            <a class="members-card-name" href="/characters/<%= member.id %>/guestbook">
+              <%= member.name %>
+            </a>
+            <div class="members-card-meta">
+              <span>Besitzer: <strong><%= member.owner_name %></strong></span>
+              <span>Server: <strong><%= member.server_label %></strong></span>
+              <span><%= member.visibility_label %></span>
+            </div>
+          </div>
+          <a class="btn btn-secondary members-card-action" href="/characters/<%= member.id %>/guestbook">
+            Gästebuch
+          </a>
+        </article>
+      <% }) %>
+    <% } %>
+  </div>
+</section>
+
+<script src="/members-list.js?v=<%= staticAssetVersion %>"></script>
+
+<%- include("partials/end") %>

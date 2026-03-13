@@ -1800,6 +1800,77 @@ a:hover {
   gap: 1rem;
 }
 
+.members-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.members-header {
+  align-items: end;
+}
+
+.members-search-wrap {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(100%, 20rem);
+}
+
+.members-search-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.members-search-input {
+  min-width: min(100%, 20rem);
+}
+
+.members-search-status {
+  margin: 0;
+}
+
+.members-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.members-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--panel-edge);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel-bg) 92%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--panel-shadow) 32%, transparent);
+}
+
+.members-card-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.members-card-name {
+  font-size: 1.18rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  overflow-wrap: anywhere;
+}
+
+.members-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.members-card-action {
+  flex: 0 0 auto;
+}
+
 .help-intro p:last-child {
   margin-bottom: 0;
   max-width: 62rem;
@@ -4492,6 +4563,17 @@ select:focus {
 
   .dashboard-server-list {
     grid-template-columns: 1fr;
+  }
+
+  .members-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .members-card-action,
+  .members-search-wrap,
+  .members-search-input {
+    width: 100%;
   }
 
   body.theme-sith .hero {

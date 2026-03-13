@@ -3605,6 +3605,43 @@ app.get("/dashboard", requireAuth, (req, res) => {
   });
 });
 
+app.get("/members", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const isAdmin = req.session.user?.is_admin === true;
+  const members = db
+    .prepare(
+      `SELECT c.id,
+              c.user_id,
+              c.name,
+              c.server_id,
+              c.is_public,
+              c.updated_at,
+              u.username AS owner_name
+       FROM characters c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.is_public = 1
+          OR c.user_id = ?
+          OR ? = 1
+       ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(currentUserId, isAdmin ? 1 : 0)
+    .map((member) => ({
+      ...member,
+      server_label: getServerLabel(member.server_id),
+      visibility_label:
+        Number(member.user_id) === currentUserId
+          ? "Dein Charakter"
+          : Number(member.is_public) === 1
+            ? "Öffentlich"
+            : "Privat"
+    }));
+
+  return res.render("members", {
+    title: "Mitgliederliste",
+    members
+  });
+});
+
 const HELP_TOPICS = [
   { slug: "charakter-anlegen", title: "Charakter anlegen" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },
