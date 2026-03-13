@@ -48,8 +48,17 @@
       throw new Error(`Theme switch failed with status ${response.status}`);
     }
 
-    const result = await response.json();
-    return String(result?.theme || nextTheme || "").trim().toLowerCase();
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.includes("application/json")) {
+      return nextTheme;
+    }
+
+    try {
+      const result = await response.json();
+      return String(result?.theme || nextTheme || "").trim().toLowerCase();
+    } catch (_error) {
+      return nextTheme;
+    }
   }
 
   for (const form of forms) {
