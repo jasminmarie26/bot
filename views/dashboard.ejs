@@ -51,6 +51,9 @@
             <% } else { %>
               <div class="character-mini-grid">
                 <% section.characters.forEach((char) => { %>
+                  <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
+                  <% const moveArrow = char.server_id === "free-rp" ? "→" : "←"; %>
+                  <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
                   <article class="character-mini-card">
                     <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
                       <span class="character-mini-name"><%= char.name %></span>
@@ -60,15 +63,15 @@
                         method="POST"
                         action="/characters/<%= char.id %>/move"
                         class="character-mini-move-form"
-                        onsubmit="return confirm('Charakter auf <%= char.server_id === \"free-rp\" ? \"ERP\" : \"FREE-RP\" %> verschieben?')"
+                        onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
                       >
                         <button
                           type="submit"
                           class="character-mini-move-btn"
                           aria-label="Charakter verschieben"
-                          title="<%= char.server_id === 'free-rp' ? 'Nach ERP verschieben' : 'Nach FREE-RP verschieben' %>"
+                          title="<%= moveTitle %>"
                         >
-                          <%= char.server_id === "free-rp" ? "\u2192" : "\u2190" %>
+                          <%= moveArrow %>
                         </button>
                       </form>
                       <form
