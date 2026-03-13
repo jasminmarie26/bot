@@ -57,11 +57,14 @@
 
   async function saveTheme(form, nextTheme) {
     const returnField = form.elements.return_to;
+    let returnTo = window.location.pathname + window.location.search + window.location.hash;
     if (returnField && typeof returnField.value === "string") {
-      returnField.value = returnField.value.split("#")[0] + window.location.hash;
+      returnTo = returnField.value.split("#")[0] + window.location.hash;
     }
 
-    const payload = new URLSearchParams(new FormData(form));
+    const payload = new URLSearchParams();
+    payload.set("theme", nextTheme);
+    payload.set("return_to", returnTo);
     const response = await fetch(form.action, {
       method: "POST",
       credentials: "same-origin",
