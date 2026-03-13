@@ -133,13 +133,13 @@
 
       <details class="rp-room-section rp-room-accordion" open>
         <summary class="rp-room-section-summary">
-          <span>Serverweite R&auml;ume</span>
+          <span>Free RP</span>
         </summary>
         <div class="rp-room-section-divider" aria-hidden="true"></div>
         <% if (!rooms || !rooms.length) { %>
           <p class="muted">Noch keine serverweiten R&auml;ume vorhanden.</p>
         <% } else { %>
-          <div class="rp-room-list">
+          <div class="rp-room-list rp-room-list-stacked">
             <% rooms.forEach((room) => { %>
               <% const activeUsers = Array.isArray(roomUsers?.[room.id]) ? roomUsers[room.id] : []; %>
               <div class="rp-room-standard-card">

@@ -2425,9 +2425,32 @@ a:hover {
   padding-right: 0;
 }
 
+.rp-room-list-stacked {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
 .rp-room-standard-card {
   display: grid;
   gap: 0.3rem;
+}
+
+.rp-room-list-stacked .rp-room-standard-card {
+  padding: 0.62rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 68%, transparent);
+}
+
+.rp-room-list-stacked .rp-room-standard-card:first-child {
+  padding-top: 0;
+}
+
+.rp-room-list-stacked .rp-room-standard-card:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.rp-room-list-stacked .rp-room-link-standard {
+  width: 100%;
 }
 
 .rp-room-link {
