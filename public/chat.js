@@ -3,6 +3,7 @@
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const onlineCharList = document.getElementById("online-char-list");
+  const chatRoomTitle = document.querySelector(".chat-room-title");
   const onlineActionsMenu = document.getElementById("online-actions-menu");
   const onlineActionGuestbook = document.getElementById("online-action-guestbook");
   const onlineActionWhisper = document.getElementById("online-action-whisper");
@@ -340,6 +341,26 @@
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
+  function updateRoomLockState(payload) {
+    if (!hasRoom || !chatRoomTitle) return;
+    if (Number(payload?.roomId) !== roomId) return;
+
+    const isLocked = Boolean(payload?.isLocked);
+    let lockNode = chatRoomTitle.querySelector(".chat-room-lock");
+
+    if (isLocked) {
+      if (!lockNode) {
+        lockNode = document.createElement("span");
+        lockNode.className = "chat-room-lock";
+        lockNode.setAttribute("aria-hidden", "true");
+        lockNode.innerHTML = "&#128274;";
+        chatRoomTitle.prepend(lockNode);
+      }
+    } else if (lockNode) {
+      lockNode.remove();
+    }
+  }
+
   function appendWhisper(msg) {
     const article = document.createElement("article");
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
@@ -601,6 +622,7 @@
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", appendWhisper);
   socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:room-state", updateRoomLockState);
 
   chatBox.scrollTop = chatBox.scrollHeight;
 })();

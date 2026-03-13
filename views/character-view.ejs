@@ -50,6 +50,7 @@
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+          <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
           <% if (isOwner) { %>
             <a
@@ -189,10 +190,23 @@
             <% rooms.forEach((room) => { %>
               <% const activeUsers = Array.isArray(roomUsers?.[room.id]) ? roomUsers[room.id] : []; %>
               <div class="rp-room-standard-card rp-room-custom-card">
+                <span
+                  class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
+                  data-room-lock-target
+                  data-room-lock-room="<%= room.id %>"
+                  data-room-lock-server="<%= character.server_id %>"
+                  aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
+                  title="Raum ist abgeschlossen"
+                >&#128274;</span>
                 <a
-                  class="rp-room-link-name rp-room-custom-link"
-                  href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
-                  title="Raum betreten"
+                  class="rp-room-link-name rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
+                  href="<%= room.can_enter ? `/chat?room_id=${room.id}&character_id=${character.id}` : '#' %>"
+                  title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
+                  data-room-link-target
+                  data-room-link-room="<%= room.id %>"
+                  data-room-link-server="<%= character.server_id %>"
+                  data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
                 ><%= room.name %></a>
                 <div class="rp-room-custom-meta">
                   <small><%= room.teaser || "Beschreibung folgt." %></small>

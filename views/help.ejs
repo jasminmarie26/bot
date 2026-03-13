@@ -62,6 +62,7 @@
           <li><code>Raum anlegen</code> erstellt einen neuen serverweiten Raum.</li>
           <li><code>Gemeinsamer Treffpunkt</code> sind feste Standardräume.</li>
           <li>Unter <code>Free RP</code> siehst du alle angelegten Räume darunter aufgelistet.</li>
+          <li>Ein kleines Schloss vor dem Raumnamen zeigt: Dieser Raum ist gerade abgeschlossen.</li>
         </ul>
       </section>
     <% } %>
@@ -157,6 +158,9 @@
           <li>Die Glocke oben schaltet den Eintrittston an oder aus.</li>
           <li>Ein Klick auf einen Namen links oeffnet Gaestebuch oder Fluestern.</li>
           <li>Beim Designwechsel bleibst du im Raum und die laufenden Nachrichten bleiben sichtbar.</li>
+          <li><code>/raumzu</code> oder <code>/abschliessen</code> schliesst einen selbst erstellten Raum. Danach erscheint kursiv <code>Der Raum wurde abgeschlossen.</code></li>
+          <li><code>/raumauf</code> oder <code>/aufschliessen</code> oeffnet ihn wieder. Danach erscheint kursiv <code>Der Raum wurde geoeffnet.</code></li>
+          <li>Abgeschlossene Raeume zeigen ein Schloss in der Raumliste und koennen von anderen nicht betreten werden.</li>
           <li><code>/log</code> startet ein Chat-Log. In benutzererstellten Raeumen darf das nur der Ersteller nutzen, Admins und Moderatoren duerfen es ueberall.</li>
           <li>Beim Start erscheint kursiv die Systemmeldung <code>Log wurde gestartet.</code></li>
           <li><code>/logoff</code> beendet das Log wieder. Danach wird es per E-Mail an alle gesendet, die waehrenddessen im Raum waren.</li>

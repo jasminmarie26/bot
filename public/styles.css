@@ -2811,6 +2811,18 @@ a:hover {
   gap: 0.18rem;
 }
 
+.rp-room-lock-indicator {
+  display: none;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 74%, var(--text) 26%);
+}
+
+.rp-room-lock-indicator.is-visible {
+  display: inline-flex;
+  align-items: center;
+}
+
 .rp-room-custom-link {
   display: inline;
   max-width: 100%;
@@ -2825,6 +2837,17 @@ a:hover {
   transform: none;
   border-color: transparent;
   box-shadow: none;
+}
+
+.rp-room-custom-link.is-disabled {
+  color: var(--muted);
+  text-decoration: none;
+  pointer-events: none;
+  cursor: default;
+}
+
+.rp-room-custom-link.is-disabled:hover {
+  text-decoration: none;
 }
 
 .rp-room-custom-meta small {
@@ -3601,6 +3624,12 @@ select:focus {
   overflow: visible;
   text-overflow: clip;
   overflow-wrap: anywhere;
+}
+
+.chat-room-lock {
+  margin-right: 0.24rem;
+  font-size: 0.86em;
+  color: color-mix(in srgb, var(--accent) 74%, var(--text) 26%);
 }
 
 .page-chat .chat-room-divider {

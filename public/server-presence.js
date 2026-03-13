@@ -1,6 +1,8 @@
 (() => {
   const presenceSource = document.querySelector("[data-server-presence]");
   const roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
+  const roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
+  const roomLinkTargets = Array.from(document.querySelectorAll("[data-room-link-target]"));
   if ((!presenceSource && roomWatchTargets.length === 0) || typeof io !== "function") return;
 
   const serverId = String(presenceSource?.dataset?.serverPresence || "")
@@ -47,6 +49,47 @@
     });
   }
 
+  function applyRoomStateToTarget(payload) {
+    const roomKey = payload?.roomId == null ? "" : String(payload.roomId);
+    const watchServerId = String(payload?.serverId || "")
+      .trim()
+      .toLowerCase();
+    const isLocked = Boolean(payload?.isLocked);
+    const canEnter = Boolean(payload?.canEnter);
+
+    roomLockTargets.forEach((target) => {
+      const targetRoomKey = String(target.dataset.roomLockRoom || "");
+      const targetServerId = String(target.dataset.roomLockServer || "")
+        .trim()
+        .toLowerCase();
+
+      if (targetRoomKey !== roomKey || targetServerId !== watchServerId) {
+        return;
+      }
+
+      target.classList.toggle("is-visible", isLocked);
+      target.setAttribute("aria-hidden", isLocked ? "false" : "true");
+      target.title = isLocked ? "Raum ist abgeschlossen" : "";
+    });
+
+    roomLinkTargets.forEach((target) => {
+      const targetRoomKey = String(target.dataset.roomLinkRoom || "");
+      const targetServerId = String(target.dataset.roomLinkServer || "")
+        .trim()
+        .toLowerCase();
+
+      if (targetRoomKey !== roomKey || targetServerId !== watchServerId) {
+        return;
+      }
+
+      const roomUrl = String(target.dataset.roomLinkUrl || "").trim();
+      target.classList.toggle("is-disabled", !canEnter);
+      target.setAttribute("aria-disabled", canEnter ? "false" : "true");
+      target.title = canEnter ? "Raum betreten" : "Raum ist abgeschlossen";
+      target.href = canEnter ? roomUrl : "#";
+    });
+  }
+
   socket.on("connect", () => {
     if (serverId) {
       socket.emit("presence:set", { serverId });
@@ -81,4 +124,6 @@
       renderRoomWatchTarget(target, payload?.users);
     });
   });
+
+  socket.on("room:state:update", applyRoomStateToTarget);
 })();

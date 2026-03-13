@@ -76,6 +76,7 @@
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+          <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
           <% if (activeCharacter && !activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>">Charakter</a>
@@ -104,6 +105,9 @@
       <div class="chat-sidebar">
         <div class="chat-room-heading">
           <h1 class="chat-room-title">
+            <% if (activeRoom?.is_locked) { %>
+              <span class="chat-room-lock" aria-hidden="true">&#128274;</span>
+            <% } %>
             <%= activeRoom
               ? activeRoom.name
               : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>

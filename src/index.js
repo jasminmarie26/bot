@@ -2072,7 +2072,7 @@ function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
     .prepare(
-      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.server_id,
+      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.is_locked, r.server_id,
               c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
                u.username AS room_owner_name
        FROM chat_rooms r
@@ -2081,6 +2081,28 @@ function getRoomWithCharacter(roomId) {
        WHERE r.id = ?`
     )
     .get(roomId);
+}
+
+function canBypassRoomLock(user, room = null) {
+  if (!user || !room) return false;
+  return Number(room.created_by_user_id) === Number(user.id);
+}
+
+function isRoomLockedForUser(user, room = null) {
+  return Boolean(room) && Number(room.is_locked) === 1 && !canBypassRoomLock(user, room);
+}
+
+function getRoomStatePayloadForUser(user, room = null, serverId = DEFAULT_SERVER_ID) {
+  const normalizedRoomId = Number.isInteger(Number(room?.id)) ? Number(room.id) : null;
+  const normalizedServerId = normalizeServer(serverId || room?.server_id);
+  const isLocked = Boolean(room) && Number(room.is_locked) === 1;
+
+  return {
+    roomId: normalizedRoomId,
+    serverId: normalizedServerId,
+    isLocked,
+    canEnter: !isRoomLockedForUser(user, room)
+  };
 }
 
 function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin = false) {
@@ -3304,15 +3326,23 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   const rooms = db
     .prepare(
-      `SELECT r.id, r.name, r.teaser, r.server_id, r.created_at, r.created_by_user_id,
+      `SELECT r.id, r.name, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
               u.username AS creator_name,
-               CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS has_room_rights
+               CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS can_manage_room
        FROM chat_rooms r
         JOIN users u ON u.id = r.created_by_user_id
         WHERE r.server_id = ?
         ORDER BY r.created_at ASC, r.id ASC`
     )
-    .all(req.session.user.id, normalizeServer(character.server_id));
+    .all(req.session.user.id, normalizeServer(character.server_id))
+    .map((room) => ({
+      ...room,
+      is_locked: Number(room.is_locked) === 1,
+      can_manage_room: Number(room.can_manage_room) === 1,
+      can_enter:
+        Number(room.is_locked) !== 1 ||
+        Number(room.can_manage_room) === 1
+    }));
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
     standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
@@ -4012,12 +4042,18 @@ app.get("/chat", requireAuth, (req, res) => {
       });
     }
 
+    if (isRoomLockedForUser(req.session.user, room)) {
+      setFlash(req, "error", "Dieser Raum ist abgeschlossen.");
+      return res.redirect(`/characters/${room.character_id}#roomlist`);
+    }
+
     activeRoom = {
       id: room.id,
       name: room.name,
       teaser: room.teaser,
+      is_locked: Number(room.is_locked) === 1,
       category: "Offplay",
-      has_room_rights: room.created_by_user_id === req.session.user.id,
+      has_room_rights: canBypassRoomLock(req.session.user, room),
       owner_name: room.room_owner_name
     };
     activeServerId = normalizeServer(room.server_id || room.character_server_id);
@@ -4627,6 +4663,22 @@ function getPreferredCharacterForUser(
 
 function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   const members = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId, serverId));
+  if (!members || members.size === 0) {
+    return [];
+  }
+
+  const sockets = [];
+  for (const socketId of members) {
+    const memberSocket = io.sockets.sockets.get(socketId);
+    if (memberSocket) {
+      sockets.push(memberSocket);
+    }
+  }
+  return sockets;
+}
+
+function getSocketsInWatchChannel(roomId, serverId = DEFAULT_SERVER_ID) {
+  const members = io.sockets.adapter.rooms.get(socketChannelForRoomWatch(roomId, serverId));
   if (!members || members.size === 0) {
     return [];
   }
@@ -5426,6 +5478,25 @@ function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
   );
 }
 
+function emitRoomStateUpdate(roomId, serverId = DEFAULT_SERVER_ID, room = null) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedRoom =
+    room ||
+    (normalizedRoomId ? getRoomWithCharacter(normalizedRoomId) : null);
+
+  if (!resolvedRoom) {
+    return;
+  }
+
+  getSocketsInWatchChannel(normalizedRoomId, normalizedServerId).forEach((memberSocket) => {
+    memberSocket.emit(
+      "room:state:update",
+      getRoomStatePayloadForUser(memberSocket?.data?.user, resolvedRoom, normalizedServerId)
+    );
+  });
+}
+
 const pendingRoomDeletionTimers = new Map();
 
 function clearPendingRoomDeletion(roomId) {
@@ -5528,6 +5599,14 @@ io.on("connection", (socket) => {
       serverId: nextServerId,
       users: getOnlineCharactersForChannel(nextRoomId, nextServerId)
     });
+
+    const watchedRoom = nextRoomId ? getRoomWithCharacter(nextRoomId) : null;
+    if (watchedRoom) {
+      socket.emit(
+        "room:state:update",
+        getRoomStatePayloadForUser(socket.data.user, watchedRoom, nextServerId)
+      );
+    }
   });
 
   socket.on("chat:join", (payload) => {
@@ -5557,6 +5636,14 @@ io.on("connection", (socket) => {
           socket.data.user.is_admin
         )
       ) {
+        return;
+      }
+      if (isRoomLockedForUser(socket.data.user, room)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Dieser Raum ist abgeschlossen.",
+          created_at: formatChatTimestamp()
+        });
         return;
       }
       nextServerId = normalizeServer(room.server_id || room.character_server_id);
@@ -5672,6 +5759,85 @@ io.on("connection", (socket) => {
     if (!content) return;
     const normalizedCommand = content.toLowerCase();
     const canUseRoomLog = canManageRoomLog(socket.data.user, room);
+    const canManageRoomState = canBypassRoomLock(socket.data.user, room);
+
+    if (normalizedCommand === "/raumzu" || normalizedCommand === "/abschliessen") {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Der gemeinsame Treffpunkt kann nicht abgeschlossen werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canManageRoomState) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn abschliessen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (Number(room.is_locked) === 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Dieser Raum ist bereits abgeschlossen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      db.prepare("UPDATE chat_rooms SET is_locked = 1 WHERE id = ?").run(roomId);
+      const refreshedRoom = getRoomWithCharacter(roomId);
+      emitSystemChatMessage(roomId, serverId, "Der Raum wurde abgeschlossen.");
+      emitRoomStateUpdate(roomId, serverId, refreshedRoom);
+      io.to(socketChannelForRoom(roomId, serverId)).emit("chat:room-state", {
+        roomId,
+        isLocked: true
+      });
+      return;
+    }
+
+    if (normalizedCommand === "/raumauf" || normalizedCommand === "/aufschliessen") {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Der gemeinsame Treffpunkt ist immer geoeffnet.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canManageRoomState) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn wieder oeffnen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (Number(room.is_locked) !== 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Dieser Raum ist bereits geoeffnet.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      db.prepare("UPDATE chat_rooms SET is_locked = 0 WHERE id = ?").run(roomId);
+      const refreshedRoom = getRoomWithCharacter(roomId);
+      emitSystemChatMessage(roomId, serverId, "Der Raum wurde geoeffnet.");
+      emitRoomStateUpdate(roomId, serverId, refreshedRoom);
+      io.to(socketChannelForRoom(roomId, serverId)).emit("chat:room-state", {
+        roomId,
+        isLocked: false
+      });
+      return;
+    }
 
     if (normalizedCommand === "/log") {
       if (!canUseRoomLog) {
