@@ -400,6 +400,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
+const SESSION_IDLE_TIMEOUT_MS = 1000 * 60 * 60;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -408,10 +409,11 @@ const sessionMiddleware = session({
   }),
   secret: process.env.SESSION_SECRET || "change-me-in-production",
   resave: false,
+  rolling: true,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 * 14,
+    maxAge: SESSION_IDLE_TIMEOUT_MS,
     sameSite: "lax"
   }
 });
@@ -3213,6 +3215,12 @@ app.get("/auth/facebook/callback", (req, res, next) => {
 app.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/");
+  });
+});
+
+app.get("/logout-idle", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/login");
   });
 });
 

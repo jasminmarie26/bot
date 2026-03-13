@@ -1,5 +1,8 @@
     </main>
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
+    <% if (currentUser) { %>
+      <script src="/idle-logout.js?v=<%= staticAssetVersion %>"></script>
+    <% } %>
   </body>
 </html>

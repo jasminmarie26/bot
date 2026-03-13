@@ -1,7 +1,7 @@
 <%- include("partials/start", { topbarCharacter }) %>
 
-<section class="panel">
-  <div class="guestbook-browser-bar">
+<section class="panel guestbook-layout">
+  <aside class="guestbook-browser-bar" aria-label="Gästebuch Infos">
     <div class="guestbook-browser-brand">
       <span class="guestbook-browser-name"><%= character.name %></span>
       <span class="guestbook-browser-label">Gästebuch-Einträge</span>
@@ -9,7 +9,9 @@
         <span class="guestbook-browser-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
       <% } %>
     </div>
-  </div>
+  </aside>
+
+  <div class="guestbook-content">
 
   <% if (guestbookAccessState?.viaReplyAccess) { %>
     <p class="muted guestbook-reply-hint">
@@ -168,6 +170,7 @@
       <% }) %>
     </div>
   <% } %>
+  </div>
 </section>
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
