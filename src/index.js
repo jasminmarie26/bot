@@ -9,11 +9,19 @@ const SQLiteStore = require("connect-sqlite3")(session);
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const PDFDocument = require("pdfkit");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const FacebookStrategy = require("passport-facebook").Strategy;
 const Database = require("better-sqlite3");
 const { Server } = require("socket.io");
+const {
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  TextRun
+} = require("docx");
 const db = require("./db");
 
 const THEME_OPTIONS = [
@@ -918,6 +926,11 @@ async function sendRoomLogEmail(payload) {
   const participantNames = Array.isArray(payload.participantNames)
     ? payload.participantNames.filter(Boolean)
     : [];
+  const attachmentBaseName = buildRoomLogAttachmentBaseName(roomLabel, payload.endedAt);
+  const [pdfBuffer, docxBuffer] = await Promise.all([
+    createRoomLogPdfBuffer(payload),
+    createRoomLogDocxBuffer(payload)
+  ]);
   const text = [
     `Hallo ${username},`,
     "",
@@ -926,6 +939,9 @@ async function sendRoomLogEmail(payload) {
     `Beendet: ${payload.endedAt || "-"}`,
     payload.endReasonText ? `Grund: ${payload.endReasonText}` : "",
     participantNames.length ? `Beteiligte: ${participantNames.join(", ")}` : "",
+    "",
+    "Im Anhang findest du das Log zusätzlich als PDF und Word-Datei.",
+    "Formatierungen wie kursiv/fett und die farbliche Hervorhebung werden dort mit übernommen.",
     "",
     "Chatverlauf:",
     "",
@@ -943,7 +959,20 @@ async function sendRoomLogEmail(payload) {
     from: MAIL_FROM,
     to: email,
     subject: `Chat-Log: ${roomLabel}`,
-    text
+    text,
+    attachments: [
+      {
+        filename: `${attachmentBaseName}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf"
+      },
+      {
+        filename: `${attachmentBaseName}.docx`,
+        content: docxBuffer,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      }
+    ]
   });
 
   return true;
@@ -4354,6 +4383,359 @@ function formatRoomLogLine(entry) {
   return `${linePrefix}${username}: ${content}`;
 }
 
+function mergeFormattedRuns(runs) {
+  const merged = [];
+  for (const run of Array.isArray(runs) ? runs : []) {
+    const text = String(run?.text || "");
+    if (!text) continue;
+
+    const normalizedRun = {
+      text,
+      bold: Boolean(run?.bold),
+      italic: Boolean(run?.italic),
+      color: String(run?.color || "").trim() || undefined,
+      size: Number(run?.size) || undefined
+    };
+
+    const previous = merged[merged.length - 1];
+    if (
+      previous &&
+      previous.bold === normalizedRun.bold &&
+      previous.italic === normalizedRun.italic &&
+      previous.color === normalizedRun.color &&
+      previous.size === normalizedRun.size
+    ) {
+      previous.text += normalizedRun.text;
+    } else {
+      merged.push(normalizedRun);
+    }
+  }
+  return merged;
+}
+
+function parseFormattedRuns(
+  text,
+  {
+    allowItalic = true,
+    allowBold = true,
+    inheritedItalic = false,
+    inheritedBold = false
+  } = {}
+) {
+  const source = String(text || "");
+  let cursor = 0;
+  let plainBuffer = "";
+  const runs = [];
+
+  function flushPlainBuffer() {
+    if (!plainBuffer) return;
+    runs.push({
+      text: plainBuffer,
+      italic: inheritedItalic,
+      bold: inheritedBold
+    });
+    plainBuffer = "";
+  }
+
+  while (cursor < source.length) {
+    const currentChar = source[cursor];
+
+    if (allowItalic && currentChar === "*") {
+      const closingIndex = source.indexOf("*", cursor + 1);
+      if (closingIndex > cursor + 1) {
+        flushPlainBuffer();
+        runs.push(
+          ...parseFormattedRuns(source.slice(cursor + 1, closingIndex), {
+            allowItalic: false,
+            allowBold: true,
+            inheritedItalic: true,
+            inheritedBold
+          })
+        );
+        cursor = closingIndex + 1;
+        continue;
+      }
+    }
+
+    if (allowBold && currentChar === '"') {
+      let contentStart = cursor + 1;
+      while (source[contentStart] === '"') {
+        contentStart += 1;
+      }
+
+      const closingIndex = source.indexOf('"', contentStart);
+      if (closingIndex > contentStart) {
+        let contentEnd = closingIndex;
+        while (contentEnd > contentStart && source[contentEnd - 1] === '"') {
+          contentEnd -= 1;
+        }
+
+        if (contentEnd > contentStart) {
+          flushPlainBuffer();
+          runs.push(
+            ...parseFormattedRuns(source.slice(contentStart, contentEnd), {
+              allowItalic: true,
+              allowBold: false,
+              inheritedItalic,
+              inheritedBold: true
+            })
+          );
+
+          cursor = closingIndex + 1;
+          while (source[cursor] === '"') {
+            cursor += 1;
+          }
+          continue;
+        }
+      }
+    }
+
+    plainBuffer += currentChar;
+    cursor += 1;
+  }
+
+  flushPlainBuffer();
+  return mergeFormattedRuns(runs);
+}
+
+function getRoleColor(roleStyle = "") {
+  const normalizedRoleStyle = String(roleStyle || "").trim().toLowerCase();
+  if (normalizedRoleStyle === "admin") return "2ea8ff";
+  if (normalizedRoleStyle === "moderator") return "68c7ff";
+  return "1f2a37";
+}
+
+function buildSystemLogRuns(content) {
+  const text = String(content || "").trim();
+  if (!text) return [];
+
+  const matchingSuffix = systemMessageSuffixes.find((suffix) => text.endsWith(suffix));
+  if (matchingSuffix) {
+    const actorName = text.slice(0, -matchingSuffix.length).trim();
+    if (actorName) {
+      return mergeFormattedRuns([
+        { text: actorName, bold: true, italic: true, color: "55759a" },
+        { text: matchingSuffix, italic: true, color: "55759a" }
+      ]);
+    }
+  }
+
+  return mergeFormattedRuns(
+    parseFormattedRuns(text, {
+      allowItalic: true,
+      allowBold: true,
+      inheritedItalic: true
+    }).map((run) => ({
+      ...run,
+      color: "55759a"
+    }))
+  );
+}
+
+function buildLogEntryRuns(entry) {
+  const createdAt = String(entry?.created_at || "").trim();
+  const timestampPrefix = createdAt ? `[${createdAt}] ` : "";
+  const type = String(entry?.type || "chat").trim().toLowerCase();
+  const content = String(entry?.content || "").trim();
+  if (!content) {
+    return [];
+  }
+
+  const runs = [];
+  if (timestampPrefix) {
+    runs.push({ text: timestampPrefix, color: "7a8699", size: 18 });
+  }
+
+  if (type === "system") {
+    runs.push(...buildSystemLogRuns(content));
+    return mergeFormattedRuns(runs);
+  }
+
+  const username = String(entry?.username || "Jemand").trim() || "Jemand";
+  const roleColor = getRoleColor(entry?.role_style);
+  const emoteAction = getChatEmoteActionText(content, username);
+
+  if (emoteAction) {
+    runs.push({ text: username, bold: true, italic: true, color: roleColor });
+    runs.push({ text: " ", italic: true, color: "425a73" });
+    runs.push(
+      ...parseFormattedRuns(emoteAction, {
+        allowItalic: false,
+        allowBold: true,
+        inheritedItalic: true
+      }).map((run) => ({
+        ...run,
+        italic: true,
+        color: "425a73"
+      }))
+    );
+    return mergeFormattedRuns(runs);
+  }
+
+  runs.push({ text: username, bold: true, color: roleColor });
+  runs.push({ text: ": ", color: "1f2a37" });
+  runs.push(
+    ...parseFormattedRuns(content, {
+      allowItalic: true,
+      allowBold: true
+    }).map((run) => ({
+      ...run,
+      color: "1f2a37"
+    }))
+  );
+
+  return mergeFormattedRuns(runs);
+}
+
+function sanitizeAttachmentFilenamePart(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .toLowerCase()
+    .slice(0, 60) || "chat-log";
+}
+
+function buildRoomLogAttachmentBaseName(roomLabel, endedAt) {
+  const safeRoomLabel = sanitizeAttachmentFilenamePart(roomLabel || "chat-log");
+  const safeDate = String(endedAt || "")
+    .replace(/[^0-9]/g, "")
+    .slice(0, 14) || formatChatTimestamp().replace(/[^0-9]/g, "").slice(0, 14);
+  return `${safeRoomLabel}-${safeDate}`;
+}
+
+function createRoomLogPdfBuffer(payload) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 48,
+        info: {
+          Title: `Chat-Log: ${payload.roomLabel}`,
+          Author: "Heldenhafte Reisen"
+        }
+      });
+      const chunks = [];
+
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      doc.font("Helvetica-Bold").fontSize(22).fillColor("#16324f").text(`Chat-Log: ${payload.roomLabel}`);
+      doc.moveDown(0.35);
+      doc.font("Helvetica").fontSize(10).fillColor("#4b5c70").text(`Gestartet: ${payload.startedAt}`);
+      doc.text(`Beendet: ${payload.endedAt}`);
+      if (payload.endReasonText) {
+        doc.text(`Grund: ${payload.endReasonText}`);
+      }
+      if (payload.participantNames?.length) {
+        doc.text(`Beteiligte: ${payload.participantNames.join(", ")}`);
+      }
+      doc.moveDown(0.7);
+
+      for (const entry of payload.entries || []) {
+        const runs = buildLogEntryRuns(entry);
+        if (!runs.length) continue;
+
+        runs.forEach((run, index) => {
+          let fontName = "Helvetica";
+          if (run.bold && run.italic) fontName = "Helvetica-BoldOblique";
+          else if (run.bold) fontName = "Helvetica-Bold";
+          else if (run.italic) fontName = "Helvetica-Oblique";
+
+          doc
+            .font(fontName)
+            .fontSize(run.size ? run.size / 2 : 10.5)
+            .fillColor(run.color ? `#${run.color}` : "#1f2a37")
+            .text(run.text, {
+              continued: index < runs.length - 1,
+              lineGap: 2
+            });
+        });
+        doc.moveDown(0.45);
+      }
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function createRoomLogDocxBuffer(payload) {
+  const paragraphs = [
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      children: [
+        new TextRun({
+          text: `Chat-Log: ${payload.roomLabel}`,
+          color: "16324f"
+        })
+      ]
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `Gestartet: ${payload.startedAt}`, color: "4b5c70" })]
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `Beendet: ${payload.endedAt}`, color: "4b5c70" })]
+    })
+  ];
+
+  if (payload.endReasonText) {
+    paragraphs.push(
+      new Paragraph({
+        children: [new TextRun({ text: `Grund: ${payload.endReasonText}`, color: "4b5c70" })]
+      })
+    );
+  }
+
+  if (payload.participantNames?.length) {
+    paragraphs.push(
+      new Paragraph({
+        children: [new TextRun({ text: `Beteiligte: ${payload.participantNames.join(", ")}`, color: "4b5c70" })]
+      })
+    );
+  }
+
+  paragraphs.push(new Paragraph({ text: "" }));
+
+  for (const entry of payload.entries || []) {
+    const runs = buildLogEntryRuns(entry);
+    if (!runs.length) continue;
+
+    paragraphs.push(
+      new Paragraph({
+        spacing: {
+          after: 120
+        },
+        children: runs.map(
+          (run) =>
+            new TextRun({
+              text: run.text,
+              bold: run.bold,
+              italics: run.italic,
+              color: run.color || "1f2a37",
+              size: run.size || 21
+            })
+        )
+      })
+    );
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: paragraphs
+      }
+    ]
+  });
+
+  return Packer.toBuffer(doc);
+}
+
 function getRoomLogRecipients(userIds) {
   const parsedIds = Array.from(new Set((Array.isArray(userIds) ? userIds : [])
     .map((value) => Number(value))
@@ -4420,6 +4802,7 @@ function appendMessageToActiveRoomLog(roomId, serverId, entry) {
   roomLog.messages.push({
     type,
     username,
+    role_style: String(entry?.role_style || "").trim(),
     content,
     created_at: createdAt
   });
@@ -4495,7 +4878,8 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
         endedAt,
         endReasonText,
         participantNames,
-        logText
+        logText,
+        entries: roomLog.messages
       });
     } catch (error) {
       console.error("Konnte Raum-Log nicht per E-Mail senden:", error);
@@ -4944,6 +5328,7 @@ io.on("connection", (socket) => {
       type: "chat",
       user_id: socket.data.user.id,
       username: displayProfile.label,
+      role_style: displayProfile.role_style || "",
       content,
       created_at: createdAt
     });
