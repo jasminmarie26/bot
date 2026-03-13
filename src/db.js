@@ -148,8 +148,8 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_character_name_key
-    ON chat_rooms(character_id, name_key);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key
+    ON chat_rooms(server_id, created_by_user_id, name_key);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
@@ -289,8 +289,9 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_entries_page_id ON guestbook_e
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
+db.exec("DROP INDEX IF EXISTS idx_chat_rooms_character_name_key");
 db.exec(
-  "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_character_name_key ON chat_rooms(character_id, name_key)"
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key ON chat_rooms(server_id, created_by_user_id, name_key)"
 );
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id)");
 
