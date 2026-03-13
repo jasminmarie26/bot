@@ -3484,6 +3484,46 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   return res.redirect("/dashboard");
 });
 
+app.post("/characters/:id/move", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Charakter verschieben."
+    });
+  }
+
+  const currentServerId = normalizeServer(character.server_id);
+  const nextServerId = currentServerId === "free-rp" ? "erp" : "free-rp";
+
+  db.prepare(
+    `UPDATE characters
+     SET server_id = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(nextServerId, id);
+
+  const preferredMap = normalizePreferredCharacterMap(req.session.preferred_character_ids);
+  if (Number(preferredMap[currentServerId]) === id) {
+    delete preferredMap[currentServerId];
+  }
+  preferredMap[nextServerId] = id;
+  req.session.preferred_character_ids = preferredMap;
+
+  emitHomeStatsUpdate();
+  setFlash(
+    req,
+    "success",
+    `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`
+  );
+  return res.redirect("/dashboard");
+});
+
 app.post("/characters/:id/role-character", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);

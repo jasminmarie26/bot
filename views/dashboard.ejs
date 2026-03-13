@@ -55,21 +55,38 @@
                     <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
-                    <form
-                      method="POST"
-                      action="/characters/<%= char.id %>/delete"
-                      class="character-mini-delete-form"
-                      onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                    >
-                      <button
-                        type="submit"
-                        class="character-mini-delete-btn"
-                        aria-label="Charakter l&ouml;schen"
-                        title="Charakter l&ouml;schen"
+                    <div class="character-mini-actions">
+                      <form
+                        method="POST"
+                        action="/characters/<%= char.id %>/move"
+                        class="character-mini-move-form"
+                        onsubmit="return confirm('Charakter auf <%= char.server_id === \"free-rp\" ? \"ERP\" : \"FREE-RP\" %> verschieben?')"
                       >
-                        X
-                      </button>
-                    </form>
+                        <button
+                          type="submit"
+                          class="character-mini-move-btn"
+                          aria-label="Charakter verschieben"
+                          title="<%= char.server_id === 'free-rp' ? 'Nach ERP verschieben' : 'Nach FREE-RP verschieben' %>"
+                        >
+                          <%= char.server_id === "free-rp" ? "\u2192" : "\u2190" %>
+                        </button>
+                      </form>
+                      <form
+                        method="POST"
+                        action="/characters/<%= char.id %>/delete"
+                        class="character-mini-delete-form"
+                        onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                      >
+                        <button
+                          type="submit"
+                          class="character-mini-delete-btn"
+                          aria-label="Charakter l&ouml;schen"
+                          title="Charakter l&ouml;schen"
+                        >
+                          X
+                        </button>
+                      </form>
+                    </div>
                   </article>
                 <% }) %>
               </div>
