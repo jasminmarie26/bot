@@ -3292,27 +3292,7 @@ app.get("/chat", requireAuth, (req, res) => {
     standardRoom = getStandardRoomForServer(activeServerId, requestedStandardRoomId);
   }
 
-  const messages = activeRoom
-    ? db
-        .prepare(
-          `SELECT username, content, created_at
-           FROM chat_messages
-           WHERE room_id = ? AND server_id = ?
-           ORDER BY id DESC
-           LIMIT 100`
-        )
-        .all(activeRoom.id, activeServerId)
-        .reverse()
-    : db
-        .prepare(
-          `SELECT username, content, created_at
-           FROM chat_messages
-           WHERE room_id IS NULL AND server_id = ?
-           ORDER BY id DESC
-           LIMIT 100`
-        )
-        .all(activeServerId)
-        .reverse();
+  const messages = [];
 
   const onlineCharacters = getOnlineCharactersForChannel(
     activeRoom ? activeRoom.id : null,
@@ -4153,27 +4133,10 @@ io.on("connection", (socket) => {
     const content = rawMessage.trim().slice(0, 500);
     if (!content) return;
 
-    const info = db
-      .prepare(
-        `INSERT INTO chat_messages (user_id, username, content, server_id, room_id)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-      .run(
-        socket.data.user.id,
-        socket.data.user.username,
-        content,
-        serverId,
-        roomId
-      );
-
-    const saved = db
-      .prepare("SELECT created_at FROM chat_messages WHERE id = ?")
-      .get(info.lastInsertRowid);
-
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
       username: socket.data.user.username,
       content,
-      created_at: saved.created_at
+      created_at: formatChatTimestamp()
     });
   });
 
