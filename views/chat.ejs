@@ -26,6 +26,16 @@
         <% }) %>
       </select>
     </form>
+    <button
+      id="chat-sound-toggle"
+      class="chat-sound-toggle"
+      type="button"
+      aria-pressed="true"
+      aria-label="Raumton ausschalten"
+      title="Raumton ausschalten"
+    >
+      <span id="chat-sound-toggle-icon" class="chat-sound-toggle-icon" aria-hidden="true">&#128276;</span>
+    </button>
     <details class="rp-user-menu">
       <summary
         class="rp-user-menu-toggle"
@@ -114,6 +124,7 @@
           class="chat-box"
           data-room-id="<%= activeRoom ? activeRoom.id : '' %>"
           data-server-id="<%= activeServerId %>"
+          data-current-character-name="<%= activeCharacter ? activeCharacter.name : '' %>"
         >
           <% messages.forEach((msg) => { %>
             <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">

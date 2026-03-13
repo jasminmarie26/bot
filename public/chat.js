@@ -6,6 +6,8 @@
   const onlineActionsMenu = document.getElementById("online-actions-menu");
   const onlineActionGuestbook = document.getElementById("online-action-guestbook");
   const onlineActionWhisper = document.getElementById("online-action-whisper");
+  const soundToggle = document.getElementById("chat-sound-toggle");
+  const soundToggleIcon = document.getElementById("chat-sound-toggle-icon");
   const whisperModal = document.getElementById("whisper-modal");
   const whisperModalTitle = document.getElementById("whisper-modal-title");
   const whisperForm = document.getElementById("whisper-form");
@@ -15,9 +17,11 @@
   const whisperCancelBtn = document.getElementById("whisper-cancel-btn");
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
+  const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
   const roomId = Number(roomIdRaw);
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   let selectedOnlineEntry = null;
+  const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const systemMessageSuffixes = [
     " schiebt den Vorhang beiseite und tritt ein.",
     " taucht zwischen den Gesprächen auf.",
@@ -28,10 +32,85 @@
     " lässt nur ein leises Echo zurück und geht.",
     " löst sich aus dem Gespräch und verlässt den Raum."
   ];
+  const entrySystemSuffixes = systemMessageSuffixes.slice(0, 4);
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
+  let notificationAudioContext = null;
+  let soundEnabled = true;
 
   if (!chatBox || !form || !input) return;
 
   const socket = io();
+
+  try {
+    soundEnabled = window.localStorage.getItem(soundPreferenceKey) !== "0";
+  } catch (_error) {
+    soundEnabled = true;
+  }
+
+  function getNotificationAudioContext() {
+    if (!AudioContextCtor) return null;
+    if (!notificationAudioContext) {
+      notificationAudioContext = new AudioContextCtor();
+    }
+    return notificationAudioContext;
+  }
+
+  async function unlockNotificationAudio() {
+    const context = getNotificationAudioContext();
+    if (!context || context.state !== "suspended") return;
+    try {
+      await context.resume();
+    } catch (_error) {
+      // Ignore resume failures; the user can still keep the toggle enabled.
+    }
+  }
+
+  function updateSoundToggle() {
+    if (!soundToggle || !soundToggleIcon) return;
+    soundToggle.classList.toggle("is-off", !soundEnabled);
+    soundToggle.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+    soundToggle.setAttribute("aria-label", soundEnabled ? "Raumton ausschalten" : "Raumton einschalten");
+    soundToggle.title = soundEnabled ? "Raumton ausschalten" : "Raumton einschalten";
+    soundToggleIcon.innerHTML = soundEnabled ? "&#128276;" : "&#128277;";
+  }
+
+  function playEntryTone() {
+    if (!soundEnabled) return;
+    const context = getNotificationAudioContext();
+    if (!context || context.state !== "running") return;
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(932, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1318, context.currentTime + 0.14);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.24);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + 0.25);
+  }
+
+  if (soundToggle) {
+    soundToggle.addEventListener("click", async () => {
+      soundEnabled = !soundEnabled;
+      try {
+        window.localStorage.setItem(soundPreferenceKey, soundEnabled ? "1" : "0");
+      } catch (_error) {
+        // Ignore storage failures; the toggle still works for the current session.
+      }
+      updateSoundToggle();
+      if (soundEnabled) {
+        await unlockNotificationAudio();
+      }
+    });
+  }
+
+  window.addEventListener("pointerdown", unlockNotificationAudio, { once: true });
+  window.addEventListener("keydown", unlockNotificationAudio, { once: true });
+  updateSoundToggle();
 
   socket.on("connect", () => {
     socket.emit("chat:join", {
@@ -52,9 +131,17 @@
       const matchingSuffix = systemMessageSuffixes.find((suffix) => content.endsWith(suffix));
       if (matchingSuffix) {
         const strong = document.createElement("strong");
-        strong.textContent = content.slice(0, -matchingSuffix.length);
+        const actorName = content.slice(0, -matchingSuffix.length).trim();
+        strong.textContent = actorName;
         body.textContent = matchingSuffix;
         line.appendChild(strong);
+        if (
+          actorName &&
+          entrySystemSuffixes.includes(matchingSuffix) &&
+          actorName.localeCompare(currentCharacterName, "de", { sensitivity: "base" }) !== 0
+        ) {
+          playEntryTone();
+        }
       } else {
         body.textContent = content;
       }

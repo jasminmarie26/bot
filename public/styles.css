@@ -858,6 +858,39 @@ a:hover {
   border-color: color-mix(in srgb, var(--link) 72%, transparent);
 }
 
+.chat-sound-toggle {
+  width: 2.8rem;
+  height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--link) 58%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
+  color: var(--link);
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, background 120ms ease, border-color 120ms ease;
+  flex: 0 0 auto;
+}
+
+.chat-sound-toggle:hover,
+.chat-sound-toggle:focus-visible {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  background: color-mix(in srgb, var(--panel-bg) 66%, white 34%);
+  border-color: color-mix(in srgb, var(--link) 72%, transparent);
+}
+
+.chat-sound-toggle.is-off {
+  color: color-mix(in srgb, var(--muted) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--field-edge) 82%, transparent);
+}
+
+.chat-sound-toggle-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
 .topbar-user-menu-toggle-icon,
 .rp-user-menu-toggle-icon {
   font-size: 1.2rem;
