@@ -4847,7 +4847,15 @@ function startRoomLog(roomId, serverId, room, startedBySocket) {
 async function finalizeRoomLog(roomId, serverId, options = {}) {
   const key = getRoomLogKey(roomId, serverId);
   const roomLog = activeRoomLogs.get(key);
-  if (!roomLog) return false;
+  if (!roomLog) {
+    return {
+      hadLog: false,
+      deliveredCount: 0,
+      missingEmailCount: 0,
+      failedCount: 0,
+      participantCount: 0
+    };
+  }
 
   activeRoomLogs.delete(key);
 
@@ -4864,10 +4872,16 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
     .join("\n");
   const participantNames = Array.from(new Set(Array.from(roomLog.participants.values()).filter(Boolean)))
     .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  let deliveredCount = 0;
+  let missingEmailCount = 0;
+  let failedCount = 0;
 
   for (const recipient of recipientRows) {
     const email = normalizeEmail(recipient?.email || "");
-    if (!email) continue;
+    if (!email) {
+      missingEmailCount += 1;
+      continue;
+    }
 
     try {
       await sendRoomLogEmail({
@@ -4881,12 +4895,20 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
         logText,
         entries: roomLog.messages
       });
+      deliveredCount += 1;
     } catch (error) {
+      failedCount += 1;
       console.error("Konnte Raum-Log nicht per E-Mail senden:", error);
     }
   }
 
-  return true;
+  return {
+    hadLog: true,
+    deliveredCount,
+    missingEmailCount,
+    failedCount,
+    participantCount: roomLog.participants.size
+  };
 }
 
 async function finalizeRoomLogIfEmpty(roomId, serverId) {
@@ -5229,7 +5251,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("chat:message", (rawMessage) => {
+  socket.on("chat:message", async (rawMessage) => {
     if (!socket.data.user) return;
     if (typeof rawMessage !== "string") return;
 
@@ -5318,7 +5340,38 @@ io.on("connection", (socket) => {
       }
 
       emitSystemChatMessage(roomId, serverId, "Log wurde beendet.");
-      void finalizeRoomLog(roomId, serverId, { reason: "manual" });
+      const finalizeResult = await finalizeRoomLog(roomId, serverId, { reason: "manual" });
+      let resultMessage = "Das Log wurde beendet.";
+
+      if (!finalizeResult.hadLog) {
+        resultMessage = "Es war kein aktives Log mehr vorhanden.";
+      } else if (finalizeResult.deliveredCount > 0 && finalizeResult.failedCount === 0) {
+        resultMessage = `Log wurde per E-Mail an ${finalizeResult.deliveredCount} Person(en) gesendet.`;
+        if (finalizeResult.missingEmailCount > 0) {
+          resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
+        }
+      } else if (finalizeResult.deliveredCount > 0) {
+        resultMessage =
+          `Log wurde an ${finalizeResult.deliveredCount} Person(en) gesendet, ` +
+          `${finalizeResult.failedCount} Versand(e) sind fehlgeschlagen.`;
+        if (finalizeResult.missingEmailCount > 0) {
+          resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
+        }
+      } else if (finalizeResult.missingEmailCount > 0 && finalizeResult.failedCount === 0) {
+        resultMessage =
+          "Es wurde keine E-Mail verschickt, weil keine beteiligte Person eine hinterlegte E-Mail-Adresse hat.";
+      } else if (finalizeResult.failedCount > 0) {
+        resultMessage =
+          "Der Log-Versand ist fehlgeschlagen. Bitte prüfe die Server-Logs und die Mail-Konfiguration.";
+      } else {
+        resultMessage = "Es gab keine passenden Empfänger für den Log-Versand.";
+      }
+
+      socket.emit("chat:message", {
+        type: "system",
+        content: resultMessage,
+        created_at: formatChatTimestamp()
+      });
       return;
     }
 
