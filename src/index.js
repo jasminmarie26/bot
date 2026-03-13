@@ -2192,7 +2192,6 @@ function getGuestbookAccessState(req, targetCharacter) {
 
   return {
     isOwner,
-    guestbookAccessState,
     isAdmin,
     canAccess: canAccessDirectly || viaReplyAccess,
     viaReplyAccess,
