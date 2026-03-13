@@ -23,8 +23,6 @@
           <a
             class="help-topic-link"
             href="/help/<%= topic.slug %>"
-            target="_blank"
-            rel="noopener noreferrer"
           ><%= topic.title %></a>
         <% }) %>
       </nav>
@@ -38,11 +36,7 @@
         </div>
       </div>
 
-      <a
-        class="help-topic-link"
-        href="/help"
-        data-help-overview-close
-      >Zur Themenübersicht</a>
+      <a class="help-topic-link" href="/help">Zur Themenübersicht</a>
     </section>
 
     <% if (helpTopic.slug === "charakter-anlegen") { %>
@@ -191,39 +185,5 @@
     <% } %>
   <% } %>
 </section>
-
-<% if (helpTopic) { %>
-  <script>
-    (() => {
-      const overviewLink = document.querySelector("[data-help-overview-close]");
-      if (!overviewLink) return;
-
-      overviewLink.addEventListener("click", (event) => {
-        event.preventDefault();
-
-        if (window.opener && !window.opener.closed) {
-          try {
-            window.close();
-            window.setTimeout(() => {
-              if (!window.closed) {
-                window.location.href = overviewLink.href;
-              }
-            }, 120);
-            return;
-          } catch (_error) {
-            // Fallback below.
-          }
-        }
-
-        if (window.history.length > 1) {
-          window.history.back();
-          return;
-        }
-
-        window.location.href = overviewLink.href;
-      });
-    })();
-  </script>
-<% } %>
 
 <%- include("partials/end") %>
