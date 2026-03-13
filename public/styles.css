@@ -3240,6 +3240,7 @@ select:focus {
   border-radius: 0;
   background: transparent;
   padding: 0;
+  gap: 0.18rem;
 }
 
 .chat-online-item {
@@ -3278,7 +3279,8 @@ select:focus {
   border-color: transparent;
   box-shadow: none;
   border-radius: 8px;
-  padding: 0.65rem 0.72rem;
+  padding: 0.3rem 0.72rem;
+  line-height: 1.15;
 }
 
 .online-actions-menu {
