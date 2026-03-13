@@ -202,17 +202,34 @@
       }
 
       if (allowBold && currentChar === '"') {
-        const closingIndex = source.indexOf('"', cursor + 1);
-        if (closingIndex > cursor + 1) {
-          flushPlainBuffer();
-          const strong = document.createElement("strong");
-          appendFormattedChatNodes(strong, source.slice(cursor + 1, closingIndex), {
-            allowItalic: true,
-            allowBold: false
-          });
-          container.appendChild(strong);
-          cursor = closingIndex + 1;
-          continue;
+        let contentStart = cursor + 1;
+        while (source[contentStart] === '"') {
+          contentStart += 1;
+        }
+
+        const closingIndex = source.indexOf('"', contentStart);
+        if (closingIndex > contentStart) {
+          let contentEnd = closingIndex;
+          while (contentEnd > contentStart && source[contentEnd - 1] === '"') {
+            contentEnd -= 1;
+          }
+
+          if (contentEnd > contentStart) {
+            let nextCursor = closingIndex + 1;
+            while (source[nextCursor] === '"') {
+              nextCursor += 1;
+            }
+
+            flushPlainBuffer();
+            const strong = document.createElement("strong");
+            appendFormattedChatNodes(strong, source.slice(contentStart, contentEnd), {
+              allowItalic: true,
+              allowBold: false
+            });
+            container.appendChild(strong);
+            cursor = nextCursor;
+            continue;
+          }
         }
       }
 
