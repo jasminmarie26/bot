@@ -50,11 +50,13 @@
       currentPath === "/dashboard"
     ); %>
     <% const menuCharacter =
-      typeof activeCharacter !== "undefined" && activeCharacter
-        ? activeCharacter
-        : typeof character !== "undefined" && character
-          ? character
-          : null; %>
+      typeof topbarCharacter !== "undefined"
+        ? topbarCharacter
+        : typeof activeCharacter !== "undefined" && activeCharacter
+          ? activeCharacter
+          : typeof character !== "undefined" && character
+            ? character
+            : null; %>
     <% const canEditMenuCharacter = Boolean(
       menuCharacter &&
       (
@@ -114,6 +116,7 @@
               </select>
             </form>
             <% if (currentUser) { %>
+              <%- include("guestbook-notification-link") %>
               <details class="topbar-user-menu">
                 <summary
                   class="topbar-user-menu-toggle"

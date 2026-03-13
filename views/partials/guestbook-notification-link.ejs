@@ -1,0 +1,23 @@
+<% if (currentUser && guestbookNotificationCount > 0 && latestGuestbookNotification) { %>
+  <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount); %>
+  <% const guestbookNotificationTitle = latestGuestbookNotification.character_name
+    ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
+    : "Neuer Gaestebucheintrag"; %>
+  <a
+    class="guestbook-notification-link"
+    href="/guestbook/notifications/open"
+    aria-label="<%= guestbookNotificationTitle %>"
+    title="<%= guestbookNotificationTitle %>"
+  >
+    <span class="guestbook-notification-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path class="guestbook-envelope-fill" d="M4.4 6.25h15.2c.8 0 1.45.65 1.45 1.45v8.6c0 .8-.65 1.45-1.45 1.45H4.4c-.8 0-1.45-.65-1.45-1.45V7.7c0-.8.65-1.45 1.45-1.45Z" />
+        <path d="M3.15 7.25 12 13.7l8.85-6.45" />
+        <path d="M4.1 17.1 9.2 12.55" />
+        <path d="m19.9 17.1-5.1-4.55" />
+        <rect x="3.15" y="6.25" width="17.7" height="11.5" rx="1.55" ry="1.55" />
+      </svg>
+    </span>
+    <span class="guestbook-notification-badge"><%= guestbookNotificationBadgeText %></span>
+  </a>
+<% } %>

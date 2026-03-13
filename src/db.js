@@ -92,12 +92,28 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     character_id INTEGER NOT NULL,
     author_id INTEGER NOT NULL,
+    author_character_id INTEGER,
     author_name TEXT NOT NULL,
     content TEXT NOT NULL,
+    is_private INTEGER NOT NULL DEFAULT 0,
     guestbook_page_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
-    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_character_id) REFERENCES characters(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS guestbook_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    character_id INTEGER NOT NULL,
+    guestbook_entry_id INTEGER NOT NULL,
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+    FOREIGN KEY (guestbook_entry_id) REFERENCES guestbook_entries(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS chat_rooms (
@@ -154,11 +170,16 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
+  CREATE INDEX IF NOT EXISTS idx_guestbook_author_character_id ON guestbook_entries(author_character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key
     ON chat_rooms(server_id, created_by_user_id, name_key);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
+  CREATE INDEX IF NOT EXISTS idx_guestbook_notifications_user_read
+    ON guestbook_notifications(user_id, is_read, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_guestbook_notifications_user_entry
+    ON guestbook_notifications(user_id, guestbook_entry_id);
   CREATE INDEX IF NOT EXISTS idx_registration_guard_ip_created_at
     ON registration_guard_events(ip, created_at);
 `);
@@ -311,11 +332,26 @@ if (!guestbookEntryColumns.includes("guestbook_page_id")) {
   db.exec("ALTER TABLE guestbook_entries ADD COLUMN guestbook_page_id INTEGER");
 }
 
+if (!guestbookEntryColumns.includes("author_character_id")) {
+  db.exec("ALTER TABLE guestbook_entries ADD COLUMN author_character_id INTEGER");
+}
+
+if (!guestbookEntryColumns.includes("is_private")) {
+  db.exec("ALTER TABLE guestbook_entries ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookEntryColumns.includes("updated_at")) {
+  db.exec("ALTER TABLE guestbook_entries ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP");
+}
+
 db.exec("CREATE INDEX IF NOT EXISTS idx_characters_festplay_id ON characters(festplay_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_characters_server_id ON characters(server_id)");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_guestbook_pages_character_number ON guestbook_pages(character_id, page_number)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_pages_character_id ON guestbook_pages(character_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_entries_page_id ON guestbook_entries(guestbook_page_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_author_character_id ON guestbook_entries(author_character_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_notifications_user_read ON guestbook_notifications(user_id, is_read, created_at)");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_guestbook_notifications_user_entry ON guestbook_notifications(user_id, guestbook_entry_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
@@ -392,6 +428,10 @@ db.prepare(
      LIMIT 1
    )
    WHERE guestbook_page_id IS NULL`
+).run();
+db.prepare("UPDATE guestbook_entries SET is_private = 0 WHERE is_private IS NULL").run();
+db.prepare(
+  "UPDATE guestbook_entries SET updated_at = created_at WHERE updated_at IS NULL OR trim(updated_at) = ''"
 ).run();
 db.prepare(
   `INSERT INTO guestbook_settings (character_id)

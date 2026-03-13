@@ -887,6 +887,79 @@ a:hover {
   background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
 }
 
+.guestbook-notification-link {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 84%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
+  color: color-mix(in srgb, var(--link) 78%, white 22%);
+  box-shadow: 0 14px 28px -24px var(--panel-shadow);
+  transition: filter 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease;
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.guestbook-notification-link:hover,
+.guestbook-notification-link:focus-visible {
+  text-decoration: none;
+  filter: brightness(1.04);
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--link) 36%, var(--field-edge) 64%);
+  color: color-mix(in srgb, var(--link) 86%, white 14%);
+}
+
+.guestbook-notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.guestbook-notification-icon svg {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  overflow: visible;
+}
+
+.guestbook-notification-icon svg path,
+.guestbook-notification-icon svg rect {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.guestbook-notification-icon .guestbook-envelope-fill {
+  fill: currentColor;
+  opacity: 0.14;
+  stroke: none;
+}
+
+.guestbook-notification-badge {
+  position: absolute;
+  top: -0.18rem;
+  right: -0.12rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-text);
+  font-size: 0.64rem;
+  font-weight: 700;
+  box-shadow: 0 10px 18px -14px var(--panel-shadow);
+}
+
 .chat-sound-toggle-icon {
   line-height: 1;
   display: inline-flex;
@@ -3559,6 +3632,107 @@ select:focus {
   justify-content: space-between;
   gap: 0.8rem;
   align-items: baseline;
+}
+
+.guestbook-entry-form {
+  margin-top: 1rem;
+}
+
+.guestbook-reply-hint {
+  margin: 0.3rem 0 0.9rem;
+}
+
+.guestbook-private-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+}
+
+.guestbook-private-row input {
+  margin: 0;
+}
+
+.guestbook-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.guestbook-item-authorline {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.guestbook-author-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.guestbook-author-link strong {
+  color: inherit;
+}
+
+.guestbook-item-header small {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.guestbook-entry-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.guestbook-entry-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--field-edge);
+  background: color-mix(in srgb, var(--field-bg) 80%, white 20%);
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.guestbook-entry-badge.is-private {
+  color: color-mix(in srgb, var(--accent) 78%, var(--text) 22%);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--field-edge) 60%);
+}
+
+.guestbook-item-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.guestbook-edit-form {
+  flex: 1 1 280px;
+}
+
+.guestbook-edit-form summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--link);
+}
+
+.guestbook-edit-form[open] {
+  width: 100%;
+}
+
+.guestbook-edit-form[open] summary {
+  margin-bottom: 0.55rem;
+}
+
+.guestbook-delete-form {
+  display: inline-flex;
 }
 
 .chat-layout {

@@ -6,13 +6,12 @@
       <div class="header-line">
         <div>
           <h1>Hilfe</h1>
-          <p class="muted">Wähle ein Thema aus. Jeder Link öffnet die Erklärung in einem neuen Tab.</p>
+          <p class="muted">Waehle ein Thema aus. Die Erklaerung wird im selben Fenster geoeffnet.</p>
         </div>
       </div>
 
       <p>
-        Hier findest du die Themen als Übersicht. Die eigentlichen Erklärungen werden nicht mehr direkt untereinander
-        auf dieser Seite angezeigt, sondern jeweils einzeln geöffnet.
+        Hier findest du die Themen als Uebersicht. Nach einem Klick wird nur das gewaehlte Thema geladen.
       </p>
     </section>
 
@@ -20,10 +19,7 @@
       <h2>Themen</h2>
       <nav class="help-topic-links" aria-label="Hilfethemen">
         <% (helpTopics || []).forEach((topic) => { %>
-          <a
-            class="help-topic-link"
-            href="/help/<%= topic.slug %>"
-          ><%= topic.title %></a>
+          <a class="help-topic-link" href="/help/<%= topic.slug %>"><%= topic.title %></a>
         <% }) %>
       </nav>
     </section>
@@ -32,11 +28,11 @@
       <div class="header-line">
         <div>
           <h1><%= helpTopic.title %></h1>
-          <p class="muted">Ein einzelnes Hilfethema im eigenen Tab.</p>
+          <p class="muted">Ein einzelnes Hilfethema im selben Fenster.</p>
         </div>
       </div>
 
-      <a class="help-topic-link" href="/help">Zur Themenübersicht</a>
+      <a class="help-topic-link" href="/help">Zur Themenuebersicht</a>
     </section>
 
     <% if (helpTopic.slug === "charakter-anlegen") { %>
@@ -46,20 +42,20 @@
         <ul class="help-list">
           <li><code>+ Charakter</code> im Bereich <code>Free - RP</code> oder <code>ERP</code> anklicken.</li>
           <li>Server, Festplay, Name und optional Avatar eintragen.</li>
-          <li>Nach dem Speichern landest du direkt im Charakterbereich und kannst Räume oder das Gästebuch nutzen.</li>
+          <li>Nach dem Speichern landest du direkt im Charakterbereich und kannst Raeume oder das Gaestebuch nutzen.</li>
         </ul>
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "raumliste-raeume") { %>
       <section class="panel help-section">
-        <h2>Raumliste & Räume</h2>
-        <p>Auf der Charakterseite findest du die gesamte Raumliste für den jeweiligen Bereich.</p>
+        <h2>Raumliste & Raeume</h2>
+        <p>Auf der Charakterseite findest du die gesamte Raumliste fuer den jeweiligen Bereich.</p>
         <ul class="help-list">
-          <li><code>Raumname</code> und <code>Raumbeschreibung</code> oben ausfüllen.</li>
+          <li><code>Raumname</code> und <code>Raumbeschreibung</code> oben ausfuellen.</li>
           <li><code>Raum anlegen</code> erstellt einen neuen serverweiten Raum.</li>
-          <li><code>Gemeinsamer Treffpunkt</code> sind feste Standardräume.</li>
-          <li>Unter <code>Free RP</code> siehst du alle angelegten Räume darunter aufgelistet.</li>
+          <li><code>Gemeinsamer Treffpunkt</code> sind feste Standardraeume.</li>
+          <li>Unter <code>Free RP</code> siehst du alle angelegten Raeume darunter aufgelistet.</li>
           <li>Ein kleines Schloss vor dem Raumnamen zeigt: Dieser Raum ist gerade abgeschlossen.</li>
         </ul>
       </section>
@@ -67,10 +63,10 @@
 
     <% if (helpTopic.slug === "gaestebuch-design-bbcode") { %>
       <section class="panel help-section">
-        <h2>Gästebuch Design & BBCode</h2>
+        <h2>Gaestebuch Design & BBCode</h2>
         <p>
-          Im Gästebuch kannst du Texte formatieren, Farben setzen und einfache Layouts bauen. Unten siehst du jeweils
-          den Code und direkt daneben eine Vorschau.
+          Im Gaestebuch kannst du Texte formatieren, Farben setzen und einfache Layouts bauen.
+          Unten siehst du jeweils den Code und direkt daneben eine Vorschau.
         </p>
 
         <div class="help-example-grid">
@@ -119,7 +115,7 @@
           </article>
 
           <article class="help-example-card">
-            <h3>Überschrift</h3>
+            <h3>Ueberschrift</h3>
             <div class="help-example-split">
               <code class="help-example-code">[h2]Kapitel[/h2]</code>
               <div class="help-example-preview guestbook-entry-body"><h2>Kapitel</h2></div>
@@ -128,9 +124,15 @@
         </div>
 
         <ul class="help-list">
-          <li>Über <code>Charakter editieren</code> kommst du in die Gästebuch-Bearbeitung.</li>
+          <li>Ueber <code>Charakter editieren</code> kommst du in die Gaestebuch-Bearbeitung.</li>
           <li>Dort findest du auch die BBCode-Hilfe direkt noch einmal eingeblendet.</li>
           <li>Farben, Gradients und Schriften kannst du dort frei kombinieren.</li>
+          <li>Wenn jemand auf irgendeinen deiner Charaktere schreibt, erscheint oben ein Brief-Symbol.</li>
+          <li>Ein Klick auf den Brief oeffnet direkt das passende Gaestebuch mit dem neuen Eintrag.</li>
+          <li>Ueber <code>Schreiben als</code> waehlst du, welcher deiner Charaktere den Eintrag hinterlaesst.</li>
+          <li>Mit <code>Privater Eintrag</code> sehen nur du, der Besitzer und Admins diesen Eintrag.</li>
+          <li>Ein Klick auf den Absendernamen oeffnet dessen Gaestebuch, damit du direkt zurueckschreiben kannst.</li>
+          <li>Deine eigenen Eintraege in fremden Gaestebuechern kannst du spaeter bearbeiten oder loeschen.</li>
         </ul>
       </section>
     <% } %>
@@ -138,9 +140,9 @@
     <% if (helpTopic.slug === "admin-moderatorname") { %>
       <section class="panel help-section">
         <h2>Admin- und Moderatorname</h2>
-        <p>Admins und Moderatoren setzen ihren sichtbaren Rollennamen direkt über einen Charakter.</p>
+        <p>Admins und Moderatoren setzen ihren sichtbaren Rollennamen direkt ueber einen Charakter.</p>
         <ul class="help-list">
-          <li>Gewünschten Charakter öffnen.</li>
+          <li>Gewuenschten Charakter oeffnen.</li>
           <li><code>Als Admin-Charakter verwenden</code> oder <code>Als Moderator-Charakter verwenden</code> anhaken.</li>
           <li><code>Rollenname speichern</code> klicken.</li>
           <li>Admins werden mit Farbverlauf hervorgehoben, Moderatoren mit <code>(M)</code>.</li>
@@ -150,13 +152,14 @@
 
     <% if (helpTopic.slug === "chat-fluestern") { %>
       <section class="panel help-section">
-        <h2>Chat &amp; Fluestern</h2>
+        <h2>Chat & Fluestern</h2>
         <p>Im Chat siehst du links die Online-Charaktere und rechts den Verlauf.</p>
         <ul class="help-list">
           <li>Die Glocke oben schaltet den Eintrittston an oder aus.</li>
-          <li>Ein Klick auf einen Namen links oeffnet Gaestebuch oder Fluestern.</li>
+          <li>Ein Klick auf einen Namen links oeffnet Gaestebuch oder Fluesterfenster.</li>
           <li>Beim Designwechsel bleibst du im Raum und die laufenden Nachrichten bleiben sichtbar.</li>
-          <li><code>/s</code> schaltet einen selbst erstellten Raum um: einmal eingeben schliesst ihn, das naechste Mal oeffnet ihn wieder. Danach erscheint kursiv <code>Der Raum wurde abgeschlossen.</code> oder <code>Der Raum wurde geoeffnet.</code></li>
+          <li><code>/s</code> schaltet einen selbst erstellten Raum um: einmal eingeben schliesst ihn, das naechste Mal oeffnet ihn wieder.</li>
+          <li>Danach erscheint kursiv <code>Der Raum wurde abgeschlossen.</code> oder <code>Der Raum wurde geoeffnet.</code></li>
           <li>Abgeschlossene Raeume zeigen ein Schloss in der Raumliste und koennen von anderen nicht betreten werden.</li>
           <li><code>/log</code> startet ein Chat-Log. In benutzererstellten Raeumen darf das nur der Ersteller nutzen, Admins und Moderatoren duerfen es ueberall.</li>
           <li>Beim Start erscheint kursiv die Systemmeldung <code>Log wurde gestartet.</code></li>
@@ -176,7 +179,7 @@
         <ul class="help-list">
           <li><code>*Text*</code> = kursiv</li>
           <li><code>"Text"</code> = fett</li>
-          <li><code>""Text""</code> = ebenfalls fett, ohne dass die zusätzlichen Anführungszeichen sichtbar bleiben</li>
+          <li><code>""Text""</code> = ebenfalls fett, ohne dass die zusaetzlichen Anfuehrungszeichen sichtbar bleiben</li>
           <li><code>/me betritt den Raum</code> = Emote, der Charaktername steht ohne Doppelpunkt davor und die ganze Aktion ist kursiv</li>
           <li><code>/me betritt den Raum "Hallo"</code> = Emote kursiv, <code>Hallo</code> darin fett</li>
           <li><code>*Kommt heute an "Hallo"*</code> = alles kursiv, <code>Hallo</code> darin fett</li>

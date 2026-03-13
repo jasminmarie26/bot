@@ -2068,6 +2068,361 @@ function getOrCreateGuestbookSettings(characterId) {
   return settings;
 }
 
+function getOwnedCharactersForUser(userId, preferredServerId = DEFAULT_SERVER_ID) {
+  const normalizedPreferredServerId = normalizeServer(preferredServerId);
+  return db
+    .prepare(
+      `SELECT id, user_id, name, server_id, is_public, updated_at
+       FROM characters
+       WHERE user_id = ?
+       ORDER BY CASE WHEN server_id = ? THEN 0 ELSE 1 END, lower(name) ASC, id ASC`
+    )
+    .all(userId, normalizedPreferredServerId);
+}
+
+function getPreferredMenuCharacterForUser(req) {
+  const currentUserId = Number(req.session?.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return null;
+  }
+
+  const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
+  const candidateIds = SERVER_OPTIONS.map((server) => Number(preferredMap[server.id]))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  for (const characterId of candidateIds) {
+    const character = getCharacterById(characterId);
+    if (character && Number(character.user_id) === currentUserId) {
+      return character;
+    }
+  }
+
+  return db
+    .prepare(
+      `SELECT c.*, u.username AS owner_name, f.name AS festplay_name
+       FROM characters c
+       JOIN users u ON u.id = c.user_id
+       LEFT JOIN festplays f ON f.id = c.festplay_id
+       WHERE c.user_id = ?
+       ORDER BY c.updated_at DESC, c.id DESC
+       LIMIT 1`
+    )
+    .get(currentUserId);
+}
+
+function getGuestbookPostingCharacters(req, targetCharacter) {
+  const currentUserId = Number(req.session?.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return { characters: [], selectedCharacterId: null };
+  }
+
+  const targetServerId = normalizeServer(targetCharacter?.server_id);
+  const characters = getOwnedCharactersForUser(currentUserId, targetServerId);
+  const preferredCharacterId = getPreferredCharacterIdFromSession(req, targetServerId);
+  let selectedCharacterId = null;
+
+  if (Number.isInteger(preferredCharacterId) && characters.some((entry) => Number(entry.id) === preferredCharacterId)) {
+    selectedCharacterId = preferredCharacterId;
+  } else {
+    const sameServerCharacter = characters.find(
+      (entry) => normalizeServer(entry.server_id) === targetServerId
+    );
+    selectedCharacterId = sameServerCharacter ? Number(sameServerCharacter.id) : Number(characters[0]?.id || 0) || null;
+  }
+
+  return {
+    characters,
+    selectedCharacterId
+  };
+}
+
+function isGuestbookReplyAccessAllowed(userId, targetCharacterId, sourceEntryId, replyToCharacterId) {
+  const parsedUserId = Number(userId);
+  const parsedTargetCharacterId = Number(targetCharacterId);
+  const parsedSourceEntryId = Number(sourceEntryId);
+  const parsedReplyToCharacterId = Number(replyToCharacterId);
+
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedTargetCharacterId) ||
+    parsedTargetCharacterId < 1 ||
+    !Number.isInteger(parsedSourceEntryId) ||
+    parsedSourceEntryId < 1 ||
+    !Number.isInteger(parsedReplyToCharacterId) ||
+    parsedReplyToCharacterId < 1
+  ) {
+    return false;
+  }
+
+  const row = db
+    .prepare(
+      `SELECT ge.id
+       FROM guestbook_entries ge
+       JOIN characters reply_target ON reply_target.id = ge.character_id
+       WHERE ge.id = ?
+         AND ge.author_character_id = ?
+         AND ge.character_id = ?
+         AND reply_target.user_id = ?
+       LIMIT 1`
+    )
+    .get(parsedSourceEntryId, parsedTargetCharacterId, parsedReplyToCharacterId, parsedUserId);
+
+  return Boolean(row);
+}
+
+function getGuestbookAccessState(req, targetCharacter) {
+  const currentUserId = Number(req.session?.user?.id);
+  const isOwner = currentUserId === Number(targetCharacter?.user_id);
+  const isAdmin = req.session?.user?.is_admin === true;
+  const canAccessDirectly = canAccessCharacter(
+    currentUserId,
+    targetCharacter?.user_id,
+    targetCharacter?.is_public,
+    isAdmin
+  );
+  const replyContextEntryId = Number(req.query.reply_from_entry || req.body.reply_context_entry_id);
+  const replyContextCharacterId = Number(req.query.reply_to_character || req.body.reply_context_character_id);
+  const viaReplyAccess = !canAccessDirectly && isGuestbookReplyAccessAllowed(
+    currentUserId,
+    targetCharacter?.id,
+    replyContextEntryId,
+    replyContextCharacterId
+  );
+
+  return {
+    isOwner,
+    guestbookAccessState,
+    isAdmin,
+    canAccess: canAccessDirectly || viaReplyAccess,
+    viaReplyAccess,
+    replyContextEntryId: Number.isInteger(replyContextEntryId) && replyContextEntryId > 0 ? replyContextEntryId : null,
+    replyContextCharacterId:
+      Number.isInteger(replyContextCharacterId) && replyContextCharacterId > 0 ? replyContextCharacterId : null
+  };
+}
+
+function buildGuestbookContextQuery(accessState = {}) {
+  if (!accessState?.viaReplyAccess || !accessState.replyContextEntryId || !accessState.replyContextCharacterId) {
+    return "";
+  }
+
+  return `&reply_from_entry=${accessState.replyContextEntryId}&reply_to_character=${accessState.replyContextCharacterId}`;
+}
+
+function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState) {
+  const viewerUserId = Number(viewerUser?.id);
+  const viewerIsAdmin = Boolean(accessState?.isAdmin);
+  const viewerIsOwner = Boolean(accessState?.isOwner);
+
+  return db
+    .prepare(
+      `SELECT ge.id,
+              ge.character_id,
+              ge.author_id,
+              ge.author_character_id,
+              ge.author_name,
+              ge.content,
+              ge.is_private,
+              ge.created_at,
+              ge.updated_at,
+              author_character.name AS author_character_name
+       FROM guestbook_entries ge
+       LEFT JOIN characters author_character ON author_character.id = ge.author_character_id
+       WHERE ge.character_id = ?
+         AND ge.guestbook_page_id = ?
+         AND (
+           ge.is_private = 0
+           OR ge.author_id = ?
+           OR ? = 1
+           OR ? = 1
+         )
+       ORDER BY ge.created_at DESC, ge.id DESC
+       LIMIT ?`
+    )
+    .all(character.id, pageId, viewerUserId, viewerIsOwner ? 1 : 0, viewerIsAdmin ? 1 : 0, GUESTBOOK_PAGE_SIZE)
+    .map((entry) => {
+      const entryAuthorId = Number(entry.author_id);
+      const authorCharacterId = Number(entry.author_character_id);
+      const isPrivate = Number(entry.is_private) === 1;
+      return {
+        ...entry,
+        is_private: isPrivate,
+        content_html: renderGuestbookBbcode(entry.content),
+        can_edit: entryAuthorId === viewerUserId || viewerIsAdmin,
+        can_delete: entryAuthorId === viewerUserId || viewerIsOwner || viewerIsAdmin,
+        author_guestbook_url:
+          Number.isInteger(authorCharacterId) && authorCharacterId > 0
+            ? `/characters/${authorCharacterId}/guestbook?reply_from_entry=${entry.id}&reply_to_character=${character.id}`
+            : "",
+        updated_label:
+          entry.updated_at && String(entry.updated_at) !== String(entry.created_at)
+            ? `bearbeitet ${entry.updated_at}`
+            : "",
+        private_label:
+          isPrivate
+            ? (viewerIsOwner ? "Privater Eintrag" : entryAuthorId === viewerUserId ? "Nur für dich und den Besitzer sichtbar" : "Privater Eintrag")
+            : ""
+      };
+    });
+}
+
+function createGuestbookNotification(userId, characterId, guestbookEntryId) {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
+  const parsedEntryId = Number(guestbookEntryId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedEntryId) ||
+    parsedEntryId < 1
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT OR IGNORE INTO guestbook_notifications (user_id, character_id, guestbook_entry_id)
+     VALUES (?, ?, ?)`
+  ).run(parsedUserId, parsedCharacterId, parsedEntryId);
+}
+
+function getUnreadGuestbookNotificationCountForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return 0;
+  }
+
+  return Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM guestbook_notifications
+         WHERE user_id = ? AND is_read = 0`
+      )
+      .get(parsedUserId)?.count || 0
+  );
+}
+
+function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT gn.id,
+              gn.user_id,
+              gn.character_id,
+              gn.guestbook_entry_id,
+              gn.is_read,
+              gn.created_at,
+              ge.guestbook_page_id,
+              ge.author_name,
+              c.name AS character_name
+       FROM guestbook_notifications gn
+       JOIN guestbook_entries ge ON ge.id = gn.guestbook_entry_id
+       JOIN characters c ON c.id = gn.character_id
+       WHERE gn.user_id = ?
+         ${unreadOnly ? "AND gn.is_read = 0" : ""}
+       ORDER BY gn.created_at DESC, gn.id DESC
+       LIMIT 1`
+    )
+    .get(parsedUserId);
+}
+
+function markGuestbookNotificationAsRead(notificationId, userId) {
+  const parsedNotificationId = Number(notificationId);
+  const parsedUserId = Number(userId);
+  if (
+    !Number.isInteger(parsedNotificationId) ||
+    parsedNotificationId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `UPDATE guestbook_notifications
+     SET is_read = 1
+     WHERE id = ? AND user_id = ?`
+  ).run(parsedNotificationId, parsedUserId);
+}
+
+function getGuestbookEntryById(entryId) {
+  const parsedEntryId = Number(entryId);
+  if (!Number.isInteger(parsedEntryId) || parsedEntryId < 1) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT ge.id,
+              ge.character_id,
+              ge.guestbook_page_id,
+              ge.author_id,
+              ge.author_character_id,
+              ge.author_name,
+              ge.content,
+              ge.is_private,
+              ge.created_at,
+              ge.updated_at
+       FROM guestbook_entries ge
+       WHERE ge.id = ?`
+    )
+    .get(parsedEntryId);
+}
+
+function deleteGuestbookNotificationsForEntry(entryId) {
+  const parsedEntryId = Number(entryId);
+  if (!Number.isInteger(parsedEntryId) || parsedEntryId < 1) {
+    return;
+  }
+
+  db.prepare("DELETE FROM guestbook_notifications WHERE guestbook_entry_id = ?").run(parsedEntryId);
+}
+
+function deleteGuestbookNotificationsForCharacterPage(characterId, pageId) {
+  const parsedCharacterId = Number(characterId);
+  const parsedPageId = Number(pageId);
+  if (
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedPageId) ||
+    parsedPageId < 1
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `DELETE FROM guestbook_notifications
+     WHERE guestbook_entry_id IN (
+       SELECT id
+       FROM guestbook_entries
+       WHERE character_id = ? AND guestbook_page_id = ?
+     )`
+  ).run(parsedCharacterId, parsedPageId);
+}
+
+function deleteGuestbookNotificationsForCharacter(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return;
+  }
+
+  db.prepare(
+    `DELETE FROM guestbook_notifications
+     WHERE guestbook_entry_id IN (
+       SELECT id
+       FROM guestbook_entries
+       WHERE character_id = ?
+     )`
+  ).run(parsedCharacterId);
+}
+
 function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
@@ -2251,6 +2606,12 @@ app.use((req, res, next) => {
   res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
   res.locals.currentUserDisplayRoleStyle = req.session.user?.display_role_style || "";
+  res.locals.guestbookNotificationCount = req.session.user
+    ? getUnreadGuestbookNotificationCountForUser(req.session.user.id)
+    : 0;
+  res.locals.latestGuestbookNotification = req.session.user
+    ? getLatestGuestbookNotificationForUser(req.session.user.id, true)
+    : null;
   res.locals.oauthEnabled = {
     google: GOOGLE_AUTH_ENABLED,
     facebook: FACEBOOK_AUTH_ENABLED
@@ -2981,6 +3342,27 @@ app.post("/account/delete", requireAuth, async (req, res) => {
   });
 });
 
+app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
+  const latestNotification = getLatestGuestbookNotificationForUser(req.session.user.id, true);
+
+  if (!latestNotification) {
+    setFlash(req, "error", "Du hast gerade keine neuen Gaestebuch-Benachrichtigungen.");
+    return res.redirect("/dashboard");
+  }
+
+  markGuestbookNotificationAsRead(latestNotification.id, req.session.user.id);
+
+  const targetCharacterId = Number(latestNotification.character_id);
+  const targetPageId = Number(latestNotification.guestbook_page_id);
+  const targetEntryId = Number(latestNotification.guestbook_entry_id);
+  const pageQuery =
+    Number.isInteger(targetPageId) && targetPageId > 0 ? `?page_id=${targetPageId}` : "";
+  const anchor =
+    Number.isInteger(targetEntryId) && targetEntryId > 0 ? `#guestbook-entry-${targetEntryId}` : "";
+
+  return res.redirect(`/characters/${targetCharacterId}/guestbook${pageQuery}${anchor}`);
+});
+
 app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
   const content = normalizeSiteUpdateContent(req.body.content);
   if (!content) {
@@ -3320,10 +3702,6 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     });
   }
 
-  if (isOwner) {
-    rememberPreferredCharacter(req, character);
-  }
-
   const rooms = db
     .prepare(
       `SELECT r.id, r.name, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
@@ -3355,21 +3733,6 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
-  const guestbookSettings = getOrCreateGuestbookSettings(id);
-
-  const guestbookEntries = db
-    .prepare(
-      `SELECT id, author_name, content, created_at
-       FROM guestbook_entries
-       WHERE character_id = ? AND guestbook_page_id = ?
-       ORDER BY created_at DESC, id DESC
-       LIMIT ?`
-    )
-    .all(id, activeGuestbookPage.id, GUESTBOOK_PAGE_SIZE)
-    .map((entry) => ({
-      ...entry,
-      content_html: renderGuestbookBbcode(entry.content)
-    }));
 
   return res.render("character-view", {
     title: character.name,
@@ -3379,13 +3742,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     standardRoomUsers,
     roomUsers,
     rooms,
-    guestbookEntries,
-    guestbookPages,
-    activeGuestbookPage: {
-      ...activeGuestbookPage,
-      content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
-    },
-    guestbookSettings
+    activeGuestbookPage
   });
 });
 
@@ -3504,6 +3861,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
 
   db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id = ?").run(id);
   db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id = ?").run(id);
+  deleteGuestbookNotificationsForCharacter(id);
   db.prepare("DELETE FROM characters WHERE id = ?").run(id);
   const refreshedUser = getUserForSessionById(req.session.user.id);
   if (refreshedUser) {
@@ -3656,17 +4014,12 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  const isOwner = req.session.user.id === character.user_id;
-  const isAdmin = req.session.user.is_admin === true;
-  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
+  const guestbookAccessState = getGuestbookAccessState(req, character);
+  if (!guestbookAccessState.canAccess) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
     });
-  }
-
-  if (isOwner) {
-    rememberPreferredCharacter(req, character);
   }
 
   const guestbookPages = ensureGuestbookPages(id);
@@ -3674,32 +4027,40 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
   const guestbookSettings = getOrCreateGuestbookSettings(id);
+  const guestbookEntries = getGuestbookEntriesForViewer(
+    character,
+    activeGuestbookPage.id,
+    req.session.user,
+    guestbookAccessState
+  );
+  const postingCharactersState = getGuestbookPostingCharacters(req, character);
+  const replyCharacterId = Number(guestbookAccessState.replyContextCharacterId);
+  if (
+    Number.isInteger(replyCharacterId) &&
+    replyCharacterId > 0 &&
+    postingCharactersState.characters.some((entry) => Number(entry.id) === replyCharacterId)
+  ) {
+    postingCharactersState.selectedCharacterId = replyCharacterId;
+  }
 
-  const guestbookEntries = db
-    .prepare(
-      `SELECT id, author_name, content, created_at
-       FROM guestbook_entries
-       WHERE character_id = ? AND guestbook_page_id = ?
-       ORDER BY created_at DESC, id DESC
-       LIMIT ?`
-    )
-    .all(id, activeGuestbookPage.id, GUESTBOOK_PAGE_SIZE)
-    .map((entry) => ({
-      ...entry,
-      content_html: renderGuestbookBbcode(entry.content)
-    }));
+  const topbarCharacter = getPreferredMenuCharacterForUser(req);
 
   return res.render("guestbook-view", {
     title: `Gästebuch: ${character.name}`,
     character,
-    isOwner,
+    isOwner: guestbookAccessState.isOwner,
+    guestbookAccessState,
     guestbookEntries,
     guestbookPages,
     activeGuestbookPage: {
       ...activeGuestbookPage,
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
     },
-    guestbookSettings
+    guestbookSettings,
+    guestbookPostingCharacters: postingCharactersState.characters,
+    selectedGuestbookAuthorCharacterId: postingCharactersState.selectedCharacterId,
+    guestbookContextQuery: buildGuestbookContextQuery(guestbookAccessState),
+    topbarCharacter
   });
 });
 
@@ -3711,37 +4072,179 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  const isOwner = req.session.user.id === character.user_id;
-  const isAdmin = req.session.user.is_admin === true;
-  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
+  const guestbookAccessState = getGuestbookAccessState(req, character);
+  if (!guestbookAccessState.canAccess) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
     });
   }
 
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const activePage =
+    pages.find((page) => page.id === requestedPageId) || pages[0];
+  const guestbookRedirectBase =
+    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
   const content = (req.body.content || "").trim().slice(0, 4000);
   if (!content) {
     setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
-    return res.redirect(`/characters/${id}/guestbook`);
+    return res.redirect(guestbookRedirectBase);
   }
 
-  if (character.user_id === req.session.user.id) {
-    rememberPreferredCharacter(req, character);
+  const postingCharactersState = getGuestbookPostingCharacters(req, character);
+  if (!postingCharactersState.characters.length) {
+    setFlash(req, "error", "Du brauchst erst einen eigenen Charakter, um ins Gaestebuch zu schreiben.");
+    return res.redirect(guestbookRedirectBase);
+  }
+
+  const requestedAuthorCharacterId = Number(req.body.author_character_id);
+  const fallbackAuthorCharacterId =
+    postingCharactersState.selectedCharacterId || Number(postingCharactersState.characters[0]?.id || 0);
+  const selectedAuthorCharacterId =
+    Number.isInteger(requestedAuthorCharacterId) && requestedAuthorCharacterId > 0
+      ? requestedAuthorCharacterId
+      : fallbackAuthorCharacterId;
+  const authorCharacter = postingCharactersState.characters.find(
+    (entry) => Number(entry.id) === Number(selectedAuthorCharacterId)
+  );
+
+  if (!authorCharacter) {
+    setFlash(req, "error", "Bitte waehle einen gueltigen Charakter fuer den Eintrag aus.");
+    return res.redirect(guestbookRedirectBase);
+  }
+
+  const info = db.prepare(
+    `INSERT INTO guestbook_entries (
+       character_id,
+       author_id,
+       author_character_id,
+       author_name,
+       content,
+       guestbook_page_id,
+       is_private
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    req.session.user.id,
+    authorCharacter.id,
+    authorCharacter.name,
+    content,
+    activePage.id,
+    req.body.is_private === "1" ? 1 : 0
+  );
+
+  if (Number(character.user_id) !== Number(req.session.user.id)) {
+    createGuestbookNotification(character.user_id, id, info.lastInsertRowid);
+  }
+
+  setFlash(req, "success", "Eintrag gespeichert.");
+  return res.redirect(`${guestbookRedirectBase}#guestbook-entry-${info.lastInsertRowid}`);
+});
+
+app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const entryId = Number(req.params.entryId);
+  const character = getCharacterById(id);
+
+  if (!character || !Number.isInteger(entryId) || entryId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const guestbookAccessState = getGuestbookAccessState(req, character);
+  if (!guestbookAccessState.canAccess) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const entry = getGuestbookEntryById(entryId);
+  if (!entry || Number(entry.character_id) !== id) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const isAuthor = Number(entry.author_id) === Number(req.session.user.id);
+  if (!isAuthor && !guestbookAccessState.isAdmin) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Verfasser oder ein Admin darf diesen Eintrag bearbeiten."
+    });
   }
 
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.body.page_id);
   const activePage =
-    pages.find((page) => page.id === requestedPageId) || pages[0];
+    pages.find((page) => page.id === requestedPageId) ||
+    pages.find((page) => page.id === Number(entry.guestbook_page_id)) ||
+    pages[0];
+  const guestbookRedirectBase =
+    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
+  const content = String(req.body.content || "").trim().slice(0, 4000);
+
+  if (!content) {
+    setFlash(req, "error", "Gaestebucheintrag darf nicht leer sein.");
+    return res.redirect(`${guestbookRedirectBase}#guestbook-entry-${entryId}`);
+  }
 
   db.prepare(
-    `INSERT INTO guestbook_entries (character_id, author_id, author_name, content, guestbook_page_id)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(id, req.session.user.id, req.session.user.username, content, activePage.id);
+    `UPDATE guestbook_entries
+     SET content = ?, is_private = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND character_id = ?`
+  ).run(content, req.body.is_private === "1" ? 1 : 0, entryId, id);
 
-  setFlash(req, "success", "Eintrag gespeichert.");
-  return res.redirect(`/characters/${id}/guestbook?page_id=${activePage.id}`);
+  setFlash(req, "success", "Eintrag aktualisiert.");
+  return res.redirect(`${guestbookRedirectBase}#guestbook-entry-${entryId}`);
+});
+
+app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const entryId = Number(req.params.entryId);
+  const character = getCharacterById(id);
+
+  if (!character || !Number.isInteger(entryId) || entryId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const guestbookAccessState = getGuestbookAccessState(req, character);
+  if (!guestbookAccessState.canAccess) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  const entry = getGuestbookEntryById(entryId);
+  if (!entry || Number(entry.character_id) !== id) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const isAuthor = Number(entry.author_id) === Number(req.session.user.id);
+  if (!isAuthor && !guestbookAccessState.isOwner && !guestbookAccessState.isAdmin) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Verfasser, der Besitzer oder ein Admin darf diesen Eintrag loeschen."
+    });
+  }
+
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const activePage =
+    pages.find((page) => page.id === requestedPageId) ||
+    pages.find((page) => page.id === Number(entry.guestbook_page_id)) ||
+    pages[0];
+  const guestbookRedirectBase =
+    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
+
+  const deleteTx = db.transaction(() => {
+    deleteGuestbookNotificationsForEntry(entryId);
+    db.prepare("DELETE FROM guestbook_entries WHERE id = ? AND character_id = ?").run(entryId, id);
+  });
+  deleteTx();
+
+  setFlash(req, "success", "Eintrag geloescht.");
+  return res.redirect(guestbookRedirectBase);
 });
 
 app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
@@ -3990,6 +4493,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   const pageToDelete = pages.find((page) => page.id === requestedPageId) || pages[pages.length - 1];
 
   const removeTx = db.transaction(() => {
+    deleteGuestbookNotificationsForCharacterPage(id, pageToDelete.id);
     db.prepare("DELETE FROM guestbook_entries WHERE character_id = ? AND guestbook_page_id = ?").run(
       id,
       pageToDelete.id
@@ -4579,6 +5083,7 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
 
   try {
     const tx = db.transaction((id) => {
+      deleteGuestbookNotificationsForCharacter(id);
       db.prepare("DELETE FROM guestbook_entries WHERE character_id = ?").run(id);
       db.prepare("DELETE FROM guestbook_pages WHERE character_id = ?").run(id);
       db.prepare(
