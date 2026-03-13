@@ -190,29 +190,31 @@
             <% rooms.forEach((room) => { %>
               <% const activeUsers = Array.isArray(roomUsers?.[room.id]) ? roomUsers[room.id] : []; %>
               <div class="rp-room-standard-card rp-room-custom-card">
-                <span
-                  class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
-                  data-room-lock-target
-                  data-room-lock-room="<%= room.id %>"
-                  data-room-lock-server="<%= character.server_id %>"
-                  aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
-                  title="Raum ist abgeschlossen"
-                ><svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>
-                  <path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>
-                  <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
-                  <path d="M12 13.15v2.8"/>
-                </svg></span>
-                <a
-                  class="rp-room-link-name rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
-                  href="<%= room.can_enter ? `/chat?room_id=${room.id}&character_id=${character.id}` : '#' %>"
-                  title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
-                  data-room-link-target
-                  data-room-link-room="<%= room.id %>"
-                  data-room-link-server="<%= character.server_id %>"
-                  data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
-                  aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
-                ><%= room.name %></a>
+                <div class="rp-room-custom-titleline">
+                  <span
+                    class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
+                    data-room-lock-target
+                    data-room-lock-room="<%= room.id %>"
+                    data-room-lock-server="<%= character.server_id %>"
+                    aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
+                    title="Raum ist abgeschlossen"
+                  ><svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>
+                    <path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>
+                    <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
+                    <path d="M12 13.15v2.8"/>
+                  </svg></span>
+                  <a
+                    class="rp-room-link-name rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
+                    href="<%= room.can_enter ? `/chat?room_id=${room.id}&character_id=${character.id}` : '#' %>"
+                    title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
+                    data-room-link-target
+                    data-room-link-room="<%= room.id %>"
+                    data-room-link-server="<%= character.server_id %>"
+                    data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                    aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
+                  ><%= room.name %></a>
+                </div>
                 <div class="rp-room-custom-meta">
                   <small><%= room.teaser || "Beschreibung folgt." %></small>
                 </div>

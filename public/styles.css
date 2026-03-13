@@ -2811,10 +2811,18 @@ a:hover {
   gap: 0.18rem;
 }
 
+.rp-room-custom-titleline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.34rem;
+  max-width: 100%;
+}
+
 .rp-room-lock-indicator {
   display: none;
   width: 0.95rem;
   height: 0.95rem;
+  flex: 0 0 auto;
   color: color-mix(in srgb, var(--link) 72%, var(--text) 28%);
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 12%, transparent));
 }
@@ -2848,7 +2856,9 @@ a:hover {
 }
 
 .rp-room-custom-link {
-  display: inline;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 100%;
   text-decoration: underline;
   text-underline-offset: 0.08em;
