@@ -1722,6 +1722,45 @@ a:hover {
   justify-content: flex-end;
 }
 
+.help-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.help-intro p:last-child {
+  margin-bottom: 0;
+  max-width: 62rem;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.help-card {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.help-card p {
+  margin: 0;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.38rem;
+}
+
+.help-list code {
+  background: color-mix(in srgb, var(--field-bg) 70%, black 30%);
+  border: 1px solid var(--field-edge);
+  border-radius: 6px;
+  padding: 0.08rem 0.3rem;
+}
+
 .dashboard-server-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

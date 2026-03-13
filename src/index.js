@@ -2756,6 +2756,12 @@ app.get("/dashboard", requireAuth, (req, res) => {
   });
 });
 
+app.get("/help", (req, res) => {
+  return res.render("help", {
+    title: "Hilfe"
+  });
+});
+
 app.get("/characters/new", requireAuth, (req, res) => {
   const festplays = getFestplays();
   const requestedServer = normalizeServer(req.query.server);
