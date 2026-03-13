@@ -336,7 +336,7 @@ if (!guestbookEntryColumns.includes("is_private")) {
 }
 
 if (!guestbookEntryColumns.includes("updated_at")) {
-  db.exec("ALTER TABLE guestbook_entries ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP");
+  db.exec("ALTER TABLE guestbook_entries ADD COLUMN updated_at TEXT");
 }
 
 db.exec("CREATE INDEX IF NOT EXISTS idx_characters_festplay_id ON characters(festplay_id)");
@@ -372,6 +372,9 @@ db.prepare("UPDATE users SET google_id = '' WHERE google_id IS NULL").run();
 db.prepare("UPDATE users SET facebook_id = '' WHERE facebook_id IS NULL").run();
 db.prepare("UPDATE users SET last_login_ip = '' WHERE last_login_ip IS NULL").run();
 db.prepare("UPDATE users SET last_login_at = '' WHERE last_login_at IS NULL").run();
+db.prepare(
+  "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
+).run();
 db.prepare(
   "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
 ).run();

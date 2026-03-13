@@ -4122,9 +4122,10 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
        author_name,
        content,
        guestbook_page_id,
-       is_private
+       is_private,
+       updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
   ).run(
     id,
     req.session.user.id,
