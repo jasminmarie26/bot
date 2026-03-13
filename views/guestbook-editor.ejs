@@ -40,7 +40,6 @@
         id="gb-theme-select"
         name="theme"
         class="theme-select"
-        onchange="this.form.elements.return_to.value = this.form.elements.return_to.value.split('#')[0] + window.location.hash; this.form.submit();"
       >
         <% availableThemes.forEach((theme) => { %>
           <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>

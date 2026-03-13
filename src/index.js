@@ -2483,6 +2483,14 @@ app.post("/settings/theme", (req, res) => {
 
   setThemeCookie(res, theme);
 
+  const acceptsJson = req.accepts(["html", "json"]) === "json";
+  const isAsyncRequest =
+    String(req.get("x-requested-with") || "").toLowerCase() === "xmlhttprequest";
+
+  if (acceptsJson || isAsyncRequest) {
+    return res.json({ ok: true, theme });
+  }
+
   const returnTo = String(req.body.return_to || "").trim();
   if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
     return res.redirect(returnTo);
