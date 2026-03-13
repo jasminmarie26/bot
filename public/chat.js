@@ -33,6 +33,23 @@
     " löst sich aus dem Gespräch und verlässt den Raum."
   ];
   const entrySystemSuffixes = systemMessageSuffixes.slice(0, 4);
+  const soundToggleIcons = {
+    on: [
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
+      '<path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
+      '<path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
+      '<path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>',
+      '</svg>'
+    ].join(""),
+    off: [
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
+      '<path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
+      '<path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
+      '<path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>',
+      '<path d="M5 5l14 14"/>',
+      '</svg>'
+    ].join("")
+  };
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   let notificationAudioContext = null;
   let soundEnabled = true;
@@ -71,7 +88,7 @@
     soundToggle.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
     soundToggle.setAttribute("aria-label", soundEnabled ? "Raumton ausschalten" : "Raumton einschalten");
     soundToggle.title = soundEnabled ? "Raumton ausschalten" : "Raumton einschalten";
-    soundToggleIcon.innerHTML = soundEnabled ? "&#128276;" : "&#128277;";
+    soundToggleIcon.innerHTML = soundEnabled ? soundToggleIcons.on : soundToggleIcons.off;
   }
 
   function playEntryTone() {
