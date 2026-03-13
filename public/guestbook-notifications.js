@@ -8,8 +8,8 @@
   function buildNotificationTitle(characterName) {
     const trimmedCharacterName = String(characterName || "").trim();
     return trimmedCharacterName
-      ? `Neuer Gaestebucheintrag fuer ${trimmedCharacterName}`
-      : "Neuer Gaestebucheintrag";
+      ? `Neuer Gästebucheintrag für ${trimmedCharacterName}`
+      : "Neuer Gästebucheintrag";
   }
 
   function formatBadgeCount(count) {

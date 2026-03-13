@@ -3399,7 +3399,7 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   const latestNotification = getLatestGuestbookNotificationForUser(req.session.user.id, true);
 
   if (!latestNotification) {
-    setFlash(req, "error", "Du hast gerade keine neuen Gaestebuch-Benachrichtigungen.");
+    setFlash(req, "error", "Du hast gerade keine neuen Gästebuch-Benachrichtigungen.");
     return res.redirect("/dashboard");
   }
 
@@ -4091,7 +4091,7 @@ app.post("/characters/:id/role-character", requireAuth, (req, res) => {
   }
 
   if (!req.session.user.is_admin && !req.session.user.is_moderator) {
-    setFlash(req, "error", "Nur Admins oder Moderatoren kÃ¶nnen einen Rollencharakter auswÃ¤hlen.");
+    setFlash(req, "error", "Nur Admins oder Moderatoren können einen Rollencharakter auswählen.");
     return res.redirect(`/characters/${id}`);
   }
 
@@ -4258,7 +4258,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const postingCharactersState = getGuestbookPostingCharacters(req, character);
   if (!postingCharactersState.characters.length) {
-    setFlash(req, "error", "Du brauchst erst einen eigenen Charakter, um ins Gaestebuch zu schreiben.");
+    setFlash(req, "error", "Du brauchst erst einen eigenen Charakter, um ins Gästebuch zu schreiben.");
     return res.redirect(guestbookRedirectBase);
   }
 
@@ -4274,7 +4274,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   );
 
   if (!authorCharacter) {
-    setFlash(req, "error", "Bitte waehle einen gueltigen Charakter fuer den Eintrag aus.");
+    setFlash(req, "error", "Bitte wähle einen gültigen Charakter für den Eintrag aus.");
     return res.redirect(guestbookRedirectBase);
   }
 
@@ -4349,7 +4349,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
   const content = String(req.body.content || "").trim().slice(0, 4000);
 
   if (!content) {
-    setFlash(req, "error", "Gaestebucheintrag darf nicht leer sein.");
+    setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
     return res.redirect(`${guestbookRedirectBase}#guestbook-entry-${entryId}`);
   }
 
@@ -4389,7 +4389,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
   if (!isAuthor && !guestbookAccessState.isOwner && !guestbookAccessState.isAdmin) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Verfasser, der Besitzer oder ein Admin darf diesen Eintrag loeschen."
+      message: "Nur der Verfasser, der Besitzer oder ein Admin darf diesen Eintrag löschen."
     });
   }
 
@@ -4408,7 +4408,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
   });
   deleteTx();
 
-  setFlash(req, "success", "Eintrag geloescht.");
+  setFlash(req, "success", "Eintrag gelöscht.");
   return res.redirect(guestbookRedirectBase);
 });
 

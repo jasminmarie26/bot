@@ -1,8 +1,8 @@
 <% if (currentUser) { %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
   <% const guestbookNotificationTitle = latestGuestbookNotification?.character_name
-    ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
-    : "Neuer Gaestebucheintrag"; %>
+    ? `Neuer Gästebucheintrag für ${latestGuestbookNotification.character_name}`
+    : "Neuer Gästebucheintrag"; %>
   <a
     class="guestbook-notification-link"
     href="/guestbook/notifications/open"

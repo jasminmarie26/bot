@@ -5,7 +5,7 @@
     <div class="guestbook-browser-brand">
       <span class="guestbook-browser-name"><%= character.name %></span>
       <span class="guestbook-browser-divider">-</span>
-      <span class="guestbook-browser-label">Gaestebuch-Eintraege</span>
+      <span class="guestbook-browser-label">Gästebuch-Einträge</span>
     </div>
     <% if (characterCreatedAtLabel) { %>
       <div class="guestbook-browser-created">
@@ -16,11 +16,11 @@
 
   <% if (guestbookAccessState?.viaReplyAccess) { %>
     <p class="muted guestbook-reply-hint">
-      Du bist ueber einen Gaestebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.
+      Du bist über einen Gästebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.
     </p>
   <% } %>
 
-  <nav class="guestbook-page-tabs" aria-label="Gaestebuch Seiten">
+  <nav class="guestbook-page-tabs" aria-label="Gästebuch Seiten">
     <% (guestbookPages || []).forEach((page) => { %>
       <a
         class="guestbook-page-tab <%= activeGuestbookPage.id === page.id ? "is-active" : "" %>"
@@ -36,7 +36,7 @@
     style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
   >
     <% if (guestbookSettings?.image_url) { %>
-      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gaestebuch Bild" />
+      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gästebuch Bild" />
     <% } %>
     <% if (activeGuestbookPage?.content_html) { %>
       <p class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></p>
@@ -63,7 +63,7 @@
         <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
         <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
         <p><code>[img float=right]https://...[/img]Text</code></p>
-        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gaestebuch[/url]</code></p>
+        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]Gästebuch[/url]</code></p>
         <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
         <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
       </div>
@@ -81,7 +81,7 @@
         </select>
       </label>
     <% } else { %>
-      <p class="muted">Du brauchst erst einen eigenen Charakter, um ins Gaestebuch zu schreiben.</p>
+      <p class="muted">Du brauchst erst einen eigenen Charakter, um ins Gästebuch zu schreiben.</p>
     <% } %>
 
     <label>
@@ -99,9 +99,9 @@
     </button>
   </form>
 
-  <h3>Eintraege auf Seite <%= activeGuestbookPage.page_number %></h3>
+  <h3>Einträge auf Seite <%= activeGuestbookPage.page_number %></h3>
   <% if (!guestbookEntries || !guestbookEntries.length) { %>
-    <p class="muted">Noch keine Eintraege.</p>
+    <p class="muted">Noch keine Einträge.</p>
   <% } else { %>
     <div class="guestbook-list">
       <% guestbookEntries.forEach((entry) => { %>
@@ -155,14 +155,14 @@
                   method="POST"
                   action="/characters/<%= character.id %>/guestbook/entries/<%= entry.id %>/delete"
                   class="guestbook-delete-form"
-                  onsubmit="return confirm('Diesen Eintrag wirklich loeschen?');"
+                  onsubmit="return confirm('Diesen Eintrag wirklich löschen?');"
                 >
                   <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
                   <% if (guestbookAccessState?.viaReplyAccess) { %>
                     <input type="hidden" name="reply_context_entry_id" value="<%= guestbookAccessState.replyContextEntryId %>" />
                     <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
                   <% } %>
-                  <button type="submit" class="btn btn-secondary">Loeschen</button>
+                  <button type="submit" class="btn btn-secondary">Löschen</button>
                 </form>
               <% } %>
             </div>
