@@ -142,17 +142,15 @@
           <div class="rp-room-list rp-room-list-stacked">
             <% rooms.forEach((room) => { %>
               <% const activeUsers = Array.isArray(roomUsers?.[room.id]) ? roomUsers[room.id] : []; %>
-              <div class="rp-room-standard-card">
+              <div class="rp-room-standard-card rp-room-custom-card">
                 <a
-                  class="rp-room-link rp-room-link-standard"
+                  class="rp-room-link-name rp-room-custom-link"
                   href="/chat?room_id=<%= room.id %>"
                   title="Raum betreten"
-                >
-                  <span class="rp-room-link-name"><%= room.name %></span>
-                  <div class="rp-room-link-meta">
-                    <small><%= room.teaser || "Beschreibung folgt." %></small>
-                  </div>
-                </a>
+                ><%= room.name %></a>
+                <div class="rp-room-custom-meta">
+                  <small><%= room.teaser || "Beschreibung folgt." %></small>
+                </div>
                 <div
                   class="rp-room-occupants"
                   data-room-watch-target
