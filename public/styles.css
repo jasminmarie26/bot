@@ -3142,7 +3142,9 @@ select:focus {
 }
 
 .page-chat .rp-room-panel.is-room-chat {
-  display: flex;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
   min-height: 0;
   height: 100%;
   padding-top: 0.78rem;
@@ -3150,9 +3152,9 @@ select:focus {
 }
 
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
-  flex: 1 1 auto;
-  min-height: min(100%, calc(100dvh - 8.15rem));
-  height: min(100%, calc(100dvh - 8.15rem));
+  min-height: 0;
+  height: 100%;
+  width: 100%;
 }
 
 .chat-online-panel {
@@ -3394,6 +3396,7 @@ select:focus {
   gap: 0.56rem;
   min-height: 0;
   height: 100%;
+  align-self: stretch;
   overflow: hidden;
 }
 
@@ -3421,6 +3424,7 @@ select:focus {
 .page-chat .chat-form {
   margin-top: 0;
   margin-bottom: 0;
+  align-self: end;
 }
 
 .chat-box .chat-message {
