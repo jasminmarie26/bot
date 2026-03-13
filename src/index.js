@@ -2281,10 +2281,14 @@ function createGuestbookNotification(userId, characterId, guestbookEntryId) {
     return;
   }
 
-  db.prepare(
+  const result = db.prepare(
     `INSERT OR IGNORE INTO guestbook_notifications (user_id, character_id, guestbook_entry_id)
      VALUES (?, ?, ?)`
   ).run(parsedUserId, parsedCharacterId, parsedEntryId);
+
+  if (result.changes > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+  }
 }
 
 function getUnreadGuestbookNotificationCountForUser(userId) {
@@ -2332,6 +2336,52 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
     .get(parsedUserId);
 }
 
+function socketChannelForGuestbookNotifications(userId) {
+  const parsedUserId = Number(userId);
+  return Number.isInteger(parsedUserId) && parsedUserId > 0
+    ? `guestbook-notifications:${parsedUserId}`
+    : "guestbook-notifications:unknown";
+}
+
+function buildGuestbookNotificationPayloadForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return {
+      count: 0,
+      latest: null
+    };
+  }
+
+  const count = getUnreadGuestbookNotificationCountForUser(parsedUserId);
+  const latestNotification = count > 0 ? getLatestGuestbookNotificationForUser(parsedUserId, true) : null;
+
+  return {
+    count,
+    latest: latestNotification
+      ? {
+          id: Number(latestNotification.id),
+          character_id: Number(latestNotification.character_id),
+          guestbook_entry_id: Number(latestNotification.guestbook_entry_id),
+          guestbook_page_id: Number(latestNotification.guestbook_page_id),
+          author_name: String(latestNotification.author_name || "").trim(),
+          character_name: String(latestNotification.character_name || "").trim()
+        }
+      : null
+  };
+}
+
+function emitGuestbookNotificationUpdateForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return;
+  }
+
+  io.to(socketChannelForGuestbookNotifications(parsedUserId)).emit(
+    "guestbook:notification:update",
+    buildGuestbookNotificationPayloadForUser(parsedUserId)
+  );
+}
+
 function markGuestbookNotificationAsRead(notificationId, userId) {
   const parsedNotificationId = Number(notificationId);
   const parsedUserId = Number(userId);
@@ -2344,11 +2394,15 @@ function markGuestbookNotificationAsRead(notificationId, userId) {
     return;
   }
 
-  db.prepare(
+  const result = db.prepare(
     `UPDATE guestbook_notifications
      SET is_read = 1
      WHERE id = ? AND user_id = ?`
   ).run(parsedNotificationId, parsedUserId);
+
+  if (result.changes > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+  }
 }
 
 function getGuestbookEntryById(entryId) {
@@ -6065,6 +6119,14 @@ io.on("connection", (socket) => {
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
   socket.data.roomWatchChannels = new Set();
+
+  if (socket.data.user?.id) {
+    socket.join(socketChannelForGuestbookNotifications(socket.data.user.id));
+    socket.emit(
+      "guestbook:notification:update",
+      buildGuestbookNotificationPayloadForUser(socket.data.user.id)
+    );
+  }
 
   socket.on("presence:set", (payload) => {
     if (!socket.data.user) return;
