@@ -1,23 +1,7 @@
 <%- include("partials/start", { topbarCharacter }) %>
 
 <section class="panel">
-  <div class="header-line">
-    <div>
-      <h1>Gaestebuch: <%= character.name %></h1>
-      <p class="muted">
-        Besitzer: <strong><%= character.owner_name %></strong>
-        | Server: <strong><%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></strong>
-      </p>
-    </div>
-    <div class="dashboard-server-actions">
-      <% if (!guestbookAccessState?.viaReplyAccess) { %>
-        <a class="btn btn-secondary" href="/characters/<%= character.id %>#roomlist">Zur Raumliste</a>
-      <% } %>
-      <% if (isOwner) { %>
-        <a class="btn" href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>">Gaestebuch editieren</a>
-      <% } %>
-    </div>
-  </div>
+  <h1><%= character.name %></h1>
 
   <% if (guestbookAccessState?.viaReplyAccess) { %>
     <p class="muted guestbook-reply-hint">
