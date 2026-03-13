@@ -168,6 +168,41 @@
     });
   });
 
+  function appendFormattedChatText(container, rawText, { leadingSpace = false } = {}) {
+    const text = String(rawText || "");
+    const pattern = /"([^"\r\n]+)"|\*([^*\r\n]+)\*/g;
+    let lastIndex = 0;
+
+    if (leadingSpace) {
+      container.appendChild(document.createTextNode(" "));
+    }
+
+    text.replace(pattern, (match, boldText, italicText, offset) => {
+      if (offset > lastIndex) {
+        container.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+      }
+
+      if (typeof boldText === "string") {
+        const strong = document.createElement("strong");
+        strong.textContent = boldText;
+        container.appendChild(strong);
+      } else if (typeof italicText === "string") {
+        const italic = document.createElement("em");
+        italic.textContent = italicText;
+        container.appendChild(italic);
+      } else {
+        container.appendChild(document.createTextNode(match));
+      }
+
+      lastIndex = offset + match.length;
+      return match;
+    });
+
+    if (lastIndex < text.length) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+  }
+
   function appendMessage(msg) {
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
@@ -201,8 +236,8 @@
         strong.classList.add(`role-name-${roleStyle}`);
       }
       strong.textContent = `${msg.username}:`;
-      body.textContent = ` ${msg.content}`;
       line.appendChild(strong);
+      appendFormattedChatText(body, msg.content, { leadingSpace: true });
     }
     line.appendChild(body);
 
@@ -226,8 +261,8 @@
     strong.textContent = msg?.outgoing
       ? `Fluestern an ${msg?.to_name || "Unbekannt"}:`
       : `Fluestern von ${msg?.from_name || "Unbekannt"}:`;
-    body.textContent = ` ${String(msg?.content || "")}`;
     line.appendChild(strong);
+    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
     line.appendChild(body);
 
     article.appendChild(line);
