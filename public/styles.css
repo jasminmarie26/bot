@@ -1131,10 +1131,9 @@ a:hover {
 }
 
 .page-home-screen .home-main .updates-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: block;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .updates-header {
@@ -1200,6 +1199,8 @@ a:hover {
 .page-home-screen .site-updates-list {
   max-height: none;
   min-height: 0;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .update-item {
@@ -1407,23 +1408,25 @@ a:hover {
 }
 
 .page-home-screen {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-attachment: fixed;
 }
 
 .page-home-screen .container {
-  height: calc(100vh - 5.15rem);
-  height: calc(100dvh - 5.15rem);
-  min-height: 0;
-  overflow: hidden;
+  height: auto;
+  min-height: calc(100vh - 5.15rem);
+  min-height: calc(100dvh - 5.15rem);
+  overflow: visible;
   padding-bottom: 1rem;
 }
 
 .page-home-screen .home-layout {
-  height: 100%;
+  height: auto;
   min-height: 0;
-  align-items: stretch;
+  align-items: start;
 }
 
 .home-main {
@@ -1431,10 +1434,9 @@ a:hover {
 }
 
 .page-home-screen .home-main {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: block;
   min-height: 0;
-  height: 100%;
+  height: auto;
 }
 
 .home-main .grid {
@@ -1451,10 +1453,12 @@ a:hover {
 }
 
 .page-home-screen .home-stats {
-  position: static;
-  height: 100%;
+  position: sticky;
+  top: 5.6rem;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
+  align-self: start;
 }
 
 .home-stats-shell {
@@ -1464,8 +1468,8 @@ a:hover {
 
 .page-home-screen .home-stats-shell {
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.12rem;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .home-stats-title {
