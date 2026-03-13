@@ -2585,11 +2585,13 @@ a:hover {
 }
 
 .rp-room-occupant {
-  color: inherit;
+  color: color-mix(in srgb, var(--accent) 78%, white 22%);
+  font-weight: 600;
   text-decoration: none;
 }
 
 .rp-room-occupant:hover {
+  color: color-mix(in srgb, var(--accent) 90%, white 10%);
   text-decoration: underline;
 }
 
