@@ -32,14 +32,19 @@
 
   function appendMessage(msg) {
     const article = document.createElement("article");
-    article.className = "chat-message";
+    const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
+    article.className = `chat-message${isSystemMessage ? " chat-system" : ""}`;
 
     const line = document.createElement("p");
-    const strong = document.createElement("strong");
     const body = document.createElement("span");
-    strong.textContent = `${msg.username}:`;
-    body.textContent = ` ${msg.content}`;
-    line.appendChild(strong);
+    if (isSystemMessage) {
+      body.textContent = String(msg?.content || "");
+    } else {
+      const strong = document.createElement("strong");
+      strong.textContent = `${msg.username}:`;
+      body.textContent = ` ${msg.content}`;
+      line.appendChild(strong);
+    }
     line.appendChild(body);
 
     article.appendChild(line);

@@ -3898,6 +3898,40 @@ function formatChatTimestamp(date = new Date()) {
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
 }
 
+const ROOM_ENTRY_TEMPLATES = [
+  (name) => `${name} schiebt den Vorhang beiseite und tritt ein.`,
+  (name) => `${name} taucht zwischen den Gesprächen auf.`,
+  (name) => `${name} findet den Weg herein und lässt sich nieder.`,
+  (name) => `${name} erscheint im Raum, als wäre es nie anders gewesen.`
+];
+
+const ROOM_EXIT_TEMPLATES = [
+  (name) => `${name} zieht sich leise wieder zurück.`,
+  (name) => `${name} nickt in die Runde und verschwindet zur Tür hinaus.`,
+  (name) => `${name} lässt nur ein leises Echo zurück und geht.`,
+  (name) => `${name} löst sich aus dem Gespräch und verlässt den Raum.`
+];
+
+function buildRoomPresenceMessage(kind, displayName) {
+  const safeName = String(displayName || "").trim() || "Jemand";
+  const templates = kind === "leave" ? ROOM_EXIT_TEMPLATES : ROOM_ENTRY_TEMPLATES;
+  const template = templates[Math.floor(Math.random() * templates.length)] || templates[0];
+  return template(safeName);
+}
+
+function emitSystemChatMessage(roomId, serverId, content) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const text = String(content || "").trim();
+  if (!text) return;
+
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", {
+    type: "system",
+    content: text,
+    created_at: formatChatTimestamp()
+  });
+}
+
 function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   const sockets = getSocketsInChannel(roomId, serverId);
   if (!sockets.length) {
@@ -4089,8 +4123,21 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
+    const isSameChannel =
+      previousServerId === nextServerId &&
+      previousRoomId === nextRoomId;
+    const preferredCharacter = getPreferredCharacterForUser(socket.data.user.id, nextServerId);
+    const displayName = String(preferredCharacter?.name || socket.data.user.username || "").trim() ||
+      `User ${socket.data.user.id}`;
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+      if (!isSameChannel) {
+        emitSystemChatMessage(
+          previousRoomId,
+          previousServerId,
+          buildRoomPresenceMessage("leave", displayName)
+        );
+      }
     }
 
     socket.data.roomId = nextRoomId;
@@ -4098,6 +4145,13 @@ io.on("connection", (socket) => {
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    if (!isSameChannel) {
+      emitSystemChatMessage(
+        nextRoomId,
+        nextServerId,
+        buildRoomPresenceMessage("enter", displayName)
+      );
+    }
     clearPendingRoomDeletion(nextRoomId);
 
     const previousRoomWasRemoved = previousServerId
@@ -4228,6 +4282,14 @@ io.on("connection", (socket) => {
       ? normalizeServer(socket.data.serverId)
       : null;
     if (previousServerId) {
+      const preferredCharacter = getPreferredCharacterForUser(socket.data.user?.id, previousServerId);
+      const displayName = String(preferredCharacter?.name || socket.data.user?.username || "").trim() ||
+        `User ${socket.data.user?.id || "?"}`;
+      emitSystemChatMessage(
+        previousRoomId,
+        previousServerId,
+        buildRoomPresenceMessage("leave", displayName)
+      );
       emitOnlineCharacters(previousRoomId, previousServerId);
       scheduleRoomDeletion(previousRoomId);
     }

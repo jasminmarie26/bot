@@ -3572,6 +3572,15 @@ select:focus {
   white-space: pre-wrap;
 }
 
+.chat-box .chat-system {
+  color: color-mix(in srgb, #17191d 62%, var(--accent));
+  font-style: italic;
+}
+
+.chat-box .chat-system p {
+  text-align: center;
+}
+
 .chat-box .chat-whisper {
   border: 0;
 }

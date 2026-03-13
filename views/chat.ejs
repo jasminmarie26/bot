@@ -116,8 +116,12 @@
           data-server-id="<%= activeServerId %>"
         >
           <% messages.forEach((msg) => { %>
-            <article class="chat-message">
-              <p><strong><%= msg.username %>:</strong> <span><%= msg.content %></span></p>
+            <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">
+              <% if (msg.type === "system") { %>
+                <p><span><%= msg.content %></span></p>
+              <% } else { %>
+                <p><strong><%= msg.username %>:</strong> <span><%= msg.content %></span></p>
+              <% } %>
             </article>
           <% }) %>
         </div>
