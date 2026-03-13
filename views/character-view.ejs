@@ -150,12 +150,8 @@
                 >
                   <span class="rp-room-link-name"><%= room.name %></span>
                   <div class="rp-room-link-meta">
-                    <small>Offplay</small>
                     <small><%= room.teaser || "Beschreibung folgt." %></small>
                   </div>
-                  <small class="rp-room-link-note">
-                    <%= room.has_room_rights ? "Dein Raum" : `Raum von ${room.creator_name}` %>
-                  </small>
                 </a>
                 <div
                   class="rp-room-occupants"
