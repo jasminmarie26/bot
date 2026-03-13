@@ -3578,7 +3578,14 @@ select:focus {
 }
 
 .chat-box .chat-system p {
-  text-align: center;
+  text-align: left;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.chat-box .chat-system strong {
+  font-weight: 700;
+  color: color-mix(in srgb, #17191d 78%, var(--accent));
 }
 
 .chat-box .chat-whisper {

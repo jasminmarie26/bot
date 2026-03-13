@@ -18,6 +18,16 @@
   const roomId = Number(roomIdRaw);
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   let selectedOnlineEntry = null;
+  const systemMessageSuffixes = [
+    " schiebt den Vorhang beiseite und tritt ein.",
+    " taucht zwischen den Gesprächen auf.",
+    " findet den Weg herein und lässt sich nieder.",
+    " erscheint im Raum, als wäre es nie anders gewesen.",
+    " zieht sich leise wieder zurück.",
+    " nickt in die Runde und verschwindet zur Tür hinaus.",
+    " lässt nur ein leises Echo zurück und geht.",
+    " löst sich aus dem Gespräch und verlässt den Raum."
+  ];
 
   if (!chatBox || !form || !input) return;
 
@@ -38,7 +48,16 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     if (isSystemMessage) {
-      body.textContent = String(msg?.content || "");
+      const content = String(msg?.content || "");
+      const matchingSuffix = systemMessageSuffixes.find((suffix) => content.endsWith(suffix));
+      if (matchingSuffix) {
+        const strong = document.createElement("strong");
+        strong.textContent = content.slice(0, -matchingSuffix.length);
+        body.textContent = matchingSuffix;
+        line.appendChild(strong);
+      } else {
+        body.textContent = content;
+      }
     } else {
       const strong = document.createElement("strong");
       strong.textContent = `${msg.username}:`;
