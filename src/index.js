@@ -906,6 +906,49 @@ async function sendAccountDeletionEmail(payload) {
   return true;
 }
 
+async function sendRoomLogEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) return false;
+
+  const email = normalizeEmail(payload.email || "");
+  if (!email) return false;
+
+  const username = String(payload.username || "Abenteurer").trim() || "Abenteurer";
+  const roomLabel = String(payload.roomLabel || "einem Chatraum").trim() || "einem Chatraum";
+  const participantNames = Array.isArray(payload.participantNames)
+    ? payload.participantNames.filter(Boolean)
+    : [];
+  const text = [
+    `Hallo ${username},`,
+    "",
+    `hier ist das Chat-Log aus ${roomLabel}.`,
+    `Gestartet: ${payload.startedAt || "-"}`,
+    `Beendet: ${payload.endedAt || "-"}`,
+    payload.endReasonText ? `Grund: ${payload.endReasonText}` : "",
+    participantNames.length ? `Beteiligte: ${participantNames.join(", ")}` : "",
+    "",
+    "Chatverlauf:",
+    "",
+    String(payload.logText || "").trim() || "Es wurden keine Nachrichten erfasst.",
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ]
+    .filter((line, index, lines) => {
+      if (line) return true;
+      return lines[index - 1] !== "";
+    })
+    .join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: `Chat-Log: ${roomLabel}`,
+    text
+  });
+
+  return true;
+}
+
 async function sendUsernameReminderEmail(payload) {
   const transporter = getVerificationMailer();
   if (!transporter) {
@@ -4242,6 +4285,234 @@ function formatChatTimestamp(date = new Date()) {
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
 }
 
+function getRoomLogKey(roomId, serverId = DEFAULT_SERVER_ID) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
+  return `${normalizedServerId}:${normalizedRoomId}`;
+}
+
+function getRoomLogLabel(roomId, serverId = DEFAULT_SERVER_ID, room = null) {
+  if (room?.name) {
+    return String(room.name).trim();
+  }
+
+  const normalizedRoomId = Number(roomId);
+  if (Number.isInteger(normalizedRoomId) && normalizedRoomId > 0) {
+    const persistedRoom = getRoomWithCharacter(normalizedRoomId);
+    if (persistedRoom?.name) {
+      return String(persistedRoom.name).trim();
+    }
+  }
+
+  const standardRoom = getStandardRoomsForServer(serverId)[0];
+  if (standardRoom?.name) {
+    return String(standardRoom.name).trim();
+  }
+
+  return `${getServerLabel(serverId)} Chat`;
+}
+
+function getChatEmoteActionText(rawText, displayName) {
+  const text = String(rawText || "").trim();
+  if (!text.toLowerCase().startsWith("/me ")) {
+    return "";
+  }
+
+  let actionText = text.slice(4).trim();
+  const actorName = String(displayName || "").trim();
+
+  if (actorName) {
+    const actorPattern = new RegExp(
+      `^${String(actorName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:(?=\\s)|(?=[,.:;!?]))\\s*`,
+      "i"
+    );
+    actionText = actionText.replace(actorPattern, "").trimStart();
+  }
+
+  return actionText;
+}
+
+function formatRoomLogLine(entry) {
+  const createdAt = String(entry?.created_at || "").trim();
+  const linePrefix = createdAt ? `[${createdAt}] ` : "";
+  const type = String(entry?.type || "chat").trim().toLowerCase();
+  const content = String(entry?.content || "").trim();
+  if (!content) {
+    return "";
+  }
+
+  if (type === "system") {
+    return `${linePrefix}${content}`;
+  }
+
+  const username = String(entry?.username || "Jemand").trim() || "Jemand";
+  const emoteAction = getChatEmoteActionText(content, username);
+  if (emoteAction) {
+    return `${linePrefix}${username} ${emoteAction}`.trim();
+  }
+
+  return `${linePrefix}${username}: ${content}`;
+}
+
+function getRoomLogRecipients(userIds) {
+  const parsedIds = Array.from(new Set((Array.isArray(userIds) ? userIds : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0)));
+
+  if (!parsedIds.length) {
+    return [];
+  }
+
+  const placeholders = parsedIds.map(() => "?").join(", ");
+  return db
+    .prepare(
+      `SELECT id, username, email
+       FROM users
+       WHERE id IN (${placeholders})`
+    )
+    .all(...parsedIds);
+}
+
+const activeRoomLogs = new Map();
+
+function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
+  return activeRoomLogs.get(getRoomLogKey(roomId, serverId)) || null;
+}
+
+function canManageRoomLog(user, room = null) {
+  if (!user) return false;
+  if (
+    user.is_admin === true ||
+    user.is_admin === 1 ||
+    user.is_moderator === true ||
+    user.is_moderator === 1
+  ) {
+    return true;
+  }
+
+  return Boolean(room) && Number(room.created_by_user_id) === Number(user.id);
+}
+
+function rememberRoomLogParticipant(roomId, serverId, user, displayName = "") {
+  const roomLog = getActiveRoomLog(roomId, serverId);
+  if (!roomLog) return;
+
+  const userId = Number(user?.id);
+  if (!Number.isInteger(userId) || userId < 1) return;
+
+  const safeDisplayName = String(displayName || user?.display_name || user?.username || `User ${userId}`).trim() ||
+    `User ${userId}`;
+
+  roomLog.participants.set(userId, safeDisplayName);
+}
+
+function appendMessageToActiveRoomLog(roomId, serverId, entry) {
+  const roomLog = getActiveRoomLog(roomId, serverId);
+  if (!roomLog) return;
+
+  const content = String(entry?.content || "").trim();
+  if (!content) return;
+
+  const createdAt = String(entry?.created_at || formatChatTimestamp()).trim() || formatChatTimestamp();
+  const type = String(entry?.type || "chat").trim().toLowerCase() === "system" ? "system" : "chat";
+  const username = String(entry?.username || "").trim();
+
+  roomLog.messages.push({
+    type,
+    username,
+    content,
+    created_at: createdAt
+  });
+
+  const userId = Number(entry?.user_id);
+  if (type !== "system" && Number.isInteger(userId) && userId > 0) {
+    roomLog.participants.set(userId, username || `User ${userId}`);
+  }
+}
+
+function startRoomLog(roomId, serverId, room, startedBySocket) {
+  const key = getRoomLogKey(roomId, serverId);
+  if (activeRoomLogs.has(key)) {
+    return null;
+  }
+
+  const roomLog = {
+    roomId: Number.isInteger(roomId) && roomId > 0 ? roomId : null,
+    serverId: normalizeServer(serverId),
+    roomLabel: getRoomLogLabel(roomId, serverId, room),
+    startedAt: formatChatTimestamp(),
+    startedByUserId: Number(startedBySocket?.data?.user?.id) || null,
+    startedByName: getSocketDisplayProfile(startedBySocket, serverId).label || "Jemand",
+    participants: new Map(),
+    messages: []
+  };
+
+  activeRoomLogs.set(key, roomLog);
+
+  getSocketsInChannel(roomId, serverId).forEach((memberSocket) => {
+    rememberRoomLogParticipant(
+      roomId,
+      serverId,
+      memberSocket?.data?.user,
+      getSocketDisplayProfile(memberSocket, serverId).label
+    );
+  });
+
+  return roomLog;
+}
+
+async function finalizeRoomLog(roomId, serverId, options = {}) {
+  const key = getRoomLogKey(roomId, serverId);
+  const roomLog = activeRoomLogs.get(key);
+  if (!roomLog) return false;
+
+  activeRoomLogs.delete(key);
+
+  const recipientRows = getRoomLogRecipients(Array.from(roomLog.participants.keys()));
+  const endedAt = formatChatTimestamp();
+  const endReason = String(options.reason || "").trim().toLowerCase();
+  const endReasonText =
+    endReason === "empty-room"
+      ? "Automatisch beendet, weil alle den Raum verlassen haben."
+      : "Manuell mit /logoff beendet.";
+  const logText = roomLog.messages
+    .map((entry) => formatRoomLogLine(entry))
+    .filter(Boolean)
+    .join("\n");
+  const participantNames = Array.from(new Set(Array.from(roomLog.participants.values()).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+
+  for (const recipient of recipientRows) {
+    const email = normalizeEmail(recipient?.email || "");
+    if (!email) continue;
+
+    try {
+      await sendRoomLogEmail({
+        email,
+        username: recipient.username,
+        roomLabel: roomLog.roomLabel,
+        startedAt: roomLog.startedAt,
+        endedAt,
+        endReasonText,
+        participantNames,
+        logText
+      });
+    } catch (error) {
+      console.error("Konnte Raum-Log nicht per E-Mail senden:", error);
+    }
+  }
+
+  return true;
+}
+
+async function finalizeRoomLogIfEmpty(roomId, serverId) {
+  if (getSocketsInChannel(roomId, serverId).length > 0) {
+    return false;
+  }
+
+  return finalizeRoomLog(roomId, serverId, { reason: "empty-room" });
+}
+
 const ROOM_ENTRY_TEMPLATES = [
   (name) => `${name} schiebt den Vorhang beiseite und tritt ein.`,
   (name) => `${name} taucht zwischen den Gesprächen auf.`,
@@ -4268,11 +4539,18 @@ function emitSystemChatMessage(roomId, serverId, content) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const text = String(content || "").trim();
   if (!text) return;
+  const createdAt = formatChatTimestamp();
+
+  appendMessageToActiveRoomLog(normalizedRoomId, normalizedServerId, {
+    type: "system",
+    content: text,
+    created_at: createdAt
+  });
 
   io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", {
     type: "system",
     content: text,
-    created_at: formatChatTimestamp()
+    created_at: createdAt
   });
 }
 
@@ -4542,6 +4820,7 @@ io.on("connection", (socket) => {
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
     if (!isSameChannel) {
       emitSystemChatMessage(
         nextRoomId,
@@ -4554,6 +4833,9 @@ io.on("connection", (socket) => {
     const previousRoomWasRemoved = previousServerId
       ? maybeRemoveEmptyRoom(previousRoomId)
       : false;
+    if (previousServerId) {
+      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
+    }
     if (previousServerId && !previousRoomWasRemoved) {
       emitOnlineCharacters(previousRoomId, previousServerId);
     }
@@ -4572,9 +4854,10 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let room = null;
 
     if (roomId) {
-      const room = getRoomWithCharacter(roomId);
+      room = getRoomWithCharacter(roomId);
       if (!room) return;
       if (
         !canAccessCharacter(
@@ -4591,12 +4874,85 @@ io.on("connection", (socket) => {
 
     const content = rawMessage.trim().slice(0, 500);
     if (!content) return;
+    const normalizedCommand = content.toLowerCase();
+    const canUseRoomLog = canManageRoomLog(socket.data.user, room);
+
+    if (normalizedCommand === "/log") {
+      if (!canUseRoomLog) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: roomId
+            ? "Nur die Person, die diesen Raum erstellt hat, kann das Log hier starten."
+            : "Nur Admins und Moderatoren können das Log hier starten.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!getVerificationMailer()) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Log kann nicht gestartet werden, weil der E-Mail-Versand nicht eingerichtet ist.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (getActiveRoomLog(roomId, serverId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "In diesem Raum läuft bereits ein Log.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      startRoomLog(roomId, serverId, room, socket);
+      emitSystemChatMessage(roomId, serverId, "Log wurde gestartet.");
+      return;
+    }
+
+    if (normalizedCommand === "/logoff") {
+      if (!canUseRoomLog) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: roomId
+            ? "Nur die Person, die diesen Raum erstellt hat, kann das Log hier beenden."
+            : "Nur Admins und Moderatoren können das Log hier beenden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!getActiveRoomLog(roomId, serverId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "In diesem Raum läuft aktuell kein Log.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      emitSystemChatMessage(roomId, serverId, "Log wurde beendet.");
+      void finalizeRoomLog(roomId, serverId, { reason: "manual" });
+      return;
+    }
+
+    const displayProfile = getSocketDisplayProfile(socket, serverId);
+    const createdAt = formatChatTimestamp();
+    appendMessageToActiveRoomLog(roomId, serverId, {
+      type: "chat",
+      user_id: socket.data.user.id,
+      username: displayProfile.label,
+      content,
+      created_at: createdAt
+    });
 
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
-      username: getSocketDisplayProfile(socket, serverId).label,
-      role_style: getSocketDisplayProfile(socket, serverId).role_style || "",
+      username: displayProfile.label,
+      role_style: displayProfile.role_style || "",
       content,
-      created_at: formatChatTimestamp()
+      created_at: createdAt
     });
   });
 
@@ -4691,6 +5047,7 @@ io.on("connection", (socket) => {
         buildRoomPresenceMessage("leave", displayName)
       );
       emitOnlineCharacters(previousRoomId, previousServerId);
+      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
       scheduleRoomDeletion(previousRoomId);
     }
     if (socket.data.presenceServerId) {
