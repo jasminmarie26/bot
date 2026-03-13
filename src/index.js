@@ -4211,6 +4211,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   return res.render("guestbook-view", {
     title: `Gästebuch: ${character.name}`,
     character,
+    characterCreatedAtLabel: formatGermanDate(character.created_at),
     isOwner: guestbookAccessState.isOwner,
     guestbookAccessState,
     guestbookEntries,

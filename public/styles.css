@@ -3073,6 +3073,44 @@ a:hover {
   gap: 0.4rem;
 }
 
+.guestbook-browser-bar {
+  margin: -0.1rem -0.1rem 1rem;
+  padding: 0.8rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 82%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 88%, var(--panel-bg) 12%);
+  color: color-mix(in srgb, var(--text) 72%, #5a5248 28%);
+}
+
+.guestbook-browser-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.guestbook-browser-name {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.guestbook-browser-divider,
+.guestbook-browser-label,
+.guestbook-browser-created {
+  color: inherit;
+}
+
+.guestbook-browser-label,
+.guestbook-browser-created {
+  font-size: 0.98rem;
+}
+
 .guestbook-page-tab {
   border: 1px solid var(--field-edge);
   border-radius: 9px;
