@@ -4,14 +4,11 @@
   <div class="guestbook-browser-bar">
     <div class="guestbook-browser-brand">
       <span class="guestbook-browser-name"><%= character.name %></span>
-      <span class="guestbook-browser-divider">-</span>
       <span class="guestbook-browser-label">Gästebuch-Einträge</span>
+      <% if (characterCreatedAtLabel) { %>
+        <span class="guestbook-browser-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
+      <% } %>
     </div>
-    <% if (characterCreatedAtLabel) { %>
-      <div class="guestbook-browser-created">
-        Charakter erstellt am <%= characterCreatedAtLabel %>
-      </div>
-    <% } %>
   </div>
 
   <% if (guestbookAccessState?.viaReplyAccess) { %>
