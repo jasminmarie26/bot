@@ -3,16 +3,18 @@
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 
 <section class="panel guestbook-layout">
-  <% if (characterCreatedAtLabel) { %>
-    <div class="guestbook-meta-row">
-      <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
-    </div>
-  <% } %>
+  <div class="guestbook-sticky-head">
+    <% if (characterCreatedAtLabel) { %>
+      <div class="guestbook-meta-row">
+        <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
+      </div>
+    <% } %>
 
-  <div class="guestbook-entry-rail">
-    <button type="button" class="guestbook-entry-launcher" data-guestbook-modal-open>
-      Gästebuch-Einträge
-    </button>
+    <div class="guestbook-entry-rail">
+      <button type="button" class="guestbook-entry-launcher" data-guestbook-modal-open>
+        Gästebuch-Einträge
+      </button>
+    </div>
   </div>
 
   <nav class="guestbook-page-tabs" aria-label="Gästebuch Seiten">
