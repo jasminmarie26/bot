@@ -3490,6 +3490,15 @@ select {
   background: var(--field-bg);
 }
 
+input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border-radius: 0.2rem;
+  accent-color: var(--accent-2);
+  box-shadow: none;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: color-mix(in srgb, var(--muted) 90%, transparent);
@@ -3643,14 +3652,18 @@ select:focus {
 }
 
 .guestbook-private-row {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.45rem;
   align-self: flex-start;
+  width: auto;
+  font-weight: 600;
 }
 
 .guestbook-private-row input {
   margin: 0;
+  flex: 0 0 auto;
 }
 
 .guestbook-item-header {
