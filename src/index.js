@@ -2664,7 +2664,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
        FROM chat_rooms r
         JOIN users u ON u.id = r.created_by_user_id
         WHERE r.server_id = ?
-        ORDER BY lower(name) ASC`
+        ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(req.session.user.id, normalizeServer(character.server_id));
   const standardRooms = getStandardRoomsForServer(character.server_id);

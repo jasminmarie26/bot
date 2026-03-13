@@ -2491,6 +2491,12 @@ a:hover {
   font-size: 0.74rem;
 }
 
+.rp-room-link-note {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .rp-room-link-meta {
   display: flex;
   justify-content: space-between;
