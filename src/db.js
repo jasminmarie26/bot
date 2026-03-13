@@ -101,6 +101,7 @@ db.exec(`
     created_by_user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     name_key TEXT NOT NULL,
+    teaser TEXT NOT NULL DEFAULT '',
     server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
@@ -250,6 +251,10 @@ if (!chatRoomColumns.includes("server_id")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
 
+if (!chatRoomColumns.includes("teaser")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN teaser TEXT NOT NULL DEFAULT ''");
+}
+
 if (!chatMessageColumns.includes("room_id")) {
   db.exec("ALTER TABLE chat_messages ADD COLUMN room_id INTEGER");
 }
@@ -314,6 +319,7 @@ db.prepare(
 db.prepare(
   "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
 ).run();
+db.prepare("UPDATE chat_rooms SET teaser = '' WHERE teaser IS NULL").run();
 db.prepare(
   `UPDATE chat_messages
    SET server_id = COALESCE(

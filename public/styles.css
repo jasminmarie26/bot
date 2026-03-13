@@ -2286,6 +2286,43 @@ a:hover {
   font-size: 1.05rem;
 }
 
+.rp-room-accordion[open] {
+  padding-bottom: 0.12rem;
+}
+
+.rp-room-section-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.rp-room-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rp-room-section-summary::after {
+  content: "\25BE";
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+
+.rp-room-accordion:not([open]) .rp-room-section-summary::after {
+  transform: rotate(-90deg);
+}
+
+.rp-room-section-divider {
+  height: 1px;
+  margin-top: 0.38rem;
+  background: color-mix(in srgb, var(--panel-edge) 68%, transparent);
+}
+
 .page-roomlist .rp-room-list-wrap {
   min-height: 0;
   display: grid;
@@ -2305,6 +2342,12 @@ a:hover {
   border-radius: 12px;
   padding: 0.7rem 0.75rem;
   background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
+}
+
+.rp-room-section > .muted,
+.rp-room-accordion > .muted,
+.rp-room-accordion > .rp-room-list {
+  margin-top: 0.6rem;
 }
 
 .rp-guestbook-wrap {

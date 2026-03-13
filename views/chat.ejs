@@ -79,8 +79,9 @@
               ? activeRoom.name
               : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
           </h1>
-          <% if (standardRoom && standardRoom.teaser) { %>
-            <p class="chat-room-description"><%= standardRoom.teaser %></p>
+          <% const chatRoomDescription = activeRoom?.teaser || standardRoom?.teaser || ""; %>
+          <% if (chatRoomDescription) { %>
+            <p class="chat-room-description"><%= chatRoomDescription %></p>
           <% } %>
           <div class="chat-room-divider" aria-hidden="true"></div>
         </div>

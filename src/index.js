@@ -1195,6 +1195,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
+      category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
   ],
@@ -1202,6 +1203,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
+      category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
   ]
@@ -1221,6 +1223,10 @@ function getStandardRoomForServer(serverId, roomId) {
     getStandardRoomsForServer(serverId).find((room) => room.id === normalizedRoomId) ||
     null
   );
+}
+
+function normalizeRoomTeaser(rawValue) {
+  return String(rawValue || "").trim().slice(0, 160);
 }
 
 function escapeHtml(value) {
@@ -1575,9 +1581,9 @@ function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
     .prepare(
-      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at,
+      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.server_id,
               c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
-              u.username AS room_owner_name
+               u.username AS room_owner_name
        FROM chat_rooms r
        JOIN characters c ON c.id = r.character_id
        JOIN users u ON u.id = r.created_by_user_id
@@ -2652,18 +2658,21 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   const rooms = db
     .prepare(
-      `SELECT r.id, r.name, r.created_at, r.created_by_user_id,
+      `SELECT r.id, r.name, r.teaser, r.server_id, r.created_at, r.created_by_user_id,
               u.username AS creator_name,
-              CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS has_room_rights
+               CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS has_room_rights
        FROM chat_rooms r
-       JOIN users u ON u.id = r.created_by_user_id
-       WHERE r.character_id = ?
-       ORDER BY lower(name) ASC`
+        JOIN users u ON u.id = r.created_by_user_id
+        WHERE r.server_id = ?
+        ORDER BY lower(name) ASC`
     )
-    .all(req.session.user.id, id);
+    .all(req.session.user.id, normalizeServer(character.server_id));
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
     standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
+  );
+  const roomUsers = Object.fromEntries(
+    rooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
 
   const guestbookPages = ensureGuestbookPages(id);
@@ -2692,6 +2701,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     isOwner,
     standardRooms,
     standardRoomUsers,
+    roomUsers,
     rooms,
     guestbookEntries,
     guestbookPages,
@@ -2840,37 +2850,39 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   const roomName = normalizeRoomName(req.body.room_name);
+  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(`/characters/${id}#roomlist`);
   }
 
   const roomNameKey = toRoomNameKey(roomName);
-    const existingRoom = db
-      .prepare(
-        `SELECT id, name
-         FROM chat_rooms
-         WHERE character_id = ? AND name_key = ?`
-      )
-      .get(character.id, roomNameKey);
+  const existingRoom = db
+    .prepare(
+      `SELECT id, name
+       FROM chat_rooms
+       WHERE server_id = ? AND name_key = ?`
+    )
+    .get(normalizeServer(character.server_id), roomNameKey);
 
-    if (existingRoom) {
-      return res.redirect(`/chat?room_id=${existingRoom.id}`);
-    }
+  if (existingRoom) {
+    return res.redirect(`/chat?room_id=${existingRoom.id}`);
+  }
 
   const info = db.prepare(
-    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, server_id)
-     VALUES (?, ?, ?, ?, ?)`
-    ).run(
-      character.id,
-      req.session.user.id,
-      roomName,
-      roomNameKey,
-      normalizeServer(character.server_id)
-    );
+    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, teaser, server_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(
+    character.id,
+    req.session.user.id,
+    roomName,
+    roomNameKey,
+    roomTeaser,
+    normalizeServer(character.server_id)
+  );
 
-    return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
-  });
+  return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
+});
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const id = Number(req.params.id);
@@ -3255,16 +3267,12 @@ app.get("/chat", requireAuth, (req, res) => {
     activeRoom = {
       id: room.id,
       name: room.name,
+      teaser: room.teaser,
+      category: "Offplay",
       has_room_rights: room.created_by_user_id === req.session.user.id,
       owner_name: room.room_owner_name
     };
-    activeCharacter = {
-      id: room.character_id,
-      name: room.character_name,
-      is_owner: room.character_owner_id === req.session.user.id,
-      server_id: normalizeServer(room.character_server_id)
-    };
-    activeServerId = normalizeServer(room.character_server_id);
+    activeServerId = normalizeServer(room.server_id || room.character_server_id);
   }
 
   if (!activeCharacter) {
@@ -4071,7 +4079,7 @@ io.on("connection", (socket) => {
       ) {
         return;
       }
-      nextServerId = normalizeServer(room.character_server_id);
+      nextServerId = normalizeServer(room.server_id || room.character_server_id);
     }
 
     const previousRoomId =
@@ -4127,7 +4135,7 @@ io.on("connection", (socket) => {
       ) {
         return;
       }
-      serverId = normalizeServer(room.character_server_id);
+      serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
     const content = rawMessage.trim().slice(0, 500);
@@ -4172,7 +4180,7 @@ io.on("connection", (socket) => {
       ) {
         return;
       }
-      serverId = normalizeServer(room.character_server_id);
+      serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
     const recipientSockets = getUserSocketsInChannel(roomId, serverId, targetUserId);
