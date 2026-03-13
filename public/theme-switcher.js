@@ -3,19 +3,30 @@
   if (!forms.length) return;
 
   const body = document.body;
+  const root = document.documentElement;
   const themeClassPrefix = "theme-";
   const themeStorageKey = "active-theme-preview";
+  let desiredTheme = "";
+
+  function stripThemeClasses(element) {
+    if (!element) return;
+
+    for (const className of Array.from(element.classList)) {
+      if (className.startsWith(themeClassPrefix)) {
+        element.classList.remove(className);
+      }
+    }
+  }
 
   function applyTheme(themeId) {
     if (!body || !themeId) return;
 
-    for (const className of Array.from(body.classList)) {
-      if (className.startsWith(themeClassPrefix)) {
-        body.classList.remove(className);
-      }
-    }
+    desiredTheme = themeId;
+    stripThemeClasses(body);
+    stripThemeClasses(root);
 
     body.classList.add(`${themeClassPrefix}${themeId}`);
+    root.classList.add(`${themeClassPrefix}${themeId}`);
   }
 
   function syncThemeSelects(themeId) {
@@ -124,5 +135,20 @@
   if (localTheme) {
     applyTheme(localTheme);
     syncThemeSelects(localTheme);
+  }
+
+  if (body && typeof MutationObserver !== "undefined") {
+    const observer = new MutationObserver(() => {
+      if (!desiredTheme) return;
+      const expectedClass = `${themeClassPrefix}${desiredTheme}`;
+      if (!body.classList.contains(expectedClass) || (root && !root.classList.contains(expectedClass))) {
+        applyTheme(desiredTheme);
+      }
+    });
+
+    observer.observe(body, { attributes: true, attributeFilter: ["class"] });
+    if (root) {
+      observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    }
   }
 })();
