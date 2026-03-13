@@ -62,6 +62,9 @@
         menuCharacter.is_owner
       )
     ); %>
+    <% const accountDisplayName =
+      currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
+    <% const activeMenuIdentityName = menuCharacter ? menuCharacter.name : accountDisplayName; %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
@@ -102,7 +105,10 @@
                 </summary>
                 <div class="topbar-user-menu-panel">
                   <div class="topbar-user-menu-meta">
-                    <strong><%= currentUser.username %></strong>
+                    <strong><%= activeMenuIdentityName %></strong>
+                    <% if (accountDisplayName && accountDisplayName !== activeMenuIdentityName) { %>
+                      <span>Konto: <%= accountDisplayName %></span>
+                    <% } %>
                     <span>Account Nr.: <%= currentUser.account_number %></span>
                     <% if (menuCharacter) { %>
                       <span>Charakter: <%= menuCharacter.name %></span>

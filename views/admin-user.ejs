@@ -69,6 +69,24 @@
         value="<%= targetUser.birth_date || "" %>"
       />
     </label>
+    <label>
+      Admin-Name
+      <input
+        name="admin_display_name"
+        maxlength="40"
+        value="<%= targetUser.admin_display_name || "" %>"
+        placeholder="z. B. Weltenwächter"
+      />
+    </label>
+    <label>
+      Moderator-Name
+      <input
+        name="moderator_display_name"
+        maxlength="40"
+        value="<%= targetUser.moderator_display_name || "" %>"
+        placeholder="z. B. Schattenfeder"
+      />
+    </label>
     <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
   </form>
 </section>

@@ -270,6 +270,46 @@ function getServerLabel(serverId) {
   return found?.label || "FREE-RP";
 }
 
+function normalizePreferredCharacterMap(value) {
+  const normalized = {};
+  if (!value || typeof value !== "object") {
+    return normalized;
+  }
+
+  for (const server of SERVER_OPTIONS) {
+    const candidate = Number(value?.[server.id]);
+    if (Number.isInteger(candidate) && candidate > 0) {
+      normalized[server.id] = candidate;
+    }
+  }
+
+  return normalized;
+}
+
+function getPreferredCharacterIdFromSession(req, serverId = DEFAULT_SERVER_ID) {
+  const normalizedServerId = normalizeServer(serverId);
+  const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
+  req.session.preferred_character_ids = preferredMap;
+  return preferredMap[normalizedServerId] || null;
+}
+
+function rememberPreferredCharacter(req, character) {
+  const parsedCharacterId = Number(character?.id);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) return;
+  const characterOwnerId = Number(character?.user_id);
+  if (
+    Number.isInteger(characterOwnerId) &&
+    characterOwnerId !== Number(req.session?.user?.id)
+  ) {
+    return;
+  }
+
+  const normalizedServerId = normalizeServer(character.server_id);
+  const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
+  preferredMap[normalizedServerId] = parsedCharacterId;
+  req.session.preferred_character_ids = preferredMap;
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -403,7 +443,7 @@ function getOnlineStaffStats(activeUserIds = null) {
   const placeholders = sessionUserIds.map(() => "?").join(", ");
   const staffUsers = db
     .prepare(
-      `SELECT username, is_admin, is_moderator
+      `SELECT username, is_admin, is_moderator, admin_display_name, moderator_display_name
        FROM users
        WHERE id IN (${placeholders})`
     )
@@ -414,11 +454,11 @@ function getOnlineStaffStats(activeUserIds = null) {
 
   for (const user of staffUsers) {
     if (user.is_admin === 1) {
-      adminOnlineNames.push(user.username);
+      adminOnlineNames.push(getUserStaffBaseName(user) || user.username);
       continue;
     }
     if (user.is_moderator === 1) {
-      moderatorOnlineNames.push(user.username);
+      moderatorOnlineNames.push(getUserStaffBaseName(user) || user.username);
     }
   }
 
@@ -920,12 +960,56 @@ function getAccountNumberByUserId(userId) {
   return Number(rank?.count) || null;
 }
 
+function normalizeStaffDisplayName(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40);
+}
+
+function getUserRoleSuffix(user) {
+  if (user?.is_admin === 1 || user?.is_admin === true) {
+    return "A";
+  }
+  if (user?.is_moderator === 1 || user?.is_moderator === true) {
+    return "M";
+  }
+  return "";
+}
+
+function getUserStaffBaseName(user) {
+  if (!user) return "";
+  if (user.is_admin === 1 || user.is_admin === true) {
+    return normalizeStaffDisplayName(user.admin_display_name);
+  }
+  if (user.is_moderator === 1 || user.is_moderator === true) {
+    return normalizeStaffDisplayName(user.moderator_display_name);
+  }
+  return "";
+}
+
+function getUserStaffDisplayName(user) {
+  const baseName = getUserStaffBaseName(user);
+  const suffix = getUserRoleSuffix(user);
+  if (!baseName) return "";
+  return suffix ? `${baseName} (${suffix})` : baseName;
+}
+
+function getUserDefaultDisplayName(user) {
+  const staffName = getUserStaffDisplayName(user);
+  if (staffName) return staffName;
+  return String(user?.username || "").trim() || "User";
+}
+
 function toSessionUser(user) {
   return {
     id: user.id,
     username: user.username,
     is_admin: user.is_admin === 1,
     is_moderator: user.is_moderator === 1,
+    admin_display_name: normalizeStaffDisplayName(user.admin_display_name),
+    moderator_display_name: normalizeStaffDisplayName(user.moderator_display_name),
+    display_name: getUserDefaultDisplayName(user),
     theme: normalizeTheme(user.theme),
     account_number: getAccountNumberByUserId(user.id)
   };
@@ -934,7 +1018,9 @@ function toSessionUser(user) {
 function getUserForSessionById(userId) {
   return db
     .prepare(
-      "SELECT id, username, is_admin, is_moderator, theme FROM users WHERE id = ?"
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme
+       FROM users
+       WHERE id = ?`
     )
     .get(userId);
 }
@@ -988,7 +1074,7 @@ function findOrCreateOAuthUser(provider, profile) {
   }
   const userByProvider = db
     .prepare(
-      `SELECT id, username, is_admin, is_moderator, theme
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme
        FROM users
        WHERE ${providerColumn} = ?`
     )
@@ -1001,7 +1087,7 @@ function findOrCreateOAuthUser(provider, profile) {
   if (email) {
     const userByEmail = db
       .prepare(
-        `SELECT id, username, is_admin, is_moderator, theme, ${providerColumn} AS provider_value
+        `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme, ${providerColumn} AS provider_value
          FROM users
          WHERE email = ?`
       )
@@ -1720,6 +1806,10 @@ app.use((req, res, next) => {
     req.session.guest_theme = normalizeTheme(req.session.guest_theme);
   }
 
+  req.session.preferred_character_ids = normalizePreferredCharacterMap(
+    req.session.preferred_character_ids
+  );
+
   if (req.session.user) {
     const user = getUserForSessionById(req.session.user.id);
 
@@ -1731,6 +1821,7 @@ app.use((req, res, next) => {
   }
 
   res.locals.currentUser = req.session.user || null;
+  res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
   res.locals.oauthEnabled = {
     google: GOOGLE_AUTH_ENABLED,
     facebook: FACEBOOK_AUTH_ENABLED
@@ -1991,7 +2082,7 @@ app.post("/login", (req, res) => {
 
   const user = db
     .prepare(
-      `SELECT id, username, password_hash, is_admin, is_moderator, theme, email_verified
+      `SELECT id, username, password_hash, is_admin, is_moderator, admin_display_name, moderator_display_name, theme, email_verified
        FROM users
        WHERE username = ?`
     )
@@ -2665,6 +2756,10 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     });
   }
 
+  if (isOwner) {
+    rememberPreferredCharacter(req, character);
+  }
+
   const rooms = db
     .prepare(
       `SELECT r.id, r.name, r.teaser, r.server_id, r.created_at, r.created_by_user_id,
@@ -2865,6 +2960,10 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}#roomlist`);
   }
 
+  if (character.user_id === req.session.user.id) {
+    rememberPreferredCharacter(req, character);
+  }
+
   const roomNameKey = toRoomNameKey(roomName);
   const existingRoom = db
     .prepare(
@@ -2875,7 +2974,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     .get(normalizeServer(character.server_id), req.session.user.id, roomNameKey);
 
   if (existingRoom) {
-    return res.redirect(`/chat?room_id=${existingRoom.id}`);
+    return res.redirect(`/chat?room_id=${existingRoom.id}&character_id=${character.id}`);
   }
 
   const info = db.prepare(
@@ -2890,7 +2989,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     normalizeServer(character.server_id)
   );
 
-  return res.redirect(`/chat?room_id=${info.lastInsertRowid}`);
+  return res.redirect(`/chat?room_id=${info.lastInsertRowid}&character_id=${character.id}`);
 });
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
@@ -2911,6 +3010,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
     });
+  }
+
+  if (isOwner) {
+    rememberPreferredCharacter(req, character);
   }
 
   const guestbookPages = ensureGuestbookPages(id);
@@ -2968,6 +3071,10 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   if (!content) {
     setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
     return res.redirect(`/characters/${id}/guestbook`);
+  }
+
+  if (character.user_id === req.session.user.id) {
+    rememberPreferredCharacter(req, character);
   }
 
   const pages = ensureGuestbookPages(id);
@@ -3246,6 +3353,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
 app.get("/chat", requireAuth, (req, res) => {
   const requestedServerId = normalizeServer(req.query.server);
   const requestedStandardRoomId = String(req.query.standard_room || "").trim().toLowerCase();
+  const requestedCharacterId = Number(req.query.character_id);
   const roomId = Number(req.query.room_id);
   let activeServerId = requestedServerId;
   let activeRoom = null;
@@ -3285,17 +3393,19 @@ app.get("/chat", requireAuth, (req, res) => {
   }
 
   if (!activeCharacter) {
-    const preferredCharacter = db
-      .prepare(
-        `SELECT id, name, server_id
-         FROM characters
-         WHERE user_id = ? AND server_id = ?
-         ORDER BY lower(name) ASC, id ASC
-         LIMIT 1`
-      )
-      .get(req.session.user.id, activeServerId);
+    const preferredCharacterIdFromSession = getPreferredCharacterIdFromSession(req, activeServerId);
+    const chosenCharacterId =
+      Number.isInteger(requestedCharacterId) && requestedCharacterId > 0
+        ? requestedCharacterId
+        : preferredCharacterIdFromSession;
+    const preferredCharacter = getPreferredCharacterForUser(
+      req.session.user.id,
+      activeServerId,
+      chosenCharacterId
+    );
 
     if (preferredCharacter) {
+      rememberPreferredCharacter(req, preferredCharacter);
       activeCharacter = {
         id: preferredCharacter.id,
         name: preferredCharacter.name,
@@ -3347,7 +3457,7 @@ function getAdminUsersOverview() {
   return db
     .prepare(
       `SELECT u.id, u.username, ${emailExpr}, ${birthDateExpr}, ${loginIpExpr}, ${loginAtExpr},
-              u.is_admin, u.is_moderator, u.created_at,
+              u.is_admin, u.is_moderator, u.admin_display_name, u.moderator_display_name, u.created_at,
               (
                 SELECT COUNT(*)
                 FROM users ux
@@ -3560,6 +3670,7 @@ app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) 
 
   const nextValue = action === "promote" ? 1 : 0;
   db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(nextValue, targetId);
+  emitHomeStatsUpdate();
 
   if (nextValue === 1) {
     setFlash(req, "success", `User ${targetUser.username} ist jetzt Admin.`);
@@ -3592,6 +3703,7 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
   const action = req.body.action === "demote" ? "demote" : "promote";
   const nextValue = action === "promote" ? 1 : 0;
   db.prepare("UPDATE users SET is_moderator = ? WHERE id = ?").run(nextValue, targetId);
+  emitHomeStatsUpdate();
 
   if (nextValue === 1) {
     setFlash(req, "success", `User ${targetUser.username} ist jetzt Moderator.`);
@@ -3613,6 +3725,8 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
+  const adminDisplayName = normalizeStaffDisplayName(req.body.admin_display_name || "");
+  const moderatorDisplayName = normalizeStaffDisplayName(req.body.moderator_display_name || "");
 
   if (!USERNAME_PATTERN.test(username)) {
     setFlash(
@@ -3634,7 +3748,11 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
   }
 
   const targetUser = db
-    .prepare("SELECT id, username, email, birth_date FROM users WHERE id = ?")
+    .prepare(
+      `SELECT id, username, email, birth_date, admin_display_name, moderator_display_name
+       FROM users
+       WHERE id = ?`
+    )
     .get(targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
@@ -3659,12 +3777,11 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
     }
   }
 
-  db.prepare("UPDATE users SET username = ?, email = ?, birth_date = ? WHERE id = ?").run(
-    username,
-    email,
-    birthDate,
-    targetId
-  );
+  db.prepare(
+    `UPDATE users
+     SET username = ?, email = ?, birth_date = ?, admin_display_name = ?, moderator_display_name = ?
+     WHERE id = ?`
+  ).run(username, email, birthDate, adminDisplayName, moderatorDisplayName, targetId);
 
   if (targetId === Number(req.session.user?.id)) {
     const refreshed = getUserForSessionById(targetId);
@@ -3673,6 +3790,7 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
     }
   }
 
+  emitHomeStatsUpdate();
   setFlash(req, "success", `Basisdaten für ${targetUser.username} gespeichert.`);
   return res.redirect("/admin");
 });
@@ -3826,6 +3944,10 @@ app.use((err, req, res, next) => {
 io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, () => {
     socket.data.user = socket.request.session?.user || null;
+    socket.data.preferredCharacterIds = normalizePreferredCharacterMap(
+      socket.request.session?.preferred_character_ids
+    );
+    socket.data.activeCharacterId = null;
     next();
   });
 });
@@ -3837,31 +3959,38 @@ function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID) {
   return `lobby:${normalizeServer(serverId)}`;
 }
 
-function getPreferredCharacterForUser(userId, serverId = DEFAULT_SERVER_ID) {
+function getPreferredCharacterForUser(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  preferredCharacterId = null
+) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return null;
 
   const normalizedServerId = normalizeServer(serverId);
-  return (
-    db
+  const parsedPreferredCharacterId = Number(preferredCharacterId);
+  if (Number.isInteger(parsedPreferredCharacterId) && parsedPreferredCharacterId > 0) {
+    const preferredCharacter = db
       .prepare(
-        `SELECT id, name
+        `SELECT id, name, server_id
          FROM characters
-         WHERE user_id = ? AND server_id = ?
-         ORDER BY lower(name) ASC, id ASC
-         LIMIT 1`
+         WHERE id = ? AND user_id = ? AND server_id = ?`
       )
-      .get(parsedUserId, normalizedServerId) ||
-    db
-      .prepare(
-        `SELECT id, name
-         FROM characters
-         WHERE user_id = ?
-         ORDER BY lower(name) ASC, id ASC
-         LIMIT 1`
-      )
-      .get(parsedUserId)
-  );
+      .get(parsedPreferredCharacterId, parsedUserId, normalizedServerId);
+    if (preferredCharacter) {
+      return preferredCharacter;
+    }
+  }
+
+  return db
+    .prepare(
+      `SELECT id, name, server_id
+       FROM characters
+       WHERE user_id = ? AND server_id = ?
+       ORDER BY lower(name) ASC, id ASC
+       LIMIT 1`
+    )
+    .get(parsedUserId, normalizedServerId);
 }
 
 function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
@@ -3888,6 +4017,14 @@ function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
   return getSocketsInChannel(roomId, serverId).filter(
     (memberSocket) => Number(memberSocket?.data?.user?.id) === parsedUserId
   );
+}
+
+function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
+  const preferredCharacter = getPreferredCharacterForUser(user?.id, serverId, preferredCharacterId);
+  if (preferredCharacter?.name) {
+    return String(preferredCharacter.name).trim();
+  }
+  return getUserDefaultDisplayName(user);
 }
 
 function socketChannelForRoomWatch(roomId, serverId = DEFAULT_SERVER_ID) {
@@ -3941,6 +4078,26 @@ function emitSystemChatMessage(roomId, serverId, content) {
   });
 }
 
+function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
+  const normalizedServerId = normalizeServer(serverId);
+  const activeCharacterId = Number(socket?.data?.activeCharacterId);
+  if (Number.isInteger(activeCharacterId) && activeCharacterId > 0) {
+    return activeCharacterId;
+  }
+
+  const preferredMap = normalizePreferredCharacterMap(socket?.data?.preferredCharacterIds);
+  return preferredMap[normalizedServerId] || null;
+}
+
+function getSocketDisplayName(socket, serverId = DEFAULT_SERVER_ID) {
+  const user = socket?.data?.user;
+  return getCurrentChannelDisplayName(
+    user,
+    serverId,
+    getSocketPreferredCharacterId(socket, serverId)
+  );
+}
+
 function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   const sockets = getSocketsInChannel(roomId, serverId);
   if (!sockets.length) {
@@ -3958,8 +4115,12 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
     }
 
     seenUserIds.add(userId);
-    const chosenCharacter = getPreferredCharacterForUser(userId, serverId);
-    const displayName = String(chosenCharacter?.name || user.username || "").trim();
+    const chosenCharacter = getPreferredCharacterForUser(
+      userId,
+      serverId,
+      getSocketPreferredCharacterId(memberSocket, serverId)
+    );
+    const displayName = getSocketDisplayName(memberSocket, serverId);
 
     onlineCharacters.push({
       user_id: userId,
@@ -4103,8 +4264,11 @@ io.on("connection", (socket) => {
       payload && typeof payload === "object" ? payload.roomId : payload;
     const rawServerId =
       payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
+    const rawCharacterId =
+      payload && typeof payload === "object" ? payload.characterId : null;
 
     const parsedRoomId = Number(rawRoomId);
+    const parsedCharacterId = Number(rawCharacterId);
     const nextRoomId =
       Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
     let nextServerId = normalizeServer(rawServerId);
@@ -4135,18 +4299,43 @@ io.on("connection", (socket) => {
     const isSameChannel =
       previousServerId === nextServerId &&
       previousRoomId === nextRoomId;
-    const preferredCharacter = getPreferredCharacterForUser(socket.data.user.id, nextServerId);
-    const displayName = String(preferredCharacter?.name || socket.data.user.username || "").trim() ||
-      `User ${socket.data.user.id}`;
+    const previousDisplayName = previousServerId
+      ? getSocketDisplayName(socket, previousServerId)
+      : "";
+    const preferredCharacterId =
+      Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+        ? parsedCharacterId
+        : getSocketPreferredCharacterId(socket, nextServerId);
+    const preferredCharacter = getPreferredCharacterForUser(
+      socket.data.user.id,
+      nextServerId,
+      preferredCharacterId
+    );
+    const nextDisplayName = preferredCharacter?.name
+      ? String(preferredCharacter.name).trim()
+      : getUserDefaultDisplayName(socket.data.user);
+
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
       if (!isSameChannel) {
         emitSystemChatMessage(
           previousRoomId,
           previousServerId,
-          buildRoomPresenceMessage("leave", displayName)
+          buildRoomPresenceMessage("leave", previousDisplayName)
         );
       }
+    }
+
+    socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
+    if (preferredCharacter?.id) {
+      socket.data.preferredCharacterIds[nextServerId] = preferredCharacter.id;
+      socket.data.activeCharacterId = preferredCharacter.id;
+      if (socket.request.session) {
+        socket.request.session.preferred_character_ids = socket.data.preferredCharacterIds;
+        socket.request.session.save(() => {});
+      }
+    } else {
+      socket.data.activeCharacterId = null;
     }
 
     socket.data.roomId = nextRoomId;
@@ -4158,7 +4347,7 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         nextRoomId,
         nextServerId,
-        buildRoomPresenceMessage("enter", displayName)
+        buildRoomPresenceMessage("enter", nextDisplayName)
       );
     }
     clearPendingRoomDeletion(nextRoomId);
@@ -4205,7 +4394,7 @@ io.on("connection", (socket) => {
     if (!content) return;
 
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
-      username: socket.data.user.username,
+      username: getSocketDisplayName(socket, serverId),
       content,
       created_at: formatChatTimestamp()
     });
@@ -4252,11 +4441,10 @@ io.on("connection", (socket) => {
     }
 
     const senderSockets = getUserSocketsInChannel(roomId, serverId, socket.data.user.id);
-    const senderCharacter = getPreferredCharacterForUser(socket.data.user.id, serverId);
-    const recipientCharacter = getPreferredCharacterForUser(targetUserId, serverId);
-    const senderName = String(senderCharacter?.name || socket.data.user.username || "").trim() ||
-      `User ${socket.data.user.id}`;
-    const recipientName = String(recipientCharacter?.name || "").trim() || `User ${targetUserId}`;
+    const senderName = getSocketDisplayName(socket, serverId);
+    const recipientName = recipientSockets[0]
+      ? getSocketDisplayName(recipientSockets[0], serverId)
+      : `User ${targetUserId}`;
     const createdAt = formatChatTimestamp();
 
     const senderPayload = {
@@ -4291,8 +4479,7 @@ io.on("connection", (socket) => {
       ? normalizeServer(socket.data.serverId)
       : null;
     if (previousServerId) {
-      const preferredCharacter = getPreferredCharacterForUser(socket.data.user?.id, previousServerId);
-      const displayName = String(preferredCharacter?.name || socket.data.user?.username || "").trim() ||
+      const displayName = getSocketDisplayName(socket, previousServerId) ||
         `User ${socket.data.user?.id || "?"}`;
       emitSystemChatMessage(
         previousRoomId,

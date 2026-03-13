@@ -1,5 +1,8 @@
 <%- include("partials/start", { hideTopbar: true, activeCharacter, pageClass: "page-rp-screen page-chat" }) %>
 
+<% const chatAccountDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
+<% const chatIdentityName = activeCharacter ? activeCharacter.name : chatAccountDisplayName; %>
+
 <section class="rp-shell">
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
@@ -51,7 +54,10 @@
       </summary>
       <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
-          <strong><%= currentUser ? currentUser.username : (activeCharacter ? activeCharacter.name : "User") %></strong>
+          <strong><%= chatIdentityName %></strong>
+          <% if (chatAccountDisplayName && chatAccountDisplayName !== chatIdentityName) { %>
+            <span>Konto: <%= chatAccountDisplayName %></span>
+          <% } %>
           <% if (currentUser) { %>
             <span>Account Nr.: <%= currentUser.account_number %></span>
           <% } %>
@@ -130,6 +136,8 @@
           data-room-id="<%= activeRoom ? activeRoom.id : '' %>"
           data-server-id="<%= activeServerId %>"
           data-current-character-name="<%= activeCharacter ? activeCharacter.name : '' %>"
+          data-current-display-name="<%= chatIdentityName %>"
+          data-active-character-id="<%= activeCharacter ? activeCharacter.id : '' %>"
         >
           <% messages.forEach((msg) => { %>
             <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">

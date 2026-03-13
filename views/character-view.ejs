@@ -1,6 +1,8 @@
 <%- include("partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
 
 <section class="rp-shell">
+  <% const roomlistAccountDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
+  <% const roomlistIdentityName = isOwner ? character.name : roomlistAccountDisplayName; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -31,7 +33,10 @@
       </summary>
       <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
-          <strong><%= currentUser ? currentUser.username : character.name %></strong>
+          <strong><%= roomlistIdentityName %></strong>
+          <% if (roomlistAccountDisplayName && roomlistAccountDisplayName !== roomlistIdentityName) { %>
+            <span>Konto: <%= roomlistAccountDisplayName %></span>
+          <% } %>
           <span>Charakter: <%= character.name %></span>
           <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
@@ -94,7 +99,7 @@
               <div class="rp-room-standard-card">
                 <a
                   class="rp-room-link rp-room-link-standard"
-                  href="/chat?server=<%= character.server_id %>&standard_room=<%= standardRoom.id %>"
+                  href="/chat?server=<%= character.server_id %>&standard_room=<%= standardRoom.id %>&character_id=<%= character.id %>"
                   title="Treffpunkt betreten"
                 >
                   <span class="rp-room-link-name"><%= standardRoom.name %></span>
@@ -144,7 +149,7 @@
               <div class="rp-room-standard-card rp-room-custom-card">
                 <a
                   class="rp-room-link-name rp-room-custom-link"
-                  href="/chat?room_id=<%= room.id %>"
+                  href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
                   title="Raum betreten"
                 ><%= room.name %></a>
                 <div class="rp-room-custom-meta">

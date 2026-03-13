@@ -18,7 +18,10 @@
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
+  const currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
+  const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
+  const activeCharacterId = Number(activeCharacterIdRaw);
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   let selectedOnlineEntry = null;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
@@ -160,7 +163,8 @@
   socket.on("connect", () => {
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
-      serverId
+      serverId,
+      characterId: Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null
     });
   });
 
@@ -183,7 +187,7 @@
         if (
           actorName &&
           entrySystemSuffixes.includes(matchingSuffix) &&
-          actorName.localeCompare(currentCharacterName, "de", { sensitivity: "base" }) !== 0
+          actorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0
         ) {
           playEntryTone();
         }
