@@ -1,0 +1,90 @@
+<%- include("partials/start") %>
+
+<section class="panel admin-user-page">
+  <div class="header-line">
+    <div>
+      <h1>Account</h1>
+      <p class="muted">Hier kannst du deine Kontodaten bearbeiten.</p>
+    </div>
+    <div class="dashboard-server-actions">
+      <a class="btn btn-secondary" href="/dashboard">Zur&uuml;ck zum Dashboard</a>
+    </div>
+  </div>
+
+  <% if (error) { %>
+    <div class="flash flash-error"><%= error %></div>
+  <% } %>
+
+  <div class="admin-user-meta">
+    <span>Account Nr.: <%= accountUser.account_number %></span>
+    <span>Aktueller Account-Name: <%= accountUser.username %></span>
+    <span>Erstellt: <%= accountUser.created_at %></span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Kontodaten bearbeiten</h2>
+  <form method="POST" action="/account/update" class="form">
+    <label>
+      Account-Name
+      <input
+        name="username"
+        maxlength="24"
+        value="<%= formValues.username %>"
+        required
+        autocomplete="username"
+      />
+    </label>
+
+    <% if (usernameChangeInfo.is_admin_bypass) { %>
+      <p class="muted">
+        Als Admin kannst du deinen Account-Namen jederzeit &auml;ndern.
+      </p>
+    <% } else if (usernameChangeInfo.can_change) { %>
+      <p class="muted">
+        Du kannst deinen Account-Namen jetzt &auml;ndern. Danach ist die n&auml;chste
+        &Auml;nderung wieder nach 182 Tagen m&ouml;glich.
+      </p>
+    <% } else { %>
+      <p class="muted">
+        Dein n&auml;chster Account-Namenswechsel ist ab
+        <strong><%= usernameChangeInfo.available_at_text %></strong> m&ouml;glich.
+      </p>
+    <% } %>
+
+    <label>
+      E-Mail
+      <input
+        name="email"
+        maxlength="255"
+        value="<%= formValues.email %>"
+        placeholder="name@domain.tld"
+        autocomplete="email"
+      />
+    </label>
+
+    <label>
+      Geburtsdatum
+      <input
+        type="date"
+        name="birth_date"
+        max="<%= new Date().toISOString().slice(0, 10) %>"
+        value="<%= formValues.birth_date || '' %>"
+      />
+    </label>
+
+    <div class="dashboard-server-actions">
+      <button class="btn" type="submit">Account speichern</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Hinweis</h2>
+  <p class="muted">
+    Die 182-Tage-Sperre gilt nur f&uuml;r normale Nutzer. Admins sind davon ausgenommen.
+    E-Mail und Geburtsdatum kannst du jederzeit anpassen.
+  </p>
+</section>
+
+<%- include("partials/end") %>

@@ -151,15 +151,18 @@
 
     <% if (helpTopic.slug === "chat-fluestern") { %>
       <section class="panel help-section">
-        <h2>Chat & Flüstern</h2>
+        <h2>Chat &amp; Fluestern</h2>
         <p>Im Chat siehst du links die Online-Charaktere und rechts den Verlauf.</p>
         <ul class="help-list">
           <li>Die Glocke oben schaltet den Eintrittston an oder aus.</li>
-          <li>Ein Klick auf einen Namen links öffnet Gästebuch oder Flüstern.</li>
+          <li>Ein Klick auf einen Namen links oeffnet Gaestebuch oder Fluestern.</li>
           <li>Beim Designwechsel bleibst du im Raum und die laufenden Nachrichten bleiben sichtbar.</li>
-          <li><code>/log</code> startet ein Chat-Log. In benutzererstellten Räumen darf das nur der Ersteller, Admins und Moderatoren dürfen es überall nutzen.</li>
-          <li><code>/logoff</code> beendet das Log wieder. Danach wird es per E-Mail an alle gesendet, die währenddessen im Raum waren.</li>
-          <li>Das Log kommt zusätzlich als PDF- und Word-Anhang, mit übernommener Kursiv-/Fett-Formatierung und farblich hervorgehobenen Namen.</li>
+          <li><code>/log</code> startet ein Chat-Log. In benutzererstellten Raeumen darf das nur der Ersteller nutzen, Admins und Moderatoren duerfen es ueberall.</li>
+          <li>Beim Start erscheint kursiv die Systemmeldung <code>Log wurde gestartet.</code></li>
+          <li><code>/logoff</code> beendet das Log wieder. Danach wird es per E-Mail an alle gesendet, die waehrenddessen im Raum waren.</li>
+          <li>Beim Beenden erscheint kursiv die Systemmeldung <code>Log wurde beendet.</code></li>
+          <li>Das Log wird zuerst mit PDF- und Word-Anhang verschickt. Wenn der Mailserver das nicht akzeptiert, gibt es automatisch einen Fallback auf nur PDF oder notfalls nur die E-Mail selbst.</li>
+          <li>Formatierungen wie kursiv, fett, Emotes und farblich hervorgehobene Namen werden im Log uebernommen.</li>
           <li>Wenn alle den Raum verlassen, endet ein aktives Log automatisch und wird ebenfalls per E-Mail verschickt.</li>
         </ul>
       </section>

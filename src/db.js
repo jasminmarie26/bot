@@ -35,6 +35,7 @@ db.exec(`
     facebook_id TEXT DEFAULT '',
     last_login_ip TEXT DEFAULT '',
     last_login_at TEXT DEFAULT '',
+    username_changed_at TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -257,6 +258,10 @@ if (!userColumns.includes("last_login_ip")) {
 
 if (!userColumns.includes("last_login_at")) {
   db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("username_changed_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN username_changed_at TEXT DEFAULT ''");
 }
 
 if (!characterColumns.includes("festplay_id")) {

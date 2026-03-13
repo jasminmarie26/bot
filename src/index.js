@@ -189,6 +189,8 @@ const EMAIL_VERIFICATION_MAIL_ENABLED =
   (SMTP_AUTH_ENABLED || (!SMTP_USER && !SMTP_PASS));
 let verificationMailer = null;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_.+\- ]{3,24}$/;
+const USERNAME_CHANGE_COOLDOWN_DAYS = 182;
+const USERNAME_CHANGE_COOLDOWN_MS = USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
@@ -636,6 +638,62 @@ function normalizeBirthDate(value) {
   return prepared;
 }
 
+function parseSqliteDateTime(value) {
+  const prepared = String(value || "").trim();
+  if (!prepared) return null;
+
+  let isoCandidate = prepared;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(prepared)) {
+    isoCandidate = `${prepared}T00:00:00Z`;
+  } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(prepared)) {
+    isoCandidate = prepared.replace(" ", "T") + "Z";
+  }
+
+  const parsed = new Date(isoCandidate);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatGermanDate(value) {
+  const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
+  if (!parsed) return "";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(parsed);
+}
+
+function getUsernameChangeAvailability(user) {
+  const isAdmin = Boolean(user?.is_admin === 1 || user?.is_admin === true);
+  if (isAdmin) {
+    return {
+      is_admin_bypass: true,
+      can_change: true,
+      available_at: null,
+      available_at_text: ""
+    };
+  }
+
+  const lastChangedAt = parseSqliteDateTime(user?.username_changed_at);
+  if (!lastChangedAt) {
+    return {
+      is_admin_bypass: false,
+      can_change: true,
+      available_at: null,
+      available_at_text: ""
+    };
+  }
+
+  const availableAt = new Date(lastChangedAt.getTime() + USERNAME_CHANGE_COOLDOWN_MS);
+  return {
+    is_admin_bypass: false,
+    can_change: Date.now() >= availableAt.getTime(),
+    available_at: availableAt,
+    available_at_text: formatGermanDate(availableAt)
+  };
+}
+
 function getEmailDomain(email) {
   const normalized = normalizeEmail(email);
   const atIndex = normalized.lastIndexOf("@");
@@ -731,6 +789,39 @@ function renderForgotUsernamePage(req, res, options = {}) {
   return renderAuthPage(req, res, {
     ...options,
     mode: "forgot-username"
+  });
+}
+
+function renderAccountPage(req, res, options = {}) {
+  const currentUserId = Number(req.session.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    req.session.user = null;
+    setFlash(req, "error", "Account konnte nicht zugeordnet werden.");
+    return res.redirect("/login");
+  }
+
+  const accountUser = options.accountUser || getAccountUserById(currentUserId);
+  if (!accountUser) {
+    req.session.user = null;
+    setFlash(req, "error", "Account existiert nicht mehr.");
+    return res.redirect("/login");
+  }
+
+  const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
+
+  return res.render("account", {
+    title: options.title || "Account",
+    error: options.error || null,
+    accountUser: {
+      ...accountUser,
+      account_number: getAccountNumberByUserId(accountUser.id)
+    },
+    formValues: {
+      username: options.values?.username ?? accountUser.username ?? "",
+      email: options.values?.email ?? accountUser.email ?? "",
+      birth_date: options.values?.birth_date ?? accountUser.birth_date ?? ""
+    },
+    usernameChangeInfo
   });
 }
 
@@ -1329,6 +1420,16 @@ function getUserForSessionById(userId) {
     .get(userId);
 }
 
+function getAccountUserById(userId) {
+  return db
+    .prepare(
+      `SELECT id, username, email, birth_date, is_admin, created_at, username_changed_at
+       FROM users
+       WHERE id = ?`
+    )
+    .get(userId);
+}
+
 function makeUsernameBase(input) {
   const prepared = String(input || "")
     .toLowerCase()
@@ -1432,8 +1533,8 @@ function findOrCreateOAuthUser(provider, profile) {
   const info = db
     .prepare(
       `INSERT INTO users
-       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id)
-       VALUES (?, ?, ?, 0, ?, ?, ?, ?)`
+       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id, username_changed_at)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
     )
     .run(
       username,
@@ -2299,8 +2400,8 @@ app.post("/register", async (req, res) => {
     const info = db
       .prepare(
         `INSERT INTO users
-         (username, password_hash, is_admin, theme, email, birth_date, email_verified, email_verification_token, last_login_ip, last_login_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)`
+         (username, password_hash, is_admin, theme, email, birth_date, email_verified, email_verification_token, last_login_ip, last_login_at, username_changed_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
       )
       .run(
         username,
@@ -2677,6 +2778,106 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/");
   });
+});
+
+app.get("/account", requireAuth, (req, res) => {
+  return renderAccountPage(req, res);
+});
+
+app.post("/account/update", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    req.session.user = null;
+    setFlash(req, "error", "Account konnte nicht zugeordnet werden.");
+    return res.redirect("/login");
+  }
+
+  const accountUser = getAccountUserById(currentUserId);
+  if (!accountUser) {
+    req.session.user = null;
+    setFlash(req, "error", "Account existiert nicht mehr.");
+    return res.redirect("/login");
+  }
+
+  const username = String(req.body.username || "").trim().slice(0, 24);
+  const email = normalizeEmail(req.body.email || "");
+  const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
+  const usernameChanged = username !== accountUser.username;
+  const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
+
+  const renderWithError = (errorMessage) =>
+    renderAccountPage(req, res, {
+      error: errorMessage,
+      accountUser,
+      values: {
+        username,
+        email,
+        birth_date: rawBirthDate
+      }
+    });
+
+  if (!USERNAME_PATTERN.test(username)) {
+    return renderWithError(
+      "Account-Name nur mit Buchstaben, Zahlen, Leerzeichen und . _ + - (3-24 Zeichen)."
+    );
+  }
+
+  if (email && !EMAIL_PATTERN.test(email)) {
+    return renderWithError("Bitte eine gueltige E-Mail-Adresse verwenden.");
+  }
+
+  if (rawBirthDate && !birthDate) {
+    return renderWithError("Bitte ein gueltiges Geburtsdatum verwenden.");
+  }
+
+  if (usernameChanged && !usernameChangeInfo.can_change) {
+    return renderWithError(
+      `Du kannst deinen Account-Namen erst wieder ab ${usernameChangeInfo.available_at_text} aendern.`
+    );
+  }
+
+  const usernameOwner = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
+  if (usernameOwner && Number(usernameOwner.id) !== currentUserId) {
+    return renderWithError("Dieser Account-Name ist bereits vergeben.");
+  }
+
+  if (email) {
+    const emailOwner = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    if (emailOwner && Number(emailOwner.id) !== currentUserId) {
+      return renderWithError("Diese E-Mail-Adresse wird bereits verwendet.");
+    }
+  }
+
+  db.prepare(
+    `UPDATE users
+     SET username = ?,
+         email = ?,
+         birth_date = ?,
+         username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
+     WHERE id = ?`
+  ).run(username, email, birthDate, usernameChanged ? 1 : 0, currentUserId);
+
+  const refreshedUser = getUserForSessionById(currentUserId);
+  if (refreshedUser) {
+    req.session.user = toSessionUser(refreshedUser);
+  }
+
+  if (usernameChanged) {
+    if (usernameChangeInfo.is_admin_bypass) {
+      setFlash(req, "success", "Account gespeichert. Dein Account-Name wurde aktualisiert.");
+    } else {
+      setFlash(
+        req,
+        "success",
+        `Account gespeichert. Dein Account-Name wurde aktualisiert. Die naechste Aenderung ist fuer normale Nutzer wieder in ${USERNAME_CHANGE_COOLDOWN_DAYS} Tagen moeglich.`
+      );
+    }
+  } else {
+    setFlash(req, "success", "Account gespeichert.");
+  }
+
+  return res.redirect("/account");
 });
 
 app.post("/account/delete", requireAuth, async (req, res) => {
@@ -4167,9 +4368,12 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
 
   db.prepare(
     `UPDATE users
-     SET username = ?, email = ?, birth_date = ?
+     SET username = ?,
+         email = ?,
+         birth_date = ?,
+         username_changed_at = CASE WHEN ? != ? THEN CURRENT_TIMESTAMP ELSE username_changed_at END
      WHERE id = ?`
-  ).run(username, email, birthDate, targetId);
+  ).run(username, email, birthDate, username, targetUser.username, targetId);
 
   if (targetId === Number(req.session.user?.id)) {
     const refreshed = getUserForSessionById(targetId);
