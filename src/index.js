@@ -2861,9 +2861,9 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     .prepare(
       `SELECT id, name
        FROM chat_rooms
-       WHERE server_id = ? AND name_key = ?`
+       WHERE server_id = ? AND created_by_user_id = ? AND name_key = ?`
     )
-    .get(normalizeServer(character.server_id), roomNameKey);
+    .get(normalizeServer(character.server_id), req.session.user.id, roomNameKey);
 
   if (existingRoom) {
     return res.redirect(`/chat?room_id=${existingRoom.id}`);
