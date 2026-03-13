@@ -1766,7 +1766,8 @@ app.get("/", (req, res) => {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
     stats: getLoginStats(),
     siteUpdates: getRecentSiteUpdates(12),
-    homeContent
+    homeContent,
+    pageClass: "page-home-screen"
   });
 });
 

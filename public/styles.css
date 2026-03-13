@@ -1130,6 +1130,13 @@ a:hover {
   margin-bottom: 0;
 }
 
+.page-home-screen .home-main .updates-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
 .updates-header {
   display: flex;
   align-items: center;
@@ -1188,6 +1195,11 @@ a:hover {
   max-height: 260px;
   overflow-y: auto;
   padding-right: 0.1rem;
+}
+
+.page-home-screen .site-updates-list {
+  max-height: none;
+  min-height: 0;
 }
 
 .update-item {
@@ -1394,8 +1406,35 @@ a:hover {
   align-items: start;
 }
 
+.page-home-screen {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.page-home-screen .container {
+  height: calc(100vh - 5.15rem);
+  height: calc(100dvh - 5.15rem);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 1rem;
+}
+
+.page-home-screen .home-layout {
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
+}
+
 .home-main {
   min-width: 0;
+}
+
+.page-home-screen .home-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
 }
 
 .home-main .grid {
@@ -1411,9 +1450,22 @@ a:hover {
   top: 5.6rem;
 }
 
+.page-home-screen .home-stats {
+  position: static;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .home-stats-shell {
   display: grid;
   gap: 0.95rem;
+}
+
+.page-home-screen .home-stats-shell {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.12rem;
 }
 
 .home-stats-title {
