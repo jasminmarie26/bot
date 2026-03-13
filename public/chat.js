@@ -79,18 +79,34 @@
     const context = getNotificationAudioContext();
     if (!context || context.state !== "running") return;
 
-    const oscillator = context.createOscillator();
+    const lead = context.createOscillator();
+    const shimmer = context.createOscillator();
     const gain = context.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(932, context.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(1318, context.currentTime + 0.14);
+
+    lead.type = "triangle";
+    shimmer.type = "sine";
+
+    lead.frequency.setValueAtTime(932, context.currentTime);
+    lead.frequency.exponentialRampToValueAtTime(1396, context.currentTime + 0.1);
+    lead.frequency.exponentialRampToValueAtTime(1174, context.currentTime + 0.28);
+
+    shimmer.frequency.setValueAtTime(1396, context.currentTime);
+    shimmer.frequency.exponentialRampToValueAtTime(1760, context.currentTime + 0.12);
+    shimmer.frequency.exponentialRampToValueAtTime(1318, context.currentTime + 0.28);
+
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.24);
-    oscillator.connect(gain);
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.38);
+
+    lead.connect(gain);
+    shimmer.connect(gain);
     gain.connect(context.destination);
-    oscillator.start(context.currentTime);
-    oscillator.stop(context.currentTime + 0.25);
+
+    lead.start(context.currentTime);
+    shimmer.start(context.currentTime);
+    lead.stop(context.currentTime + 0.4);
+    shimmer.stop(context.currentTime + 0.4);
   }
 
   if (soundToggle) {
