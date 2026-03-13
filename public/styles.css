@@ -1820,6 +1820,7 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
+  padding-top: 0.32rem;
 }
 
 .dashboard-accordion {
