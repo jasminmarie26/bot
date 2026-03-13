@@ -1,4 +1,13 @@
 (() => {
+  const roomLockIconMarkup = [
+    '<svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
+    '<path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>',
+    '<path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>',
+    '<rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>',
+    '<path d="M12 13.15v2.8"/>',
+    '</svg>'
+  ].join("");
+
   const chatBox = document.getElementById("chat-box");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
@@ -349,16 +358,16 @@
     let lockNode = chatRoomTitle.querySelector(".chat-room-lock");
 
     if (isLocked) {
-      if (!lockNode) {
-        lockNode = document.createElement("span");
-        lockNode.className = "chat-room-lock";
-        lockNode.setAttribute("aria-hidden", "true");
-        lockNode.innerHTML = "&#128274;";
-        chatRoomTitle.prepend(lockNode);
+        if (!lockNode) {
+          lockNode = document.createElement("span");
+          lockNode.className = "chat-room-lock";
+          lockNode.setAttribute("aria-hidden", "true");
+          lockNode.innerHTML = roomLockIconMarkup;
+          chatRoomTitle.prepend(lockNode);
+        }
+      } else if (lockNode) {
+        lockNode.remove();
       }
-    } else if (lockNode) {
-      lockNode.remove();
-    }
   }
 
   function appendWhisper(msg) {

@@ -5761,7 +5761,7 @@ io.on("connection", (socket) => {
     const canUseRoomLog = canManageRoomLog(socket.data.user, room);
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
 
-    if (normalizedCommand === "/raumzu" || normalizedCommand === "/abschliessen") {
+    if (normalizedCommand === "/s") {
       if (!roomId || !room) {
         socket.emit("chat:message", {
           type: "system",
@@ -5780,61 +5780,18 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (Number(room.is_locked) === 1) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: "Dieser Raum ist bereits abgeschlossen.",
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
-      db.prepare("UPDATE chat_rooms SET is_locked = 1 WHERE id = ?").run(roomId);
+      const nextLockState = Number(room.is_locked) === 1 ? 0 : 1;
+      db.prepare("UPDATE chat_rooms SET is_locked = ? WHERE id = ?").run(nextLockState, roomId);
       const refreshedRoom = getRoomWithCharacter(roomId);
-      emitSystemChatMessage(roomId, serverId, "Der Raum wurde abgeschlossen.");
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        nextLockState === 1 ? "Der Raum wurde abgeschlossen." : "Der Raum wurde geoeffnet."
+      );
       emitRoomStateUpdate(roomId, serverId, refreshedRoom);
       io.to(socketChannelForRoom(roomId, serverId)).emit("chat:room-state", {
         roomId,
-        isLocked: true
-      });
-      return;
-    }
-
-    if (normalizedCommand === "/raumauf" || normalizedCommand === "/aufschliessen") {
-      if (!roomId || !room) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: "Der gemeinsame Treffpunkt ist immer geoeffnet.",
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
-      if (!canManageRoomState) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn wieder oeffnen.",
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
-      if (Number(room.is_locked) !== 1) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: "Dieser Raum ist bereits geoeffnet.",
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
-      db.prepare("UPDATE chat_rooms SET is_locked = 0 WHERE id = ?").run(roomId);
-      const refreshedRoom = getRoomWithCharacter(roomId);
-      emitSystemChatMessage(roomId, serverId, "Der Raum wurde geoeffnet.");
-      emitRoomStateUpdate(roomId, serverId, refreshedRoom);
-      io.to(socketChannelForRoom(roomId, serverId)).emit("chat:room-state", {
-        roomId,
-        isLocked: false
+        isLocked: nextLockState === 1
       });
       return;
     }
