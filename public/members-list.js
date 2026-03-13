@@ -1,6 +1,7 @@
 (() => {
   const searchInput = document.getElementById("members-search");
   const cards = Array.from(document.querySelectorAll("[data-member-card]"));
+  const sections = Array.from(document.querySelectorAll("[data-members-section]"));
   const status = document.getElementById("members-search-status");
   if (!searchInput || !status || !cards.length) return;
 
@@ -26,6 +27,17 @@
       if (isVisible) {
         visibleCount += 1;
       }
+    });
+
+    sections.forEach((section) => {
+      const sectionCards = Array.from(section.querySelectorAll("[data-member-card]"));
+      if (!sectionCards.length) {
+        section.hidden = query.length > 0;
+        return;
+      }
+
+      const visibleSectionCards = sectionCards.filter((card) => !card.hidden);
+      section.hidden = visibleSectionCards.length === 0;
     });
 
     updateStatus(visibleCount, searchInput.value);

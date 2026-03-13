@@ -3608,7 +3608,7 @@ app.get("/dashboard", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
-  const members = db
+  const visibleMembers = db
     .prepare(
       `SELECT c.id,
               c.user_id,
@@ -3636,9 +3636,82 @@ app.get("/members", requireAuth, (req, res) => {
             : "Privat"
     }));
 
+  const staffCharacterIds = new Set();
+  const staffMembers = [];
+  const staffUsers = db
+    .prepare(
+      `SELECT u.id,
+              u.username,
+              u.is_admin,
+              u.is_moderator,
+              u.admin_character_id,
+              u.moderator_character_id,
+              admin_character.name AS admin_character_name,
+              admin_character.server_id AS admin_character_server_id,
+              moderator_character.name AS moderator_character_name,
+              moderator_character.server_id AS moderator_character_server_id
+       FROM users u
+       LEFT JOIN characters admin_character ON admin_character.id = u.admin_character_id
+       LEFT JOIN characters moderator_character ON moderator_character.id = u.moderator_character_id
+       WHERE u.is_admin = 1 OR u.is_moderator = 1
+       ORDER BY lower(u.username) ASC, u.id ASC`
+    )
+    .all();
+
+  staffUsers.forEach((user) => {
+    const adminCharacterId = Number(user.admin_character_id);
+    if (
+      user.is_admin &&
+      Number.isInteger(adminCharacterId) &&
+      adminCharacterId > 0 &&
+      String(user.admin_character_name || "").trim() &&
+      !staffCharacterIds.has(adminCharacterId)
+    ) {
+      staffCharacterIds.add(adminCharacterId);
+      staffMembers.push({
+        id: adminCharacterId,
+        name: user.admin_character_name,
+        owner_name: user.username,
+        server_id: normalizeServer(user.admin_character_server_id),
+        server_label: getServerLabel(user.admin_character_server_id),
+        visibility_label: "Rollencharakter",
+        role_label: "Administrator (A)",
+        role_style: "admin"
+      });
+    }
+
+    const moderatorCharacterId = Number(user.moderator_character_id);
+    if (
+      user.is_moderator &&
+      Number.isInteger(moderatorCharacterId) &&
+      moderatorCharacterId > 0 &&
+      String(user.moderator_character_name || "").trim() &&
+      !staffCharacterIds.has(moderatorCharacterId)
+    ) {
+      staffCharacterIds.add(moderatorCharacterId);
+      staffMembers.push({
+        id: moderatorCharacterId,
+        name: user.moderator_character_name,
+        owner_name: user.username,
+        server_id: normalizeServer(user.moderator_character_server_id),
+        server_label: getServerLabel(user.moderator_character_server_id),
+        visibility_label: "Rollencharakter",
+        role_label: "Moderator (M)",
+        role_style: "moderator"
+      });
+    }
+  });
+
+  const regularMembers = visibleMembers.filter((member) => !staffCharacterIds.has(Number(member.id)));
+  const rpMembers = regularMembers.filter((member) => normalizeServer(member.server_id) === "free-rp");
+  const erpMembers = regularMembers.filter((member) => normalizeServer(member.server_id) === "erp");
+
   return res.render("members", {
     title: "Mitgliederliste",
-    members
+    staffMembers,
+    rpMembers,
+    erpMembers,
+    memberCount: staffMembers.length + rpMembers.length + erpMembers.length
   });
 });
 

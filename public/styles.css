@@ -1830,6 +1830,28 @@ a:hover {
 
 .members-list {
   display: grid;
+  gap: 1.1rem;
+}
+
+.members-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.members-section-header {
+  padding-top: 0.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 80%, transparent);
+}
+
+.members-section-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.members-section-list {
+  display: grid;
   gap: 0.85rem;
 }
 

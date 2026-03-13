@@ -19,37 +19,54 @@
   </div>
 
   <p id="members-search-status" class="muted members-search-status">
-    <%= members.length %> Charaktere gefunden.
+    <%= memberCount %> Charaktere gefunden.
   </p>
 
   <div id="members-list" class="members-list">
-    <% if (!members.length) { %>
-      <p class="muted">Gerade sind keine sichtbaren Charaktere vorhanden.</p>
-    <% } else { %>
-      <% members.forEach((member) => { %>
-        <article
-          class="members-card"
-          data-member-card
-          data-member-name="<%= member.name.toLowerCase() %>"
-          data-member-owner="<%= String(member.owner_name || '').toLowerCase() %>"
-          data-member-server="<%= String(member.server_label || '').toLowerCase() %>"
-        >
-          <div class="members-card-main">
-            <a class="members-card-name" href="/characters/<%= member.id %>/guestbook">
-              <%= member.name %>
-            </a>
-            <div class="members-card-meta">
-              <span>Besitzer: <strong><%= member.owner_name %></strong></span>
-              <span>Server: <strong><%= member.server_label %></strong></span>
-              <span><%= member.visibility_label %></span>
-            </div>
-          </div>
-          <a class="btn btn-secondary members-card-action" href="/characters/<%= member.id %>/guestbook">
-            Gästebuch
-          </a>
-        </article>
-      <% }) %>
-    <% } %>
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>Administratoren & Moderatoren</h2>
+      </header>
+      <% if (!staffMembers || !staffMembers.length) { %>
+        <p class="muted">Noch keine Rollencharaktere gesetzt.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% staffMembers.forEach((member) => { %>
+            <%- include("partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>RP SERVER</h2>
+      </header>
+      <% if (!rpMembers || !rpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im RP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% rpMembers.forEach((member) => { %>
+            <%- include("partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>ERP SERVER</h2>
+      </header>
+      <% if (!erpMembers || !erpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im ERP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% erpMembers.forEach((member) => { %>
+            <%- include("partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
   </div>
 </section>
 

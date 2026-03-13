@@ -1,0 +1,31 @@
+<article
+  class="members-card"
+  data-member-card
+  data-member-name="<%= String(member.name || '').toLowerCase() %>"
+  data-member-owner="<%= String(member.owner_name || '').toLowerCase() %>"
+  data-member-server="<%= String(member.server_label || '').toLowerCase() %>"
+  data-member-role="<%= String(member.role_label || '').toLowerCase() %>"
+>
+  <div class="members-card-main">
+    <a
+      class="members-card-name <%= member.role_style ? `role-name-${member.role_style}` : '' %>"
+      href="/characters/<%= member.id %>/guestbook"
+    >
+      <%= member.name %>
+    </a>
+    <div class="members-card-meta">
+      <span>Besitzer: <strong><%= member.owner_name %></strong></span>
+      <span>Server: <strong><%= member.server_label %></strong></span>
+      <% if (member.role_label) { %>
+        <span class="members-card-role <%= member.role_style ? `role-name-${member.role_style}` : '' %>">
+          <%= member.role_label %>
+        </span>
+      <% } else { %>
+        <span><%= member.visibility_label %></span>
+      <% } %>
+    </div>
+  </div>
+  <a class="btn btn-secondary members-card-action" href="/characters/<%= member.id %>/guestbook">
+    Gästebuch
+  </a>
+</article>
