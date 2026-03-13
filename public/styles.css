@@ -1013,6 +1013,34 @@ a:hover {
   row-gap: 0.85rem;
 }
 
+.page-roomlist.page-rp-screen {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.page-roomlist.page-rp-screen .container {
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.page-roomlist .rp-shell {
+  display: block;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.page-roomlist .rp-room-panel {
+  display: block;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
 .page-chat .rp-room-panel > h1,
 .page-roomlist .rp-room-panel > h1 {
   margin: 0;
@@ -2329,10 +2357,9 @@ a:hover {
   grid-auto-rows: min-content;
   align-content: start;
   gap: 0.85rem;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 0.16rem;
+  height: auto;
+  overflow: visible;
+  padding-right: 0;
   padding-bottom: 0.24rem;
 }
 
@@ -2417,11 +2444,11 @@ a:hover {
 
 .page-roomlist .rp-room-list {
   min-height: 0;
-  max-height: 100%;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   align-content: start;
   grid-auto-rows: min-content;
-  padding-right: 0.16rem;
+  padding-right: 0;
 }
 
 .rp-room-list-standard {
