@@ -955,27 +955,146 @@ async function sendRoomLogEmail(payload) {
     })
     .join("\n");
 
-  await transporter.sendMail({
+  const pdfOnlyText = [
+    `Hallo ${username},`,
+    "",
+    `hier ist das Chat-Log aus ${roomLabel}.`,
+    `Gestartet: ${payload.startedAt || "-"}`,
+    `Beendet: ${payload.endedAt || "-"}`,
+    payload.endReasonText ? `Grund: ${payload.endReasonText}` : "",
+    participantNames.length ? `Beteiligte: ${participantNames.join(", ")}` : "",
+    "",
+    "Im Anhang findest du das Log als PDF.",
+    "Der Word-Anhang wurde vom Mailserver nicht akzeptiert und daher weggelassen.",
+    "",
+    "Chatverlauf:",
+    "",
+    String(payload.logText || "").trim() || "Es wurden keine Nachrichten erfasst.",
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ]
+    .filter((line, index, lines) => {
+      if (line) return true;
+      return lines[index - 1] !== "";
+    })
+    .join("\n");
+
+  const plainText = [
+    `Hallo ${username},`,
+    "",
+    `hier ist das Chat-Log aus ${roomLabel}.`,
+    `Gestartet: ${payload.startedAt || "-"}`,
+    `Beendet: ${payload.endedAt || "-"}`,
+    payload.endReasonText ? `Grund: ${payload.endReasonText}` : "",
+    participantNames.length ? `Beteiligte: ${participantNames.join(", ")}` : "",
+    "",
+    "Die Anhänge wurden vom Mailserver nicht akzeptiert.",
+    "Darum bekommst du das Log diesmal direkt in der E-Mail ohne PDF- oder Word-Datei.",
+    "",
+    "Chatverlauf:",
+    "",
+    String(payload.logText || "").trim() || "Es wurden keine Nachrichten erfasst.",
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ]
+    .filter((line, index, lines) => {
+      if (line) return true;
+      return lines[index - 1] !== "";
+    })
+    .join("\n");
+
+  const mailBase = {
     from: MAIL_FROM,
     to: email,
-    subject: `Chat-Log: ${roomLabel}`,
-    text,
-    attachments: [
-      {
-        filename: `${attachmentBaseName}.pdf`,
-        content: pdfBuffer,
-        contentType: "application/pdf"
-      },
-      {
-        filename: `${attachmentBaseName}.docx`,
-        content: docxBuffer,
-        contentType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      }
-    ]
-  });
+    subject: `Chat-Log: ${roomLabel}`
+  };
+  const attempts = [
+    {
+      deliveryMode: "pdf-docx",
+      text,
+      attachments: [
+        {
+          filename: `${attachmentBaseName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        },
+        {
+          filename: `${attachmentBaseName}.docx`,
+          content: docxBuffer,
+          contentType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        }
+      ]
+    },
+    {
+      deliveryMode: "pdf",
+      text: pdfOnlyText,
+      attachments: [
+        {
+          filename: `${attachmentBaseName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
+      ]
+    },
+    {
+      deliveryMode: "plain",
+      text: plainText,
+      attachments: []
+    }
+  ];
 
-  return true;
+  let lastError = null;
+  for (const attempt of attempts) {
+    try {
+      await transporter.sendMail({
+        ...mailBase,
+        text: attempt.text,
+        attachments: attempt.attachments
+      });
+      return {
+        delivered: true,
+        deliveryMode: attempt.deliveryMode
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Room log email delivery failed");
+}
+
+function summarizeMailError(error) {
+  const code = String(error?.code || "").trim().toUpperCase();
+  const responseCode = Number(error?.responseCode);
+  const message = String(error?.message || "").trim();
+
+  if (code === "EAUTH") {
+    return "SMTP-Anmeldung fehlgeschlagen.";
+  }
+  if (code === "ESOCKET" || code === "ECONNECTION") {
+    return "SMTP-Server nicht erreichbar.";
+  }
+  if (code === "EENVELOPE") {
+    return "Absender oder Empfänger wurde vom Mailserver abgelehnt.";
+  }
+  if (responseCode === 535) {
+    return "SMTP-Benutzername oder Passwort ist falsch.";
+  }
+  if (responseCode === 550 || responseCode === 553) {
+    return "Mailserver lehnt Absender oder Empfänger ab.";
+  }
+  if (responseCode === 552) {
+    return "Mailserver lehnt die Nachricht wegen Größe oder Anhang ab.";
+  }
+  if (/self[- ]signed|certificate/i.test(message)) {
+    return "TLS-/Zertifikatsproblem beim SMTP-Server.";
+  }
+  if (/timeout/i.test(message)) {
+    return "Verbindung zum SMTP-Server läuft in ein Timeout.";
+  }
+
+  return message || "Unbekannter Mailfehler.";
 }
 
 async function sendUsernameReminderEmail(payload) {
@@ -4875,6 +4994,10 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   let deliveredCount = 0;
   let missingEmailCount = 0;
   let failedCount = 0;
+  let fullAttachmentCount = 0;
+  let pdfOnlyCount = 0;
+  let plainOnlyCount = 0;
+  let lastErrorSummary = "";
 
   for (const recipient of recipientRows) {
     const email = normalizeEmail(recipient?.email || "");
@@ -4884,7 +5007,7 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
     }
 
     try {
-      await sendRoomLogEmail({
+      const deliveryResult = await sendRoomLogEmail({
         email,
         username: recipient.username,
         roomLabel: roomLog.roomLabel,
@@ -4896,8 +5019,16 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
         entries: roomLog.messages
       });
       deliveredCount += 1;
+      if (deliveryResult?.deliveryMode === "pdf-docx") {
+        fullAttachmentCount += 1;
+      } else if (deliveryResult?.deliveryMode === "pdf") {
+        pdfOnlyCount += 1;
+      } else {
+        plainOnlyCount += 1;
+      }
     } catch (error) {
       failedCount += 1;
+      lastErrorSummary = summarizeMailError(error);
       console.error("Konnte Raum-Log nicht per E-Mail senden:", error);
     }
   }
@@ -4907,7 +5038,11 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
     deliveredCount,
     missingEmailCount,
     failedCount,
-    participantCount: roomLog.participants.size
+    fullAttachmentCount,
+    pdfOnlyCount,
+    plainOnlyCount,
+    participantCount: roomLog.participants.size,
+    lastErrorSummary
   };
 }
 
@@ -5347,6 +5482,16 @@ io.on("connection", (socket) => {
         resultMessage = "Es war kein aktives Log mehr vorhanden.";
       } else if (finalizeResult.deliveredCount > 0 && finalizeResult.failedCount === 0) {
         resultMessage = `Log wurde per E-Mail an ${finalizeResult.deliveredCount} Person(en) gesendet.`;
+        if (finalizeResult.pdfOnlyCount > 0 || finalizeResult.plainOnlyCount > 0) {
+          const fallbackParts = [];
+          if (finalizeResult.pdfOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.pdfOnlyCount}x nur als PDF`);
+          }
+          if (finalizeResult.plainOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.plainOnlyCount}x ohne Anhang`);
+          }
+          resultMessage += ` Fallback aktiv: ${fallbackParts.join(", ")}.`;
+        }
         if (finalizeResult.missingEmailCount > 0) {
           resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
         }
@@ -5354,6 +5499,16 @@ io.on("connection", (socket) => {
         resultMessage =
           `Log wurde an ${finalizeResult.deliveredCount} Person(en) gesendet, ` +
           `${finalizeResult.failedCount} Versand(e) sind fehlgeschlagen.`;
+        if (finalizeResult.pdfOnlyCount > 0 || finalizeResult.plainOnlyCount > 0) {
+          const fallbackParts = [];
+          if (finalizeResult.pdfOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.pdfOnlyCount}x nur als PDF`);
+          }
+          if (finalizeResult.plainOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.plainOnlyCount}x ohne Anhang`);
+          }
+          resultMessage += ` Fallback aktiv: ${fallbackParts.join(", ")}.`;
+        }
         if (finalizeResult.missingEmailCount > 0) {
           resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
         }
@@ -5363,6 +5518,9 @@ io.on("connection", (socket) => {
       } else if (finalizeResult.failedCount > 0) {
         resultMessage =
           "Der Log-Versand ist fehlgeschlagen. Bitte prüfe die Server-Logs und die Mail-Konfiguration.";
+        if (finalizeResult.lastErrorSummary) {
+          resultMessage += ` Ursache: ${finalizeResult.lastErrorSummary}`;
+        }
       } else {
         resultMessage = "Es gab keine passenden Empfänger für den Log-Versand.";
       }
