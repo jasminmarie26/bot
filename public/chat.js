@@ -91,10 +91,20 @@
     soundToggleIcon.innerHTML = soundEnabled ? soundToggleIcons.on : soundToggleIcons.off;
   }
 
-  function playEntryTone() {
+  async function playEntryTone() {
     if (!soundEnabled) return;
     const context = getNotificationAudioContext();
-    if (!context || context.state !== "running") return;
+    if (!context) return;
+
+    if (context.state === "suspended") {
+      try {
+        await context.resume();
+      } catch (_error) {
+        // Continue; the activation might happen elsewhere.
+      }
+    }
+
+    if (context.state !== "running") return;
 
     const lead = context.createOscillator();
     const shimmer = context.createOscillator();
@@ -143,6 +153,8 @@
 
   window.addEventListener("pointerdown", unlockNotificationAudio, { once: true });
   window.addEventListener("keydown", unlockNotificationAudio, { once: true });
+  window.addEventListener("touchstart", unlockNotificationAudio, { once: true });
+  window.addEventListener("click", unlockNotificationAudio, { once: true });
   updateSoundToggle();
 
   socket.on("connect", () => {
