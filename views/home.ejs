@@ -33,7 +33,7 @@
             <% const staffNames = []; %>
             <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
               <% stats.adminOnlineNames.forEach((name) => { %>
-                <% staffNames.push({ role: "admin", label: `${name} (A)` }); %>
+                <% staffNames.push({ role: "admin", label: name }); %>
               <% }) %>
             <% } %>
             <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>

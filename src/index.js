@@ -310,6 +310,59 @@ function rememberPreferredCharacter(req, character) {
   req.session.preferred_character_ids = preferredMap;
 }
 
+function getStaffCharacterUsageForUser(user, character) {
+  const parsedCharacterId = Number(character?.id);
+  const canUseAdmin = Boolean(user?.is_admin);
+  const canUseModerator = Boolean(user?.is_moderator);
+
+  return {
+    canUseAdmin,
+    canUseModerator,
+    isAdminCharacterSelected:
+      canUseAdmin && Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+        ? Number(user?.admin_character_id) === parsedCharacterId
+        : false,
+    isModeratorCharacterSelected:
+      canUseModerator && Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+        ? Number(user?.moderator_character_id) === parsedCharacterId
+        : false
+  };
+}
+
+function updateUserRoleCharacterSelection(user, characterId, payload = {}) {
+  const parsedUserId = Number(user?.id);
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return getUserForSessionById(parsedUserId);
+  }
+
+  const useAsAdminCharacter = payload.use_as_admin_character === "1";
+  const useAsModeratorCharacter = payload.use_as_moderator_character === "1";
+  const currentAdminCharacterId = Number(user?.admin_character_id);
+  const currentModeratorCharacterId = Number(user?.moderator_character_id);
+
+  if (user?.is_admin) {
+    if (useAsAdminCharacter) {
+      db.prepare("UPDATE users SET admin_character_id = ? WHERE id = ?").run(parsedCharacterId, parsedUserId);
+    } else if (currentAdminCharacterId === parsedCharacterId) {
+      db.prepare("UPDATE users SET admin_character_id = NULL WHERE id = ?").run(parsedUserId);
+    }
+  }
+
+  if (user?.is_moderator) {
+    if (useAsModeratorCharacter) {
+      db.prepare("UPDATE users SET moderator_character_id = ? WHERE id = ?").run(parsedCharacterId, parsedUserId);
+    } else if (currentModeratorCharacterId === parsedCharacterId) {
+      db.prepare("UPDATE users SET moderator_character_id = NULL WHERE id = ?").run(parsedUserId);
+    }
+  }
+
+  return getUserForSessionById(parsedUserId);
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -443,7 +496,7 @@ function getOnlineStaffStats(activeUserIds = null) {
   const placeholders = sessionUserIds.map(() => "?").join(", ");
   const staffUsers = db
     .prepare(
-      `SELECT username, is_admin, is_moderator, admin_display_name, moderator_display_name
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, admin_character_id, moderator_character_id
        FROM users
        WHERE id IN (${placeholders})`
     )
@@ -967,49 +1020,108 @@ function normalizeStaffDisplayName(value) {
     .slice(0, 40);
 }
 
-function getUserRoleSuffix(user) {
-  if (user?.is_admin === 1 || user?.is_admin === true) {
-    return "A";
+function getUserRoleCharacter(user, role) {
+  if (!user) return null;
+
+  const normalizedRole = role === "moderator" ? "moderator" : "admin";
+  const isAllowedRole =
+    normalizedRole === "admin"
+      ? user.is_admin === 1 || user.is_admin === true
+      : user.is_moderator === 1 || user.is_moderator === true;
+  if (!isAllowedRole) return null;
+
+  const rawCharacterId =
+    normalizedRole === "admin" ? user.admin_character_id : user.moderator_character_id;
+  const parsedCharacterId = Number(rawCharacterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return null;
   }
-  if (user?.is_moderator === 1 || user?.is_moderator === true) {
-    return "M";
+
+  const parsedUserId = Number(user.id);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
   }
-  return "";
+
+  return (
+    db
+      .prepare(
+        `SELECT id, user_id, name, server_id
+         FROM characters
+         WHERE id = ? AND user_id = ?`
+      )
+      .get(parsedCharacterId, parsedUserId) || null
+  );
 }
 
 function getUserStaffBaseName(user) {
   if (!user) return "";
-  if (user.is_admin === 1 || user.is_admin === true) {
-    return normalizeStaffDisplayName(user.admin_display_name);
+  const adminCharacter = getUserRoleCharacter(user, "admin");
+  if (adminCharacter?.name) {
+    return String(adminCharacter.name).trim();
   }
-  if (user.is_moderator === 1 || user.is_moderator === true) {
-    return normalizeStaffDisplayName(user.moderator_display_name);
+  const moderatorCharacter = getUserRoleCharacter(user, "moderator");
+  if (moderatorCharacter?.name) {
+    return String(moderatorCharacter.name).trim();
   }
   return "";
 }
 
-function getUserStaffDisplayName(user) {
-  const baseName = getUserStaffBaseName(user);
-  const suffix = getUserRoleSuffix(user);
-  if (!baseName) return "";
-  return suffix ? `${baseName} (${suffix})` : baseName;
+function getUserDisplayProfile(user, activeCharacter = null) {
+  const fallbackName = String(user?.username || "").trim() || "User";
+  const activeCharacterId = Number(activeCharacter?.id);
+  const activeCharacterName = String(activeCharacter?.name || "").trim();
+
+  if (Number.isInteger(activeCharacterId) && activeCharacterId > 0 && activeCharacterName) {
+    if (Number(user?.admin_character_id) === activeCharacterId && (user?.is_admin === 1 || user?.is_admin === true)) {
+      return { label: activeCharacterName, role_style: "admin" };
+    }
+
+    if (
+      Number(user?.moderator_character_id) === activeCharacterId &&
+      (user?.is_moderator === 1 || user?.is_moderator === true)
+    ) {
+      return { label: `${activeCharacterName} (M)`, role_style: "moderator" };
+    }
+
+    return { label: activeCharacterName, role_style: "" };
+  }
+
+  const adminCharacter = getUserRoleCharacter(user, "admin");
+  if (adminCharacter?.name) {
+    return {
+      label: String(adminCharacter.name).trim(),
+      role_style: "admin"
+    };
+  }
+
+  const moderatorCharacter = getUserRoleCharacter(user, "moderator");
+  if (moderatorCharacter?.name) {
+    return {
+      label: `${String(moderatorCharacter.name).trim()} (M)`,
+      role_style: "moderator"
+    };
+  }
+
+  return { label: fallbackName, role_style: "" };
 }
 
 function getUserDefaultDisplayName(user) {
-  const staffName = getUserStaffDisplayName(user);
-  if (staffName) return staffName;
-  return String(user?.username || "").trim() || "User";
+  return getUserDisplayProfile(user).label;
 }
 
 function toSessionUser(user) {
+  const displayProfile = getUserDisplayProfile(user);
   return {
     id: user.id,
     username: user.username,
     is_admin: user.is_admin === 1,
     is_moderator: user.is_moderator === 1,
+    admin_character_id: Number(user.admin_character_id) || null,
+    moderator_character_id: Number(user.moderator_character_id) || null,
     admin_display_name: normalizeStaffDisplayName(user.admin_display_name),
     moderator_display_name: normalizeStaffDisplayName(user.moderator_display_name),
-    display_name: getUserDefaultDisplayName(user),
+    display_name: displayProfile.label,
+    display_role_style: displayProfile.role_style,
     theme: normalizeTheme(user.theme),
     account_number: getAccountNumberByUserId(user.id)
   };
@@ -1019,6 +1131,7 @@ function getUserForSessionById(userId) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme
+       , admin_character_id, moderator_character_id
        FROM users
        WHERE id = ?`
     )
@@ -1074,7 +1187,7 @@ function findOrCreateOAuthUser(provider, profile) {
   }
   const userByProvider = db
     .prepare(
-      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, admin_character_id, moderator_character_id, theme
        FROM users
        WHERE ${providerColumn} = ?`
     )
@@ -1087,7 +1200,7 @@ function findOrCreateOAuthUser(provider, profile) {
   if (email) {
     const userByEmail = db
       .prepare(
-        `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme, ${providerColumn} AS provider_value
+        `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, admin_character_id, moderator_character_id, theme, ${providerColumn} AS provider_value
          FROM users
          WHERE email = ?`
       )
@@ -1821,7 +1934,9 @@ app.use((req, res, next) => {
   }
 
   res.locals.currentUser = req.session.user || null;
+  res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
+  res.locals.currentUserDisplayRoleStyle = req.session.user?.display_role_style || "";
   res.locals.oauthEnabled = {
     google: GOOGLE_AUTH_ENABLED,
     facebook: FACEBOOK_AUTH_ENABLED
@@ -2082,7 +2197,7 @@ app.post("/login", (req, res) => {
 
   const user = db
     .prepare(
-      `SELECT id, username, password_hash, is_admin, is_moderator, admin_display_name, moderator_display_name, theme, email_verified
+      `SELECT id, username, password_hash, is_admin, is_moderator, admin_display_name, moderator_display_name, admin_character_id, moderator_character_id, theme, email_verified
        FROM users
        WHERE username = ?`
     )
@@ -2650,6 +2765,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     error: null,
     festplays,
     serverOptions: SERVER_OPTIONS,
+    staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
     character: {
       server_id: requestedServer,
       festplay_id: festplays[0]?.id || null,
@@ -2675,6 +2791,7 @@ app.post("/characters", requireAuth, (req, res) => {
       error: "Name ist erforderlich.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
       character: payload
     });
   }
@@ -2686,6 +2803,7 @@ app.post("/characters", requireAuth, (req, res) => {
       error: "Avatar-URL muss mit http:// oder https:// starten.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
       character: payload
     });
   }
@@ -2697,6 +2815,7 @@ app.post("/characters", requireAuth, (req, res) => {
       error: "Bitte ein gültiges Festplay auswählen.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
       character: payload
     });
   }
@@ -2708,6 +2827,7 @@ app.post("/characters", requireAuth, (req, res) => {
       error: "Dieser Charaktername ist bereits vergeben.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
       character: payload
     });
   }
@@ -2905,6 +3025,11 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     id
   );
 
+  const refreshedUser = getUserForSessionById(req.session.user.id);
+  if (refreshedUser) {
+    req.session.user = toSessionUser(refreshedUser);
+  }
+
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter aktualisiert.");
   return res.redirect(`/characters/${id}`);
@@ -2925,10 +3050,46 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     });
   }
 
+  db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id = ?").run(id);
+  db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id = ?").run(id);
   db.prepare("DELETE FROM characters WHERE id = ?").run(id);
+  const refreshedUser = getUserForSessionById(req.session.user.id);
+  if (refreshedUser) {
+    req.session.user = toSessionUser(refreshedUser);
+  }
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gelöscht.");
   return res.redirect("/dashboard");
+});
+
+app.post("/characters/:id/role-character", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Charakter als Rollenname setzen."
+    });
+  }
+
+  if (!req.session.user.is_admin && !req.session.user.is_moderator) {
+    setFlash(req, "error", "Nur Admins oder Moderatoren kÃ¶nnen einen Rollencharakter auswÃ¤hlen.");
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const refreshedUser = updateUserRoleCharacterSelection(req.session.user, id, req.body);
+  if (refreshedUser) {
+    req.session.user = toSessionUser(refreshedUser);
+  }
+
+  emitHomeStatsUpdate();
+  setFlash(req, "success", "Rollenname aktualisiert.");
+  return res.redirect(`/characters/${id}`);
 });
 
 app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
@@ -3217,10 +3378,18 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     id
   );
 
+  if (character.user_id === req.session.user.id) {
+    const refreshedUser = updateUserRoleCharacterSelection(req.session.user, id, req.body);
+    if (refreshedUser) {
+      req.session.user = toSessionUser(refreshedUser);
+    }
+  }
+
   if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
     delete req.session.guestbookPreview;
   }
 
+  emitHomeStatsUpdate();
   setFlash(req, "success", "Gästebuch gespeichert.");
   return res.redirect(`/characters/${id}/guestbook/edit?page_id=${activePage.id}`);
 });
@@ -3725,8 +3894,6 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
-  const adminDisplayName = normalizeStaffDisplayName(req.body.admin_display_name || "");
-  const moderatorDisplayName = normalizeStaffDisplayName(req.body.moderator_display_name || "");
 
   if (!USERNAME_PATTERN.test(username)) {
     setFlash(
@@ -3749,7 +3916,7 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
 
   const targetUser = db
     .prepare(
-      `SELECT id, username, email, birth_date, admin_display_name, moderator_display_name
+      `SELECT id, username, email, birth_date
        FROM users
        WHERE id = ?`
     )
@@ -3779,9 +3946,9 @@ app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) 
 
   db.prepare(
     `UPDATE users
-     SET username = ?, email = ?, birth_date = ?, admin_display_name = ?, moderator_display_name = ?
+     SET username = ?, email = ?, birth_date = ?
      WHERE id = ?`
-  ).run(username, email, birthDate, adminDisplayName, moderatorDisplayName, targetId);
+  ).run(username, email, birthDate, targetId);
 
   if (targetId === Number(req.session.user?.id)) {
     const refreshed = getUserForSessionById(targetId);
@@ -4019,12 +4186,13 @@ function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
   );
 }
 
-function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
+function getCurrentChannelDisplayProfile(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
   const preferredCharacter = getPreferredCharacterForUser(user?.id, serverId, preferredCharacterId);
-  if (preferredCharacter?.name) {
-    return String(preferredCharacter.name).trim();
-  }
-  return getUserDefaultDisplayName(user);
+  return getUserDisplayProfile(user, preferredCharacter);
+}
+
+function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
+  return getCurrentChannelDisplayProfile(user, serverId, preferredCharacterId).label;
 }
 
 function socketChannelForRoomWatch(roomId, serverId = DEFAULT_SERVER_ID) {
@@ -4089,9 +4257,9 @@ function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
   return preferredMap[normalizedServerId] || null;
 }
 
-function getSocketDisplayName(socket, serverId = DEFAULT_SERVER_ID) {
+function getSocketDisplayProfile(socket, serverId = DEFAULT_SERVER_ID) {
   const user = socket?.data?.user;
-  return getCurrentChannelDisplayName(
+  return getCurrentChannelDisplayProfile(
     user,
     serverId,
     getSocketPreferredCharacterId(socket, serverId)
@@ -4120,12 +4288,13 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       serverId,
       getSocketPreferredCharacterId(memberSocket, serverId)
     );
-    const displayName = getSocketDisplayName(memberSocket, serverId);
+    const displayProfile = getSocketDisplayProfile(memberSocket, serverId);
 
     onlineCharacters.push({
       user_id: userId,
-      name: displayName || `User ${userId}`,
-      character_id: chosenCharacter?.id || null
+      name: displayProfile.label || `User ${userId}`,
+      character_id: chosenCharacter?.id || null,
+      role_style: displayProfile.role_style || ""
     });
   }
 
@@ -4300,7 +4469,7 @@ io.on("connection", (socket) => {
       previousServerId === nextServerId &&
       previousRoomId === nextRoomId;
     const previousDisplayName = previousServerId
-      ? getSocketDisplayName(socket, previousServerId)
+      ? getSocketDisplayProfile(socket, previousServerId).label
       : "";
     const preferredCharacterId =
       Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
@@ -4394,7 +4563,8 @@ io.on("connection", (socket) => {
     if (!content) return;
 
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
-      username: getSocketDisplayName(socket, serverId),
+      username: getSocketDisplayProfile(socket, serverId).label,
+      role_style: getSocketDisplayProfile(socket, serverId).role_style || "",
       content,
       created_at: formatChatTimestamp()
     });
@@ -4441,9 +4611,13 @@ io.on("connection", (socket) => {
     }
 
     const senderSockets = getUserSocketsInChannel(roomId, serverId, socket.data.user.id);
-    const senderName = getSocketDisplayName(socket, serverId);
-    const recipientName = recipientSockets[0]
-      ? getSocketDisplayName(recipientSockets[0], serverId)
+    const senderProfile = getSocketDisplayProfile(socket, serverId);
+    const recipientProfile = recipientSockets[0]
+      ? getSocketDisplayProfile(recipientSockets[0], serverId)
+      : null;
+    const senderName = senderProfile.label;
+    const recipientName = recipientProfile
+      ? recipientProfile.label
       : `User ${targetUserId}`;
     const createdAt = formatChatTimestamp();
 
@@ -4479,7 +4653,7 @@ io.on("connection", (socket) => {
       ? normalizeServer(socket.data.serverId)
       : null;
     if (previousServerId) {
-      const displayName = getSocketDisplayName(socket, previousServerId) ||
+      const displayName = getSocketDisplayProfile(socket, previousServerId).label ||
         `User ${socket.data.user?.id || "?"}`;
       emitSystemChatMessage(
         previousRoomId,

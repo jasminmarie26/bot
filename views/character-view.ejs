@@ -1,8 +1,16 @@
 <%- include("partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
 
 <section class="rp-shell">
-  <% const roomlistAccountDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
-  <% const roomlistIdentityName = isOwner ? character.name : roomlistAccountDisplayName; %>
+  <% const roomlistDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
+  <% const roomlistAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
+  <% const roomlistIdentityRoleStyle = isOwner && currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(character.id)
+    ? "admin"
+    : isOwner && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(character.id)
+      ? "moderator"
+      : ""; %>
+  <% const roomlistIdentityName = isOwner
+    ? (roomlistIdentityRoleStyle === "moderator" ? `${character.name} (M)` : character.name)
+    : roomlistDisplayName; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -33,7 +41,7 @@
       </summary>
       <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
-          <strong><%= roomlistIdentityName %></strong>
+          <strong class="<%= roomlistIdentityRoleStyle ? `role-name-${roomlistIdentityRoleStyle}` : "" %>"><%= roomlistIdentityName %></strong>
           <% if (roomlistAccountDisplayName && roomlistAccountDisplayName !== roomlistIdentityName) { %>
             <span>Konto: <%= roomlistAccountDisplayName %></span>
           <% } %>
@@ -86,6 +94,40 @@
       <button class="rp-enter-btn" type="submit">Raum anlegen</button>
     </form>
 
+    <% if (isOwner && currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+      <form method="POST" action="/characters/<%= character.id %>/role-character" class="rp-role-character-form">
+        <fieldset class="gb-role-character-box">
+          <legend>Rollenname</legend>
+          <% if (currentUser.is_admin) { %>
+            <label class="gb-role-character-option">
+              <input
+                type="checkbox"
+                name="use_as_admin_character"
+                value="1"
+                <%= Number(currentUser.admin_character_id) === Number(character.id) ? "checked" : "" %>
+              />
+              Als Admin-Charakter verwenden
+            </label>
+          <% } %>
+          <% if (currentUser.is_moderator) { %>
+            <label class="gb-role-character-option">
+              <input
+                type="checkbox"
+                name="use_as_moderator_character"
+                value="1"
+                <%= Number(currentUser.moderator_character_id) === Number(character.id) ? "checked" : "" %>
+              />
+              Als Moderator-Charakter verwenden
+            </label>
+          <% } %>
+          <p class="gb-role-character-hint muted">
+            Der markierte Charakter wird dann als sichtbarer Rollenname auf der Startseite, im Menü und im Chat verwendet.
+          </p>
+          <button class="btn btn-secondary rp-role-character-submit" type="submit">Rollenname speichern</button>
+        </fieldset>
+      </form>
+    <% } %>
+
     <div class="rp-room-list-wrap">
       <% if (standardRooms && standardRooms.length) { %>
         <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
@@ -117,9 +159,9 @@
                   <% if (activeUsers.length) { %>
                     <% activeUsers.forEach((entry, index) => { %>
                       <% if (entry.character_id) { %>
-                        <a class="rp-room-occupant" href="/characters/<%= entry.character_id %>/guestbook"><%= entry.name %></a>
+                        <a class="rp-room-occupant <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>" href="/characters/<%= entry.character_id %>/guestbook"><%= entry.name %></a>
                       <% } else { %>
-                        <span class="rp-room-occupant"><%= entry.name %></span>
+                        <span class="rp-room-occupant <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"><%= entry.name %></span>
                       <% } %>
                       <% if (index < activeUsers.length - 1) { %>
                         <span class="rp-room-occupant-separator">, </span>
@@ -164,9 +206,9 @@
                   <% if (activeUsers.length) { %>
                     <% activeUsers.forEach((entry, index) => { %>
                       <% if (entry.character_id) { %>
-                        <a class="rp-room-occupant" href="/characters/<%= entry.character_id %>/guestbook"><%= entry.name %></a>
+                        <a class="rp-room-occupant <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>" href="/characters/<%= entry.character_id %>/guestbook"><%= entry.name %></a>
                       <% } else { %>
-                        <span class="rp-room-occupant"><%= entry.name %></span>
+                        <span class="rp-room-occupant <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"><%= entry.name %></span>
                       <% } %>
                       <% if (index < activeUsers.length - 1) { %>
                         <span class="rp-room-occupant-separator">, </span>

@@ -1,7 +1,15 @@
 <%- include("partials/start", { hideTopbar: true, activeCharacter, pageClass: "page-rp-screen page-chat" }) %>
 
-<% const chatAccountDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
-<% const chatIdentityName = activeCharacter ? activeCharacter.name : chatAccountDisplayName; %>
+<% const chatDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
+<% const chatAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : "User"); %>
+<% const chatIdentityRoleStyle = activeCharacter && currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(activeCharacter.id)
+  ? "admin"
+  : activeCharacter && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(activeCharacter.id)
+    ? "moderator"
+    : (activeCharacter ? "" : (currentUserDisplayRoleStyle || "")); %>
+<% const chatIdentityName = activeCharacter
+  ? (chatIdentityRoleStyle === "moderator" ? `${activeCharacter.name} (M)` : activeCharacter.name)
+  : chatDisplayName; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -54,7 +62,7 @@
       </summary>
       <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
-          <strong><%= chatIdentityName %></strong>
+          <strong class="<%= chatIdentityRoleStyle ? `role-name-${chatIdentityRoleStyle}` : "" %>"><%= chatIdentityName %></strong>
           <% if (chatAccountDisplayName && chatAccountDisplayName !== chatIdentityName) { %>
             <span>Konto: <%= chatAccountDisplayName %></span>
           <% } %>
@@ -118,8 +126,9 @@
                   data-user-id="<%= entry.user_id %>"
                   data-character-id="<%= entry.character_id || '' %>"
                   data-name="<%= entry.name %>"
+                  data-role-style="<%= entry.role_style || '' %>"
                 >
-                  <%= entry.name %>
+                  <span class="<%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"><%= entry.name %></span>
                 </button>
               <% }) %>
             <% } else { %>
@@ -144,7 +153,7 @@
               <% if (msg.type === "system") { %>
                 <p><span><%= msg.content %></span></p>
               <% } else { %>
-                <p><strong><%= msg.username %>:</strong> <span><%= msg.content %></span></p>
+                <p><strong class="<%= msg.role_style ? `role-name-${msg.role_style}` : "" %>"><%= msg.username %>:</strong> <span><%= msg.content %></span></p>
               <% } %>
             </article>
           <% }) %>

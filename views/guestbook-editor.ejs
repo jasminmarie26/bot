@@ -135,6 +135,37 @@
       <input name="tags" maxlength="500" value="<%= settings.tags %>" />
     </label>
 
+    <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+      <fieldset class="gb-role-character-box">
+        <legend>Rollenname</legend>
+        <% if (currentUser.is_admin) { %>
+          <label class="gb-role-character-option">
+            <input
+              type="checkbox"
+              name="use_as_admin_character"
+              value="1"
+              <%= Number(currentUser.admin_character_id) === Number(character.id) ? "checked" : "" %>
+            />
+            Als Admin-Charakter verwenden
+          </label>
+        <% } %>
+        <% if (currentUser.is_moderator) { %>
+          <label class="gb-role-character-option">
+            <input
+              type="checkbox"
+              name="use_as_moderator_character"
+              value="1"
+              <%= Number(currentUser.moderator_character_id) === Number(character.id) ? "checked" : "" %>
+            />
+            Als Moderator-Charakter verwenden
+          </label>
+        <% } %>
+        <p class="gb-role-character-hint muted">
+          Der ausgewählte Charaktername wird dann auf der Startseite, im Menü und im Chat als Rollenname angezeigt.
+        </p>
+      </fieldset>
+    <% } %>
+
     <details class="bbcode-help">
       <summary>BBCode Hilfe</summary>
       <div class="bbcode-help-content">

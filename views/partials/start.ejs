@@ -62,9 +62,28 @@
         menuCharacter.is_owner
       )
     ); %>
-    <% const accountDisplayName =
+    <% const displayIdentityName =
       currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
-    <% const activeMenuIdentityName = menuCharacter ? menuCharacter.name : accountDisplayName; %>
+    <% const accountDisplayName =
+      currentUserAccountName || (currentUser ? currentUser.username : ""); %>
+    <% const menuCharacterIsAdmin = Boolean(
+      menuCharacter &&
+      currentUser &&
+      currentUser.is_admin &&
+      Number(currentUser.admin_character_id) === Number(menuCharacter.id)
+    ); %>
+    <% const menuCharacterIsModerator = Boolean(
+      menuCharacter &&
+      currentUser &&
+      currentUser.is_moderator &&
+      Number(currentUser.moderator_character_id) === Number(menuCharacter.id)
+    ); %>
+    <% const activeMenuIdentityName = menuCharacter
+      ? (menuCharacterIsModerator ? `${menuCharacter.name} (M)` : menuCharacter.name)
+      : displayIdentityName; %>
+    <% const activeMenuIdentityRoleStyle = menuCharacter
+      ? (menuCharacterIsAdmin ? "admin" : (menuCharacterIsModerator ? "moderator" : ""))
+      : (currentUserDisplayRoleStyle || ""); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
@@ -105,7 +124,7 @@
                 </summary>
                 <div class="topbar-user-menu-panel">
                   <div class="topbar-user-menu-meta">
-                    <strong><%= activeMenuIdentityName %></strong>
+                    <strong class="<%= activeMenuIdentityRoleStyle ? `role-name-${activeMenuIdentityRoleStyle}` : "" %>"><%= activeMenuIdentityName %></strong>
                     <% if (accountDisplayName && accountDisplayName !== activeMenuIdentityName) { %>
                       <span>Konto: <%= accountDisplayName %></span>
                     <% } %>

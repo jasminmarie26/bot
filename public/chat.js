@@ -196,6 +196,10 @@
       }
     } else {
       const strong = document.createElement("strong");
+      const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
+      if (roleStyle === "admin" || roleStyle === "moderator") {
+        strong.classList.add(`role-name-${roleStyle}`);
+      }
       strong.textContent = `${msg.username}:`;
       body.textContent = ` ${msg.content}`;
       line.appendChild(strong);
@@ -344,15 +348,22 @@
       const userId = Number(entry?.user_id);
       const characterId = Number(entry?.character_id);
       const label = String(entry?.name || "").trim();
+      const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const text = label || "Unbekannt";
       const node = document.createElement("button");
+      const textNode = document.createElement("span");
 
       node.type = "button";
       node.classList.add("chat-online-item", "chat-online-trigger");
+      if (roleStyle === "admin" || roleStyle === "moderator") {
+        textNode.classList.add(`role-name-${roleStyle}`);
+      }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
       node.dataset.name = text;
-      node.textContent = text;
+      node.dataset.roleStyle = roleStyle;
+      textNode.textContent = text;
+      node.appendChild(textNode);
       onlineCharList.appendChild(node);
     });
 

@@ -22,6 +22,8 @@ db.exec(`
     is_moderator INTEGER NOT NULL DEFAULT 0,
     admin_display_name TEXT NOT NULL DEFAULT '',
     moderator_display_name TEXT NOT NULL DEFAULT '',
+    admin_character_id INTEGER,
+    moderator_character_id INTEGER,
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
     email TEXT DEFAULT '',
     birth_date TEXT DEFAULT '',
@@ -209,6 +211,14 @@ if (!userColumns.includes("moderator_display_name")) {
   db.exec("ALTER TABLE users ADD COLUMN moderator_display_name TEXT NOT NULL DEFAULT ''");
 }
 
+if (!userColumns.includes("admin_character_id")) {
+  db.exec("ALTER TABLE users ADD COLUMN admin_character_id INTEGER");
+}
+
+if (!userColumns.includes("moderator_character_id")) {
+  db.exec("ALTER TABLE users ADD COLUMN moderator_character_id INTEGER");
+}
+
 if (!userColumns.includes("email")) {
   db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''");
 }
@@ -309,6 +319,8 @@ db.prepare("UPDATE users SET theme = 'glass-aurora' WHERE theme IS NULL OR theme
 db.prepare("UPDATE users SET is_moderator = 0 WHERE is_moderator IS NULL").run();
 db.prepare("UPDATE users SET admin_display_name = '' WHERE admin_display_name IS NULL").run();
 db.prepare("UPDATE users SET moderator_display_name = '' WHERE moderator_display_name IS NULL").run();
+db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id IS NOT NULL AND admin_character_id < 1").run();
+db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id IS NOT NULL AND moderator_character_id < 1").run();
 db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
 db.prepare("UPDATE users SET birth_date = '' WHERE birth_date IS NULL").run();
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();

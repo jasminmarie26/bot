@@ -69,26 +69,13 @@
         value="<%= targetUser.birth_date || "" %>"
       />
     </label>
-    <label>
-      Admin-Name
-      <input
-        name="admin_display_name"
-        maxlength="40"
-        value="<%= targetUser.admin_display_name || "" %>"
-        placeholder="z. B. Weltenwächter"
-      />
-    </label>
-    <label>
-      Moderator-Name
-      <input
-        name="moderator_display_name"
-        maxlength="40"
-        value="<%= targetUser.moderator_display_name || "" %>"
-        placeholder="z. B. Schattenfeder"
-      />
-    </label>
     <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
   </form>
+  <p class="muted">
+    Admin- und Moderatornamen werden jetzt direkt im gewünschten Charakter gesetzt.
+    Öffne dafür den Charakter und aktiviere dort „Als Admin-Charakter verwenden“
+    oder „Als Moderator-Charakter verwenden“.
+  </p>
 </section>
 
 <section class="panel">

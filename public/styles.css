@@ -1597,17 +1597,20 @@ a:hover {
   font-feature-settings: "tnum" 1;
 }
 
-.staff-name-admin {
+.staff-name-admin,
+.role-name-admin {
   font-weight: 700;
   background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  color: transparent;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
 }
 
-.staff-name-moderator {
+.staff-name-moderator,
+.role-name-moderator {
   font-weight: 600;
-  color: color-mix(in srgb, var(--accent) 82%, white 18%);
+  color: color-mix(in srgb, var(--accent) 82%, white 18%) !important;
 }
 
 .oauth-section {
@@ -2542,6 +2545,50 @@ a:hover {
   border: 1px solid var(--field-edge);
   border-radius: 6px;
   padding: 0.08rem 0.3rem;
+}
+
+.gb-role-character-box {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.gb-role-character-box legend {
+  padding: 0 0.25rem;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.gb-role-character-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.gb-role-character-option input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.gb-role-character-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.rp-role-character-form {
+  margin-top: 0.85rem;
+}
+
+.rp-role-character-submit {
+  justify-self: start;
 }
 
 .rp-room-list {
@@ -3512,6 +3559,11 @@ select:focus {
   text-align: left;
   font: inherit;
   cursor: pointer;
+}
+
+.chat-online-item > span {
+  display: inline-block;
+  max-width: 100%;
 }
 
 .page-chat .chat-online-item {
