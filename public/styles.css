@@ -3852,6 +3852,20 @@ select:focus {
   color: color-mix(in srgb, #17191d 78%, var(--accent));
 }
 
+.chat-box .chat-emote {
+  color: color-mix(in srgb, #17191d 82%, var(--accent));
+}
+
+.chat-box .chat-emote p {
+  text-align: left;
+  font-size: 0.92rem;
+  line-height: 1.32;
+}
+
+.chat-box .chat-emote em {
+  font-style: italic;
+}
+
 .chat-box .chat-whisper {
   border: 0;
 }

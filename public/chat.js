@@ -234,10 +234,34 @@
     });
   }
 
+  function escapeRegExp(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function getEmoteActionText(rawText, displayName) {
+    const text = String(rawText || "").trim();
+    if (!text.toLowerCase().startsWith("/me ")) {
+      return "";
+    }
+
+    let actionText = text.slice(4).trim();
+    const actorName = String(displayName || "").trim();
+
+    if (actorName) {
+      const actorPattern = new RegExp(`^${escapeRegExp(actorName)}(?:(?=\\s)|(?=[,.:;!?]))\\s*`, "i");
+      actionText = actionText.replace(actorPattern, "").trimStart();
+    }
+
+    return actionText;
+  }
+
   function appendMessage(msg) {
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
-    article.className = `chat-message${isSystemMessage ? " chat-system" : ""}`;
+    const emoteActionText = !isSystemMessage
+      ? getEmoteActionText(msg?.content, msg?.username)
+      : "";
+    article.className = `chat-message${isSystemMessage ? " chat-system" : emoteActionText ? " chat-emote" : ""}`;
 
     const line = document.createElement("p");
     const body = document.createElement("span");
@@ -260,6 +284,23 @@
       } else {
         body.textContent = content;
       }
+    } else if (emoteActionText) {
+      const emote = document.createElement("em");
+      const actor = document.createElement("span");
+      const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
+      if (roleStyle === "admin" || roleStyle === "moderator") {
+        actor.classList.add(`role-name-${roleStyle}`);
+      }
+      actor.textContent = String(msg?.username || "").trim() || "Unbekannt";
+      emote.appendChild(actor);
+      if (emoteActionText) {
+        emote.appendChild(document.createTextNode(" "));
+        appendFormattedChatNodes(emote, emoteActionText, {
+          allowItalic: false,
+          allowBold: true
+        });
+      }
+      line.appendChild(emote);
     } else {
       const strong = document.createElement("strong");
       const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
