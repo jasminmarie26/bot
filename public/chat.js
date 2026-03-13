@@ -168,39 +168,70 @@
     });
   });
 
-  function appendFormattedChatText(container, rawText, { leadingSpace = false } = {}) {
-    const text = String(rawText || "");
-    const pattern = /"([^"\r\n]+)"|\*([^*\r\n]+)\*/g;
-    let lastIndex = 0;
+  function appendFormattedChatNodes(
+    container,
+    text,
+    { allowItalic = true, allowBold = true } = {}
+  ) {
+    const source = String(text || "");
+    let cursor = 0;
+    let plainBuffer = "";
 
+    function flushPlainBuffer() {
+      if (!plainBuffer) return;
+      container.appendChild(document.createTextNode(plainBuffer));
+      plainBuffer = "";
+    }
+
+    while (cursor < source.length) {
+      const currentChar = source[cursor];
+
+      if (allowItalic && currentChar === "*") {
+        const closingIndex = source.indexOf("*", cursor + 1);
+        if (closingIndex > cursor + 1) {
+          flushPlainBuffer();
+          const italic = document.createElement("em");
+          appendFormattedChatNodes(italic, source.slice(cursor + 1, closingIndex), {
+            allowItalic: false,
+            allowBold: true
+          });
+          container.appendChild(italic);
+          cursor = closingIndex + 1;
+          continue;
+        }
+      }
+
+      if (allowBold && currentChar === '"') {
+        const closingIndex = source.indexOf('"', cursor + 1);
+        if (closingIndex > cursor + 1) {
+          flushPlainBuffer();
+          const strong = document.createElement("strong");
+          appendFormattedChatNodes(strong, source.slice(cursor + 1, closingIndex), {
+            allowItalic: true,
+            allowBold: false
+          });
+          container.appendChild(strong);
+          cursor = closingIndex + 1;
+          continue;
+        }
+      }
+
+      plainBuffer += currentChar;
+      cursor += 1;
+    }
+
+    flushPlainBuffer();
+  }
+
+  function appendFormattedChatText(container, rawText, { leadingSpace = false } = {}) {
     if (leadingSpace) {
       container.appendChild(document.createTextNode(" "));
     }
 
-    text.replace(pattern, (match, boldText, italicText, offset) => {
-      if (offset > lastIndex) {
-        container.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
-      }
-
-      if (typeof boldText === "string") {
-        const strong = document.createElement("strong");
-        strong.textContent = boldText;
-        container.appendChild(strong);
-      } else if (typeof italicText === "string") {
-        const italic = document.createElement("em");
-        italic.textContent = italicText;
-        container.appendChild(italic);
-      } else {
-        container.appendChild(document.createTextNode(match));
-      }
-
-      lastIndex = offset + match.length;
-      return match;
+    appendFormattedChatNodes(container, rawText, {
+      allowItalic: true,
+      allowBold: true
     });
-
-    if (lastIndex < text.length) {
-      container.appendChild(document.createTextNode(text.slice(lastIndex)));
-    }
   }
 
   function appendMessage(msg) {
