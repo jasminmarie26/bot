@@ -3072,7 +3072,7 @@ a:hover {
 
 .guestbook-sticky-head {
   position: sticky;
-  top: 0.7rem;
+  top: clamp(4.55rem, 8vw, 5.4rem);
   z-index: 7;
   margin: -0.15rem -0.15rem 1rem;
   padding: 0.9rem 1rem 0.75rem;
@@ -3245,7 +3245,7 @@ body.theme-atari .guestbook-sticky-head {
 
 @media (max-width: 719.98px) {
   .guestbook-sticky-head {
-    top: 0.45rem;
+    top: clamp(4.15rem, 13vw, 4.95rem);
     margin-left: -0.1rem;
     margin-right: -0.1rem;
     padding: 0.8rem 0.82rem 0.68rem;
