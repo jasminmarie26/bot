@@ -171,29 +171,6 @@
 <script src="/chat.js?v=<%= staticAssetVersion %>"></script>
 <script>
   (() => {
-    const fitSingleLine = (element, maxPx, minPx) => {
-      if (!element) return;
-      const max = Number(maxPx);
-      const min = Number(minPx);
-      element.style.fontSize = `${max}px`;
-      let current = max;
-      while (element.scrollWidth > element.clientWidth && current > min) {
-        current -= 0.5;
-        element.style.fontSize = `${current}px`;
-      }
-    };
-
-    const applyChatHeadingFit = () => {
-      document.querySelectorAll(".page-chat .chat-room-title").forEach((element) => {
-        fitSingleLine(element, 20, 14);
-      });
-      document.querySelectorAll(".page-chat .chat-room-description").forEach((element) => {
-        fitSingleLine(element, 13, 10);
-      });
-    };
-
-    window.addEventListener("load", applyChatHeadingFit, { once: true });
-    window.addEventListener("resize", applyChatHeadingFit);
   })();
 </script>
 

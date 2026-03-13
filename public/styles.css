@@ -2553,9 +2553,12 @@ a:hover {
 }
 
 .rp-room-custom-link {
-  display: inline-block;
-  width: fit-content;
-  text-decoration: none;
+  display: inline;
+  max-width: 100%;
+  text-decoration: underline;
+  text-underline-offset: 0.08em;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rp-room-custom-link:hover {
@@ -3303,9 +3306,10 @@ select:focus {
   margin: 0;
   font-size: 1.26rem;
   line-height: 1.06;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
   max-width: 100%;
 }
 
@@ -3321,9 +3325,10 @@ select:focus {
   color: var(--muted);
   font-style: italic;
   display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
 }
 
 .page-chat .chat-room-divider {
