@@ -4,6 +4,7 @@
 
   const body = document.body;
   const themeClassPrefix = "theme-";
+  const themeStorageKey = "active-theme-preview";
 
   function applyTheme(themeId) {
     if (!body || !themeId) return;
@@ -24,6 +25,22 @@
         select.value = themeId;
         select.dataset.savedTheme = themeId;
       }
+    }
+  }
+
+  function persistThemeLocally(themeId) {
+    try {
+      window.localStorage.setItem(themeStorageKey, themeId);
+    } catch (_error) {
+      // Ignore storage failures; the live switch still works for the current page.
+    }
+  }
+
+  function getPersistedLocalTheme() {
+    try {
+      return String(window.localStorage.getItem(themeStorageKey) || "").trim().toLowerCase();
+    } catch (_error) {
+      return "";
     }
   }
 
@@ -74,6 +91,7 @@
 
       applyTheme(nextTheme);
       syncThemeSelects(nextTheme);
+      persistThemeLocally(nextTheme);
 
       for (const candidate of forms) {
         const candidateSelect = candidate.querySelector('select[name="theme"]');
@@ -86,9 +104,11 @@
         const persistedTheme = await saveTheme(form, nextTheme);
         applyTheme(persistedTheme);
         syncThemeSelects(persistedTheme);
+        persistThemeLocally(persistedTheme);
       } catch (_error) {
-        applyTheme(previousTheme);
-        syncThemeSelects(previousTheme);
+        applyTheme(nextTheme);
+        syncThemeSelects(nextTheme);
+        persistThemeLocally(nextTheme);
       } finally {
         for (const candidate of forms) {
           const candidateSelect = candidate.querySelector('select[name="theme"]');
@@ -98,5 +118,11 @@
         }
       }
     });
+  }
+
+  const localTheme = getPersistedLocalTheme();
+  if (localTheme) {
+    applyTheme(localTheme);
+    syncThemeSelects(localTheme);
   }
 })();
