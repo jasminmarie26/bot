@@ -3082,20 +3082,16 @@ body:has(.guestbook-layout) .guestbook-layout {
   position: sticky;
   top: clamp(4.55rem, 8vw, 5.4rem);
   z-index: 7;
-  margin: -0.15rem -0.15rem 1rem;
-  padding: 0.9rem 1rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0 0.55rem;
   display: grid;
   gap: 0.55rem;
-  border-radius: 18px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-bg) 90%, var(--field-bg) 10%) 0%,
-    color-mix(in srgb, var(--panel-bg) 78%, var(--field-bg) 22%) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
-  box-shadow: 0 18px 30px -26px var(--panel-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(120%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .guestbook-meta-row {
@@ -3258,10 +3254,8 @@ body.theme-atari .guestbook-sticky-head {
 
   .guestbook-sticky-head {
     top: clamp(4.15rem, 13vw, 4.95rem);
-    margin-left: -0.1rem;
-    margin-right: -0.1rem;
-    padding: 0.8rem 0.82rem 0.68rem;
-    border-radius: 16px;
+    margin: 0 0 0.9rem;
+    padding: 0.45rem 0 0.5rem;
   }
 
   .guestbook-meta-row {
