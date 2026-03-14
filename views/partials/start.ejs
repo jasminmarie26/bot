@@ -108,7 +108,6 @@
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <% } else { %>
             <div class="topbar-guestbook-control">
-              <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
               <button
                 type="button"
                 class="guestbook-entry-toggle"
@@ -120,6 +119,7 @@
               >
                 <span class="guestbook-entry-toggle-icon" aria-hidden="true"></span>
               </button>
+              <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
             </div>
           <% } %>
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">

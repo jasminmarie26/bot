@@ -777,9 +777,9 @@ a:hover {
 }
 
 .topbar-guestbook-control {
-  display: inline-grid;
-  justify-items: start;
-  gap: 0.32rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 }
 
@@ -3144,19 +3144,8 @@ body:has(.guestbook-layout) .guestbook-layout {
   color: var(--link);
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
   font-size: clamp(1rem, 1.4vw, 1.14rem);
   font-weight: 700;
-}
-
-.guestbook-entry-heading::before {
-  content: "";
-  width: 0.58rem;
-  height: 0.58rem;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
-  flex: 0 0 auto;
 }
 
 .guestbook-entry-toggle {
