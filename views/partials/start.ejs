@@ -107,7 +107,19 @@
           <% if (!topbarGuestbookModeActive) { %>
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <% } else { %>
-            <div class="topbar-brand-spacer" aria-hidden="true"></div>
+            <div class="topbar-guestbook-control">
+              <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
+              <button
+                type="button"
+                class="guestbook-entry-toggle"
+                data-guestbook-panel-toggle
+                aria-controls="guestbook-entry-panel"
+                aria-expanded="false"
+              >
+                <span class="guestbook-entry-toggle-text" data-guestbook-panel-toggle-label>Aufklappen</span>
+                <span class="guestbook-entry-toggle-icon" aria-hidden="true"></span>
+              </button>
+            </div>
           <% } %>
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
             <% if (currentUser) { %>

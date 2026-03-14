@@ -14,27 +14,13 @@
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 
 <section class="panel guestbook-layout">
-  <div class="guestbook-sticky-head">
-    <% if (characterCreatedAtLabel) { %>
+  <% if (characterCreatedAtLabel) { %>
+    <div class="guestbook-sticky-head">
       <div class="guestbook-meta-row">
         <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
       </div>
-    <% } %>
-
-    <div class="guestbook-entry-rail">
-      <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
-      <button
-        type="button"
-        class="guestbook-entry-toggle"
-        data-guestbook-panel-toggle
-        aria-controls="guestbook-entry-panel"
-        aria-expanded="false"
-      >
-        <span class="guestbook-entry-toggle-text" data-guestbook-panel-toggle-label>Aufklappen</span>
-        <span class="guestbook-entry-toggle-icon" aria-hidden="true"></span>
-      </button>
     </div>
-  </div>
+  <% } %>
 
   <section
     class="guestbook-entry-panel"

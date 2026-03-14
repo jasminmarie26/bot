@@ -762,11 +762,6 @@ a:hover {
   text-overflow: ellipsis;
 }
 
-.topbar-brand-spacer {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 .nav {
   display: flex;
   gap: 0.65rem;
@@ -779,6 +774,13 @@ a:hover {
 
 .nav-guestbook-mode {
   gap: 0.85rem;
+}
+
+.topbar-guestbook-control {
+  display: inline-grid;
+  justify-items: start;
+  gap: 0.38rem;
+  min-width: 0;
 }
 
 .brand.brand-in-nav {
@@ -3137,13 +3139,6 @@ body:has(.guestbook-layout) .guestbook-layout {
   color: var(--muted);
 }
 
-.guestbook-entry-rail {
-  display: inline-grid;
-  justify-items: start;
-  gap: 0.42rem;
-  margin: 0;
-}
-
 .guestbook-entry-heading {
   color: var(--link);
   display: inline-flex;
@@ -3256,10 +3251,6 @@ body.theme-atari .guestbook-sticky-head {
 
   .guestbook-meta-created {
     font-size: 0.88rem;
-  }
-
-  .guestbook-entry-rail {
-    gap: 0.65rem;
   }
 
   .guestbook-entry-toggle {
