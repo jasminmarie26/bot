@@ -44,16 +44,6 @@
   data-auto-open="<%= guestbookAccessState?.viaReplyAccess ? "true" : "false" %>"
   hidden
 >
-  <header class="guestbook-entry-panel-header">
-    <div class="guestbook-entry-panel-title">
-      <strong>G&auml;stebuch-Eintr&auml;ge</strong>
-      <span class="muted">f&uuml;r <%= character.name %></span>
-    </div>
-    <button type="button" class="btn btn-secondary guestbook-entry-panel-close" data-guestbook-panel-close>
-      Schlie&szlig;en
-    </button>
-  </header>
-
   <% if (guestbookAccessState?.viaReplyAccess) { %>
     <p class="muted guestbook-reply-hint">
       Du bist &uuml;ber einen G&auml;stebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.

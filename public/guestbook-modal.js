@@ -11,8 +11,13 @@
     const shouldScrollToEntry = Boolean(options.scrollToEntry);
 
     panel.hidden = !expanded;
+    document.body.classList.toggle("guestbook-panel-open", expanded);
     toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-    const actionLabel = expanded ? "Gästebuch-Einträge schließen" : "Gästebuch-Einträge öffnen";
+
+    const actionLabel = expanded
+      ? "Gästebuch-Einträge schließen"
+      : "Gästebuch-Einträge öffnen";
+
     toggle.setAttribute("aria-label", actionLabel);
     toggle.setAttribute("title", actionLabel);
 
@@ -32,12 +37,6 @@
     button.addEventListener("click", () => {
       updatePanelState(false);
     });
-  });
-
-  document.addEventListener("click", (event) => {
-    if (panel.hidden) return;
-    if (panel.contains(event.target) || toggle.contains(event.target)) return;
-    updatePanelState(false);
   });
 
   document.addEventListener("keydown", (event) => {
