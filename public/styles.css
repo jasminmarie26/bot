@@ -1472,8 +1472,8 @@ a:hover {
 }
 
 .hero-copy.guestbook-entry-body {
-  font-size: clamp(0.84rem, 0.9vw, 0.92rem);
-  line-height: 1.32;
+  font-size: clamp(0.74rem, 0.82vw, 0.84rem);
+  line-height: 1.28;
 }
 
 .hero.has-update-actions .hero-copy {
