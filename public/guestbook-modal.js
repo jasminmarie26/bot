@@ -1,7 +1,6 @@
 (() => {
   const panel = document.querySelector("[data-guestbook-panel]");
   const toggle = document.querySelector("[data-guestbook-panel-toggle]");
-  const toggleLabel = document.querySelector("[data-guestbook-panel-toggle-label]");
   const closeButtons = document.querySelectorAll("[data-guestbook-panel-close]");
 
   if (!panel || !toggle) return;
@@ -13,10 +12,9 @@
 
     panel.hidden = !expanded;
     toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-
-    if (toggleLabel) {
-      toggleLabel.textContent = expanded ? "Zuklappen" : "Aufklappen";
-    }
+    const actionLabel = expanded ? "Gästebuch-Einträge schließen" : "Gästebuch-Einträge öffnen";
+    toggle.setAttribute("aria-label", actionLabel);
+    toggle.setAttribute("title", actionLabel);
 
     if (expanded && shouldScrollToEntry) {
       window.requestAnimationFrame(() => {
