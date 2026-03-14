@@ -87,7 +87,7 @@
             <a href="/characters/<%= activeCharacter.id %>/guestbook/edit">Charakter editieren</a>
           <% } %>
           <% if (activeCharacter) { %>
-            <a href="/characters/<%= activeCharacter.id %>/guestbook">G&auml;stebuch</a>
+            <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
             <% if (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp") { %>
               <a href="/characters/<%= activeCharacter.id %>#roomlist">Festplays</a>
             <% } %>
