@@ -3070,6 +3070,14 @@ a:hover {
   position: relative;
 }
 
+body:has(.guestbook-layout) .container {
+  padding-top: 0;
+}
+
+body:has(.guestbook-layout) .guestbook-layout {
+  margin-top: -1px;
+}
+
 .guestbook-sticky-head {
   position: sticky;
   top: clamp(4.55rem, 8vw, 5.4rem);
@@ -3244,6 +3252,10 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 @media (max-width: 719.98px) {
+  body:has(.guestbook-layout) .container {
+    padding-top: 0;
+  }
+
   .guestbook-sticky-head {
     top: clamp(4.15rem, 13vw, 4.95rem);
     margin-left: -0.1rem;
