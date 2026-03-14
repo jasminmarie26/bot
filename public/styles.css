@@ -1543,6 +1543,29 @@ a:hover {
   height: auto;
 }
 
+body.page-home-screen .hero {
+  align-items: center;
+  text-align: center;
+}
+
+body.page-home-screen .hero h1,
+body.page-home-screen .hero-copy,
+body.page-home-screen .hero-actions {
+  width: 100%;
+  max-width: min(100%, 1040px);
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+body.page-home-screen .hero h1 {
+  white-space: normal;
+}
+
+body.page-home-screen .hero-actions {
+  justify-content: center;
+}
+
 .home-main .grid {
   margin-top: 1rem;
 }
