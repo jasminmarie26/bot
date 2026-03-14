@@ -1454,7 +1454,7 @@ a:hover {
   font-family: var(--font-display);
   letter-spacing: 0.03em;
   text-align: center;
-  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  font-size: clamp(1.45rem, 2.1vw, 1.9rem);
 }
 
 .hero-actions {
@@ -1472,8 +1472,8 @@ a:hover {
 }
 
 .hero-copy.guestbook-entry-body {
-  font-size: clamp(0.98rem, 1.35vw, 1.14rem);
-  line-height: 1.42;
+  font-size: clamp(0.84rem, 0.9vw, 0.92rem);
+  line-height: 1.32;
 }
 
 .hero.has-update-actions .hero-copy {
@@ -1506,8 +1506,8 @@ a:hover {
 
 .home-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 1.15rem;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
 }
 
@@ -1520,7 +1520,6 @@ a:hover {
 }
 
 .page-home-screen .container {
-  max-width: 1280px;
   height: auto;
   min-height: calc(100vh - 5.15rem);
   min-height: calc(100dvh - 5.15rem);
@@ -1594,7 +1593,7 @@ a:hover {
 
 .home-stat-group-title {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.28em;
   text-transform: uppercase;
@@ -1641,7 +1640,7 @@ a:hover {
 }
 
 .home-stat-highlight span {
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   color: var(--text);
 }
 
@@ -1652,25 +1651,25 @@ a:hover {
 }
 
 .home-stat span {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 
 .home-stat-names {
   margin-top: 0.2rem;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   line-height: 1.35;
 }
 
 .home-stat-empty {
   margin-top: 0.2rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .home-stat-meta {
   margin-top: 0.24rem;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   line-height: 1.4;
   color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
 }
@@ -1689,12 +1688,12 @@ a:hover {
 
 .home-stat-detail-label {
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   line-height: 1.35;
 }
 
 .home-stat-highlight .home-stat-detail-value {
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 400;
   line-height: 1;
   text-align: right;
