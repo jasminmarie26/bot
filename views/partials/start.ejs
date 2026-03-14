@@ -104,8 +104,12 @@
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
-          <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
-          <nav class="nav">
+          <% if (!topbarGuestbookModeActive) { %>
+            <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
+          <% } else { %>
+            <div class="topbar-brand-spacer" aria-hidden="true"></div>
+          <% } %>
+          <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
                 <a href="/dashboard">Dashboard</a>
@@ -136,6 +140,9 @@
               </form>
             <% } %>
             <% if (currentUser) { %>
+              <% if (topbarGuestbookModeActive) { %>
+                <a class="<%= `${topbarBrandClass} brand-in-nav` %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
+              <% } %>
               <%- include("guestbook-notification-link") %>
               <details class="topbar-user-menu">
                 <summary
