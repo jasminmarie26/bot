@@ -3116,10 +3116,7 @@ body:has(.guestbook-layout) .guestbook-layout {
 }
 
 .guestbook-entry-rail::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  background: color-mix(in srgb, var(--panel-edge) 84%, transparent);
+  content: none;
 }
 
 .guestbook-entry-launcher {
