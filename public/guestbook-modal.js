@@ -1,59 +1,43 @@
 (() => {
-  const modal = document.querySelector("[data-guestbook-modal]");
-  if (!modal) return;
+  const panel = document.querySelector("[data-guestbook-panel]");
+  const toggle = document.querySelector("[data-guestbook-panel-toggle]");
+  const toggleLabel = document.querySelector("[data-guestbook-panel-toggle-label]");
 
-  const openButtons = document.querySelectorAll("[data-guestbook-modal-open]");
-  const closeButtons = modal.querySelectorAll("[data-guestbook-modal-close]");
-  const modalBody = modal.querySelector(".guestbook-modal-body");
+  if (!panel || !toggle) return;
 
-  const openModal = () => {
-    modal.hidden = false;
-    document.body.classList.add("has-guestbook-modal");
+  const entryHash = () => window.location.hash.startsWith("#guestbook-entry-");
 
-    window.requestAnimationFrame(() => {
-      const targetId = window.location.hash;
-      if (targetId && targetId.startsWith("#guestbook-entry-")) {
-        const targetEntry = modal.querySelector(targetId);
-        targetEntry?.scrollIntoView({ block: "center", behavior: "smooth" });
-      }
-    });
-  };
+  const updatePanelState = (expanded, options = {}) => {
+    const shouldScrollToEntry = Boolean(options.scrollToEntry);
 
-  const closeModal = () => {
-    modal.hidden = true;
-    document.body.classList.remove("has-guestbook-modal");
-  };
+    panel.hidden = !expanded;
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
 
-  openButtons.forEach((button) => {
-    button.addEventListener("click", openModal);
-  });
-
-  closeButtons.forEach((button) => {
-    button.addEventListener("click", closeModal);
-  });
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      closeModal();
+    if (toggleLabel) {
+      toggleLabel.textContent = expanded ? "Zuklappen" : "Aufklappen";
     }
+
+    if (expanded && shouldScrollToEntry) {
+      window.requestAnimationFrame(() => {
+        const targetEntry = panel.querySelector(window.location.hash);
+        targetEntry?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    updatePanelState(panel.hidden);
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !modal.hidden) {
-      closeModal();
+    if (event.key === "Escape" && !panel.hidden) {
+      updatePanelState(false);
     }
   });
 
-  if (modalBody) {
-    modalBody.addEventListener("click", (event) => {
-      const authorLink = event.target.closest(".guestbook-author-link");
-      if (authorLink) {
-        closeModal();
-      }
-    });
-  }
-
-  if (modal.dataset.autoOpen === "true" || window.location.hash.startsWith("#guestbook-entry-")) {
-    openModal();
+  if (panel.dataset.autoOpen === "true" || entryHash()) {
+    updatePanelState(true, { scrollToEntry: entryHash() });
+  } else {
+    updatePanelState(false);
   }
 })();
