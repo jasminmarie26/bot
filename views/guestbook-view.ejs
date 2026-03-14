@@ -1,9 +1,15 @@
-<%
+<% 
   const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
   const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
   const topbarBrandModifier = "is-character";
 %>
-<%- include("partials/start", { topbarCharacter, topbarBrandLabel, topbarBrandHref, topbarBrandModifier }) %>
+<%- include("partials/start", {
+  topbarCharacter,
+  topbarBrandLabel,
+  topbarBrandHref,
+  topbarBrandModifier,
+  topbarGuestbookMode: true
+}) %>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 

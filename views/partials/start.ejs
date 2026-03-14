@@ -98,14 +98,19 @@
       typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
         ? `brand ${topbarBrandModifier}`
         : "brand"; %>
+    <% const topbarGuestbookModeActive = Boolean(
+      typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
+    ); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
           <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <nav class="nav">
             <% if (currentUser) { %>
-              <a href="/dashboard">Dashboard</a>
-              <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+              <% if (!topbarGuestbookModeActive) { %>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+              <% } %>
               <% if (currentUser.is_admin) { %>
                 <a href="/admin">Admin</a>
               <% } %>
@@ -113,21 +118,23 @@
               <a href="/login">Login</a>
               <a href="/register">Registrieren</a>
             <% } %>
-            <form method="POST" action="/settings/theme" class="inline-form theme-form">
-              <label for="theme-select">Design</label>
-              <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
-              <select
-                id="theme-select"
-                name="theme"
-                class="theme-select"
-              >
-                <% availableThemes.forEach((theme) => { %>
-                  <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
-                    <%= theme.label %>
-                  </option>
-                <% }) %>
-              </select>
-            </form>
+            <% if (!topbarGuestbookModeActive) { %>
+              <form method="POST" action="/settings/theme" class="inline-form theme-form">
+                <label for="theme-select">Design</label>
+                <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+                <select
+                  id="theme-select"
+                  name="theme"
+                  class="theme-select"
+                >
+                  <% availableThemes.forEach((theme) => { %>
+                    <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+                      <%= theme.label %>
+                    </option>
+                  <% }) %>
+                </select>
+              </form>
+            <% } %>
             <% if (currentUser) { %>
               <%- include("guestbook-notification-link") %>
               <details class="topbar-user-menu">
