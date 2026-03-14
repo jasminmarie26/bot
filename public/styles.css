@@ -3201,16 +3201,50 @@ body:has(.guestbook-layout) .guestbook-layout {
 }
 
 .guestbook-entry-panel {
-  margin: 0 0 1rem;
-  padding: 0.95rem 1rem 1rem;
+  position: fixed;
+  top: clamp(5.35rem, 8vw, 6.2rem);
+  left: max(1rem, calc((100vw - 1150px) / 2 + 1rem));
+  z-index: 80;
+  width: min(620px, calc(100vw - 2rem));
+  max-height: min(78vh, calc(100vh - 7rem));
+  overflow: auto;
+  padding: 1rem 1rem 1.05rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 88%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
-  box-shadow: 0 14px 34px -22px var(--panel-shadow);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
+  box-shadow:
+    0 28px 52px -34px var(--panel-shadow),
+    0 18px 32px -28px color-mix(in srgb, black 40%, transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%);
 }
 
 .guestbook-entry-panel[hidden] {
   display: none !important;
+}
+
+.guestbook-entry-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 80%, transparent);
+}
+
+.guestbook-entry-panel-title {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.guestbook-entry-panel-title strong {
+  font-size: 1.08rem;
+}
+
+.guestbook-entry-panel-close {
+  flex: 0 0 auto;
 }
 
 .guestbook-page-tabs {
@@ -3222,6 +3256,12 @@ body:has(.guestbook-layout) .guestbook-layout {
 
 body.theme-paper-ink .guestbook-sticky-head,
 body.theme-windows-xp .guestbook-sticky-head {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.theme-paper-ink .guestbook-entry-panel,
+body.theme-windows-xp .guestbook-entry-panel {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -3259,7 +3299,20 @@ body.theme-atari .guestbook-sticky-head {
   }
 
   .guestbook-entry-panel {
+    top: clamp(4.7rem, 12vw, 5.4rem);
+    left: 0.5rem;
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 5.4rem);
     padding: 0.85rem 0.85rem 0.9rem;
+  }
+
+  .guestbook-entry-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guestbook-entry-panel-close {
+    width: 100%;
   }
 }
 

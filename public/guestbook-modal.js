@@ -2,6 +2,7 @@
   const panel = document.querySelector("[data-guestbook-panel]");
   const toggle = document.querySelector("[data-guestbook-panel-toggle]");
   const toggleLabel = document.querySelector("[data-guestbook-panel-toggle-label]");
+  const closeButtons = document.querySelectorAll("[data-guestbook-panel-close]");
 
   if (!panel || !toggle) return;
 
@@ -29,15 +30,25 @@
     updatePanelState(panel.hidden);
   });
 
+  closeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      updatePanelState(false);
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (panel.hidden) return;
+    if (panel.contains(event.target) || toggle.contains(event.target)) return;
+    updatePanelState(false);
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) {
       updatePanelState(false);
     }
   });
 
-  if (panel.dataset.autoOpen === "true" || entryHash()) {
-    updatePanelState(true, { scrollToEntry: entryHash() });
-  } else {
-    updatePanelState(false);
-  }
+  updatePanelState(panel.dataset.autoOpen === "true" || entryHash(), {
+    scrollToEntry: entryHash()
+  });
 })();
