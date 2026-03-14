@@ -1,4 +1,9 @@
-<%- include("partials/start", { topbarCharacter }) %>
+<%
+  const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
+  const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
+  const topbarBrandModifier = "is-character";
+%>
+<%- include("partials/start", { topbarCharacter, topbarBrandLabel, topbarBrandHref, topbarBrandModifier }) %>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 

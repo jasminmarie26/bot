@@ -751,6 +751,17 @@ a:hover {
   line-height: 1;
 }
 
+.brand.is-character {
+  font-family: var(--font-ui);
+  font-size: clamp(1.02rem, 1.6vw, 1.32rem);
+  letter-spacing: 0.015em;
+  font-weight: 700;
+  text-transform: none;
+  max-width: min(26rem, 36vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .nav {
   display: flex;
   gap: 0.65rem;

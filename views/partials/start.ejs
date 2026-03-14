@@ -86,10 +86,22 @@
     <% const activeMenuIdentityRoleStyle = menuCharacter
       ? (menuCharacterIsAdmin ? "admin" : (menuCharacterIsModerator ? "moderator" : ""))
       : (currentUserDisplayRoleStyle || ""); %>
+    <% const topbarBrandText =
+      typeof topbarBrandLabel !== "undefined" && topbarBrandLabel
+        ? topbarBrandLabel
+        : "Heldenhafte Reisen"; %>
+    <% const topbarBrandTarget =
+      typeof topbarBrandHref !== "undefined" && topbarBrandHref
+        ? topbarBrandHref
+        : "/"; %>
+    <% const topbarBrandClass =
+      typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
+        ? `brand ${topbarBrandModifier}`
+        : "brand"; %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner">
-          <a class="brand" href="/">Heldenhafte Reisen</a>
+          <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <nav class="nav">
             <% if (currentUser) { %>
               <a href="/dashboard">Dashboard</a>
