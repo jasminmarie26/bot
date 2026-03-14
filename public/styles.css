@@ -525,7 +525,7 @@ body.theme-sith .hero-actions {
 }
 
 body.theme-sith .hero-copy.guestbook-entry-body {
-  font-size: clamp(1.08rem, 2vw, 1.42rem);
+  font-size: clamp(0.84rem, 1.05vw, 0.98rem);
 }
 
 body.theme-jedi {
@@ -693,7 +693,7 @@ body.theme-jedi .hero-actions {
 }
 
 body.theme-jedi .hero-copy.guestbook-entry-body {
-  font-size: clamp(1.08rem, 2vw, 1.42rem);
+  font-size: clamp(0.84rem, 1.05vw, 0.98rem);
 }
 
 a {
