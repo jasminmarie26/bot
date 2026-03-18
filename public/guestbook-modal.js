@@ -43,6 +43,7 @@
     const shouldScrollToEntry = Boolean(options.scrollToEntry);
 
     panel.hidden = !expanded;
+    document.documentElement.classList.toggle("guestbook-panel-open", expanded);
     document.body.classList.toggle("guestbook-panel-open", expanded);
     toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
     persistPanelState(expanded);

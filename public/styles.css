@@ -3122,7 +3122,6 @@ body.page-home-screen .hero-actions {
 
 .guestbook-layout {
   position: relative;
-  transition: padding-left 160ms ease;
 }
 
 body:has(.guestbook-layout) .container {
@@ -3245,7 +3244,7 @@ body:has(.guestbook-layout) .guestbook-layout {
   margin: 0;
 }
 
-body.guestbook-panel-open .guestbook-layout {
+.guestbook-panel-open .guestbook-layout {
   padding-left: clamp(22rem, 34vw, 29rem);
 }
 
@@ -3302,7 +3301,7 @@ body.theme-atari .guestbook-sticky-head {
     padding: 0.85rem 0.85rem 0.9rem;
   }
 
-  body.guestbook-panel-open .guestbook-layout {
+  .guestbook-panel-open .guestbook-layout {
     padding-left: 0;
   }
 }

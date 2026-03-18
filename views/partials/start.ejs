@@ -37,6 +37,27 @@
         );
       })();
     </script>
+    <script>
+      (() => {
+        const isGuestbookPath = /^\/characters\/\d+\/guestbook\/?$/.test(window.location.pathname);
+        if (!isGuestbookPath) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageId = urlParams.get("page_id") || "default";
+        const storageKey = `guestbook-panel:${window.location.pathname}:${pageId}`;
+        const hasGuestbookEntryHash = window.location.hash.startsWith("#guestbook-entry-");
+
+        try {
+          if (window.sessionStorage.getItem(storageKey) === "open" || hasGuestbookEntryHash) {
+            document.documentElement.classList.add("guestbook-panel-open");
+          }
+        } catch (_error) {
+          if (hasGuestbookEntryHash) {
+            document.documentElement.classList.add("guestbook-panel-open");
+          }
+        }
+      })();
+    </script>
     <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>
     <link rel="stylesheet" href="/styles.css?v=<%= staticAssetVersion %>" />
   </head>
