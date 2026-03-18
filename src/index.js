@@ -2211,10 +2211,51 @@ function buildGuestbookContextQuery(accessState = {}) {
   return `&reply_from_entry=${accessState.replyContextEntryId}&reply_to_character=${accessState.replyContextCharacterId}`;
 }
 
-function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState) {
+function normalizeGuestbookEntriesPageNumber(value) {
+  const pageNumber = Number(value);
+  return Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+}
+
+function buildGuestbookViewUrl(characterId, guestbookPageId, accessState, entriesPageNumber = 1) {
+  const normalizedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(entriesPageNumber);
+  let url = `/characters/${characterId}/guestbook?page_id=${guestbookPageId}`;
+
+  if (normalizedEntriesPageNumber > 1) {
+    url += `&entries_page=${normalizedEntriesPageNumber}`;
+  }
+
+  return `${url}${buildGuestbookContextQuery(accessState)}`;
+}
+
+function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, accessState) {
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
   const viewerIsOwner = Boolean(accessState?.isOwner);
+
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM guestbook_entries ge
+       WHERE ge.character_id = ?
+         AND ge.guestbook_page_id = ?
+         AND (
+           ge.is_private = 0
+           OR ge.author_id = ?
+           OR ? = 1
+           OR ? = 1
+         )`
+    )
+    .get(character.id, pageId, viewerUserId, viewerIsOwner ? 1 : 0, viewerIsAdmin ? 1 : 0);
+
+  return Number(row?.total || 0);
+}
+
+function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState, entriesPageNumber = 1) {
+  const viewerUserId = Number(viewerUser?.id);
+  const viewerIsAdmin = Boolean(accessState?.isAdmin);
+  const viewerIsOwner = Boolean(accessState?.isOwner);
+  const normalizedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(entriesPageNumber);
+  const offset = (normalizedEntriesPageNumber - 1) * GUESTBOOK_PAGE_SIZE;
 
   return db
     .prepare(
@@ -2239,9 +2280,18 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
            OR ? = 1
          )
        ORDER BY ge.created_at DESC, ge.id DESC
-       LIMIT ?`
+       LIMIT ?
+       OFFSET ?`
     )
-    .all(character.id, pageId, viewerUserId, viewerIsOwner ? 1 : 0, viewerIsAdmin ? 1 : 0, GUESTBOOK_PAGE_SIZE)
+    .all(
+      character.id,
+      pageId,
+      viewerUserId,
+      viewerIsOwner ? 1 : 0,
+      viewerIsAdmin ? 1 : 0,
+      GUESTBOOK_PAGE_SIZE,
+      offset
+    )
     .map((entry) => {
       const entryAuthorId = Number(entry.author_id);
       const authorCharacterId = Number(entry.author_character_id);
@@ -3416,8 +3466,29 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   const targetCharacterId = Number(latestNotification.character_id);
   const targetPageId = Number(latestNotification.guestbook_page_id);
   const targetEntryId = Number(latestNotification.guestbook_entry_id);
+  const entryPosition =
+    Number.isInteger(targetEntryId) && targetEntryId > 0
+      ? Number(
+          db
+            .prepare(
+              `SELECT COUNT(*) AS total
+               FROM guestbook_entries ge
+               JOIN guestbook_entries target ON target.id = ?
+               WHERE ge.character_id = target.character_id
+                 AND ge.guestbook_page_id = target.guestbook_page_id
+                 AND (
+                   ge.created_at > target.created_at
+                   OR (ge.created_at = target.created_at AND ge.id >= target.id)
+                 )`
+            )
+            .get(targetEntryId)?.total || 1
+        )
+      : 1;
+  const targetEntriesPageNumber = Math.max(1, Math.ceil(entryPosition / GUESTBOOK_PAGE_SIZE));
   const pageQuery =
-    Number.isInteger(targetPageId) && targetPageId > 0 ? `?page_id=${targetPageId}` : "";
+    Number.isInteger(targetPageId) && targetPageId > 0
+      ? `?page_id=${targetPageId}${targetEntriesPageNumber > 1 ? `&entries_page=${targetEntriesPageNumber}` : ""}`
+      : "";
   const anchor =
     Number.isInteger(targetEntryId) && targetEntryId > 0 ? `#guestbook-entry-${targetEntryId}` : "";
 
@@ -4198,11 +4269,21 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
   const guestbookSettings = getOrCreateGuestbookSettings(id);
-  const guestbookEntries = getGuestbookEntriesForViewer(
+  const requestedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(req.query.entries_page);
+  const totalGuestbookEntries = getGuestbookEntriesCountForViewer(
     character,
     activeGuestbookPage.id,
     req.session.user,
     guestbookAccessState
+  );
+  const totalGuestbookEntryPages = Math.max(1, Math.ceil(totalGuestbookEntries / GUESTBOOK_PAGE_SIZE));
+  const activeGuestbookEntriesPageNumber = Math.min(requestedEntriesPageNumber, totalGuestbookEntryPages);
+  const guestbookEntries = getGuestbookEntriesForViewer(
+    character,
+    activeGuestbookPage.id,
+    req.session.user,
+    guestbookAccessState,
+    activeGuestbookEntriesPageNumber
   );
   const postingCharactersState = getGuestbookPostingCharacters(req, character);
   const replyCharacterId = Number(guestbookAccessState.replyContextCharacterId);
@@ -4224,6 +4305,14 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     guestbookAccessState,
     guestbookEntries,
     guestbookPages,
+    guestbookEntryPagination: {
+      currentPage: activeGuestbookEntriesPageNumber,
+      totalPages: totalGuestbookEntryPages,
+      hasPreviousPage: activeGuestbookEntriesPageNumber > 1,
+      hasNextPage: activeGuestbookEntriesPageNumber < totalGuestbookEntryPages,
+      previousPage: Math.max(1, activeGuestbookEntriesPageNumber - 1),
+      nextPage: Math.min(totalGuestbookEntryPages, activeGuestbookEntriesPageNumber + 1)
+    },
     activeGuestbookPage: {
       ...activeGuestbookPage,
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
@@ -4256,8 +4345,13 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   const requestedPageId = Number(req.body.page_id);
   const activePage =
     pages.find((page) => page.id === requestedPageId) || pages[0];
-  const guestbookRedirectBase =
-    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
+  const requestedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(req.body.entries_page);
+  const guestbookRedirectBase = buildGuestbookViewUrl(
+    id,
+    activePage.id,
+    guestbookAccessState,
+    requestedEntriesPageNumber
+  );
   const content = (req.body.content || "").trim().slice(0, 4000);
   if (!content) {
     setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
@@ -4313,7 +4407,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   setFlash(req, "success", "Eintrag gespeichert.");
-  return res.redirect(`${guestbookRedirectBase}#guestbook-entry-${info.lastInsertRowid}`);
+  return res.redirect(`${buildGuestbookViewUrl(id, activePage.id, guestbookAccessState, 1)}#guestbook-entry-${info.lastInsertRowid}`);
 });
 
 app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req, res) => {
@@ -4352,8 +4446,13 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
     pages.find((page) => page.id === requestedPageId) ||
     pages.find((page) => page.id === Number(entry.guestbook_page_id)) ||
     pages[0];
-  const guestbookRedirectBase =
-    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
+  const requestedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(req.body.entries_page);
+  const guestbookRedirectBase = buildGuestbookViewUrl(
+    id,
+    activePage.id,
+    guestbookAccessState,
+    requestedEntriesPageNumber
+  );
   const content = String(req.body.content || "").trim().slice(0, 4000);
 
   if (!content) {
@@ -4407,8 +4506,13 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
     pages.find((page) => page.id === requestedPageId) ||
     pages.find((page) => page.id === Number(entry.guestbook_page_id)) ||
     pages[0];
-  const guestbookRedirectBase =
-    `/characters/${id}/guestbook?page_id=${activePage.id}${buildGuestbookContextQuery(guestbookAccessState)}`;
+  const requestedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(req.body.entries_page);
+  const guestbookRedirectBase = buildGuestbookViewUrl(
+    id,
+    activePage.id,
+    guestbookAccessState,
+    requestedEntriesPageNumber
+  );
 
   const deleteTx = db.transaction(() => {
     deleteGuestbookNotificationsForEntry(entryId);
