@@ -3574,16 +3574,16 @@ body.theme-atari .guestbook-sticky-head {
 
 .bb-image-left {
   float: left;
-  width: min(58px, 22%);
-  max-width: 58px;
-  margin: 0.1rem 0.5rem 0.45rem 0;
+  width: min(210px, 34%);
+  max-width: 210px;
+  margin: 0.1rem 0.75rem 0.55rem 0;
 }
 
 .bb-image-right {
   float: right;
-  width: min(58px, 22%);
-  max-width: 58px;
-  margin: 0.1rem 0 0.45rem 0.5rem;
+  width: min(210px, 34%);
+  max-width: 210px;
+  margin: 0.1rem 0 0.55rem 0.75rem;
 }
 
 .bb-gradient {

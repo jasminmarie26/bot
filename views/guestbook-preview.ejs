@@ -20,7 +20,7 @@
       <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gästebuch Bild" />
     <% } %>
     <% if (previewHtml) { %>
-      <p class="guestbook-entry-body"><%- previewHtml %></p>
+      <div class="guestbook-entry-body"><%- previewHtml %></div>
     <% } else { %>
       <p class="muted">Diese Seite ist noch leer.</p>
     <% } %>
@@ -29,5 +29,6 @@
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
+<script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>

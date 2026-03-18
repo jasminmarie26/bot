@@ -1798,6 +1798,16 @@ function toGuestbookImageSrc(safeUrl) {
   return value;
 }
 
+function toGuestbookFallbackImageSrc(safeUrl) {
+  const value = String(safeUrl || "").trim();
+  if (!value) return "";
+  if (value.startsWith("/")) return value;
+  if (/^https?:\/\/images\.weserv\.nl\//i.test(value)) return value;
+
+  const normalized = value.replace(/^https?:\/\//i, "");
+  return `https://images.weserv.nl/?n=-1&url=${encodeURIComponent(normalized)}`;
+}
+
 function normalizeGradientColorToken(rawToken) {
   const token = String(rawToken || "").trim();
   if (!token) return null;
@@ -1886,7 +1896,9 @@ function renderGuestbookBbcode(rawContent) {
     const floatMatch = attributeText.match(/\bfloat\s*=\s*["']?\s*(left|right)\s*["']?/i);
     const floatValue = floatMatch ? floatMatch[1].toLowerCase() : "";
     const floatClass = floatValue ? ` bb-image-${floatValue}` : "";
-    return `<img class="bb-image${floatClass}" src="${escapeHtml(toGuestbookImageSrc(safeUrl))}" alt="Bild" loading="lazy" referrerpolicy="no-referrer" />`;
+    const directSrc = escapeHtml(toGuestbookImageSrc(safeUrl));
+    const fallbackSrc = escapeHtml(toGuestbookFallbackImageSrc(safeUrl));
+    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" loading="lazy" referrerpolicy="no-referrer" />`;
   });
 
   inlineTags.forEach(([bbTag, htmlTag]) => {

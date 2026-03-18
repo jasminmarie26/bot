@@ -37,7 +37,7 @@
       <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
     <% } %>
     <% if (activeGuestbookPage?.content_html) { %>
-      <p class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></p>
+      <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
     <% } else { %>
       <p class="muted">Diese Seite ist noch leer.</p>
     <% } %>
@@ -224,6 +224,7 @@
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
+<script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>
