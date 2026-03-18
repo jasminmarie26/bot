@@ -1732,7 +1732,7 @@ function escapeHtml(value) {
 }
 
 function sanitizeBbcodeUrl(rawUrl) {
-  const value = String(rawUrl || "").trim();
+  const value = normalizeCommonBbcodeUrlTypos(rawUrl);
   if (!value) return null;
 
   if (/^\/(?!\/)[^\s]*$/i.test(value)) {
@@ -1758,8 +1758,21 @@ function sanitizeBbcodeColor(rawColor) {
   return null;
 }
 
+function normalizeCommonBbcodeUrlTypos(rawUrl) {
+  let value = String(rawUrl || "").trim();
+  if (!value) return "";
+
+  value = value
+    .replace(/^hhttps:\/\//i, "https://")
+    .replace(/^hhttp:\/\//i, "http://")
+    .replace(/^ttps:\/\//i, "https://")
+    .replace(/^ttp:\/\//i, "http://");
+
+  return value;
+}
+
 function sanitizeBbcodeImageUrl(rawUrl) {
-  const value = String(rawUrl || "").trim();
+  const value = normalizeCommonBbcodeUrlTypos(rawUrl);
   if (!value) return null;
 
   if (/^\/(?!\/)[^\s]*$/i.test(value)) {
@@ -1795,11 +1808,18 @@ function sanitizeBbcodeImageUrl(rawUrl) {
 function toGuestbookImageSrc(safeUrl) {
   const value = String(safeUrl || "").trim();
   if (!value) return "";
+  if (!/^https?:\/\//i.test(value)) return value;
+  return `/media/guestbook-image?url=${encodeURIComponent(value)}`;
+}
+
+function toGuestbookDirectImageSrc(safeUrl) {
+  const value = String(safeUrl || "").trim();
+  if (!value) return "";
   return value;
 }
 
 function toGuestbookFallbackImageSrc(safeUrl) {
-  const value = String(safeUrl || "").trim();
+  const value = toGuestbookDirectImageSrc(safeUrl);
   if (!value) return "";
   if (value.startsWith("/")) return value;
   if (/^https?:\/\/images\.weserv\.nl\//i.test(value)) return value;
@@ -1855,6 +1875,20 @@ function parseGradientSpec(rawSpec) {
   };
 }
 
+function getCharacterByExactName(name) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) return null;
+
+  return db
+    .prepare(
+      `SELECT c.id, c.name
+       FROM characters c
+       WHERE c.name = ? COLLATE NOCASE
+       LIMIT 1`
+    )
+    .get(normalizedName);
+}
+
 function renderGuestbookBbcode(rawContent) {
   let html = escapeHtml(String(rawContent || "").slice(0, 12000)).replace(/\r\n?/g, "\n");
 
@@ -1898,7 +1932,7 @@ function renderGuestbookBbcode(rawContent) {
     const floatClass = floatValue ? ` bb-image-${floatValue}` : "";
     const directSrc = escapeHtml(toGuestbookImageSrc(safeUrl));
     const fallbackSrc = escapeHtml(toGuestbookFallbackImageSrc(safeUrl));
-    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" loading="lazy" referrerpolicy="no-referrer" />`;
+    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" loading="lazy" />`;
   });
 
   inlineTags.forEach(([bbTag, htmlTag]) => {
@@ -1920,6 +1954,16 @@ function renderGuestbookBbcode(rawContent) {
     if (!safeUrl) return escapeHtml(rawUrl);
     const safeLabel = escapeHtml(safeUrl);
     return `<a href="${safeLabel}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+  });
+
+  html = html.replace(/\[gb\]([\s\S]*?)\[\/gb\]/gi, (full, rawName) => {
+    const safeLabel = String(rawName || "").replace(/<br\s*\/?>/gi, " ").trim();
+    if (!safeLabel) return "";
+
+    const targetCharacter = getCharacterByExactName(safeLabel);
+    if (!targetCharacter) return safeLabel;
+
+    return `<a href="/characters/${targetCharacter.id}/guestbook" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
   });
 
   html = html.replace(/\[color=([^\]\n]+)\]([\s\S]*?)\[\/color\]/gi, (full, rawColor, inner) => {
@@ -2752,6 +2796,52 @@ app.use((req, res, next) => {
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   delete req.session.flash;
   next();
+});
+
+app.get("/media/guestbook-image", async (req, res) => {
+  const safeUrl = sanitizeBbcodeImageUrl(req.query?.url);
+  if (!safeUrl || !/^https?:\/\//i.test(safeUrl)) {
+    return res.status(404).end();
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(safeUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(502).end();
+    }
+
+    const contentType = String(response.headers.get("content-type") || "").trim().toLowerCase();
+    if (!contentType.startsWith("image/")) {
+      return res.status(415).end();
+    }
+
+    const cacheControl = String(response.headers.get("cache-control") || "").trim();
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Length", String(imageBuffer.length));
+    res.setHeader(
+      "Cache-Control",
+      cacheControl || "public, max-age=21600, s-maxage=21600"
+    );
+    return res.send(imageBuffer);
+  } catch (error) {
+    return res.status(502).end();
+  } finally {
+    clearTimeout(timeout);
+  }
 });
 
 app.get("/", (req, res) => {
