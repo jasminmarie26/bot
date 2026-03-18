@@ -520,7 +520,9 @@
 
   if (typeof io !== "function") return;
 
-  const socket = io();
+  const socket = io({
+    transports: ["websocket"]
+  });
 
   if (list) {
     socket.on("site:update:create", (item) => {

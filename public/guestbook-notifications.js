@@ -50,6 +50,8 @@
   };
   applyNotificationPayload(initialPayload);
 
-  const socket = io();
+  const socket = io({
+    transports: ["websocket"]
+  });
   socket.on("guestbook:notification:update", applyNotificationPayload);
 })();

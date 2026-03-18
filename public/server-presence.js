@@ -9,7 +9,9 @@
     .trim()
     .toLowerCase();
 
-  const socket = io();
+  const socket = io({
+    transports: ["websocket"]
+  });
 
   function createOccupantNode(entry) {
     const displayName = String(entry?.name || "").trim() || "Unbekannt";

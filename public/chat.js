@@ -69,7 +69,9 @@
 
   if (!chatBox || !form || !input) return;
 
-  const socket = io();
+  const socket = io({
+    transports: ["websocket"]
+  });
 
   try {
     soundEnabled = window.localStorage.getItem(soundPreferenceKey) !== "0";
