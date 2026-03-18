@@ -3241,13 +3241,6 @@ body:has(.guestbook-layout) .guestbook-layout {
   margin-top: 0.9rem;
 }
 
-.guestbook-page-tabs {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
 .guestbook-reply-hint {
   margin: 0;
 }
@@ -3314,27 +3307,56 @@ body.theme-atari .guestbook-sticky-head {
   }
 }
 
-.guestbook-page-tab {
-  border: 1px solid var(--field-edge);
-  border-radius: 9px;
-  padding: 0.25rem 0.52rem;
-  background: color-mix(in srgb, var(--field-bg) 86%, white 14%);
-  color: var(--text);
-  text-decoration: none;
-  min-width: 2rem;
-  text-align: center;
+.guestbook-pagination-shell {
+  margin-top: 1rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
 }
 
-.guestbook-page-tab:hover {
-  text-decoration: none;
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--field-edge));
+.guestbook-pagination-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
 }
 
-.guestbook-page-tab.is-active {
-  border-color: var(--accent-2);
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-text);
-  font-weight: 700;
+.guestbook-pagination {
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+}
+
+.guestbook-pagination-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  color: var(--link);
+  text-decoration: none;
+  font-size: 1.45rem;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transition:
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.guestbook-pagination-arrow:hover {
+  color: color-mix(in srgb, var(--link) 82%, white 18%);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.guestbook-pagination-arrow.is-disabled {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  pointer-events: none;
 }
 
 .guestbook-page-preview {

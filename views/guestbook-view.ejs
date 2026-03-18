@@ -12,6 +12,16 @@
 }) %>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
+<%
+  const guestbookPageList = Array.isArray(guestbookPages) ? guestbookPages : [];
+  const activeGuestbookPageIndex = guestbookPageList.findIndex((page) => page.id === activeGuestbookPage?.id);
+  const previousGuestbookPage =
+    activeGuestbookPageIndex > 0 ? guestbookPageList[activeGuestbookPageIndex - 1] : null;
+  const nextGuestbookPage =
+    activeGuestbookPageIndex >= 0 && activeGuestbookPageIndex < guestbookPageList.length - 1
+      ? guestbookPageList[activeGuestbookPageIndex + 1]
+      : null;
+%>
 
 <section class="panel guestbook-layout">
   <% if (characterCreatedAtLabel) { %>
@@ -49,17 +59,6 @@
       Du bist &uuml;ber einen G&auml;stebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.
     </p>
   <% } %>
-
-  <nav class="guestbook-page-tabs" aria-label="G&auml;stebuch Seiten">
-    <% (guestbookPages || []).forEach((page) => { %>
-      <a
-        class="guestbook-page-tab <%= activeGuestbookPage.id === page.id ? "is-active" : "" %>"
-        href="/characters/<%= character.id %>/guestbook?page_id=<%= page.id %><%= guestbookContextQuery %>"
-      >
-        <%= page.page_number %>
-      </a>
-    <% }) %>
-  </nav>
 
   <form method="POST" action="/characters/<%= character.id %>/guestbook" class="form guestbook-entry-form">
     <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
@@ -160,6 +159,43 @@
           <% } %>
         </article>
       <% }) %>
+    </div>
+  <% } %>
+
+  <% if (guestbookPageList.length > 1) { %>
+    <div class="guestbook-pagination-shell">
+      <div class="guestbook-pagination-status">
+        <span><%= activeGuestbookPage.page_number %></span>
+        <span>/</span>
+        <span><%= guestbookPageList.length %></span>
+      </div>
+      <nav class="guestbook-pagination" aria-label="G&auml;stebuch Seitenwechsel">
+        <% if (previousGuestbookPage) { %>
+          <a
+            class="guestbook-pagination-arrow"
+            href="/characters/<%= character.id %>/guestbook?page_id=<%= previousGuestbookPage.id %><%= guestbookContextQuery %>"
+            aria-label="Vorherige G&auml;stebuch-Seite"
+            title="Vorherige Seite"
+          >
+            &#8249;
+          </a>
+        <% } else { %>
+          <span class="guestbook-pagination-arrow is-disabled" aria-hidden="true">&#8249;</span>
+        <% } %>
+
+        <% if (nextGuestbookPage) { %>
+          <a
+            class="guestbook-pagination-arrow"
+            href="/characters/<%= character.id %>/guestbook?page_id=<%= nextGuestbookPage.id %><%= guestbookContextQuery %>"
+            aria-label="N&auml;chste G&auml;stebuch-Seite"
+            title="N&auml;chste Seite"
+          >
+            &#8250;
+          </a>
+        <% } else { %>
+          <span class="guestbook-pagination-arrow is-disabled" aria-hidden="true">&#8250;</span>
+        <% } %>
+      </nav>
     </div>
   <% } %>
 </section>
