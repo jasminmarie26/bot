@@ -84,7 +84,7 @@
             <a href="/characters/<%= activeCharacter.id %>">Charakter</a>
           <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
-            <a href="/characters/<%= activeCharacter.id %>/guestbook/edit">Charakter editieren</a>
+            <a href="/characters/<%= activeCharacter.id %>/guestbook/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <% } %>
           <% if (activeCharacter) { %>
             <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
