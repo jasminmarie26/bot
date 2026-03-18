@@ -118,7 +118,16 @@
             <div class="guestbook-item-actions">
               <% if (entry.can_edit) { %>
                 <details class="guestbook-edit-form">
-                  <summary>Eintrag bearbeiten</summary>
+                  <summary
+                    class="guestbook-tool-btn"
+                    title="Eintrag bearbeiten"
+                    aria-label="Eintrag bearbeiten"
+                  >
+                    <svg class="guestbook-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 20l4.2-1 9.2-9.2a1.8 1.8 0 0 0 0-2.6l-.6-.6a1.8 1.8 0 0 0-2.6 0L5 15.8 4 20z"></path>
+                      <path d="M13.5 6.5l4 4"></path>
+                    </svg>
+                  </summary>
                   <form method="POST" action="/characters/<%= character.id %>/guestbook/entries/<%= entry.id %>/update" class="form">
                     <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
                     <input type="hidden" name="entries_page" value="<%= guestbookEntryPage %>" />
@@ -152,7 +161,20 @@
                     <input type="hidden" name="reply_context_entry_id" value="<%= guestbookAccessState.replyContextEntryId %>" />
                     <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
                   <% } %>
-                  <button type="submit" class="btn btn-secondary">L&ouml;schen</button>
+                  <button
+                    type="submit"
+                    class="guestbook-tool-btn guestbook-tool-btn-delete"
+                    title="Eintrag l&ouml;schen"
+                    aria-label="Eintrag l&ouml;schen"
+                  >
+                    <svg class="guestbook-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M6 7h12"></path>
+                      <path d="M9 7V5.8c0-.9.7-1.6 1.6-1.6h2.8c.9 0 1.6.7 1.6 1.6V7"></path>
+                      <path d="M8 7l.7 11.1c.1 1 .9 1.7 1.9 1.7h2.8c1 0 1.8-.7 1.9-1.7L16 7"></path>
+                      <path d="M10.2 10.2v6.2"></path>
+                      <path d="M13.8 10.2v6.2"></path>
+                    </svg>
+                  </button>
                 </form>
               <% } %>
             </div>
