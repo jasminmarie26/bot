@@ -7,6 +7,27 @@
   if (!panel || !toggle) return;
 
   const entryHash = () => window.location.hash.startsWith("#guestbook-entry-");
+  const guestbookPanelStateKey = (() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageId = urlParams.get("page_id") || "default";
+    return `guestbook-panel:${window.location.pathname}:${pageId}`;
+  })();
+
+  const readPersistedPanelState = () => {
+    try {
+      return window.sessionStorage.getItem(guestbookPanelStateKey);
+    } catch (_error) {
+      return null;
+    }
+  };
+
+  const persistPanelState = (expanded) => {
+    try {
+      window.sessionStorage.setItem(guestbookPanelStateKey, expanded ? "open" : "closed");
+    } catch (_error) {
+      // Ignore storage errors and keep the panel working normally.
+    }
+  };
 
   const syncGuestbookOffsets = () => {
     if (!topbar) return;
@@ -24,10 +45,11 @@
     panel.hidden = !expanded;
     document.body.classList.toggle("guestbook-panel-open", expanded);
     toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    persistPanelState(expanded);
 
     const actionLabel = expanded
-      ? "Gästebuch-Einträge schließen"
-      : "Gästebuch-Einträge öffnen";
+      ? "Gaestebuch-Eintraege schliessen"
+      : "Gaestebuch-Eintraege oeffnen";
 
     toggle.setAttribute("aria-label", actionLabel);
     toggle.setAttribute("title", actionLabel);
@@ -60,7 +82,11 @@
   window.addEventListener("resize", syncGuestbookOffsets);
   window.addEventListener("load", syncGuestbookOffsets, { once: true });
 
-  updatePanelState(panel.dataset.autoOpen === "true" || entryHash(), {
+  const persistedPanelState = readPersistedPanelState();
+  const shouldAutoOpen = panel.dataset.autoOpen === "true" || entryHash();
+  const initialOpen = shouldAutoOpen || persistedPanelState === "open";
+
+  updatePanelState(initialOpen, {
     scrollToEntry: entryHash()
   });
 })();
