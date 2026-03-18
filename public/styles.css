@@ -3217,7 +3217,7 @@ body:has(.guestbook-layout) .guestbook-layout {
   top: var(--guestbook-panel-top-offset, var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
   left: 0;
   z-index: 80;
-  width: min(410px, calc(100vw - 2rem));
+  width: min(520px, calc(100vw - 2rem));
   max-height: calc(100vh - clamp(4.8rem, 7.5vw, 5.2rem));
   overflow: auto;
   padding: 0.95rem 1rem 1.05rem;
