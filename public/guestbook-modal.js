@@ -2,10 +2,21 @@
   const panel = document.querySelector("[data-guestbook-panel]");
   const toggle = document.querySelector("[data-guestbook-panel-toggle]");
   const closeButtons = document.querySelectorAll("[data-guestbook-panel-close]");
+  const topbar = document.querySelector(".topbar");
 
   if (!panel || !toggle) return;
 
   const entryHash = () => window.location.hash.startsWith("#guestbook-entry-");
+
+  const syncGuestbookOffsets = () => {
+    if (!topbar) return;
+
+    const topbarRect = topbar.getBoundingClientRect();
+    const offset = Math.max(0, Math.round(topbarRect.top + topbarRect.height));
+
+    document.documentElement.style.setProperty("--guestbook-top-offset", `${offset}px`);
+    document.documentElement.style.setProperty("--guestbook-panel-top-offset", `${offset}px`);
+  };
 
   const updatePanelState = (expanded, options = {}) => {
     const shouldScrollToEntry = Boolean(options.scrollToEntry);
@@ -44,6 +55,10 @@
       updatePanelState(false);
     }
   });
+
+  syncGuestbookOffsets();
+  window.addEventListener("resize", syncGuestbookOffsets);
+  window.addEventListener("load", syncGuestbookOffsets, { once: true });
 
   updatePanelState(panel.dataset.autoOpen === "true" || entryHash(), {
     scrollToEntry: entryHash()

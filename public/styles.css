@@ -3135,10 +3135,10 @@ body:has(.guestbook-layout) .guestbook-layout {
 
 .guestbook-sticky-head {
   position: sticky;
-  top: clamp(4.55rem, 8vw, 5.4rem);
+  top: var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem));
   z-index: 7;
-  margin: 0 0 1rem;
-  padding: 0.5rem 0 0.55rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
   display: grid;
   gap: 0.55rem;
   border: 0;
@@ -3215,11 +3215,11 @@ body:has(.guestbook-layout) .guestbook-layout {
 
 .guestbook-entry-panel {
   position: fixed;
-  top: clamp(5.3rem, 8vw, 6rem);
+  top: var(--guestbook-panel-top-offset, var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
   left: 0;
   z-index: 80;
   width: min(410px, calc(100vw - 2rem));
-  max-height: calc(100vh - clamp(6.1rem, 9vw, 6.8rem));
+  max-height: calc(100vh - clamp(4.8rem, 7.5vw, 5.2rem));
   overflow: auto;
   padding: 0.95rem 1rem 1.05rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 88%, transparent);
@@ -3282,9 +3282,9 @@ body.theme-atari .guestbook-sticky-head {
   }
 
   .guestbook-sticky-head {
-    top: clamp(4.15rem, 13vw, 4.95rem);
-    margin: 0 0 0.9rem;
-    padding: 0.45rem 0 0.5rem;
+    top: var(--guestbook-top-offset, clamp(3.95rem, 10.5vw, 4.35rem));
+    margin: 0 0 0.45rem;
+    padding: 0;
   }
 
   .guestbook-meta-row {
@@ -3302,10 +3302,10 @@ body.theme-atari .guestbook-sticky-head {
   }
 
   .guestbook-entry-panel {
-    top: clamp(4.6rem, 11vw, 5.15rem);
+    top: var(--guestbook-panel-top-offset, var(--guestbook-top-offset, clamp(3.95rem, 10.5vw, 4.35rem)));
     left: 0;
     width: calc(100vw - 0.5rem);
-    max-height: calc(100vh - 5.65rem);
+    max-height: calc(100vh - 4.75rem);
     padding: 0.85rem 0.85rem 0.9rem;
   }
 
