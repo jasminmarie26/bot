@@ -4406,7 +4406,6 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
     createGuestbookNotification(character.user_id, id, info.lastInsertRowid);
   }
 
-  setFlash(req, "success", "Eintrag gespeichert.");
   return res.redirect(`${buildGuestbookViewUrl(id, activePage.id, guestbookAccessState, 1)}#guestbook-entry-${info.lastInsertRowid}`);
 });
 
