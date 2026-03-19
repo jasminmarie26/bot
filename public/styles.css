@@ -1547,6 +1547,17 @@ a:hover {
   justify-content: center;
 }
 
+.home-hero-stack {
+  width: min(100%, 1040px);
+  max-width: min(100%, 1040px);
+  margin-left: auto;
+  margin-right: auto;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+}
+
 .home-legal-links {
   margin-top: 1rem;
   display: inline-flex;
@@ -1728,9 +1739,11 @@ body.page-home-screen .hero {
   text-align: center;
 }
 
+body.page-home-screen .home-hero-stack,
 body.page-home-screen .hero h1,
 body.page-home-screen .hero-copy,
-body.page-home-screen .hero-actions {
+body.page-home-screen .hero-actions,
+body.page-home-screen .home-legal-links {
   width: 100%;
   max-width: min(100%, 1040px);
   margin-left: auto;
@@ -5587,9 +5600,11 @@ body.page-home-screen .hero {
   text-align: center !important;
 }
 
+body.page-home-screen .home-hero-stack,
 body.page-home-screen .hero h1,
 body.page-home-screen .hero-copy,
-body.page-home-screen .hero-actions {
+body.page-home-screen .hero-actions,
+body.page-home-screen .home-legal-links {
   width: min(100%, 1040px) !important;
   max-width: min(100%, 1040px) !important;
   margin-left: auto !important;
