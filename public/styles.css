@@ -731,7 +731,9 @@ body.theme-larp {
       rgba(255, 241, 216, 0.012) 0 2px,
       transparent 2px 26px
     ),
+    url("/5537bac5-cc6a-423f-89fd-5dbe67a31be5.png") center 12% / cover no-repeat,
     linear-gradient(145deg, #1a1410 0%, #231810 42%, #1e150f 74%, #130d09 100%);
+  background-attachment: scroll, scroll, scroll, scroll, scroll, fixed, scroll;
 }
 
 body.theme-larp::before {
