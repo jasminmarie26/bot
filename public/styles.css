@@ -2316,6 +2316,18 @@ body.page-home-screen .home-hero-actions {
   max-width: 38rem;
 }
 
+.dashboard-add-character-btn {
+  min-width: 2.55rem;
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
 .dashboard-larp-block {
   margin-top: 1.25rem;
 }
@@ -4322,7 +4334,7 @@ body.page-guestbook-preview::after {
 
 .character-mini-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 0.55rem;
 }
 
@@ -4332,7 +4344,7 @@ body.page-guestbook-preview::after {
 
 .character-mini-item {
   border-radius: 12px;
-  padding: 0.5rem 3.2rem 0.5rem 0.5rem;
+  padding: 0.42rem 2.7rem 0.42rem 0.5rem;
   display: grid;
   gap: 0;
   text-decoration: none;
@@ -4347,9 +4359,9 @@ body.page-guestbook-preview::after {
 }
 
 .character-mini-name {
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4357,11 +4369,11 @@ body.page-guestbook-preview::after {
 
 .character-mini-actions {
   position: absolute;
-  right: 0.45rem;
-  bottom: 0.4rem;
+  right: 0.38rem;
+  bottom: 0.34rem;
   display: flex;
   align-items: center;
-  gap: 0.34rem;
+  gap: 0.28rem;
   z-index: 1;
 }
 
@@ -4375,7 +4387,7 @@ body.page-guestbook-preview::after {
   border: none;
   background: transparent;
   color: color-mix(in srgb, var(--accent) 80%, #0f7cff 20%);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
   line-height: 1;
   padding: 0;
