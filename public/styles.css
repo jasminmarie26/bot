@@ -732,7 +732,7 @@ body.theme-larp {
       rgba(255, 241, 216, 0.016) 0 2px,
       transparent 2px 26px
     ),
-    url("/5537bac5-cc6a-423f-89fd-5dbe67a31be5.png") center 12% / cover no-repeat,
+    url("/5537bac5-cc6a-423f-89fd-5dbe67a31be5.png") center 2% / 106% auto no-repeat,
     linear-gradient(145deg, #1a1410 0%, #231810 42%, #1e150f 74%, #130d09 100%);
   background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, fixed, scroll;
 }
@@ -1011,6 +1011,24 @@ a:hover {
 .ghost-btn,
 .theme-form label {
   white-space: nowrap;
+}
+
+.header-identity-display,
+.rp-header-identity {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: min(18rem, 22vw);
+  margin-left: 0.35rem;
+  margin-right: 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
 }
 
 .nav-delete-btn {
@@ -5765,6 +5783,13 @@ select:focus {
 
   .theme-form {
     width: 100%;
+  }
+
+  .header-identity-display,
+  .rp-header-identity {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .rp-room-list {

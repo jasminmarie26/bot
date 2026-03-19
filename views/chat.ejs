@@ -15,6 +15,11 @@
 <% const chatLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
   ? recentSiteUpdateRevisions
   : []; %>
+<% const showChatHeaderIdentity = Boolean(
+  currentUser &&
+  (currentUser.is_admin || currentUser.is_moderator) &&
+  currentUserDisplayName
+); %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -39,6 +44,12 @@
         <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
       </a>
     </nav>
+    <% if (showChatHeaderIdentity) { %>
+      <span
+        class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+        title="<%= currentUserDisplayName %>"
+      ><%= currentUserDisplayName %></span>
+    <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-chat">Design</label>
       <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />

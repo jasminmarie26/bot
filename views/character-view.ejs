@@ -15,6 +15,11 @@
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
+  <% const showRoomlistHeaderIdentity = Boolean(
+    currentUser &&
+    (currentUser.is_admin || currentUser.is_moderator) &&
+    currentUserDisplayName
+  ); %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -33,6 +38,12 @@
         <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
       </a>
     </nav>
+    <% if (showRoomlistHeaderIdentity) { %>
+      <span
+        class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+        title="<%= currentUserDisplayName %>"
+      ><%= currentUserDisplayName %></span>
+    <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-roomlist">Design</label>
       <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
