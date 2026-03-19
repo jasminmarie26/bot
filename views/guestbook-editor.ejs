@@ -5,7 +5,6 @@
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
 
     <div class="gb-editor-actions">
-      <a class="btn btn-secondary" href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
       <button
         class="btn btn-secondary"
@@ -102,7 +101,7 @@
         <option value="nacht" <%= settings.theme_style === "nacht" ? "selected" : "" %>>Nacht</option>
         <option value="minimal" <%= settings.theme_style === "minimal" ? "selected" : "" %>>Minimal</option>
         <option value="tiefschwarz" <%= settings.theme_style === "tiefschwarz" ? "selected" : "" %>>Schwarz mit wei&szlig;em Rahmen</option>
-        <option value="neutral-weiss" <%= settings.theme_style === "neutral-weiss" ? "selected" : "" %>>Neutral Weiß</option>
+        <option value="neutral-weiss" <%= settings.theme_style === "neutral-weiss" ? "selected" : "" %>>Neutral Wei&szlig;</option>
       </select>
     </label>
 
@@ -122,53 +121,16 @@
       <input name="tags" maxlength="500" value="<%= settings.tags %>" />
     </label>
 
-    <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
-      <fieldset class="gb-role-character-box">
-        <legend>Rollenname</legend>
-        <% if (currentUser.is_admin) { %>
-          <label class="gb-role-character-option">
-            <input
-              type="checkbox"
-              name="use_as_admin_character"
-              value="1"
-              <%= Number(currentUser.admin_character_id) === Number(character.id) ? "checked" : "" %>
-            />
-            Als Admin-Charakter verwenden
-          </label>
-        <% } %>
-        <% if (currentUser.is_moderator) { %>
-          <label class="gb-role-character-option">
-            <input
-              type="checkbox"
-              name="use_as_moderator_character"
-              value="1"
-              <%= Number(currentUser.moderator_character_id) === Number(character.id) ? "checked" : "" %>
-            />
-            Als Moderator-Charakter verwenden
-          </label>
-        <% } %>
-        <p class="gb-role-character-hint muted">
-          Der ausgewählte Charaktername wird dann auf der Startseite, im Menü und im Chat als Rollenname angezeigt.
-        </p>
-      </fieldset>
-    <% } %>
-
-    <details class="bbcode-help">
-      <summary>BBCode Hilfe</summary>
-      <div class="bbcode-help-content">
-        <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
-        <p><code>[h1]Titel[/h1]</code> <code>[h2]Titel[/h2]</code> <code>[h3]Titel[/h3]</code></p>
-        <p><code>[color=#610b0b]Text[/color]</code> <code>[gradient=0,0,#ff0000,#00aaff]Text[/gradient]</code></p>
-        <p><code>[0,0,ff0000,00aaff]Text[/gradient]</code> (Kurzform Gradient)</p>
-        <p><code>[center]Text[/center]</code> <code>[right]Text[/right]</code> <code>[block]Text[/block]</code></p>
-        <p><code>[table][tr][td]Links[/td][td]Rechts[/td][/tr][/table]</code></p>
-        <p><code>[img]https://...[/img]</code> <code>[img float=left]https://...[/img]Text</code></p>
-        <p><code>[img float=right]https://...[/img]Text</code></p>
-        <p><code>[url]https://beispiel.de[/url]</code> <code>[url=/characters/1/guestbook]G&auml;stebuch[/url]</code></p>
-        <p><code>[spoiler=Buttonname]Inhalt[/spoiler]</code> <code>[ab18]Inhalt[/ab18]</code> <code>[hr]</code></p>
-        <p><code>[quote]Zitat[/quote]</code> <code>[code]Code[/code]</code></p>
-      </div>
-    </details>
+    <p class="gb-editor-link-row">
+      <a
+        class="gb-editor-text-link"
+        href="https://heldenhaftereisen.net/help/gaestebuch-design-bbcode"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        BBCode Hilfe
+      </a>
+    </p>
 
     <label>
       Seiteninhalt (BBCode)

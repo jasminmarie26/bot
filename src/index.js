@@ -342,6 +342,7 @@ function getStaffCharacterUsageForUser(user, character) {
 function updateUserRoleCharacterSelection(user, characterId, payload = {}) {
   const parsedUserId = Number(user?.id);
   const parsedCharacterId = Number(characterId);
+  const safePayload = payload || {};
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return null;
   }
@@ -349,12 +350,17 @@ function updateUserRoleCharacterSelection(user, characterId, payload = {}) {
     return getUserForSessionById(parsedUserId);
   }
 
-  const useAsAdminCharacter = payload.use_as_admin_character === "1";
-  const useAsModeratorCharacter = payload.use_as_moderator_character === "1";
+  const hasAdminCharacterField = Object.prototype.hasOwnProperty.call(safePayload, "use_as_admin_character");
+  const hasModeratorCharacterField = Object.prototype.hasOwnProperty.call(
+    safePayload,
+    "use_as_moderator_character"
+  );
+  const useAsAdminCharacter = safePayload.use_as_admin_character === "1";
+  const useAsModeratorCharacter = safePayload.use_as_moderator_character === "1";
   const currentAdminCharacterId = Number(user?.admin_character_id);
   const currentModeratorCharacterId = Number(user?.moderator_character_id);
 
-  if (user?.is_admin) {
+  if (user?.is_admin && hasAdminCharacterField) {
     if (useAsAdminCharacter) {
       db.prepare("UPDATE users SET admin_character_id = ? WHERE id = ?").run(parsedCharacterId, parsedUserId);
     } else if (currentAdminCharacterId === parsedCharacterId) {
@@ -362,7 +368,7 @@ function updateUserRoleCharacterSelection(user, characterId, payload = {}) {
     }
   }
 
-  if (user?.is_moderator) {
+  if (user?.is_moderator && hasModeratorCharacterField) {
     if (useAsModeratorCharacter) {
       db.prepare("UPDATE users SET moderator_character_id = ? WHERE id = ?").run(parsedCharacterId, parsedUserId);
     } else if (currentModeratorCharacterId === parsedCharacterId) {

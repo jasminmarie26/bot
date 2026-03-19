@@ -4081,7 +4081,7 @@ body.page-guestbook-preview::after {
 
 .gb-radio-list label {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.42rem;
   font-weight: 500;
   width: fit-content;
@@ -4093,7 +4093,6 @@ body.page-guestbook-preview::after {
   width: 0.84rem;
   height: 0.84rem;
   margin: 0;
-  margin-top: 0.16rem;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -4102,6 +4101,15 @@ body.page-guestbook-preview::after {
   box-shadow: none;
   flex: 0 0 auto;
   vertical-align: middle;
+}
+
+.gb-editor-link-row {
+  margin: 0;
+}
+
+.gb-editor-text-link {
+  display: inline-block;
+  font-weight: 600;
 }
 
 .gb-color-row {
