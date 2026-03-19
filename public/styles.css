@@ -1558,6 +1558,26 @@ a:hover {
   text-align: center;
 }
 
+.home-hero-title,
+.home-hero-copy,
+.home-hero-actions,
+.home-legal-links {
+  width: 100%;
+  max-width: 1040px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.home-hero-copy {
+  display: block;
+}
+
+.home-hero-copy > * {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .home-legal-links {
   margin-top: 1rem;
   display: inline-flex;
@@ -1734,15 +1754,20 @@ a:hover {
   height: auto;
 }
 
+.page-home-screen .home-main > .home-legal-links {
+  margin-top: 0.9rem;
+  margin-bottom: 0;
+}
+
 body.page-home-screen .hero {
   align-items: center;
   text-align: center;
 }
 
 body.page-home-screen .home-hero-stack,
-body.page-home-screen .hero h1,
-body.page-home-screen .hero-copy,
-body.page-home-screen .hero-actions,
+body.page-home-screen .home-hero-title,
+body.page-home-screen .home-hero-copy,
+body.page-home-screen .home-hero-actions,
 body.page-home-screen .home-legal-links {
   width: 100%;
   max-width: min(100%, 1040px);
@@ -1751,11 +1776,11 @@ body.page-home-screen .home-legal-links {
   text-align: center;
 }
 
-body.page-home-screen .hero h1 {
+body.page-home-screen .home-hero-title {
   white-space: normal;
 }
 
-body.page-home-screen .hero-actions {
+body.page-home-screen .home-hero-actions {
   justify-content: center;
 }
 
@@ -5601,9 +5626,9 @@ body.page-home-screen .hero {
 }
 
 body.page-home-screen .home-hero-stack,
-body.page-home-screen .hero h1,
-body.page-home-screen .hero-copy,
-body.page-home-screen .hero-actions,
+body.page-home-screen .home-hero-title,
+body.page-home-screen .home-hero-copy,
+body.page-home-screen .home-hero-actions,
 body.page-home-screen .home-legal-links {
   width: min(100%, 1040px) !important;
   max-width: min(100%, 1040px) !important;
@@ -5612,17 +5637,17 @@ body.page-home-screen .home-legal-links {
   text-align: center !important;
 }
 
-body.page-home-screen .hero h1 {
+body.page-home-screen .home-hero-title {
   font-family: var(--font-display) !important;
   white-space: normal !important;
 }
 
-body.page-home-screen .hero-copy.guestbook-entry-body {
+body.page-home-screen .home-hero-copy.guestbook-entry-body {
   font-family: var(--font-ui) !important;
   font-size: clamp(0.84rem, 1.05vw, 0.98rem) !important;
   line-height: 1.34 !important;
 }
 
-body.page-home-screen .hero-actions {
+body.page-home-screen .home-hero-actions {
   justify-content: center !important;
 }
