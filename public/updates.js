@@ -40,10 +40,28 @@
     liveUpdatesLink?.dataset.liveUpdatesInitialRevision ||
     ""
   ).trim();
+  const initialLiveUpdatesRevisions = Array.from(
+    new Set(
+      String(
+        liveUpdatesPageRoot?.dataset.liveUpdatesInitialRevisions ||
+        liveUpdatesLink?.dataset.liveUpdatesInitialRevisions ||
+        ""
+      )
+        .split("|")
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    )
+  );
 
   const canEditUpdates = Boolean(updateForm);
   const LIVE_UPDATES_LAST_SEEN_KEY = "site-updates:last-seen-revision";
   const LIVE_UPDATES_LATEST_KEY = "site-updates:latest-revision";
+  const LIVE_UPDATES_REVISIONS_LIMIT = Math.max(initialLiveUpdatesRevisions.length, 50);
+  let currentLiveUpdatesRevisions = initialLiveUpdatesRevisions.length
+    ? [...initialLiveUpdatesRevisions]
+    : initialLiveUpdatesRevision
+      ? [initialLiveUpdatesRevision]
+      : [];
 
   function readLocalStorage(key) {
     try {
@@ -65,7 +83,7 @@
   }
 
   function getLatestLiveUpdatesRevision() {
-    return readLocalStorage(LIVE_UPDATES_LATEST_KEY) || initialLiveUpdatesRevision;
+    return currentLiveUpdatesRevisions[0] || readLocalStorage(LIVE_UPDATES_LATEST_KEY) || initialLiveUpdatesRevision;
   }
 
   function syncLatestLiveUpdatesRevision(revision) {
@@ -75,16 +93,116 @@
     return prepared;
   }
 
+  function parseRevisionToken(token) {
+    const prepared = String(token || "").trim();
+    if (!prepared) return null;
+
+    const separatorIndex = prepared.lastIndexOf(":");
+    if (separatorIndex <= 0 || separatorIndex >= prepared.length - 1) {
+      return null;
+    }
+
+    const stamp = prepared.slice(0, separatorIndex).trim();
+    const id = Number.parseInt(prepared.slice(separatorIndex + 1), 10);
+    if (!stamp || !Number.isInteger(id) || id < 1) {
+      return null;
+    }
+
+    return { stamp, id, raw: prepared };
+  }
+
+  function compareRevisionTokens(leftToken, rightToken) {
+    const left = parseRevisionToken(leftToken);
+    const right = parseRevisionToken(rightToken);
+    if (!left && !right) return 0;
+    if (!left) return -1;
+    if (!right) return 1;
+
+    if (left.stamp !== right.stamp) {
+      return left.stamp > right.stamp ? 1 : -1;
+    }
+
+    if (left.id === right.id) {
+      return 0;
+    }
+
+    return left.id > right.id ? 1 : -1;
+  }
+
+  function setCurrentLiveUpdatesRevisions(revisions) {
+    const nextRevisions = [];
+    revisions.forEach((value) => {
+      const prepared = String(value || "").trim();
+      if (!prepared || nextRevisions.includes(prepared)) {
+        return;
+      }
+      nextRevisions.push(prepared);
+    });
+
+    nextRevisions.sort((left, right) => compareRevisionTokens(right, left));
+    currentLiveUpdatesRevisions = nextRevisions.slice(0, LIVE_UPDATES_REVISIONS_LIMIT);
+    if (currentLiveUpdatesRevisions[0]) {
+      syncLatestLiveUpdatesRevision(currentLiveUpdatesRevisions[0]);
+    }
+  }
+
+  function syncLiveUpdatesRevisionList(item) {
+    const revision = String(item?.revision_token || item || "").trim();
+    if (!revision) return "";
+
+    const parsedRevision = parseRevisionToken(revision);
+    const updateId = Number.isInteger(Number.parseInt(item?.id, 10))
+      ? Number.parseInt(item.id, 10)
+      : parsedRevision?.id || null;
+    const filteredRevisions = currentLiveUpdatesRevisions.filter((entry) => {
+      if (!entry || entry === revision) {
+        return false;
+      }
+      if (!Number.isInteger(updateId) || updateId < 1) {
+        return true;
+      }
+      return !String(entry).endsWith(`:${updateId}`);
+    });
+
+    setCurrentLiveUpdatesRevisions([revision, ...filteredRevisions]);
+    return revision;
+  }
+
+  function removeLiveUpdatesRevisionByUpdateId(updateId) {
+    const parsedUpdateId = Number.parseInt(updateId, 10);
+    if (!Number.isInteger(parsedUpdateId) || parsedUpdateId < 1) {
+      return;
+    }
+
+    setCurrentLiveUpdatesRevisions(
+      currentLiveUpdatesRevisions.filter((entry) => !String(entry).endsWith(`:${parsedUpdateId}`))
+    );
+  }
+
+  function getUnreadLiveUpdatesCount() {
+    const lastSeenRevision = readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY);
+    if (!lastSeenRevision) {
+      return 0;
+    }
+
+    if (!currentLiveUpdatesRevisions.length) {
+      const latestRevision = getLatestLiveUpdatesRevision();
+      return latestRevision && compareRevisionTokens(latestRevision, lastSeenRevision) > 0 ? 1 : 0;
+    }
+
+    return currentLiveUpdatesRevisions.reduce((count, revision) => {
+      return count + (compareRevisionTokens(revision, lastSeenRevision) > 0 ? 1 : 0);
+    }, 0);
+  }
+
   function updateLiveUpdatesBadge() {
     if (!liveUpdatesLink || !liveUpdatesBadge) return;
 
-    const latestRevision = getLatestLiveUpdatesRevision();
-    const lastSeenRevision = readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY);
-    const hasUnseenUpdate = Boolean(latestRevision && latestRevision !== lastSeenRevision);
+    const unreadCount = getUnreadLiveUpdatesCount();
 
-    liveUpdatesBadge.hidden = !hasUnseenUpdate;
-    if (hasUnseenUpdate) {
-      liveUpdatesBadge.textContent = "1";
+    liveUpdatesBadge.hidden = unreadCount < 1;
+    if (unreadCount > 0) {
+      liveUpdatesBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
     }
   }
 
@@ -96,7 +214,7 @@
   }
 
   function syncLiveUpdatesRevisionFromItem(item, { autoSeen = false } = {}) {
-    const revision = syncLatestLiveUpdatesRevision(item?.revision_token);
+    const revision = syncLiveUpdatesRevisionList(item);
     if (!revision) return;
 
     if (autoSeen) {
@@ -596,9 +714,13 @@
   if (typeof io !== "function") return;
 
   if (initialLiveUpdatesRevision) {
-    syncLatestLiveUpdatesRevision(initialLiveUpdatesRevision);
+    if (!currentLiveUpdatesRevisions.length) {
+      setCurrentLiveUpdatesRevisions([initialLiveUpdatesRevision]);
+    } else {
+      syncLatestLiveUpdatesRevision(getLatestLiveUpdatesRevision());
+    }
     if (!readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY) && liveUpdatesLink) {
-      writeLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY, initialLiveUpdatesRevision);
+      writeLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY, getLatestLiveUpdatesRevision());
     }
   }
 
@@ -680,6 +802,8 @@
       const updateId = Number.parseInt(payload?.id, 10);
       if (Number.isInteger(updateId) && updateId > 0) {
         deleteUpdate(updateId);
+        removeLiveUpdatesRevisionByUpdateId(updateId);
+        updateLiveUpdatesBadge();
       }
     });
   } else {
@@ -689,6 +813,11 @@
 
     socket.on("site:update:update", (item) => {
       syncLiveUpdatesRevisionFromItem(item);
+    });
+
+    socket.on("site:update:delete", (payload) => {
+      removeLiveUpdatesRevisionByUpdateId(payload?.id);
+      updateLiveUpdatesBadge();
     });
   }
 

@@ -3002,7 +3002,7 @@ function getRecentSiteUpdates(limit = 10) {
     .prepare(
       `SELECT id, author_name, content, created_at, updated_at
        FROM site_updates
-       ORDER BY id DESC
+       ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC
        LIMIT ?`
     )
     .all(limit)
@@ -3171,10 +3171,14 @@ app.get("/media/guestbook-image", async (req, res) => {
 
 app.get("/", (req, res) => {
   const homeContent = getHomeContent();
+  const recentSiteUpdates = getRecentSiteUpdates(30);
   return res.render("home", {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
     stats: getLoginStats(),
     homeContent,
+    recentSiteUpdateRevisions: recentSiteUpdates
+      .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
+      .filter(Boolean),
     latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
     pageClass: "page-home-screen"
   });
@@ -3182,10 +3186,14 @@ app.get("/", (req, res) => {
 
 app.get("/live-updates", (req, res) => {
   const homeContent = getHomeContent();
+  const siteUpdates = getRecentSiteUpdates(30);
   return res.render("live-updates", {
     title: homeContent.updates_title || DEFAULT_UPDATES_TITLE,
     homeContent,
-    siteUpdates: getRecentSiteUpdates(30),
+    siteUpdates,
+    recentSiteUpdateRevisions: siteUpdates
+      .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
+      .filter(Boolean),
     latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
     pageClass: "page-live-updates"
   });

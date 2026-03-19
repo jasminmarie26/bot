@@ -4,6 +4,7 @@
   class="panel updates-panel live-updates-page-panel"
   data-live-updates-page-root
   data-live-updates-initial-revision="<%= latestSiteUpdateRevisionToken || '' %>"
+  data-live-updates-initial-revisions="<%= Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions.join('|') : '' %>"
 >
   <div class="updates-header">
     <input id="updates-section-title-source" type="hidden" value="<%= homeContent.updates_title %>" />

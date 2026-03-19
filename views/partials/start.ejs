@@ -132,6 +132,9 @@
     <% const topbarLiveUpdatesInitialRevision = String(
       typeof latestSiteUpdateRevisionToken !== "undefined" ? latestSiteUpdateRevisionToken || "" : ""
     ).trim(); %>
+    <% const topbarLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
+      ? recentSiteUpdateRevisions
+      : []; %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner<%= showTopbarGuestbookCreatedAt ? " has-guestbook-created-at" : "" %>">
@@ -182,6 +185,7 @@
                 data-live-updates-link-root
                 data-live-updates-target="site-live-updates"
                 data-live-updates-initial-revision="<%= topbarLiveUpdatesInitialRevision %>"
+                data-live-updates-initial-revisions="<%= topbarLiveUpdatesInitialRevisions.join('|') %>"
               >
                 <span>Live Updates</span>
                 <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
