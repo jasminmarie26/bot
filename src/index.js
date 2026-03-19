@@ -4791,15 +4791,7 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     saved_at: Date.now()
   };
 
-  return res.render("guestbook-preview", {
-    title: `Vorschau: ${character.name}`,
-    character,
-    pageId: activePage.id,
-    pageNumber: activePage.page_number,
-    guestbookSettings: payload.settings,
-    previewHtml: renderGuestbookBbcode(payload.pageContent || ""),
-    previewBackUrl: `/characters/${id}/guestbook/edit?page_id=${activePage.id}`
-  });
+  return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}`);
 });
 
 app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
