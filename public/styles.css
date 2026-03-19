@@ -4223,6 +4223,21 @@ body.page-guestbook-preview::after {
   font-weight: 600;
 }
 
+.gb-editor-form .gb-radio-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  width: fit-content;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.gb-editor-form .gb-radio-list input[type="radio"] {
+  margin: 0;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
 input,
 textarea,
 select {
