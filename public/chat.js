@@ -29,12 +29,17 @@
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
   const currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
+  const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
   const activeCharacterId = Number(activeCharacterIdRaw);
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   let selectedOnlineEntry = null;
+  let typingEmitActive = false;
+  let typingStopTimer = null;
+  const typingStateByUserId = new Map();
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
+  const typingIdleDelayMs = 1400;
   const systemMessageSuffixes = [
     " schiebt den Vorhang beiseite und tritt ein.",
     " taucht zwischen den Gesprächen auf.",
@@ -497,6 +502,88 @@
     onlineActionsMenu.hidden = false;
   }
 
+  function updateTypingIndicator(node, isTyping) {
+    if (!node) return;
+
+    let contentNode = node.querySelector(".chat-online-content");
+    if (!contentNode) {
+      contentNode = document.createElement("span");
+      contentNode.className = "chat-online-content";
+
+      while (node.firstChild) {
+        contentNode.appendChild(node.firstChild);
+      }
+
+      node.appendChild(contentNode);
+    }
+
+    let typingNode = contentNode.querySelector(".chat-online-typing");
+    if (!isTyping) {
+      if (typingNode) {
+        typingNode.remove();
+      }
+      return;
+    }
+
+    if (!typingNode) {
+      typingNode = document.createElement("em");
+      typingNode.className = "chat-online-typing";
+      typingNode.textContent = "tippt...";
+      contentNode.appendChild(typingNode);
+    }
+  }
+
+  function syncTypingIndicatorForUser(userId) {
+    const parsedUserId = Number(userId);
+    if (!onlineCharList || !Number.isInteger(parsedUserId) || parsedUserId < 1) return;
+
+    const targetNode = onlineCharList.querySelector(`[data-user-id="${parsedUserId}"]`);
+    if (!targetNode) return;
+
+    updateTypingIndicator(targetNode, typingStateByUserId.get(parsedUserId) === true);
+  }
+
+  function emitTypingState(isTyping) {
+    const nextState = Boolean(isTyping);
+    if (typingEmitActive === nextState) {
+      return;
+    }
+
+    typingEmitActive = nextState;
+    socket.emit("chat:typing", { isTyping: nextState });
+  }
+
+  function stopTypingIndicator() {
+    if (typingStopTimer) {
+      window.clearTimeout(typingStopTimer);
+      typingStopTimer = null;
+    }
+
+    emitTypingState(false);
+  }
+
+  function scheduleTypingStop() {
+    if (typingStopTimer) {
+      window.clearTimeout(typingStopTimer);
+    }
+
+    typingStopTimer = window.setTimeout(() => {
+      typingStopTimer = null;
+      emitTypingState(false);
+    }, typingIdleDelayMs);
+  }
+
+  function handleTypingInput() {
+    const hasContent = Boolean(String(input?.value || "").trim());
+    if (!hasContent) {
+      stopTypingIndicator();
+      return;
+    }
+
+    emitTypingState(true);
+    scheduleTypingStop();
+  }
+
   function renderOnlineCharacters(entries) {
     if (!onlineCharList) return;
 
@@ -506,6 +593,7 @@
         sensitivity: "base"
       })
     );
+    const presentUserIds = new Set();
 
     onlineCharList.innerHTML = "";
 
@@ -525,12 +613,18 @@
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
       const text = label || "Unbekannt";
       const node = document.createElement("button");
+      const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
 
       node.type = "button";
       node.classList.add("chat-online-item", "chat-online-trigger");
+      contentNode.className = "chat-online-content";
+      textNode.classList.add("chat-online-name");
       if (roleStyle === "admin" || roleStyle === "moderator") {
         textNode.classList.add(`role-name-${roleStyle}`);
+      }
+      if (Number.isInteger(userId) && userId > 0) {
+        presentUserIds.add(userId);
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
@@ -539,8 +633,18 @@
       node.dataset.chatTextColor = chatTextColor;
       applyChatTextColor(textNode, chatTextColor);
       textNode.textContent = text;
-      node.appendChild(textNode);
+      contentNode.appendChild(textNode);
+      node.appendChild(contentNode);
+      if (Number.isInteger(userId) && userId > 0) {
+        updateTypingIndicator(node, typingStateByUserId.get(userId) === true);
+      }
       onlineCharList.appendChild(node);
+    });
+
+    Array.from(typingStateByUserId.keys()).forEach((userId) => {
+      if (!presentUserIds.has(userId)) {
+        typingStateByUserId.delete(userId);
+      }
     });
 
     closeOnlineMenu();
@@ -551,10 +655,14 @@
     const content = input.value.trim();
     if (!content) return;
 
+    stopTypingIndicator();
     socket.emit("chat:message", content);
     input.value = "";
     input.focus();
   });
+
+  input.addEventListener("input", handleTypingInput);
+  input.addEventListener("blur", stopTypingIndicator);
 
   if (onlineCharList) {
     onlineCharList.addEventListener("click", (event) => {
@@ -653,6 +761,20 @@
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", appendWhisper);
   socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:typing", (payload) => {
+    const userId = Number(payload?.user_id);
+    if (!Number.isInteger(userId) || userId < 1 || userId === currentUserId) {
+      return;
+    }
+
+    if (payload?.is_typing) {
+      typingStateByUserId.set(userId, true);
+    } else {
+      typingStateByUserId.delete(userId);
+    }
+
+    syncTypingIndicatorForUser(userId);
+  });
   socket.on("chat:room-state", updateRoomLockState);
 
   chatBox.scrollTop = chatBox.scrollHeight;

@@ -4875,6 +4875,25 @@ select:focus {
   max-width: 100%;
 }
 
+.chat-online-content {
+  display: inline-grid;
+  gap: 0.08rem;
+  max-width: 100%;
+}
+
+.chat-online-name {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.chat-online-typing {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82em;
+  font-style: italic;
+  line-height: 1.15;
+}
+
 .page-chat .chat-online-item {
   appearance: none;
   -webkit-appearance: none;

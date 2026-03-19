@@ -6798,6 +6798,27 @@ function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
   );
 }
 
+function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID) {
+  const userId = Number(memberSocket?.data?.user?.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const userSockets = getUserSocketsInChannel(normalizedRoomId, normalizedServerId, userId);
+  const isTyping = userSockets.some((socketEntry) => Boolean(socketEntry?.data?.isTyping));
+  const displayProfile = getSocketDisplayProfile(memberSocket, normalizedServerId);
+
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:typing", {
+    user_id: userId,
+    name: displayProfile.label || `User ${userId}`,
+    role_style: displayProfile.role_style || "",
+    chat_text_color: displayProfile.chat_text_color || "",
+    is_typing: isTyping
+  });
+}
+
 function emitRoomStateUpdate(roomId, serverId = DEFAULT_SERVER_ID, room = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
@@ -6880,6 +6901,7 @@ io.on("connection", (socket) => {
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
   socket.data.roomWatchChannels = new Set();
+  socket.data.isTyping = false;
 
   if (socket.data.user?.id) {
     socket.join(socketChannelForGuestbookNotifications(socket.data.user.id));
@@ -7005,6 +7027,11 @@ io.on("connection", (socket) => {
       : getUserDisplayProfile(socket.data.user);
     const nextDisplayName = nextDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
 
+    if (previousServerId && socket.data.isTyping) {
+      socket.data.isTyping = false;
+      emitChatTypingState(socket, previousRoomId, previousServerId);
+    }
+
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
       if (!isSameChannel) {
@@ -7060,6 +7087,40 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("chat:typing", (payload) => {
+    if (!socket.data.user) return;
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (
+        !canAccessCharacter(
+          socket.data.user.id,
+          room.character_owner_id,
+          room.character_is_public,
+          socket.data.user.is_admin
+        )
+      ) {
+        return;
+      }
+      serverId = normalizeServer(room.server_id || room.character_server_id);
+    }
+
+    const wantsTyping = Boolean(payload && typeof payload === "object" ? payload.isTyping : payload);
+    if (socket.data.isTyping === wantsTyping) {
+      return;
+    }
+
+    socket.data.isTyping = wantsTyping;
+    emitChatTypingState(socket, roomId, serverId);
+  });
+
   socket.on("chat:message", async (rawMessage) => {
     if (!socket.data.user) return;
     if (typeof rawMessage !== "string") return;
@@ -7085,6 +7146,11 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+    }
+
+    if (socket.data.isTyping) {
+      socket.data.isTyping = false;
+      emitChatTypingState(socket, roomId, serverId);
     }
 
     const content = rawMessage.trim().slice(0, 500);
@@ -7347,6 +7413,10 @@ io.on("connection", (socket) => {
       ? normalizeServer(socket.data.serverId)
       : null;
     if (previousServerId) {
+      if (socket.data.isTyping) {
+        socket.data.isTyping = false;
+        emitChatTypingState(socket, previousRoomId, previousServerId);
+      }
       const displayProfile = getSocketDisplayProfile(socket, previousServerId);
       const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
       emitSystemChatMessage(

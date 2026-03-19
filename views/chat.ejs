@@ -160,10 +160,12 @@
                   data-role-style="<%= entry.role_style || '' %>"
                   data-chat-text-color="<%= entry.chat_text_color || '' %>"
                 >
-                  <span
-                    class="<%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"
-                    style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
-                  ><%= entry.name %></span>
+                  <span class="chat-online-content">
+                    <span
+                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"
+                      style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
+                    ><%= entry.name %></span>
+                  </span>
                 </button>
               <% }) %>
             <% } else { %>
@@ -181,6 +183,7 @@
           data-server-id="<%= activeServerId %>"
           data-current-character-name="<%= activeCharacter ? activeCharacter.name : '' %>"
           data-current-display-name="<%= chatIdentityName %>"
+          data-current-user-id="<%= currentUser ? currentUser.id : '' %>"
           data-active-character-id="<%= activeCharacter ? activeCharacter.id : '' %>"
         >
           <% messages.forEach((msg) => { %>
