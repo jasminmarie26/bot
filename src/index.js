@@ -1876,6 +1876,18 @@ function parseGradientSpec(rawSpec) {
   };
 }
 
+function createBbcodeWrapRegex(tag) {
+  return new RegExp(`\\[\\s*${tag}\\s*\\]([\\s\\S]*?)\\[\\s*\\/\\s*${tag}\\s*\\]`, "gi");
+}
+
+function createBbcodeOptionRegex(tag) {
+  return new RegExp(`\\[\\s*${tag}\\s*=\\s*([^\\]\\n]+?)\\s*\\]([\\s\\S]*?)\\[\\s*\\/\\s*${tag}\\s*\\]`, "gi");
+}
+
+function createBbcodeSingleRegex(tag) {
+  return new RegExp(`\\[\\s*${tag}\\s*\\]`, "gi");
+}
+
 function getCharacterByExactName(name) {
   const normalizedName = String(name || "").trim();
   if (!normalizedName) return null;
@@ -1900,30 +1912,30 @@ function renderGuestbookBbcode(rawContent) {
     ["s", "s"]
   ];
 
-  html = html.replace(/\[hr\]/gi, "<hr class=\"bb-hr\">");
+  html = html.replace(createBbcodeSingleRegex("hr"), "<hr class=\"bb-hr\">");
 
-  html = html.replace(/\[h1\]([\s\S]*?)\[\/h1\]/gi, "<h1>$1</h1>");
-  html = html.replace(/\[h2\]([\s\S]*?)\[\/h2\]/gi, "<h2>$1</h2>");
-  html = html.replace(/\[h3\]([\s\S]*?)\[\/h3\]/gi, "<h3>$1</h3>");
+  html = html.replace(createBbcodeWrapRegex("h1"), "<h1>$1</h1>");
+  html = html.replace(createBbcodeWrapRegex("h2"), "<h2>$1</h2>");
+  html = html.replace(createBbcodeWrapRegex("h3"), "<h3>$1</h3>");
 
-  html = html.replace(/\[left\]([\s\S]*?)\[\/left\]/gi, "<div class=\"bb-left\">$1</div>");
-  html = html.replace(/\[center\]([\s\S]*?)\[\/center\]/gi, "<div class=\"bb-center\">$1</div>");
-  html = html.replace(/\[right\]([\s\S]*?)\[\/right\]/gi, "<div class=\"bb-right\">$1</div>");
-  html = html.replace(/\[block\]([\s\S]*?)\[\/block\]/gi, "<div class=\"bb-block\">$1</div>");
+  html = html.replace(createBbcodeWrapRegex("left"), "<div class=\"bb-left\">$1</div>");
+  html = html.replace(createBbcodeWrapRegex("center"), "<div class=\"bb-center\">$1</div>");
+  html = html.replace(createBbcodeWrapRegex("right"), "<div class=\"bb-right\">$1</div>");
+  html = html.replace(createBbcodeWrapRegex("block"), "<div class=\"bb-block\">$1</div>");
 
-  html = html.replace(/\[table\]([\s\S]*?)\[\/table\]/gi, "<table class=\"bb-table\">$1</table>");
-  html = html.replace(/\[tr\]([\s\S]*?)\[\/tr\]/gi, "<tr>$1</tr>");
-  html = html.replace(/\[td\]([\s\S]*?)\[\/td\]/gi, "<td>$1</td>");
+  html = html.replace(createBbcodeWrapRegex("table"), "<table class=\"bb-table\">$1</table>");
+  html = html.replace(createBbcodeWrapRegex("tr"), "<tr>$1</tr>");
+  html = html.replace(createBbcodeWrapRegex("td"), "<td>$1</td>");
 
-  html = html.replace(/\[spoiler=([^\]\n]+)\]([\s\S]*?)\[\/spoiler\]/gi, (full, title, inner) => (
+  html = html.replace(createBbcodeOptionRegex("spoiler"), (full, title, inner) => (
     `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
   ));
   html = html.replace(
-    /\[ab18\]([\s\S]*?)\[\/ab18\]/gi,
+    createBbcodeWrapRegex("ab18"),
     "<details class=\"bb-spoiler bb-spoiler-ab18\"><summary>Ab 18 Inhalt</summary><div class=\"bb-spoiler-content\">$1</div></details>"
   );
 
-  html = html.replace(/\[img([^\]]*)\]([\s\S]*?)\[\/img\]/gi, (full, rawAttributes, rawUrl) => {
+  html = html.replace(/\[\s*img([^\]]*)\]([\s\S]*?)\[\s*\/\s*img\s*\]/gi, (full, rawAttributes, rawUrl) => {
     const safeUrl = sanitizeBbcodeImageUrl(rawUrl);
     if (!safeUrl) return "";
 
@@ -1937,27 +1949,27 @@ function renderGuestbookBbcode(rawContent) {
   });
 
   inlineTags.forEach(([bbTag, htmlTag]) => {
-    const re = new RegExp(`\\[${bbTag}\\]([\\s\\S]*?)\\[\\/${bbTag}\\]`, "gi");
+    const re = createBbcodeWrapRegex(bbTag);
     html = html.replace(re, `<${htmlTag}>$1</${htmlTag}>`);
   });
 
-  html = html.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, "<blockquote>$1</blockquote>");
-  html = html.replace(/\[code\]([\s\S]*?)\[\/code\]/gi, "<code>$1</code>");
+  html = html.replace(createBbcodeWrapRegex("quote"), "<blockquote>$1</blockquote>");
+  html = html.replace(createBbcodeWrapRegex("code"), "<code>$1</code>");
 
-  html = html.replace(/\[url=([^\]\s]+)\]([\s\S]*?)\[\/url\]/gi, (full, rawUrl, label) => {
+  html = html.replace(/\[\s*url\s*=\s*([^\]\n]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
     const safeUrl = sanitizeBbcodeUrl(rawUrl);
     if (!safeUrl) return label;
     return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   });
 
-  html = html.replace(/\[url\]([^\[]+)\[\/url\]/gi, (full, rawUrl) => {
+  html = html.replace(/\[\s*url\s*\]([^\[]+)\[\s*\/\s*url\s*\]/gi, (full, rawUrl) => {
     const safeUrl = sanitizeBbcodeUrl(rawUrl);
     if (!safeUrl) return escapeHtml(rawUrl);
     const safeLabel = escapeHtml(safeUrl);
     return `<a href="${safeLabel}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
   });
 
-  html = html.replace(/\[gb\]([\s\S]*?)\[\/gb\]/gi, (full, rawName) => {
+  html = html.replace(createBbcodeWrapRegex("gb"), (full, rawName) => {
     const safeLabel = String(rawName || "").replace(/<br\s*\/?>/gi, " ").trim();
     if (!safeLabel) return "";
 
@@ -1967,19 +1979,19 @@ function renderGuestbookBbcode(rawContent) {
     return `<a href="/characters/${targetCharacter.id}/guestbook" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
   });
 
-  html = html.replace(/\[color=([^\]\n]+)\]([\s\S]*?)\[\/color\]/gi, (full, rawColor, inner) => {
+  html = html.replace(createBbcodeOptionRegex("color"), (full, rawColor, inner) => {
     const safeColor = sanitizeBbcodeColor(rawColor);
     if (!safeColor) return inner;
     return `<span style="color:${safeColor}">${inner}</span>`;
   });
 
-  html = html.replace(/\[gradient=([^\]\n]+)\]([\s\S]*?)\[\/gradient\]/gi, (full, rawSpec, inner) => {
+  html = html.replace(createBbcodeOptionRegex("gradient"), (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
   });
 
-  html = html.replace(/\[([^\]\n]*,[^\]\n]+)\]([\s\S]*?)\[\/gradient\]/gi, (full, rawSpec, inner) => {
+  html = html.replace(/\[\s*([^\]\n]*,[^\]\n]+?)\s*\]([\s\S]*?)\[\s*\/\s*gradient\s*\]/gi, (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
