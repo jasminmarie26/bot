@@ -3,7 +3,7 @@
 :root {
   --font-ui: "Manrope", "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
   --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
-  --guestbook-frame-width: 680px;
+  --guestbook-frame-width: 660px;
 }
 
 html {
