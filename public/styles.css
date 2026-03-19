@@ -4333,18 +4333,18 @@ body.page-guestbook-preview::after {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.55rem 1rem;
-  row-gap: 0.9rem;
-  padding-top: 0.15rem;
+  row-gap: 1.05rem;
+  padding-top: 0.05rem;
   background:
     linear-gradient(
       180deg,
       transparent calc(50% - 0.5px),
-      color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%) calc(50% - 0.5px),
-      color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%) calc(50% + 0.5px),
+      color-mix(in srgb, var(--panel-edge) 48%, transparent) calc(50% - 0.5px),
+      color-mix(in srgb, var(--panel-edge) 48%, transparent) calc(50% + 0.5px),
       transparent calc(50% + 0.5px)
     );
   background-repeat: repeat-y;
-  background-size: 100% 3rem;
+  background-size: 100% 3.2rem;
 }
 
 .character-mini-card {
@@ -5559,8 +5559,8 @@ select:focus {
 
   .character-mini-grid {
     gap: 0.45rem 0.85rem;
-    row-gap: 0.8rem;
-    background-size: 100% 2.7rem;
+    row-gap: 0.95rem;
+    background-size: 100% 3rem;
   }
 
   .dashboard-server-list {
