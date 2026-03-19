@@ -1,0 +1,36 @@
+<%- include("partials/start") %>
+
+<section class="panel narrow">
+  <h1>Geburtsdatum ergänzen</h1>
+  <p>
+    Du hast dich mit <strong><%= providerLabel %></strong> angemeldet. Bevor es weitergeht,
+    musst du bitte noch dein Geburtsdatum eintragen.
+  </p>
+  <p class="field-hint">
+    Ohne diese Angabe kommst du nicht weiter. Das Datum wird für Altersfreigaben benötigt
+    und ist nicht öffentlich sichtbar.
+  </p>
+
+  <% if (error) { %>
+    <div class="inline-error"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="/auth/complete-profile" class="form">
+    <label>
+      Geburtsdatum
+      <input
+        type="date"
+        name="birth_date"
+        required
+        max="<%= new Date().toISOString().slice(0, 10) %>"
+        value="<%= values.birth_date || '' %>"
+      />
+    </label>
+
+    <div class="hero-actions">
+      <button type="submit" class="btn">Speichern und weiter</button>
+    </div>
+  </form>
+</section>
+
+<%- include("partials/end") %>

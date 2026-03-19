@@ -831,6 +831,23 @@ function renderRegisterPage(req, res, options = {}) {
   });
 }
 
+function renderOAuthBirthDatePage(req, res, options = {}) {
+  const provider = String(
+    options.provider || req.session.oauth_birth_date_provider || "google"
+  ).trim().toLowerCase();
+  const providerLabel = provider === "facebook" ? "Facebook" : "Google";
+
+  return res.status(options.status || 200).render("oauth-birth-date", {
+    title: "Geburtsdatum ergänzen",
+    provider,
+    providerLabel,
+    error: options.error || "",
+    values: {
+      birth_date: options.values?.birth_date || ""
+    }
+  });
+}
+
 function renderKontaktPage(req, res, options = {}) {
   return res.status(options.status || 200).render("kontakt", {
     title: "Kontakt",
@@ -3160,6 +3177,30 @@ function requireSiteUpdateEditor(req, res, next) {
   return next();
 }
 
+function isOAuthBirthDateCompletionRequired(req) {
+  if (!req.session?.user || !req.session?.oauth_birth_date_required) {
+    return false;
+  }
+
+  const accountUser = getAccountUserById(req.session.user.id);
+  if (!accountUser) {
+    req.session.user = null;
+    delete req.session.oauth_birth_date_required;
+    delete req.session.oauth_birth_date_provider;
+    delete req.session.oauth_birth_date_redirect;
+    return false;
+  }
+
+  if (normalizeBirthDate(accountUser.birth_date)) {
+    delete req.session.oauth_birth_date_required;
+    delete req.session.oauth_birth_date_provider;
+    delete req.session.oauth_birth_date_redirect;
+    return false;
+  }
+
+  return true;
+}
+
 app.use((req, res, next) => {
   const cookieTheme = getThemeCookie(req);
 
@@ -3178,6 +3219,18 @@ app.use((req, res, next) => {
       req.session.user = toSessionUser(user);
     } else {
       req.session.user = null;
+    }
+  }
+
+  if (isOAuthBirthDateCompletionRequired(req)) {
+    const normalizedPath = String(req.path || "").trim();
+    const isAllowedPath =
+      normalizedPath === "/auth/complete-profile" ||
+      normalizedPath === "/logout" ||
+      normalizedPath === "/logout-idle";
+
+    if (!isAllowedPath) {
+      return res.redirect("/auth/complete-profile");
     }
   }
 
@@ -3814,6 +3867,16 @@ app.get("/auth/google/callback", (req, res, next) => {
       try {
         req.session.user = findOrCreateOAuthUser("google", profile);
         touchUserLoginMetadata(req.session.user.id, req);
+        const accountUser = getAccountUserById(req.session.user.id);
+        if (!normalizeBirthDate(accountUser?.birth_date)) {
+          req.session.oauth_birth_date_required = true;
+          req.session.oauth_birth_date_provider = "google";
+          req.session.oauth_birth_date_redirect = "/dashboard";
+          return res.redirect("/auth/complete-profile");
+        }
+        delete req.session.oauth_birth_date_required;
+        delete req.session.oauth_birth_date_provider;
+        delete req.session.oauth_birth_date_redirect;
         setFlash(req, "success", "Mit Google eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
@@ -3866,6 +3929,16 @@ app.get("/auth/facebook/callback", (req, res, next) => {
       try {
         req.session.user = findOrCreateOAuthUser("facebook", profile);
         touchUserLoginMetadata(req.session.user.id, req);
+        const accountUser = getAccountUserById(req.session.user.id);
+        if (!normalizeBirthDate(accountUser?.birth_date)) {
+          req.session.oauth_birth_date_required = true;
+          req.session.oauth_birth_date_provider = "facebook";
+          req.session.oauth_birth_date_redirect = "/dashboard";
+          return res.redirect("/auth/complete-profile");
+        }
+        delete req.session.oauth_birth_date_required;
+        delete req.session.oauth_birth_date_provider;
+        delete req.session.oauth_birth_date_redirect;
         setFlash(req, "success", "Mit Facebook eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
@@ -3886,6 +3959,47 @@ app.get("/auth/facebook/callback", (req, res, next) => {
       }
     }
   )(req, res, next);
+});
+
+app.get("/auth/complete-profile", requireAuth, (req, res) => {
+  if (!isOAuthBirthDateCompletionRequired(req)) {
+    return res.redirect("/dashboard");
+  }
+
+  return renderOAuthBirthDatePage(req, res);
+});
+
+app.post("/auth/complete-profile", requireAuth, (req, res) => {
+  if (!isOAuthBirthDateCompletionRequired(req)) {
+    return res.redirect("/dashboard");
+  }
+
+  const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const birthDate = normalizeBirthDate(rawBirthDate);
+
+  if (!birthDate) {
+    return renderOAuthBirthDatePage(req, res, {
+      status: 400,
+      error: "Bitte trage ein gültiges Geburtsdatum ein, bevor du weitermachen kannst.",
+      values: {
+        birth_date: rawBirthDate
+      }
+    });
+  }
+
+  db.prepare("UPDATE users SET birth_date = ? WHERE id = ?").run(birthDate, req.session.user.id);
+
+  const refreshedUser = getUserForSessionById(req.session.user.id);
+  if (refreshedUser) {
+    req.session.user = toSessionUser(refreshedUser);
+  }
+
+  delete req.session.oauth_birth_date_required;
+  delete req.session.oauth_birth_date_provider;
+  const nextUrl = String(req.session.oauth_birth_date_redirect || "/dashboard").trim() || "/dashboard";
+  delete req.session.oauth_birth_date_redirect;
+  setFlash(req, "success", "Geburtsdatum gespeichert. Du kannst jetzt weitermachen.");
+  return res.redirect(nextUrl);
 });
 
 app.post("/logout", (req, res) => {
