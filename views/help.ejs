@@ -70,57 +70,15 @@
         </p>
 
         <div class="help-example-grid">
-          <article class="help-example-card">
-            <h3>Fett</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[b]Das ist fett[/b]</code>
-              <div class="help-example-preview guestbook-entry-body"><strong>Das ist fett</strong></div>
-            </div>
-          </article>
-
-          <article class="help-example-card">
-            <h3>Kursiv</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[i]Das ist kursiv[/i]</code>
-              <div class="help-example-preview guestbook-entry-body"><em>Das ist kursiv</em></div>
-            </div>
-          </article>
-
-          <article class="help-example-card">
-            <h3>Unterstrichen</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[u]Das ist unterstrichen[/u]</code>
-              <div class="help-example-preview guestbook-entry-body"><u>Das ist unterstrichen</u></div>
-            </div>
-          </article>
-
-          <article class="help-example-card">
-            <h3>Farbe</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[color=#6ec8ff]Blauer Text[/color]</code>
-              <div class="help-example-preview guestbook-entry-body"><span style="color:#6ec8ff;">Blauer Text</span></div>
-            </div>
-          </article>
-
-          <article class="help-example-card">
-            <h3>Gradient</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[gradient=0,0,#ff7a7a,#ffd36e]Leuchtender Titel[/gradient]</code>
-              <div class="help-example-preview guestbook-entry-body">
-                <span style="background:linear-gradient(90deg,#ff7a7a,#ffd36e);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700;">
-                  Leuchtender Titel
-                </span>
+          <% (helpBbcodeExamples || []).forEach((entry) => { %>
+            <article class="help-example-card">
+              <h3><%= entry.title %></h3>
+              <div class="help-example-split">
+                <code class="help-example-code"><%= entry.code %></code>
+                <div class="help-example-preview guestbook-entry-body"><%- entry.preview_html %></div>
               </div>
-            </div>
-          </article>
-
-          <article class="help-example-card">
-            <h3>Ueberschrift</h3>
-            <div class="help-example-split">
-              <code class="help-example-code">[h2]Kapitel[/h2]</code>
-              <div class="help-example-preview guestbook-entry-body"><h2>Kapitel</h2></div>
-            </div>
-          </article>
+            </article>
+          <% }) %>
         </div>
 
         <ul class="help-list">

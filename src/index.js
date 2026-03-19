@@ -4037,11 +4037,52 @@ const HELP_TOPICS = [
   { slug: "chat-formatierung", title: "Chat-Formatierung" }
 ];
 
+const HELP_BBCODE_EXAMPLES = [
+  { title: "Fett", code: "[b]Das ist fett[/b]" },
+  { title: "Kursiv", code: "[i]Das ist kursiv[/i]" },
+  { title: "Unterstrichen", code: "[u]Das ist unterstrichen[/u]" },
+  { title: "Farbe", code: "[color=#6ec8ff]Blauer Text[/color]" },
+  { title: "Gradient", code: "[0,0,ff7a7a,ffd36e]Leuchtender Titel[/gradient]" },
+  { title: "Ueberschrift 1", code: "[h1]Ueberschrift 1[/h1]" },
+  { title: "Ueberschrift 2", code: "[h2]Ueberschrift 2[/h2]" },
+  { title: "Ueberschrift 3", code: "[h3]Ueberschrift 3[/h3]" },
+  { title: "Zentriert", code: "[center]Zentrierter Text[/center]" },
+  { title: "Rechts", code: "[right]Rechts formatierter Text[/right]" },
+  { title: "Block", code: "[block]Blocktext[/block]" },
+  {
+    title: "Spalten",
+    code: "[block][table][tr][td]Textspalte links[/td][td]Textspalte rechts[/td][/tr][/table][/block]"
+  },
+  { title: "Bild", code: "[img]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]" },
+  {
+    title: "Bild links",
+    code: "[img float=left]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild links"
+  },
+  {
+    title: "Bild rechts",
+    code: "[img float=right]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild rechts"
+  },
+  { title: "Link", code: "[url=https://heldenhaftereisen.net]Startseite[/url]" },
+  { title: "Zitat", code: "[quote]Ein stilles Zitat.[/quote]" },
+  { title: "Code", code: "[code]Beispielcode[/code]" },
+  { title: "Spoiler", code: "[spoiler=Mehr anzeigen]Versteckter Inhalt[/spoiler]" },
+  { title: "Ab 18", code: "[ab18]Ab 18 Inhalt[/ab18]" },
+  { title: "Linie", code: "[hr]" }
+];
+
+function decorateHelpBbcodeExamples() {
+  return HELP_BBCODE_EXAMPLES.map((entry) => ({
+    ...entry,
+    preview_html: renderGuestbookBbcode(entry.code)
+  }));
+}
+
 app.get("/help", (req, res) => {
   return res.render("help", {
     title: "Hilfe",
     helpTopics: HELP_TOPICS,
-    helpTopic: null
+    helpTopic: null,
+    helpBbcodeExamples: decorateHelpBbcodeExamples()
   });
 });
 
@@ -4054,7 +4095,8 @@ app.get("/help/:slug", (req, res) => {
   return res.render("help", {
     title: `Hilfe: ${helpTopic.title}`,
     helpTopics: HELP_TOPICS,
-    helpTopic
+    helpTopic,
+    helpBbcodeExamples: decorateHelpBbcodeExamples()
   });
 });
 
