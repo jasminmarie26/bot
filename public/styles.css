@@ -4890,7 +4890,7 @@ select:focus {
 
 .chat-online-typing {
   display: inline-block;
-  margin-left: 0.58rem;
+  margin-left: 0.46rem;
   color: var(--muted);
   font-size: 0.82em;
   font-style: italic;
