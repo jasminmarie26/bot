@@ -3387,6 +3387,18 @@ body.theme-atari .guestbook-sticky-head {
   color: inherit;
 }
 
+.guestbook-page-preview.gb-theme-neutral-weiss,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body a,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body strong,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body b,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body em,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body i,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body u,
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body s {
+  color: #111 !important;
+}
+
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-hr {
   border-top-color: rgba(0, 0, 0, 0.42);
 }
