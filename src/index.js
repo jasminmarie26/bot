@@ -1900,6 +1900,20 @@ function normalizeBbcodeMarkup(rawContent) {
     });
 }
 
+function normalizeBbcodeMarkup(rawContent) {
+  return String(rawContent || "")
+    .replace(/[\uFF3B\u3010\u3014\u2772\u27E6]/g, "[")
+    .replace(/[\uFF3D\u3011\u3015\u2773\u27E7]/g, "]")
+    .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
+      const normalizedInner = String(inner || "")
+        .replace(/[\u200B\u200C\u200D\u200E\u200F\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/g, "")
+        .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return `[${normalizedInner}]`;
+    });
+}
+
 function normalizeBbcodeInput(rawContent, maxLength) {
   return normalizeBbcodeMarkup(String(rawContent || "").slice(0, maxLength)).trim();
 }
