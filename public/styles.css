@@ -3627,21 +3627,12 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .bb-block {
-  display: flow-root;
-  margin: 0;
-  padding: 0;
+  display: block;
   text-align: justify;
   text-justify: inter-word;
   hyphens: none;
   overflow-wrap: normal;
   word-break: normal;
-}
-
-.bb-block > .bb-gradient {
-  display: block;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
 }
 
 .bb-table {
