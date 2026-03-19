@@ -55,16 +55,18 @@
     </form>
   </header>
 
-  <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
-    <% pages.forEach((page) => { %>
-      <a
-        class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
-        href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= page.id %>"
-      >
-        <%= page.page_number %>
-      </a>
-    <% }) %>
-  </nav>
+  <% if ((pages || []).length > 1) { %>
+    <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
+      <% pages.forEach((page) => { %>
+        <a
+          class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+          href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= page.id %>"
+        >
+          <%= page.page_number %>
+        </a>
+      <% }) %>
+    </nav>
+  <% } %>
 
   <form
     id="guestbook-editor-form"
@@ -74,17 +76,7 @@
   >
     <input type="hidden" name="page_id" value="<%= activePage.id %>" />
 
-    <h2>Einstellungen und Bilder</h2>
-
-    <label>
-      Bild URL
-      <input
-        name="image_url"
-        maxlength="500"
-        placeholder="https://..."
-        value="<%= settings.image_url %>"
-      />
-    </label>
+    <h2>Einstellungen</h2>
 
     <label>
       Zensur

@@ -2154,9 +2154,13 @@ function normalizeGuestbookOption(input, allowedValues, fallback) {
   return allowedValues.has(value) ? value : fallback;
 }
 
-function getGuestbookEditorPayload(body) {
+function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeBbcodeInput(body.page_content, 12000);
-  const imageUrl = (body.image_url || "").trim().slice(0, 500);
+  const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
+  const hasImageUrlField = Object.prototype.hasOwnProperty.call(body || {}, "image_url");
+  const imageUrl = hasImageUrlField
+    ? String(body.image_url || "").trim().slice(0, 500)
+    : existingImageUrl;
   const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
   const censorLevel = normalizeGuestbookOption(
     body.censor_level,
@@ -4960,7 +4964,8 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.body.page_id);
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const payload = getGuestbookEditorPayload(req.body);
+  const currentSettings = getOrCreateGuestbookSettings(id);
+  const payload = getGuestbookEditorPayload(req.body, currentSettings);
 
   db.prepare(
     `UPDATE guestbook_pages
@@ -5024,7 +5029,8 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.body.page_id);
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const payload = getGuestbookEditorPayload(req.body);
+  const currentSettings = getOrCreateGuestbookSettings(id);
+  const payload = getGuestbookEditorPayload(req.body, currentSettings);
 
   req.session.guestbookPreview = {
     character_id: id,
