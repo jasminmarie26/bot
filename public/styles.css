@@ -1651,24 +1651,6 @@ a:hover {
   gap: 0.45rem;
 }
 
-.legal-page-links {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-}
-
-.legal-page-links a {
-  color: var(--link);
-  text-decoration: none;
-}
-
-.legal-page-links a:hover,
-.legal-page-links a:focus-visible {
-  text-decoration: underline;
-}
-
 .legal-page-intro {
   margin: 0;
   max-width: 72ch;
