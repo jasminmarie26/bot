@@ -1984,7 +1984,17 @@ function renderGuestbookBbcode(rawContent) {
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
   });
 
-  return html.replace(/\n/g, "<br>");
+  html = html.replace(/\n/g, "<br>");
+  html = html.replace(
+    /<br>\s*(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)/gi,
+    "$1"
+  );
+  html = html.replace(
+    /(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)\s*<br>/gi,
+    "$1"
+  );
+
+  return html;
 }
 
 function normalizeGuestbookColor(rawColor) {
