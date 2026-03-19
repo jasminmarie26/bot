@@ -2,47 +2,67 @@
 
 <section class="panel legal-page-shell">
   <header class="legal-page-header">
+    <div class="legal-page-links" aria-label="Rechtliche Seiten">
+      <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+      <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
+      <a href="/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a>
+    </div>
     <h1>Datenschutz</h1>
     <p class="muted legal-page-intro">
-      Diese Datenschutzhinweise beschreiben in kompakter Form, welche Daten auf
-      <strong><%= legalMeta.siteName %></strong> verarbeitet werden und wof&uuml;r sie genutzt werden.
+      Diese Datenschutzhinweise geben einen kompakten &Uuml;berblick dazu, welche Daten auf
+      <strong><%= legalMeta.siteName %></strong> verarbeitet werden, wof&uuml;r sie ben&ouml;tigt
+      werden und an wen du dich bei Fragen wenden kannst.
     </p>
   </header>
 
   <div class="legal-grid">
     <section class="legal-section">
-      <h2>Welche Daten gespeichert werden</h2>
+      <h2>Verantwortliche Stelle</h2>
+      <p>
+        <strong><%= legalMeta.operatorName %></strong><br />
+        <%= legalMeta.operatorStreet %><br />
+        <%= legalMeta.operatorCity %>
+      </p>
+      <p>
+        E-Mail:
+        <a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>
+      </p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Welche Daten verarbeitet werden</h2>
       <ul>
-        <li>Accountdaten wie Benutzername, E-Mail-Adresse und Geburtsdatum</li>
-        <li>Charakterdaten, G&auml;stebuchinhalte, Rollenprofiltexte und freiwillig eingetragene Angaben</li>
-        <li>Chatnachrichten, Whisper-Nachrichten, Raumzuordnungen und Serverzuordnungen</li>
-        <li>Technische Angaben wie Sitzungsdaten, Login-Zeitpunkte und sicherheitsrelevante Protokolle</li>
+        <li>Accountdaten wie Benutzername, E-Mail-Adresse, Geburtsdatum und Sicherheitsangaben f&uuml;r Login und Schutzfunktionen</li>
+        <li>Charakterdaten, Profiltexte, G&auml;stebuchinhalte, BBCode-Inhalte und freiwillig eingetragene Angaben</li>
+        <li>Chatinhalte, Whisper-Nachrichten, Raumzuordnungen, Serverzuordnungen und Statusinformationen innerhalb der Plattform</li>
+        <li>Technische Daten wie Sitzungsinformationen, Login-Zeitpunkte und sicherheitsrelevante Protokolle zur Missbrauchserkennung</li>
       </ul>
     </section>
 
     <section class="legal-section">
-      <h2>Zweck der Verarbeitung</h2>
+      <h2>Wof&uuml;r die Daten genutzt werden</h2>
       <p>
-        Die Daten werden verarbeitet, um Accounts bereitzustellen, Rollenspielbereiche zu
-        verwalten, Inhalte anzuzeigen, Missbrauch vorzubeugen und den Betrieb der Plattform
-        technisch sicher aufrechtzuerhalten.
+        Die Daten werden verarbeitet, um die Plattform bereitzustellen, Accounts zu verwalten,
+        Inhalte anzuzeigen, Rollenspielbereiche zu organisieren, Missbrauch zu verhindern und
+        den technischen Betrieb sicher aufrechtzuerhalten.
       </p>
       <p>
         Ohne diese Verarbeitung k&ouml;nnen Registrierung, Login, Chat, G&auml;steb&uuml;cher,
-        Charakterdarstellung und Benachrichtigungen nicht sinnvoll funktionieren.
+        Charakterdarstellung, Altersfreigaben und Benachrichtigungen nicht sinnvoll funktionieren.
       </p>
     </section>
 
     <section class="legal-section">
-      <h2>Jugendschutz und Altersfreigaben</h2>
+      <h2>Bereichssteuerung und Altersfreigaben</h2>
       <p>
-        Altersgesperrte Inhalte werden anhand der im Account eingetragenen Geburtsdaten
-        sowie der jeweiligen Inhaltsmarkierung gefiltert.
+        Die Plattform unterscheidet zwischen Free-RP, ERP und LARP. Altersbeschr&auml;nkte Inhalte
+        werden anhand der im Account hinterlegten Geburtsdaten und anhand der gesetzten
+        Inhaltsmarkierungen gesteuert.
       </p>
       <ul>
-        <li>ERP-Bereiche und entsprechend markierte Inhalte sind ausschlie&szlig;lich f&uuml;r vollj&auml;hrige Personen vorgesehen.</li>
-        <li>Free-RP-Bereiche sind f&uuml;r allgemeines Rollenspiel gedacht und k&ouml;nnen dennoch moderiert oder eingeschr&auml;nkt werden, wenn Inhalte entgleisen.</li>
-        <li>LARP-Inhalte dienen vorrangig der Organisation, Vorstellung und dem Austausch innerhalb der Community.</li>
+        <li><strong>Free-RP:</strong> allgemeiner Rollenspielbereich mit Community-Funktion.</li>
+        <li><strong>ERP:</strong> nur f&uuml;r vollj&auml;hrige Mitglieder und nur bei entsprechender Freischaltung sichtbar.</li>
+        <li><strong>LARP:</strong> Austausch zu Live-Rollenspiel, Veranstaltungen und Charaktervorstellungen.</li>
         <li>Falsche Altersangaben sind unzul&auml;ssig. Bei Verdacht auf T&auml;uschung kann der Zugang eingeschr&auml;nkt oder gesperrt werden.</li>
       </ul>
     </section>
@@ -50,38 +70,42 @@
     <section class="legal-section">
       <h2>Sichtbarkeit von Inhalten</h2>
       <p>
-        Je nach Bereich k&ouml;nnen Inhalte &ouml;ffentlich, f&uuml;r eingeloggte Mitglieder oder
-        nur f&uuml;r bestimmte Rollen sichtbar sein. Inhalte in Chats, G&auml;steb&uuml;chern und Profilen
-        k&ouml;nnen innerhalb der Plattform von anderen Mitgliedern wahrgenommen werden.
+        Je nach Bereich k&ouml;nnen Inhalte &ouml;ffentlich, nur f&uuml;r eingeloggte Mitglieder
+        oder nur f&uuml;r bestimmte Nutzergruppen sichtbar sein. Inhalte in Chats, Profilen,
+        Charakterseiten und G&auml;steb&uuml;chern k&ouml;nnen daher innerhalb der Plattform von
+        anderen Mitgliedern wahrgenommen werden.
       </p>
       <p>
-        Bitte teile daher nur Angaben, mit deren Speicherung und Sichtbarkeit du innerhalb
-        der Community einverstanden bist.
+        Bitte trage daher nur Angaben ein, deren Speicherung und Sichtbarkeit du innerhalb
+        der Community verantworten m&ouml;chtest.
       </p>
     </section>
 
     <section class="legal-section">
-      <h2>Kontakt zum Datenschutz</h2>
-      <% if (legalMeta.contactEmail) { %>
-        <p>
-          Fragen zu Datenschutz, Auskunft, Berichtigung oder L&ouml;schung kannst du an
-          <a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>
-          richten.
-        </p>
-      <% } else { %>
-        <p>
-          Eine feste Datenschutz-Kontaktadresse ist derzeit noch nicht eingetragen. Bitte erg&auml;nze
-          hier sp&auml;ter eine erreichbare E-Mail-Adresse.
-        </p>
-      <% } %>
+      <h2>Speicherung und L&ouml;schung</h2>
+      <p>
+        Daten werden grunds&auml;tzlich so lange gespeichert, wie sie f&uuml;r den Betrieb des
+        Accounts, der Community-Funktionen oder zur Missbrauchsabwehr ben&ouml;tigt werden.
+        Nach einer Accountl&ouml;schung k&ouml;nnen einzelne Daten noch vor&uuml;bergehend aufbewahrt
+        werden, soweit dies technisch erforderlich ist oder berechtigte Schutzinteressen bestehen.
+      </p>
     </section>
 
     <section class="legal-section">
-      <h2>Wichtiger Hinweis</h2>
+      <h2>Deine Kontaktm&ouml;glichkeiten</h2>
+      <p>
+        Fragen zu Auskunft, Berichtigung, L&ouml;schung oder sonstigen Datenschutzanliegen kannst du an
+        <a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>
+        richten oder die <a href="/kontakt" target="_blank" rel="noopener noreferrer">Kontaktseite</a> nutzen.
+      </p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Hinweis</h2>
       <p>
         Diese Seite ist als praktische Datenschutz-&Uuml;bersicht f&uuml;r die Plattform gedacht.
-        F&uuml;r eine vollst&auml;ndige rechtliche Pr&uuml;fung und endg&uuml;ltige Formulierungen kann
-        im Zweifel fachkundiger juristischer Rat sinnvoll sein.
+        F&uuml;r eine abschlie&szlig;ende rechtliche Pr&uuml;fung und individuelle Sonderf&auml;lle kann
+        zus&auml;tzlicher fachkundiger juristischer Rat sinnvoll sein.
       </p>
     </section>
   </div>

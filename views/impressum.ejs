@@ -2,74 +2,98 @@
 
 <section class="panel legal-page-shell">
   <header class="legal-page-header">
+    <div class="legal-page-links" aria-label="Rechtliche Seiten">
+      <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+      <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
+      <a href="/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a>
+    </div>
     <h1>Impressum</h1>
     <p class="muted legal-page-intro">
-      Angaben zur Plattform <strong><%= legalMeta.siteName %></strong>. Diese Seite
-      bündelt die grundlegenden Betreiber- und Verantwortlichkeitshinweise für die Community.
+      Dieses Impressum enth&auml;lt die Anbieterkennzeichnung f&uuml;r
+      <strong><%= legalMeta.siteName %></strong> gem&auml;&szlig; &sect; 5 DDG sowie,
+      soweit einschl&auml;gig, Angaben zur Verantwortlichkeit gem&auml;&szlig;
+      &sect; 18 Abs. 2 MStV.
     </p>
   </header>
 
   <div class="legal-grid">
     <section class="legal-section">
-      <h2>Betreiberhinweis</h2>
+      <h2>Anbieterin</h2>
+      <p>
+        <strong><%= legalMeta.operatorName %></strong><br />
+        <%= legalMeta.operatorStreet %><br />
+        <%= legalMeta.operatorCity %>
+      </p>
       <p>
         <strong>Plattform:</strong> <%= legalMeta.siteName %><br />
         <strong>Webadresse:</strong>
         <a href="<%= legalMeta.appBaseUrl %>" target="_blank" rel="noopener noreferrer"><%= legalMeta.appBaseUrl %></a>
       </p>
-      <p>
-        Diese Plattform wird als Rollenspiel-, Community- und Austauschseite betrieben.
-        Für ein rechtlich vollst&auml;ndiges Impressum sollten die echten Betreiberdaten
-        und eine ladungsf&auml;hige Anschrift erg&auml;nzt werden.
-      </p>
     </section>
 
     <section class="legal-section">
       <h2>Kontakt</h2>
-      <% if (legalMeta.contactEmail) { %>
-        <p>
-          Kontaktanfragen k&ouml;nnen derzeit per E-Mail an
-          <a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>
-          gerichtet werden.
-        </p>
-      <% } else { %>
-        <p>
-          Eine feste Kontakt-E-Mail ist derzeit noch nicht hinterlegt. Bitte erg&auml;nze hier
-          sp&auml;ter deine offizielle Kontaktadresse.
-        </p>
-      <% } %>
-      <p class="muted">
-        F&uuml;r ein vollst&auml;ndiges Impressum sollten au&szlig;erdem Verantwortliche nach
-        &sect; 18 MStV namentlich benannt werden.
+      <p>
+        <strong><%= legalMeta.contactName %></strong>
+        &lt;<a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>&gt;
+      </p>
+      <p>
+        Bitte nutze diese Adresse insbesondere f&uuml;r allgemeine Kontaktanfragen,
+        Hinweise auf Rechtsverletzungen, Beschwerden zu Inhalten oder technische Meldungen.
       </p>
     </section>
 
     <section class="legal-section">
-      <h2>Inhalte und Verantwortung</h2>
+      <h2>Verantwortlich f&uuml;r Inhalte</h2>
       <p>
-        Nutzerinhalte wie Charaktertexte, G&auml;steb&uuml;cher, Chatbeitr&auml;ge und Profilangaben
-        werden von den jeweiligen Mitgliedern selbst eingestellt. F&uuml;r diese Inhalte sind
-        in erster Linie die jeweiligen Verfasser verantwortlich.
+        Verantwortlich f&uuml;r journalistisch-redaktionelle Inhalte gem&auml;&szlig;
+        &sect; 18 Abs. 2 MStV, soweit einschl&auml;gig:
       </p>
+      <p>
+        <strong><%= legalMeta.operatorName %></strong><br />
+        <%= legalMeta.operatorStreet %><br />
+        <%= legalMeta.operatorCity %>
+      </p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Plattformbereiche</h2>
       <ul>
-        <li>Rechtswidrige, beleidigende oder jugendschutzwidrige Inhalte k&ouml;nnen entfernt werden.</li>
-        <li>Accounts oder Inhalte k&ouml;nnen bei Missbrauch, T&auml;uschung oder wiederholten Verst&ouml;&szlig;en eingeschr&auml;nkt werden.</li>
-        <li>Es besteht kein Anspruch auf dauerhafte Verf&uuml;gbarkeit einzelner Inhalte oder Accounts.</li>
+        <li><strong>Free-RP-Server:</strong> allgemeines textbasiertes Rollenspiel und Community-Austausch.</li>
+        <li><strong>ERP-Server:</strong> ausschlie&szlig;lich f&uuml;r vollj&auml;hrige Personen und nur f&uuml;r entsprechend freigeschaltete Inhalte.</li>
+        <li><strong>LARP-Server:</strong> Austausch zu Live-Rollenspiel, Planung, Charaktervorstellung und Community-Organisation.</li>
       </ul>
     </section>
 
     <section class="legal-section">
-      <h2>Hinweis zu Altersangaben</h2>
+      <h2>Nutzerinhalte und Moderation</h2>
       <p>
-        Bereiche mit Altersfreigaben werden technisch anhand der im Account hinterlegten
-        Geburtsdaten und Markierungen wie <strong>ab 18</strong> oder
-        <strong>sexuelle Darstellung</strong> gesteuert.
+        Charaktertexte, G&auml;steb&uuml;cher, Chatbeitr&auml;ge, Profilangaben und sonstige
+        Nutzerinhalte werden grunds&auml;tzlich von den jeweiligen Mitgliedern selbst erstellt.
+        F&uuml;r diese Inhalte sind in erster Linie die jeweiligen Verfasser verantwortlich.
+      </p>
+      <ul>
+        <li>Rechtswidrige, beleidigende, gewaltverherrlichende oder jugendschutzwidrige Inhalte k&ouml;nnen ohne Vorank&uuml;ndigung eingeschr&auml;nkt oder entfernt werden.</li>
+        <li>Bei Missbrauch, Umgehung technischer Schutzmechanismen oder wiederholten Verst&ouml;&szlig;en k&ouml;nnen Inhalte gesperrt, Accounts eingeschr&auml;nkt oder Accounts gel&ouml;scht werden.</li>
+        <li>Es besteht kein Anspruch auf dauerhafte Verf&uuml;gbarkeit einzelner Inhalte, Accounts oder Funktionen.</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>Hinweis zu Altersangaben und Freischaltungen</h2>
+      <p>
+        Altersbeschr&auml;nkte Inhalte und Bereiche werden technisch anhand der im Account
+        hinterlegten Geburtsdaten sowie anhand der jeweiligen Inhaltskennzeichnung gesteuert.
       </p>
       <ul>
         <li>Mitglieder sind verpflichtet, bei der Registrierung wahrheitsgem&auml;&szlig;e Altersangaben zu machen.</li>
-        <li>Bewusst falsche Altersangaben erfolgen in eigener Verantwortung der betreffenden Person.</li>
-        <li>Bei Verdacht auf Falschangaben oder Umgehung von Altersfreigaben kann der Zugriff gesperrt oder ein Account entfernt werden.</li>
+        <li>Bewusst falsche Altersangaben oder die gezielte Umgehung von Altersfreigaben erfolgen in eigener Verantwortung der betreffenden Person.</li>
+        <li>Werden Falschangaben bekannt, k&ouml;nnen Freischaltungen entzogen, Inhalte eingeschr&auml;nkt oder Accounts gesperrt bzw. entfernt werden.</li>
       </ul>
+      <p class="muted">
+        Die technische Alterspr&uuml;fung kann nur auf Basis der von Mitgliedern gemachten Angaben arbeiten
+        und ersetzt keine amtliche Identit&auml;ts- oder Alterspr&uuml;fung.
+      </p>
     </section>
   </div>
 </section>

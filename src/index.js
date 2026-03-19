@@ -85,6 +85,11 @@ const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
+const LEGAL_OPERATOR_NAME = "Jasmin Beyer";
+const LEGAL_OPERATOR_STREET = "Sternstraße 98";
+const LEGAL_OPERATOR_CITY = "06886 Lutherstadt Wittenberg";
+const LEGAL_CONTACT_NAME = "Heldenhaft Reisen";
+const LEGAL_CONTACT_EMAIL = "admin@heldenhaftereisen.net";
 const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
@@ -113,6 +118,18 @@ function getOAuthDisplayCallbackUrl(callbackUrl) {
   if (/^https?:\/\//i.test(normalized)) return normalized;
   if (!APP_BASE_URL) return normalized;
   return `${APP_BASE_URL}${normalized}`;
+}
+
+function getLegalMeta() {
+  return {
+    siteName: "Heldenhafte Reisen",
+    appBaseUrl: APP_BASE_URL || "https://heldenhaftereisen.net",
+    operatorName: LEGAL_OPERATOR_NAME,
+    operatorStreet: LEGAL_OPERATOR_STREET,
+    operatorCity: LEGAL_OPERATOR_CITY,
+    contactName: LEGAL_CONTACT_NAME,
+    contactEmail: LEGAL_CONTACT_EMAIL
+  };
 }
 
 function buildOAuthProviderStatus(label, clientId, clientSecret, callbackUrl) {
@@ -3209,11 +3226,7 @@ app.get("/live-updates", (req, res) => {
 app.get("/impressum", (req, res) => {
   return res.render("impressum", {
     title: "Impressum",
-    legalMeta: {
-      siteName: "Heldenhafte Reisen",
-      appBaseUrl: APP_BASE_URL || "https://heldenhaftereisen.net",
-      contactEmail: MAIL_FROM || ""
-    },
+    legalMeta: getLegalMeta(),
     pageClass: "page-legal"
   });
 });
@@ -3221,11 +3234,15 @@ app.get("/impressum", (req, res) => {
 app.get("/datenschutz", (req, res) => {
   return res.render("datenschutz", {
     title: "Datenschutz",
-    legalMeta: {
-      siteName: "Heldenhafte Reisen",
-      appBaseUrl: APP_BASE_URL || "https://heldenhaftereisen.net",
-      contactEmail: MAIL_FROM || ""
-    },
+    legalMeta: getLegalMeta(),
+    pageClass: "page-legal"
+  });
+});
+
+app.get("/kontakt", (req, res) => {
+  return res.render("kontakt", {
+    title: "Kontakt",
+    legalMeta: getLegalMeta(),
     pageClass: "page-legal"
   });
 });
