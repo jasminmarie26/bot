@@ -90,6 +90,7 @@ const LEGAL_OPERATOR_STREET = "Sternstraße 98";
 const LEGAL_OPERATOR_CITY = "06886 Lutherstadt Wittenberg";
 const LEGAL_CONTACT_NAME = "Heldenhaft Reisen";
 const LEGAL_CONTACT_EMAIL = "admin@heldenhaftereisen.net";
+const LEGAL_CONTACT_FORWARD_EMAIL = "jasmin.marie87@t-online.de";
 const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
@@ -128,7 +129,8 @@ function getLegalMeta() {
     operatorStreet: LEGAL_OPERATOR_STREET,
     operatorCity: LEGAL_OPERATOR_CITY,
     contactName: LEGAL_CONTACT_NAME,
-    contactEmail: LEGAL_CONTACT_EMAIL
+    contactEmail: LEGAL_CONTACT_EMAIL,
+    contactForwardEmail: LEGAL_CONTACT_FORWARD_EMAIL
   };
 }
 
@@ -829,6 +831,22 @@ function renderRegisterPage(req, res, options = {}) {
   });
 }
 
+function renderKontaktPage(req, res, options = {}) {
+  return res.status(options.status || 200).render("kontakt", {
+    title: "Kontakt",
+    legalMeta: getLegalMeta(),
+    pageClass: "page-legal",
+    contactError: options.error || "",
+    contactSuccess: options.success || "",
+    contactValues: options.values || {
+      name: "",
+      email: "",
+      subject: "",
+      message: ""
+    }
+  });
+}
+
 function renderLoginPage(req, res, options = {}) {
   return renderAuthPage(req, res, {
     ...options,
@@ -1028,6 +1046,68 @@ async function sendVerificationEmail(req, payload) {
     subject: "Bitte bestätige deine E-Mail bei Heldenhafte Reisen",
     text
   });
+}
+
+async function sendRegistrationAdminNotification(req, payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter || !LEGAL_CONTACT_FORWARD_EMAIL) return false;
+
+  const baseUrl = getPublicBaseUrl(req) || APP_BASE_URL || "https://heldenhaftereisen.net";
+  const text = [
+    "Neue Registrierung bei Heldenhafte Reisen",
+    "",
+    `Benutzername: ${payload.username}`,
+    `E-Mail: ${payload.email}`,
+    payload.accountNumber ? `Accountnummer: ${payload.accountNumber}` : "",
+    `Zeitpunkt: ${new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}`,
+    "",
+    `Plattform: ${baseUrl}`
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: LEGAL_CONTACT_FORWARD_EMAIL,
+    subject: `Neue Registrierung: ${payload.username}`,
+    text
+  });
+
+  return true;
+}
+
+async function sendContactMessageEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) {
+    throw new Error("Contact mailer is not configured");
+  }
+
+  const recipients = [LEGAL_CONTACT_EMAIL].filter(Boolean);
+  const bccRecipients = [LEGAL_CONTACT_FORWARD_EMAIL].filter(
+    (email) => email && !recipients.includes(email)
+  );
+
+  const text = [
+    "Neue Kontaktanfrage über Heldenhafte Reisen",
+    "",
+    `Name: ${payload.name}`,
+    `E-Mail: ${payload.email}`,
+    `Betreff: ${payload.subject}`,
+    "",
+    "Nachricht:",
+    payload.message
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: recipients.join(", "),
+    bcc: bccRecipients.length ? bccRecipients.join(", ") : undefined,
+    replyTo: payload.email,
+    subject: `[Kontakt] ${payload.subject}`,
+    text
+  });
+
+  return true;
 }
 
 async function sendAccountDeletionEmail(payload) {
@@ -3240,11 +3320,55 @@ app.get("/datenschutz", (req, res) => {
 });
 
 app.get("/kontakt", (req, res) => {
-  return res.render("kontakt", {
-    title: "Kontakt",
-    legalMeta: getLegalMeta(),
-    pageClass: "page-legal"
+  return renderKontaktPage(req, res, {
+    success: req.query.sent === "1" ? "Deine Nachricht wurde versendet." : ""
   });
+});
+
+app.post("/kontakt", async (req, res) => {
+  const name = String(req.body.name || "").trim().slice(0, 80);
+  const email = normalizeEmail(req.body.email || "");
+  const subject = String(req.body.subject || "").trim().slice(0, 140);
+  const message = String(req.body.message || "").trim().slice(0, 5000);
+  const honeypotValue = String(req.body.website || "").trim();
+  const values = { name, email, subject, message };
+
+  if (honeypotValue) {
+    return renderKontaktPage(req, res, {
+      status: 400,
+      error: "Die Nachricht konnte nicht versendet werden.",
+      values
+    });
+  }
+
+  if (!name || !EMAIL_PATTERN.test(email) || !subject || !message) {
+    return renderKontaktPage(req, res, {
+      status: 400,
+      error: "Bitte fülle Name, E-Mail, Betreff und Nachricht vollständig aus.",
+      values
+    });
+  }
+
+  if (!getVerificationMailer()) {
+    return renderKontaktPage(req, res, {
+      status: 503,
+      error: "Der E-Mail-Versand ist derzeit nicht verfügbar. Bitte versuche es später erneut.",
+      values
+    });
+  }
+
+  try {
+    await sendContactMessageEmail({ name, email, subject, message });
+  } catch (error) {
+    console.error("Konnte Kontaktanfrage nicht senden:", error);
+    return renderKontaktPage(req, res, {
+      status: 500,
+      error: "Die Nachricht konnte gerade nicht versendet werden. Bitte versuche es später erneut.",
+      values
+    });
+  }
+
+  return res.redirect("/kontakt?sent=1");
 });
 
 app.get("/register", (req, res) => {
@@ -3373,6 +3497,7 @@ app.post("/register", async (req, res) => {
     .get().count;
   const isAdmin = adminCount === 0 ? 1 : 0;
   let createdUserId = null;
+  let accountNumber = null;
 
   try {
     const info = db
@@ -3392,13 +3517,23 @@ app.post("/register", async (req, res) => {
         getRequestIp(req)
       );
     createdUserId = info.lastInsertRowid;
-    getAccountNumberByUserId(createdUserId);
+    accountNumber = getAccountNumberByUserId(createdUserId);
 
     await sendVerificationEmail(req, {
       username,
       email,
       verificationToken
     });
+
+    try {
+      await sendRegistrationAdminNotification(req, {
+        username,
+        email,
+        accountNumber
+      });
+    } catch (notificationError) {
+      console.error("Konnte Registrierungsinfo nicht an die Betreiberadresse senden:", notificationError);
+    }
   } catch (error) {
     console.error(error);
     if (createdUserId) {
