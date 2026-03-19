@@ -82,6 +82,7 @@
       <div class="gb-radio-list">
         <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
         <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
+        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschränkung</label>
       </div>
     </div>
 
