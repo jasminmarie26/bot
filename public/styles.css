@@ -3375,6 +3375,26 @@ body.theme-atari .guestbook-sticky-head {
   margin-right: auto;
 }
 
+.guestbook-page-preview.gb-theme-neutral-weiss {
+  background: #f7f7f4;
+  border: 2px solid #161616;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.88) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body {
+  color: inherit;
+}
+
+.guestbook-page-preview.gb-theme-neutral-weiss .bb-hr {
+  border-top-color: rgba(0, 0, 0, 0.42);
+}
+
+.guestbook-page-preview.gb-theme-neutral-weiss .bb-table td {
+  border-color: rgba(0, 0, 0, 0.42);
+}
+
 .guestbook-page-preview.gb-font-default {
   font-family: var(--font-ui);
 }
