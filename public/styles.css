@@ -3392,8 +3392,8 @@ body.theme-atari .guestbook-sticky-head {
 .guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body {
   color: inherit;
   max-width: var(--gb-content-width);
-  font-size: 1.16em;
-  line-height: 1.26;
+  font-size: 1.24em;
+  line-height: 1.28;
   margin-top: 0;
 }
 
@@ -3432,14 +3432,14 @@ body.theme-atari .guestbook-sticky-head {
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-left {
   width: auto;
-  max-width: 126px;
-  margin: -0.6rem 6px 0 0;
+  max-width: 130px;
+  margin: -0.48rem 8px 0 0;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-right {
   width: auto;
-  max-width: 126px;
-  margin: -0.6rem 0 0 6px;
+  max-width: 130px;
+  margin: -0.48rem 0 0 8px;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-gradient {
@@ -3568,7 +3568,7 @@ body.theme-atari .guestbook-sticky-head {
   line-height: 1.56;
   word-break: break-word;
   max-width: var(--gb-content-width);
-  font-size: 1.16em;
+  font-size: 1.24em;
 }
 
 .guestbook-entry-body::after {
@@ -3664,14 +3664,14 @@ body.theme-atari .guestbook-sticky-head {
   float: left;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: -0.6rem 0.55rem 0.65rem 0;
+  margin: -0.48rem 0.7rem 0.65rem 0;
 }
 
 .bb-image-right {
   float: right;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: -0.6rem 0 0.65rem 0.55rem;
+  margin: -0.48rem 0 0.65rem 0.7rem;
 }
 
 .bb-gradient {
