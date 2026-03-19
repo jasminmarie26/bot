@@ -722,33 +722,46 @@ body.theme-larp {
   --error-edge: rgba(205, 135, 110, 0.34);
   --glass-blur: 8px;
   background:
-    radial-gradient(820px 420px at 12% 8%, rgba(206, 149, 82, 0.12), transparent 68%),
-    radial-gradient(720px 460px at 88% 12%, rgba(92, 124, 84, 0.1), transparent 66%),
-    radial-gradient(940px 560px at 52% 104%, rgba(44, 32, 22, 0.16), transparent 72%),
-    linear-gradient(180deg, rgba(247, 222, 177, 0.04), rgba(24, 17, 12, 0.08) 14%, rgba(14, 10, 8, 0.44) 100%),
+    radial-gradient(820px 420px at 12% 8%, rgba(206, 149, 82, 0.16), transparent 68%),
+    radial-gradient(720px 460px at 88% 12%, rgba(92, 124, 84, 0.14), transparent 66%),
+    radial-gradient(940px 560px at 52% 104%, rgba(44, 32, 22, 0.22), transparent 72%),
+    linear-gradient(180deg, rgba(248, 231, 199, 0.1) 0%, rgba(62, 45, 28, 0.16) 24%, rgba(14, 10, 8, 0.58) 100%),
+    linear-gradient(180deg, rgba(247, 222, 177, 0.08), rgba(24, 17, 12, 0.12) 14%, rgba(14, 10, 8, 0.5) 100%),
     repeating-linear-gradient(
       122deg,
-      rgba(255, 241, 216, 0.012) 0 2px,
+      rgba(255, 241, 216, 0.016) 0 2px,
       transparent 2px 26px
     ),
     url("/5537bac5-cc6a-423f-89fd-5dbe67a31be5.png") center 12% / cover no-repeat,
     linear-gradient(145deg, #1a1410 0%, #231810 42%, #1e150f 74%, #130d09 100%);
-  background-attachment: scroll, scroll, scroll, scroll, scroll, fixed, scroll;
+  background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, fixed, scroll;
 }
 
 body.theme-larp::before {
   inset: -24% -16%;
-  opacity: 0.46;
+  opacity: 0.74;
   background:
-    linear-gradient(128deg, transparent 0%, rgba(255, 233, 192, 0.04) 30%, transparent 66%),
-    radial-gradient(circle at 18% 20%, rgba(209, 160, 99, 0.08), transparent 18%),
-    radial-gradient(circle at 78% 14%, rgba(96, 124, 90, 0.08), transparent 16%),
+    radial-gradient(circle at 50% 10%, rgba(255, 241, 214, 0.1), transparent 28%),
+    radial-gradient(circle at 18% 20%, rgba(209, 160, 99, 0.12), transparent 18%),
+    radial-gradient(circle at 78% 14%, rgba(96, 124, 90, 0.11), transparent 16%),
+    radial-gradient(720px 300px at 8% 100%, rgba(18, 13, 10, 0.5), transparent 74%),
+    radial-gradient(720px 300px at 86% 100%, rgba(18, 13, 10, 0.42), transparent 76%),
+    linear-gradient(128deg, transparent 0%, rgba(255, 233, 192, 0.08) 30%, transparent 66%),
     repeating-linear-gradient(
       116deg,
-      rgba(255, 245, 226, 0.012) 0 2px,
+      rgba(255, 245, 226, 0.014) 0 2px,
       transparent 2px 22px
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 247, 232, 0.06) 0%,
+      rgba(30, 22, 16, 0.14) 36%,
+      rgba(18, 13, 10, 0.34) 68%,
+      rgba(11, 8, 6, 0.52) 100%
     );
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
+  backdrop-filter: blur(12px) saturate(72%) brightness(0.78);
+  -webkit-backdrop-filter: blur(12px) saturate(72%) brightness(0.78);
   animation-duration: 26s;
 }
 
