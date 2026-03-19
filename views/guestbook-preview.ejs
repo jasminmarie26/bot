@@ -26,17 +26,9 @@
 
   <div class="guestbook-page-shell guestbook-preview-page-shell">
     <article
-      class="guestbook-page-preview <%= characterCreatedAtLabel ? 'has-created-chip' : '' %><%= guestbookSettings?.image_url ? ' has-page-image' : ' no-page-image' %> gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
       style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
     >
-      <% if (characterCreatedAtLabel) { %>
-        <div class="guestbook-meta-floating">
-          <span class="account-chip created-chip guestbook-meta-created">
-            <span class="created-chip-label">Charakter erstellt am</span>
-            <strong class="created-chip-value"><%= characterCreatedAtLabel %></strong>
-          </span>
-        </div>
-      <% } %>
       <% if (guestbookSettings?.image_url) { %>
         <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
       <% } %>

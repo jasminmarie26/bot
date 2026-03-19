@@ -774,6 +774,8 @@ a:hover {
 
 .nav-guestbook-mode {
   gap: 0.85rem;
+  margin-left: 0;
+  flex: 0 0 auto;
 }
 
 .topbar-guestbook-control {
@@ -781,6 +783,32 @@ a:hover {
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
+  flex: 0 0 auto;
+}
+
+.topbar-guestbook-created-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.topbar-guestbook-created-at {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  max-width: min(100%, 28rem);
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.topbar-guestbook-created-at strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .brand.brand-in-nav {
@@ -834,22 +862,6 @@ a:hover {
   color: var(--link);
   background: color-mix(in srgb, var(--panel-bg) 75%, white 25%);
   line-height: 1.2;
-}
-
-.created-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.created-chip-label {
-  color: var(--muted);
-}
-
-.created-chip-value {
-  color: var(--text);
-  font-weight: 700;
 }
 
 .topbar-user-menu,
@@ -3150,30 +3162,6 @@ body:has(.guestbook-layout) .guestbook-layout {
   margin-top: -1px;
 }
 
-.guestbook-meta-floating {
-  position: absolute;
-  top: 0.72rem;
-  right: 1rem;
-  z-index: 6;
-  display: flex;
-  justify-content: flex-end;
-  max-width: min(46%, 20rem);
-  pointer-events: none;
-}
-
-.guestbook-meta-created {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  max-width: 100%;
-  border-radius: 14px;
-  padding: 0.34rem 0.7rem;
-  font-size: 0.88rem;
-  text-align: left;
-  white-space: normal;
-}
-
 .guestbook-entry-heading {
   color: var(--link);
   display: inline-flex;
@@ -3276,16 +3264,6 @@ body.theme-atari .guestbook-entry-panel {
     padding-top: 0;
   }
 
-  .guestbook-meta-floating {
-    top: 0.58rem;
-    right: 0.75rem;
-    max-width: min(62%, 14rem);
-  }
-
-  .guestbook-meta-created {
-    font-size: 0.84rem;
-  }
-
   .guestbook-entry-toggle {
     width: auto;
     height: auto;
@@ -3371,10 +3349,6 @@ body.theme-atari .guestbook-entry-panel {
   margin-left: auto;
   margin-right: auto;
   font-size: 10.16px;
-}
-
-.guestbook-page-preview.has-created-chip.no-page-image {
-  padding-top: 3.35rem;
 }
 
 .guestbook-page-shell {
@@ -5058,6 +5032,16 @@ select:focus {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
+  }
+
+  .topbar-guestbook-created-wrap {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .topbar-guestbook-created-at {
+    font-size: 0.92rem;
+    white-space: normal;
   }
 
   .nav {

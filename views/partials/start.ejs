@@ -122,9 +122,14 @@
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
     ); %>
+    <% const topbarCharacterCreatedAtLabel =
+      typeof characterCreatedAtLabel !== "undefined" ? String(characterCreatedAtLabel || "").trim() : ""; %>
+    <% const showTopbarGuestbookCreatedAt = Boolean(
+      topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
+    ); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
-        <div class="topbar-inner">
+        <div class="topbar-inner<%= showTopbarGuestbookCreatedAt ? " has-guestbook-created-at" : "" %>">
           <% if (!topbarGuestbookModeActive) { %>
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <% } else { %>
@@ -142,6 +147,14 @@
               </button>
               <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
             </div>
+            <% if (showTopbarGuestbookCreatedAt) { %>
+              <div class="topbar-guestbook-created-wrap">
+                <span class="topbar-guestbook-created-at">
+                  <span>Charakter erstellt am</span>
+                  <strong><%= topbarCharacterCreatedAtLabel %></strong>
+                </span>
+              </div>
+            <% } %>
           <% } %>
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
             <% if (currentUser) { %>
