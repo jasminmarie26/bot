@@ -49,6 +49,7 @@
       </div>
     <% } %>
     <% if (orderedGuestbookPages.length > 1) { %>
+      <div class="guestbook-page-nav-layer">
       <% if (previousGuestbookPage) { %>
         <a
           class="guestbook-page-nav guestbook-page-nav-prev"
@@ -74,6 +75,7 @@
       <% } else { %>
         <span class="guestbook-page-nav guestbook-page-nav-next is-disabled" aria-hidden="true">&#8250;</span>
       <% } %>
+      </div>
     <% } %>
 
     <article

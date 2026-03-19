@@ -48,6 +48,9 @@
             <span>Konto: <%= roomlistAccountDisplayName %></span>
           <% } %>
           <span>Charakter: <%= character.name %></span>
+          <% if (characterCreatedAtLabel) { %>
+            <span>Charakter erstellt: <%= characterCreatedAtLabel %></span>
+          <% } %>
           <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
 

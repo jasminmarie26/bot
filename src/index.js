@@ -818,6 +818,7 @@ function renderAccountPage(req, res, options = {}) {
       ...accountUser,
       account_number: getAccountNumberByUserId(accountUser.id)
     },
+    accountCreatedAtLabel: formatGermanDate(accountUser.created_at),
     formValues: {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
@@ -4087,6 +4088,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   return res.render("character-view", {
     title: character.name,
     character,
+    characterCreatedAtLabel: formatGermanDate(character.created_at),
     isOwner,
     standardRooms,
     standardRoomUsers,
@@ -4700,6 +4702,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   return res.render("guestbook-preview", {
     title: `Vorschau: ${character.name}`,
     character,
+    characterCreatedAtLabel: formatGermanDate(character.created_at),
     pageId: previewPage.id,
     pageNumber: previewPage.page_number,
     guestbookSettings: previewSettings,

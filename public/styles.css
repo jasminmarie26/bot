@@ -3364,10 +3364,17 @@ body.theme-atari .guestbook-entry-panel {
   margin-bottom: 0;
 }
 
+.guestbook-page-nav-layer {
+  position: sticky;
+  top: calc(var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)) + 0.45rem);
+  height: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+
 .guestbook-page-nav {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3381,6 +3388,7 @@ body.theme-atari .guestbook-entry-panel {
   border: 0;
   box-shadow: none;
   z-index: 5;
+  pointer-events: auto;
   transition:
     color 120ms ease,
     transform 120ms ease;
@@ -3389,7 +3397,7 @@ body.theme-atari .guestbook-entry-panel {
 .guestbook-page-nav:hover {
   color: color-mix(in srgb, var(--link) 82%, white 18%);
   text-decoration: none;
-  transform: translateY(-50%) scale(1.04);
+  transform: scale(1.04);
 }
 
 .guestbook-page-nav.is-disabled {
@@ -3900,10 +3908,8 @@ body.page-guestbook-preview::after {
   gap: 0.7rem;
 }
 
-.page-guestbook-preview .guestbook-page-preview {
+.page-guestbook-preview .guestbook-preview-page-shell {
   margin-top: 1.15rem;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 @media (max-width: 719.98px) {
@@ -3921,6 +3927,10 @@ body.page-guestbook-preview::after {
 
   .guestbook-page-preview.gb-theme-neutral-weiss {
     padding: 14px;
+  }
+
+  .guestbook-page-nav-layer {
+    top: calc(var(--guestbook-top-offset, clamp(3.95rem, 10.5vw, 4.35rem)) + 0.2rem);
   }
 
   .guestbook-page-nav {

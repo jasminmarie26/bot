@@ -24,19 +24,27 @@
     </p>
   </header>
 
-  <article
-    class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
-    style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
-  >
-    <% if (guestbookSettings?.image_url) { %>
-      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+  <div class="guestbook-page-shell guestbook-preview-page-shell">
+    <% if (characterCreatedAtLabel) { %>
+      <div class="guestbook-meta-floating">
+        <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
+      </div>
     <% } %>
-    <% if (previewHtml) { %>
-      <div class="guestbook-entry-body"><%- previewHtml %></div>
-    <% } else { %>
-      <p class="muted">Diese Seite ist noch leer.</p>
-    <% } %>
-  </article>
+
+    <article
+      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+      style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+    >
+      <% if (guestbookSettings?.image_url) { %>
+        <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+      <% } %>
+      <% if (previewHtml) { %>
+        <div class="guestbook-entry-body"><%- previewHtml %></div>
+      <% } else { %>
+        <p class="muted">Diese Seite ist noch leer.</p>
+      <% } %>
+    </article>
+  </div>
 </section>
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
