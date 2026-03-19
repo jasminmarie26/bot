@@ -3152,16 +3152,20 @@ body:has(.guestbook-layout) .guestbook-layout {
 
 .guestbook-meta-floating {
   position: absolute;
-  top: 0.3rem;
-  left: calc(50% + 0.95rem);
+  top: 0.72rem;
   right: 1rem;
   z-index: 6;
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
+  max-width: min(46%, 20rem);
   pointer-events: none;
 }
 
 .guestbook-meta-created {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
   max-width: 100%;
   border-radius: 14px;
   padding: 0.34rem 0.7rem;
@@ -3273,11 +3277,9 @@ body.theme-atari .guestbook-entry-panel {
   }
 
   .guestbook-meta-floating {
-    top: 0.38rem;
-    left: auto;
+    top: 0.58rem;
     right: 0.75rem;
     max-width: min(62%, 14rem);
-    justify-content: flex-end;
   }
 
   .guestbook-meta-created {
@@ -3358,6 +3360,7 @@ body.theme-atari .guestbook-entry-panel {
 .guestbook-page-preview {
   --gb-frame-width: 710px;
   --gb-content-width: 600px;
+  position: relative;
   border: 1px solid var(--field-edge);
   border-radius: 12px;
   background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
@@ -3368,6 +3371,10 @@ body.theme-atari .guestbook-entry-panel {
   margin-left: auto;
   margin-right: auto;
   font-size: 10.16px;
+}
+
+.guestbook-page-preview.has-created-chip.no-page-image {
+  padding-top: 3.35rem;
 }
 
 .guestbook-page-shell {

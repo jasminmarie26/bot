@@ -7,12 +7,6 @@
       <p class="muted">Hier kannst du deine Kontodaten bearbeiten.</p>
     </div>
     <div class="dashboard-server-actions">
-      <% if (accountCreatedAtLabel || accountUser.created_at) { %>
-        <span class="account-chip created-chip">
-          <span class="created-chip-label">Account erstellt am</span>
-          <strong class="created-chip-value"><%= accountCreatedAtLabel || accountUser.created_at %></strong>
-        </span>
-      <% } %>
       <a class="btn btn-secondary" href="/dashboard">Zur&uuml;ck zum Dashboard</a>
     </div>
   </div>
@@ -24,6 +18,7 @@
   <div class="admin-user-meta">
     <span>Account Nr.: <%= accountUser.account_number %></span>
     <span>Aktueller Account-Name: <%= accountUser.username %></span>
+    <span>Account erstellt: <%= accountCreatedAtLabel || accountUser.created_at %></span>
   </div>
 </section>
 
