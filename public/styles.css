@@ -1013,7 +1013,6 @@ a:hover {
   white-space: nowrap;
 }
 
-.header-identity-display,
 .rp-header-identity {
   display: inline-flex;
   align-items: center;
@@ -1029,6 +1028,11 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   text-decoration: none;
+}
+
+.rp-header-identity-link:hover {
+  text-decoration: none;
+  filter: brightness(1.08);
 }
 
 .nav-delete-btn {
@@ -5785,7 +5789,6 @@ select:focus {
     width: 100%;
   }
 
-  .header-identity-display,
   .rp-header-identity {
     max-width: 100%;
     margin-left: 0;

@@ -89,11 +89,6 @@
       currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
     <% const accountDisplayName =
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
-    <% const showPersistentHeaderIdentity = Boolean(
-      currentUser &&
-      (currentUser.is_admin || currentUser.is_moderator) &&
-      displayIdentityName
-    ); %>
     <% const menuCharacterIsAdmin = Boolean(
       menuCharacter &&
       currentUser &&
@@ -194,12 +189,6 @@
                 <span>Live Updates</span>
                 <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
               </a>
-            <% } %>
-            <% if (showPersistentHeaderIdentity) { %>
-              <span
-                class="header-identity-display <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
-                title="<%= displayIdentityName %>"
-              ><%= displayIdentityName %></span>
             <% } %>
             <% if (!topbarGuestbookModeActive) { %>
               <form method="POST" action="/settings/theme" class="inline-form theme-form">

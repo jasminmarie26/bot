@@ -3164,6 +3164,16 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+function requireStaff(req, res, next) {
+  if (!req.session.user?.is_admin && !req.session.user?.is_moderator) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur Admins und Moderatoren dürfen diese Seite sehen."
+    });
+  }
+  return next();
+}
+
 function canPublishSiteUpdates(user) {
   return Boolean(user?.is_admin || user?.is_moderator);
 }
@@ -5783,6 +5793,12 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
     accountCount,
     adminCount,
     moderatorCount
+  });
+});
+
+app.get("/staff", requireAuth, requireStaff, (req, res) => {
+  return res.render("staff", {
+    title: "Admin- und Moderatorenbereich"
   });
 });
 

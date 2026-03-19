@@ -15,11 +15,10 @@
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
-  <% const showRoomlistHeaderIdentity = Boolean(
-    currentUser &&
-    (currentUser.is_admin || currentUser.is_moderator) &&
-    currentUserDisplayName
-  ); %>
+  <% const showRoomlistHeaderIdentity = Boolean(currentUser && currentUserDisplayName); %>
+  <% const roomlistHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
+    ? "/staff"
+    : ""; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -39,10 +38,18 @@
       </a>
     </nav>
     <% if (showRoomlistHeaderIdentity) { %>
-      <span
-        class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
-        title="<%= currentUserDisplayName %>"
-      ><%= currentUserDisplayName %></span>
+      <% if (roomlistHeaderIdentityHref) { %>
+        <a
+          class="rp-header-identity rp-header-identity-link <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          href="<%= roomlistHeaderIdentityHref %>"
+          title="Zum Admin- und Moderatorenbereich"
+        ><%= currentUserDisplayName %></a>
+      <% } else { %>
+        <span
+          class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          title="<%= currentUserDisplayName %>"
+        ><%= currentUserDisplayName %></span>
+      <% } %>
     <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-roomlist">Design</label>

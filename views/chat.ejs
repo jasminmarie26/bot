@@ -15,11 +15,10 @@
 <% const chatLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
   ? recentSiteUpdateRevisions
   : []; %>
-<% const showChatHeaderIdentity = Boolean(
-  currentUser &&
-  (currentUser.is_admin || currentUser.is_moderator) &&
-  currentUserDisplayName
-); %>
+<% const showChatHeaderIdentity = Boolean(currentUser && currentUserDisplayName); %>
+<% const chatHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
+  ? "/staff"
+  : ""; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -45,10 +44,18 @@
       </a>
     </nav>
     <% if (showChatHeaderIdentity) { %>
-      <span
-        class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
-        title="<%= currentUserDisplayName %>"
-      ><%= currentUserDisplayName %></span>
+      <% if (chatHeaderIdentityHref) { %>
+        <a
+          class="rp-header-identity rp-header-identity-link <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          href="<%= chatHeaderIdentityHref %>"
+          title="Zum Admin- und Moderatorenbereich"
+        ><%= currentUserDisplayName %></a>
+      <% } else { %>
+        <span
+          class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          title="<%= currentUserDisplayName %>"
+        ><%= currentUserDisplayName %></span>
+      <% } %>
     <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-chat">Design</label>

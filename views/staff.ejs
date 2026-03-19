@@ -1,0 +1,32 @@
+<%- include("partials/start", { topbarBrandLabel: "Heldenhafte Reisen" }) %>
+
+<section class="panel">
+  <div class="header-line">
+    <div>
+      <h1>Admin- und Moderatorenbereich</h1>
+      <p class="muted">
+        Hier landest du direkt über deinen Namen im Header.
+      </p>
+    </div>
+  </div>
+
+  <div class="dashboard-server-actions">
+    <% if (currentUser?.is_admin) { %>
+      <a class="btn" href="/admin">Adminbereich öffnen</a>
+    <% } %>
+    <a class="btn btn-secondary" href="/live-updates" target="_blank" rel="noopener noreferrer">
+      Live Updates öffnen
+    </a>
+    <a class="btn btn-secondary" href="/members" target="_blank" rel="noopener noreferrer">
+      Mitgliederliste öffnen
+    </a>
+  </div>
+
+  <% if (currentUser?.is_moderator && !currentUser?.is_admin) { %>
+    <p class="muted" style="margin-top: 1rem;">
+      Als Moderator kommst du hier gesammelt zu deinen Bereichen. Der volle Adminbereich bleibt nur für Admins offen.
+    </p>
+  <% } %>
+</section>
+
+<%- include("partials/end") %>
