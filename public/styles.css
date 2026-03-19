@@ -4382,11 +4382,11 @@ body.page-guestbook-preview::after {
   flex: 0 0 auto;
 }
 
-.character-mini-actions::before {
+.character-mini-actions::after {
   content: "";
   width: 1px;
   height: 0.95em;
-  margin-right: 0.12rem;
+  margin-left: 0.12rem;
   background: color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
 }
 
