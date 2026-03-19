@@ -2019,14 +2019,17 @@ function renderGuestbookBbcode(rawContent) {
 
   html = html.replace(createBbcodeSingleRegex("hr"), "<hr class=\"bb-hr\">");
 
-  html = html.replace(createBbcodeWrapRegex("h1"), "<h1>$1</h1>");
-  html = html.replace(createBbcodeWrapRegex("h2"), "<h2>$1</h2>");
-  html = html.replace(createBbcodeWrapRegex("h3"), "<h3>$1</h3>");
-
-  html = html.replace(createBbcodeWrapRegex("left"), "<div class=\"bb-left\">$1</div>");
-  html = html.replace(createBbcodeWrapRegex("center"), "<div class=\"bb-center\">$1</div>");
-  html = html.replace(createBbcodeWrapRegex("right"), "<div class=\"bb-right\">$1</div>");
-  html = html.replace(createBbcodeWrapRegex("block"), "<div class=\"bb-block\">$1</div>");
+  [
+    ["h1", "<h1>$1</h1>"],
+    ["h2", "<h2>$1</h2>"],
+    ["h3", "<h3>$1</h3>"],
+    ["left", "<div class=\"bb-left\">$1</div>"],
+    ["center", "<div class=\"bb-center\">$1</div>"],
+    ["right", "<div class=\"bb-right\">$1</div>"],
+    ["block", "<div class=\"bb-block\">$1</div>"]
+  ].forEach(([tag, replacement]) => {
+    html = replaceInnermostBbcodeWrap(html, tag, replacement);
+  });
 
   html = replaceInnermostBbcodeWrap(html, "table", "<table class=\"bb-table\">$1</table>");
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
@@ -2035,8 +2038,9 @@ function renderGuestbookBbcode(rawContent) {
   html = html.replace(createBbcodeOptionRegex("spoiler"), (full, title, inner) => (
     `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
   ));
-  html = html.replace(
-    createBbcodeWrapRegex("ab18"),
+  html = replaceInnermostBbcodeWrap(
+    html,
+    "ab18",
     "<details class=\"bb-spoiler bb-spoiler-ab18\"><summary>Ab 18 Inhalt</summary><div class=\"bb-spoiler-content\">$1</div></details>"
   );
 
@@ -2058,8 +2062,8 @@ function renderGuestbookBbcode(rawContent) {
     html = html.replace(re, `<${htmlTag}>$1</${htmlTag}>`);
   });
 
-  html = html.replace(createBbcodeWrapRegex("quote"), "<blockquote>$1</blockquote>");
-  html = html.replace(createBbcodeWrapRegex("code"), "<code>$1</code>");
+  html = replaceInnermostBbcodeWrap(html, "quote", "<blockquote>$1</blockquote>");
+  html = replaceInnermostBbcodeWrap(html, "code", "<code>$1</code>");
 
   html = html.replace(/\[\s*url\s*=\s*([^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
     const safeUrl = sanitizeBbcodeUrl(rawUrl);
