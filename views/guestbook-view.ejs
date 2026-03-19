@@ -42,15 +42,9 @@
 %>
 
 <section class="panel guestbook-layout">
-  <% if (characterCreatedAtLabel) { %>
-    <div class="guestbook-sticky-head">
-      <div class="guestbook-meta-row">
-        <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
-      </div>
-    </div>
-  <% } %>
-
-  <div class="guestbook-page-shell">
+  <div class="guestbook-stage">
+    <div class="guestbook-stage-inner">
+      <div class="guestbook-page-shell">
     <% if (orderedGuestbookPages.length > 1) { %>
       <% if (previousGuestbookPage) { %>
         <a
@@ -92,6 +86,14 @@
         <p class="muted">Diese Seite ist noch leer.</p>
       <% } %>
     </article>
+      </div>
+
+      <% if (characterCreatedAtLabel) { %>
+        <aside class="guestbook-side-meta" aria-label="Charakterdetails">
+          <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
+        </aside>
+      <% } %>
+    </div>
   </div>
 </section>
 
