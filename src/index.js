@@ -2224,6 +2224,33 @@ function ensureGuestbookPages(characterId) {
     .all(characterId);
 }
 
+function orderGuestbookPages(pages) {
+  return Array.isArray(pages)
+    ? [...pages].sort((left, right) => {
+        const leftPageNumber = Number(left.page_number) || 0;
+        const rightPageNumber = Number(right.page_number) || 0;
+        if (leftPageNumber !== rightPageNumber) return leftPageNumber - rightPageNumber;
+        return (Number(left.id) || 0) - (Number(right.id) || 0);
+      })
+    : [];
+}
+
+function buildGuestbookPageNavigation(pages, activePageId, buildPageUrl) {
+  const orderedPages = orderGuestbookPages(pages);
+  const activeIndex = orderedPages.findIndex((page) => Number(page.id) === Number(activePageId));
+  const previousPage = activeIndex > 0 ? orderedPages[activeIndex - 1] : null;
+  const nextPage =
+    activeIndex >= 0 && activeIndex < orderedPages.length - 1 ? orderedPages[activeIndex + 1] : null;
+
+  const withUrl = (page) => (page ? { ...page, url: buildPageUrl(page.id) } : null);
+
+  return {
+    hasMultiplePages: orderedPages.length > 1,
+    previousPage: withUrl(previousPage),
+    nextPage: withUrl(nextPage)
+  };
+}
+
 function renumberGuestbookPages(characterId) {
   const pages = db
     .prepare(
@@ -4595,6 +4622,14 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
+  const guestbookPageNavigation = buildGuestbookPageNavigation(
+    guestbookPages,
+    activeGuestbookPage.id,
+    (pageId) =>
+      `/characters/${character.id}/guestbook?page_id=${pageId}` +
+      (activeGuestbookEntriesPageNumber > 1 ? `&entries_page=${activeGuestbookEntriesPageNumber}` : "") +
+      buildGuestbookContextQuery(guestbookAccessState)
+  );
 
   return res.render("guestbook-view", {
     title: `Gästebuch: ${character.name}`,
@@ -4616,6 +4651,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       ...activeGuestbookPage,
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
     },
+    guestbookPageNavigation,
     guestbookSettings,
     guestbookPostingCharacters: postingCharactersState.characters,
     selectedGuestbookAuthorCharacterId: postingCharactersState.selectedCharacterId,
@@ -4887,6 +4923,11 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const previewContent = canUseStoredPreview
     ? String(storedPreview.page_content || "")
     : String(previewPage.content || "");
+  const guestbookPageNavigation = buildGuestbookPageNavigation(
+    pages,
+    previewPage.id,
+    (pageId) => `/characters/${id}/guestbook/edit/preview?page_id=${pageId}`
+  );
 
   return res.render("guestbook-preview", {
     title: `Vorschau: ${character.name}`,
@@ -4894,6 +4935,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     characterCreatedAtLabel: formatGermanDate(character.created_at),
     pageId: previewPage.id,
     pageNumber: previewPage.page_number,
+    guestbookPageNavigation,
     guestbookSettings: previewSettings,
     previewHtml: renderGuestbookBbcode(previewContent),
     previewBackUrl: `/characters/${id}/guestbook/edit?page_id=${previewPage.id}`

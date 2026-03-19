@@ -25,6 +25,8 @@
   </header>
 
   <div class="guestbook-page-shell guestbook-preview-page-shell">
+    <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
+
     <article
       class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
       style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
