@@ -3102,6 +3102,13 @@ app.use((req, res, next) => {
   res.locals.availableThemes = THEME_OPTIONS;
   res.locals.serverOptions = SERVER_OPTIONS;
   res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
+  const recentSiteUpdatesForHeader = getRecentSiteUpdates(50);
+  res.locals.latestSiteUpdateRevisionToken =
+    String(recentSiteUpdatesForHeader[0]?.revision_token || "").trim() ||
+    getLatestSiteUpdateRevisionToken();
+  res.locals.recentSiteUpdateRevisions = recentSiteUpdatesForHeader
+    .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
+    .filter(Boolean);
   const currentPath = String(req.originalUrl || "/").trim();
   res.locals.currentPath =
     currentPath.startsWith("/") && !currentPath.startsWith("//")

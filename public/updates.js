@@ -63,6 +63,17 @@
       ? [initialLiveUpdatesRevision]
       : [];
 
+  if (
+    !list &&
+    !heroSection &&
+    !liveUpdatesLink &&
+    !liveUpdatesPageRoot &&
+    !updateModal &&
+    !siteContentModal
+  ) {
+    return;
+  }
+
   function readLocalStorage(key) {
     try {
       return String(window.localStorage.getItem(key) || "").trim();

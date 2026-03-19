@@ -127,8 +127,7 @@
     <% const showTopbarGuestbookCreatedAt = Boolean(
       topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
     ); %>
-    <% const currentPagePath = String(currentPath || "").trim(); %>
-    <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive && currentPagePath === "/"); %>
+    <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive); %>
     <% const topbarLiveUpdatesInitialRevision = String(
       typeof latestSiteUpdateRevisionToken !== "undefined" ? latestSiteUpdateRevisionToken || "" : ""
     ).trim(); %>
