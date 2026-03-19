@@ -17,67 +17,72 @@
       <a href="#roomlist">Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
     </nav>
-    <form method="POST" action="/settings/theme" class="inline-form theme-form">
-      <label for="rp-theme-select-roomlist">Design</label>
-      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
-      <select
-        id="rp-theme-select-roomlist"
-        name="theme"
-        class="theme-select"
-      >
-        <% availableThemes.forEach((theme) => { %>
-          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
-            <%= theme.label %>
-          </option>
-        <% }) %>
-      </select>
-    </form>
-    <%- include("partials/guestbook-notification-link") %>
-    <details class="rp-user-menu">
-      <summary
-        class="rp-user-menu-toggle"
-        aria-label="Benutzermen&uuml; &ouml;ffnen"
-        title="Benutzermen&uuml;"
-      >
-        <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
-      </summary>
-      <div class="rp-user-menu-panel">
-        <div class="rp-user-menu-meta">
-          <strong class="<%= roomlistIdentityRoleStyle ? `role-name-${roomlistIdentityRoleStyle}` : "" %>"><%= roomlistIdentityName %></strong>
-          <% if (roomlistAccountDisplayName && roomlistAccountDisplayName !== roomlistIdentityName) { %>
-            <span>Konto: <%= roomlistAccountDisplayName %></span>
-          <% } %>
-          <span>Charakter: <%= character.name %></span>
-          <% if (characterCreatedAtLabel) { %>
-            <span>Charakter erstellt: <%= characterCreatedAtLabel %></span>
-          <% } %>
-          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+    <div class="rp-userline">
+      <form method="POST" action="/settings/theme" class="inline-form theme-form">
+        <label for="rp-theme-select-roomlist">Design</label>
+        <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <select
+          id="rp-theme-select-roomlist"
+          name="theme"
+          class="theme-select"
+        >
+          <% availableThemes.forEach((theme) => { %>
+            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+              <%= theme.label %>
+            </option>
+          <% }) %>
+        </select>
+      </form>
+      <%- include("partials/guestbook-notification-link") %>
+      <% if (characterCreatedAtLabel) { %>
+        <span class="account-chip created-chip">
+          <span class="created-chip-label">Charakter erstellt am</span>
+          <strong class="created-chip-value"><%= characterCreatedAtLabel %></strong>
+        </span>
+      <% } %>
+      <details class="rp-user-menu">
+        <summary
+          class="rp-user-menu-toggle"
+          aria-label="Benutzermen&uuml; &ouml;ffnen"
+          title="Benutzermen&uuml;"
+        >
+          <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+        </summary>
+        <div class="rp-user-menu-panel">
+          <div class="rp-user-menu-meta">
+            <strong class="<%= roomlistIdentityRoleStyle ? `role-name-${roomlistIdentityRoleStyle}` : "" %>"><%= roomlistIdentityName %></strong>
+            <% if (roomlistAccountDisplayName && roomlistAccountDisplayName !== roomlistIdentityName) { %>
+              <span>Konto: <%= roomlistAccountDisplayName %></span>
+            <% } %>
+            <span>Charakter: <%= character.name %></span>
+            <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+          </div>
+
+          <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+            <a href="/account">Account</a>
+            <a href="/dashboard">Dashboard</a>
+            <% if (isOwner) { %>
+              <a
+                href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Charakter editieren
+              </a>
+            <% } %>
+            <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+            <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
+              <a href="/characters/<%= character.id %>#roomlist">Festplays</a>
+            <% } %>
+            <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+          </nav>
+
+          <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
+            <button type="submit" class="rp-user-menu-logout">Logout</button>
+          </form>
         </div>
-
-        <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
-          <a href="/account">Account</a>
-          <a href="/dashboard">Dashboard</a>
-          <% if (isOwner) { %>
-            <a
-              href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Charakter editieren
-            </a>
-          <% } %>
-          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
-          <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
-            <a href="/characters/<%= character.id %>#roomlist">Festplays</a>
-          <% } %>
-          <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
-        </nav>
-
-        <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
-          <button type="submit" class="rp-user-menu-logout">Logout</button>
-        </form>
-      </div>
-    </details>
+      </details>
+    </div>
   </header>
 
   <section class="rp-room-panel" id="roomlist">

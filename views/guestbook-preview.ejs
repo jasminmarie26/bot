@@ -27,7 +27,10 @@
   <div class="guestbook-page-shell guestbook-preview-page-shell">
     <% if (characterCreatedAtLabel) { %>
       <div class="guestbook-meta-floating">
-        <span class="guestbook-meta-created">Charakter erstellt am <%= characterCreatedAtLabel %></span>
+        <span class="account-chip created-chip guestbook-meta-created">
+          <span class="created-chip-label">Charakter erstellt am</span>
+          <strong class="created-chip-value"><%= characterCreatedAtLabel %></strong>
+        </span>
       </div>
     <% } %>
 

@@ -836,6 +836,22 @@ a:hover {
   line-height: 1.2;
 }
 
+.created-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.created-chip-label {
+  color: var(--muted);
+}
+
+.created-chip-value {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .topbar-user-menu,
 .rp-user-menu {
   position: relative;
@@ -3137,20 +3153,21 @@ body:has(.guestbook-layout) .guestbook-layout {
 .guestbook-meta-floating {
   position: absolute;
   top: 0.3rem;
+  left: calc(50% + 0.95rem);
   right: 1rem;
   z-index: 6;
-  max-width: min(46%, 20rem);
-  text-align: right;
+  display: flex;
+  justify-content: flex-start;
   pointer-events: none;
 }
 
 .guestbook-meta-created {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.94rem;
-  color: var(--muted);
-  white-space: nowrap;
+  max-width: 100%;
+  border-radius: 14px;
+  padding: 0.34rem 0.7rem;
+  font-size: 0.88rem;
+  text-align: left;
+  white-space: normal;
 }
 
 .guestbook-entry-heading {
@@ -3257,14 +3274,14 @@ body.theme-atari .guestbook-entry-panel {
 
   .guestbook-meta-floating {
     top: 0.38rem;
+    left: auto;
     right: 0.75rem;
     max-width: min(62%, 14rem);
+    justify-content: flex-end;
   }
 
   .guestbook-meta-created {
-    font-size: 0.88rem;
-    white-space: normal;
-    line-height: 1.2;
+    font-size: 0.84rem;
   }
 
   .guestbook-entry-toggle {
