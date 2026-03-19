@@ -4050,6 +4050,28 @@ body.page-guestbook-preview::after {
   background: transparent;
 }
 
+.gb-editor-section {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.gb-editor-subheading {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gb-editor-helptext {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .gb-radio-list {
   display: grid;
   gap: 0.42rem;
