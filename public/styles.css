@@ -4875,12 +4875,12 @@ select:focus {
   max-width: 100%;
 }
 
-.chat-online-content {
+.chat-online-item > .chat-online-content {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.58rem;
+  gap: 0;
   max-width: 100%;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .chat-online-name {
@@ -4889,7 +4889,8 @@ select:focus {
 }
 
 .chat-online-typing {
-  display: inline;
+  display: inline-block;
+  margin-left: 1rem;
   color: var(--muted);
   font-size: 0.82em;
   font-style: italic;
