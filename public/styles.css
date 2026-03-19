@@ -1764,6 +1764,12 @@ body.page-home-screen .hero {
   text-align: center;
 }
 
+body.page-home-screen .hero.has-update-actions .home-hero-copy,
+body.page-home-screen .hero.has-update-actions .home-hero-title,
+body.page-home-screen .hero.has-update-actions .home-hero-stack {
+  padding-right: 0;
+}
+
 body.page-home-screen .home-hero-stack,
 body.page-home-screen .home-hero-title,
 body.page-home-screen .home-hero-copy,
@@ -5623,6 +5629,12 @@ select:focus {
 body.page-home-screen .hero {
   align-items: center !important;
   text-align: center !important;
+}
+
+body.page-home-screen .hero.has-update-actions .home-hero-copy,
+body.page-home-screen .hero.has-update-actions .home-hero-title,
+body.page-home-screen .hero.has-update-actions .home-hero-stack {
+  padding-right: 0 !important;
 }
 
 body.page-home-screen .home-hero-stack,
