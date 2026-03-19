@@ -1,0 +1,77 @@
+<%- include("partials/start") %>
+
+<section class="panel legal-page-shell">
+  <header class="legal-page-header">
+    <h1>Impressum</h1>
+    <p class="muted legal-page-intro">
+      Angaben zur Plattform <strong><%= legalMeta.siteName %></strong>. Diese Seite
+      bündelt die grundlegenden Betreiber- und Verantwortlichkeitshinweise für die Community.
+    </p>
+  </header>
+
+  <div class="legal-grid">
+    <section class="legal-section">
+      <h2>Betreiberhinweis</h2>
+      <p>
+        <strong>Plattform:</strong> <%= legalMeta.siteName %><br />
+        <strong>Webadresse:</strong>
+        <a href="<%= legalMeta.appBaseUrl %>" target="_blank" rel="noopener noreferrer"><%= legalMeta.appBaseUrl %></a>
+      </p>
+      <p>
+        Diese Plattform wird als Rollenspiel-, Community- und Austauschseite betrieben.
+        Für ein rechtlich vollst&auml;ndiges Impressum sollten die echten Betreiberdaten
+        und eine ladungsf&auml;hige Anschrift erg&auml;nzt werden.
+      </p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Kontakt</h2>
+      <% if (legalMeta.contactEmail) { %>
+        <p>
+          Kontaktanfragen k&ouml;nnen derzeit per E-Mail an
+          <a href="mailto:<%= legalMeta.contactEmail %>"><%= legalMeta.contactEmail %></a>
+          gerichtet werden.
+        </p>
+      <% } else { %>
+        <p>
+          Eine feste Kontakt-E-Mail ist derzeit noch nicht hinterlegt. Bitte erg&auml;nze hier
+          sp&auml;ter deine offizielle Kontaktadresse.
+        </p>
+      <% } %>
+      <p class="muted">
+        F&uuml;r ein vollst&auml;ndiges Impressum sollten au&szlig;erdem Verantwortliche nach
+        &sect; 18 MStV namentlich benannt werden.
+      </p>
+    </section>
+
+    <section class="legal-section">
+      <h2>Inhalte und Verantwortung</h2>
+      <p>
+        Nutzerinhalte wie Charaktertexte, G&auml;steb&uuml;cher, Chatbeitr&auml;ge und Profilangaben
+        werden von den jeweiligen Mitgliedern selbst eingestellt. F&uuml;r diese Inhalte sind
+        in erster Linie die jeweiligen Verfasser verantwortlich.
+      </p>
+      <ul>
+        <li>Rechtswidrige, beleidigende oder jugendschutzwidrige Inhalte k&ouml;nnen entfernt werden.</li>
+        <li>Accounts oder Inhalte k&ouml;nnen bei Missbrauch, T&auml;uschung oder wiederholten Verst&ouml;&szlig;en eingeschr&auml;nkt werden.</li>
+        <li>Es besteht kein Anspruch auf dauerhafte Verf&uuml;gbarkeit einzelner Inhalte oder Accounts.</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>Hinweis zu Altersangaben</h2>
+      <p>
+        Bereiche mit Altersfreigaben werden technisch anhand der im Account hinterlegten
+        Geburtsdaten und Markierungen wie <strong>ab 18</strong> oder
+        <strong>sexuelle Darstellung</strong> gesteuert.
+      </p>
+      <ul>
+        <li>Mitglieder sind verpflichtet, bei der Registrierung wahrheitsgem&auml;&szlig;e Altersangaben zu machen.</li>
+        <li>Bewusst falsche Altersangaben erfolgen in eigener Verantwortung der betreffenden Person.</li>
+        <li>Bei Verdacht auf Falschangaben oder Umgehung von Altersfreigaben kann der Zugriff gesperrt oder ein Account entfernt werden.</li>
+      </ul>
+    </section>
+  </div>
+</section>
+
+<%- include("partials/end") %>

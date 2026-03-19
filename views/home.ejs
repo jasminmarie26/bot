@@ -116,13 +116,16 @@
 
       <h1 id="home-hero-title"><%= homeContent.hero_title %></h1>
       <div id="home-hero-body" class="hero-copy guestbook-entry-body"><%- homeContent.hero_body_html %></div>
-      <div class="hero-actions">
-        <% if (currentUser) { %>
-          <a class="btn btn-secondary" href="/dashboard">Zum Dashboard</a>
-        <% } else { %>
+      <% if (!currentUser) { %>
+        <div class="hero-actions">
           <a class="btn" href="/register">Jetzt starten</a>
           <a class="btn btn-secondary" href="/login">Einloggen</a>
-        <% } %>
+        </div>
+      <% } %>
+      <div class="home-legal-links" aria-label="Rechtliche Informationen">
+        <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+        <span aria-hidden="true">|</span>
+        <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
       </div>
     </section>
 

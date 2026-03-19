@@ -3206,6 +3206,30 @@ app.get("/live-updates", (req, res) => {
   });
 });
 
+app.get("/impressum", (req, res) => {
+  return res.render("impressum", {
+    title: "Impressum",
+    legalMeta: {
+      siteName: "Heldenhafte Reisen",
+      appBaseUrl: APP_BASE_URL || "https://heldenhaftereisen.net",
+      contactEmail: MAIL_FROM || ""
+    },
+    pageClass: "page-legal"
+  });
+});
+
+app.get("/datenschutz", (req, res) => {
+  return res.render("datenschutz", {
+    title: "Datenschutz",
+    legalMeta: {
+      siteName: "Heldenhafte Reisen",
+      appBaseUrl: APP_BASE_URL || "https://heldenhaftereisen.net",
+      contactEmail: MAIL_FROM || ""
+    },
+    pageClass: "page-legal"
+  });
+});
+
 app.get("/register", (req, res) => {
   return renderRegisterPage(req, res);
 });
