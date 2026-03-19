@@ -3464,7 +3464,7 @@ body.theme-atari .guestbook-sticky-head {
   background: #030303;
   border: 1px solid #151515;
   border-radius: 0;
-  padding: 20px;
+  padding: 16px;
   font-size: 10.16px;
   box-shadow:
     0 0 0 4px rgba(0, 0, 0, 0.98) inset,
@@ -3519,14 +3519,14 @@ body.theme-atari .guestbook-sticky-head {
 
 .guestbook-page-preview.gb-theme-tiefschwarz .bb-image-left {
   width: auto;
-  max-width: 120px;
-  margin: 0 0.35rem 0.25rem 0;
+  max-width: 104px;
+  margin: 0 0.2rem 0 0;
 }
 
 .guestbook-page-preview.gb-theme-tiefschwarz .bb-image-right {
   width: auto;
-  max-width: 120px;
-  margin: 0 0 0.25rem 0.35rem;
+  max-width: 104px;
+  margin: 0 0 0 0.2rem;
 }
 
 .guestbook-page-preview.gb-theme-tiefschwarz .bb-gradient {
