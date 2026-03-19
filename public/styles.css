@@ -3362,8 +3362,8 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .guestbook-page-preview {
-  --gb-frame-width: 860px;
-  --gb-content-width: 820px;
+  --gb-frame-width: 710px;
+  --gb-content-width: 600px;
   border: 1px solid var(--field-edge);
   border-radius: 12px;
   background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
@@ -3373,6 +3373,7 @@ body.theme-atari .guestbook-sticky-head {
   max-width: var(--gb-frame-width);
   margin-left: auto;
   margin-right: auto;
+  font-size: 10px;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss {
@@ -3391,9 +3392,9 @@ body.theme-atari .guestbook-sticky-head {
 .guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body {
   color: inherit;
   max-width: var(--gb-content-width);
-  font-size: 1rem;
-  line-height: 1.42;
-  margin-top: 0.3rem;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  margin-top: 0;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss,
@@ -3419,25 +3420,26 @@ body.theme-atari .guestbook-sticky-head {
 .guestbook-page-preview.gb-theme-neutral-weiss .guestbook-page-image {
   max-height: none;
   object-fit: contain;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image {
   width: auto;
   margin-top: 0;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0;
+  vertical-align: top;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-left {
   width: auto;
   max-width: 135px;
-  margin: 0 10px 6px 0;
+  margin: -0.36rem 10px 0 0;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-right {
   width: auto;
   max-width: 135px;
-  margin: 0 0 6px 10px;
+  margin: -0.36rem 0 0 10px;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-gradient {
@@ -3542,7 +3544,7 @@ body.theme-atari .guestbook-sticky-head {
 
 .guestbook-page-preview.gb-font-magie {
   font-family: "Great Vibes", "Berkshire Swash", cursive;
-  font-size: 1.08em;
+  font-size: inherit;
 }
 
 .guestbook-page-preview.gb-font-vintage-fantasy {
@@ -3564,7 +3566,7 @@ body.theme-atari .guestbook-sticky-head {
   line-height: 1.56;
   word-break: break-word;
   max-width: var(--gb-content-width);
-  font-size: 0.98rem;
+  font-size: 0.88rem;
 }
 
 .guestbook-entry-body::after {
@@ -3658,14 +3660,14 @@ body.theme-atari .guestbook-sticky-head {
   float: left;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: 0 0.9rem 0.65rem 0;
+  margin: -0.36rem 0.9rem 0.65rem 0;
 }
 
 .bb-image-right {
   float: right;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: 0 0 0.65rem 0.9rem;
+  margin: -0.36rem 0 0.65rem 0.9rem;
 }
 
 .bb-gradient {
