@@ -32,7 +32,8 @@ const THEME_OPTIONS = [
   { id: "windows-xp", label: "Windows XP" },
   { id: "atari", label: "Atari" },
   { id: "sith", label: "Sith" },
-  { id: "jedi", label: "Jedi" }
+  { id: "jedi", label: "Jedi" },
+  { id: "larp", label: "LARP" }
 ];
 const SERVER_OPTIONS = [
   { id: "free-rp", label: "FREE-RP" },

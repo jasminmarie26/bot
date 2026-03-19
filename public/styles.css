@@ -697,6 +697,177 @@ body.theme-jedi .hero-copy.guestbook-entry-body {
   font-size: clamp(0.84rem, 1.05vw, 0.98rem);
 }
 
+body.theme-larp {
+  --bg-base: #16110d;
+  --orb-1: rgba(196, 137, 73, 0.18);
+  --orb-2: rgba(88, 113, 76, 0.14);
+  --orb-3: rgba(231, 212, 171, 0.08);
+  --text: #f3ead7;
+  --muted: #d0c0a7;
+  --link: #e8cf95;
+  --panel-bg: rgba(23, 18, 14, 0.82);
+  --panel-edge: rgba(166, 128, 79, 0.28);
+  --panel-shadow: rgba(0, 0, 0, 0.78);
+  --field-bg: rgba(15, 12, 9, 0.92);
+  --field-edge: rgba(146, 114, 70, 0.34);
+  --accent: #c89553;
+  --accent-2: #8d6131;
+  --accent-text: #1d140a;
+  --danger: #b06653;
+  --danger-2: #7d3929;
+  --danger-text: #fff5ef;
+  --success-bg: rgba(73, 101, 66, 0.24);
+  --success-edge: rgba(147, 183, 126, 0.3);
+  --error-bg: rgba(115, 63, 49, 0.3);
+  --error-edge: rgba(205, 135, 110, 0.34);
+  --glass-blur: 8px;
+  background:
+    radial-gradient(820px 420px at 12% 8%, rgba(206, 149, 82, 0.12), transparent 68%),
+    radial-gradient(720px 460px at 88% 12%, rgba(92, 124, 84, 0.1), transparent 66%),
+    radial-gradient(940px 560px at 52% 104%, rgba(44, 32, 22, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(247, 222, 177, 0.04), rgba(24, 17, 12, 0.08) 14%, rgba(14, 10, 8, 0.44) 100%),
+    repeating-linear-gradient(
+      122deg,
+      rgba(255, 241, 216, 0.012) 0 2px,
+      transparent 2px 26px
+    ),
+    linear-gradient(145deg, #1a1410 0%, #231810 42%, #1e150f 74%, #130d09 100%);
+}
+
+body.theme-larp::before {
+  inset: -24% -16%;
+  opacity: 0.46;
+  background:
+    linear-gradient(128deg, transparent 0%, rgba(255, 233, 192, 0.04) 30%, transparent 66%),
+    radial-gradient(circle at 18% 20%, rgba(209, 160, 99, 0.08), transparent 18%),
+    radial-gradient(circle at 78% 14%, rgba(96, 124, 90, 0.08), transparent 16%),
+    repeating-linear-gradient(
+      116deg,
+      rgba(255, 245, 226, 0.012) 0 2px,
+      transparent 2px 22px
+    );
+  mix-blend-mode: screen;
+  animation-duration: 26s;
+}
+
+body.theme-larp::after {
+  right: 7%;
+  top: 10%;
+  width: 620px;
+  height: 620px;
+  border-radius: 46% 54% 60% 40% / 44% 46% 54% 56%;
+  background:
+    radial-gradient(circle at 38% 34%, rgba(255, 220, 171, 0.12), transparent 20%),
+    radial-gradient(circle at 56% 56%, rgba(117, 148, 99, 0.08), transparent 32%),
+    radial-gradient(circle at 50% 74%, rgba(22, 16, 11, 0.22), transparent 62%);
+  filter: blur(48px);
+  opacity: 0.36;
+}
+
+body.theme-larp .topbar,
+body.theme-larp .panel,
+body.theme-larp .card,
+body.theme-larp .hero,
+body.theme-larp .list-item,
+body.theme-larp .character-mini-item,
+body.theme-larp .guestbook-item,
+body.theme-larp .chat-message,
+body.theme-larp .chat-box {
+  box-shadow:
+    0 24px 54px -34px rgba(0, 0, 0, 0.88),
+    inset 0 1px 0 rgba(239, 221, 181, 0.05);
+}
+
+body.theme-larp .btn {
+  box-shadow: 0 18px 28px -24px rgba(200, 149, 83, 0.46);
+}
+
+body.theme-larp .ghost-btn,
+body.theme-larp .account-chip,
+body.theme-larp .theme-select {
+  border-color: color-mix(in srgb, var(--panel-edge) 78%, rgba(239, 221, 181, 0.18));
+}
+
+body.theme-larp .brand {
+  font-family: "IM Fell English SC", var(--font-display);
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 18px rgba(229, 199, 144, 0.12);
+}
+
+body.theme-larp .hero {
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  background:
+    linear-gradient(
+      140deg,
+      rgba(22, 17, 12, 0.86) 0%,
+      rgba(25, 18, 13, 0.74) 46%,
+      rgba(17, 12, 9, 0.58) 100%
+    );
+  border-color: rgba(166, 128, 79, 0.3);
+  backdrop-filter: blur(8px) saturate(118%);
+  -webkit-backdrop-filter: blur(8px) saturate(118%);
+}
+
+body.theme-larp .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(236, 202, 148, 0.08), transparent 18%),
+    radial-gradient(circle at 20% 88%, rgba(96, 123, 86, 0.08), transparent 18%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 240, 214, 0.012) 0 1px,
+      transparent 1px 24px
+    ),
+    linear-gradient(180deg, rgba(255, 246, 230, 0.03), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.34) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-larp .hero::after {
+  right: -28px;
+  top: -32px;
+  width: 250px;
+  height: 250px;
+  transform: none;
+  background:
+    radial-gradient(circle, rgba(237, 211, 162, 0.12) 0%, rgba(200, 149, 83, 0.08) 30%, transparent 72%);
+  filter: blur(34px);
+  opacity: 0.26;
+}
+
+body.theme-larp .hero h1,
+body.theme-larp .hero-copy,
+body.theme-larp .hero-actions {
+  position: relative;
+  z-index: 1;
+  width: min(64%, 900px);
+  margin-left: 0;
+  text-align: left;
+}
+
+body.theme-larp .hero h1 {
+  width: auto;
+  max-width: none;
+  white-space: normal;
+  font-family: "IM Fell English SC", var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+body.theme-larp .hero-actions {
+  justify-content: flex-start;
+}
+
+body.theme-larp .hero-copy.guestbook-entry-body {
+  font-size: clamp(0.84rem, 1.05vw, 0.98rem);
+}
+
 a {
   color: var(--link);
   text-decoration: none;
@@ -4371,6 +4542,17 @@ body.page-guestbook-preview::after {
   transition: filter 140ms ease;
 }
 
+.dashboard-server-panel .character-mini-grid .character-mini-card,
+.dashboard-server-panel .character-mini-grid .character-mini-item {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .character-mini-item:hover {
   text-decoration: none;
   filter: brightness(1.06);
@@ -5439,6 +5621,23 @@ select:focus {
     width: min(76%, 720px);
   }
 
+  body.theme-larp .hero {
+    min-height: 320px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(22, 17, 12, 0.8) 0%,
+        rgba(25, 18, 13, 0.62) 42%,
+        rgba(17, 12, 9, 0.48) 100%
+      );
+  }
+
+  body.theme-larp .hero h1,
+  body.theme-larp .hero-copy,
+  body.theme-larp .hero-actions {
+    width: min(76%, 720px);
+  }
+
   body.theme-sith {
     background-attachment: scroll, scroll, scroll, scroll, scroll, fixed, scroll;
   }
@@ -5644,6 +5843,39 @@ select:focus {
     height: 180px;
     transform: none;
     opacity: 0.18;
+  }
+
+  body.theme-larp .hero {
+    min-height: 0;
+    align-items: center;
+    text-align: center;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(22, 17, 12, 0.74) 0%,
+        rgba(25, 18, 13, 0.58) 42%,
+        rgba(17, 12, 9, 0.44) 100%
+      );
+  }
+
+  body.theme-larp .hero h1,
+  body.theme-larp .hero-copy,
+  body.theme-larp .hero-actions {
+    width: 100%;
+    text-align: center;
+  }
+
+  body.theme-larp .hero-actions {
+    justify-content: center;
+  }
+
+  body.theme-larp .hero::after {
+    right: 8%;
+    top: -12px;
+    width: 180px;
+    height: 180px;
+    transform: none;
+    opacity: 0.16;
   }
 }
 
