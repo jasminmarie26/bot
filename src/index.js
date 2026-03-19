@@ -1881,11 +1881,27 @@ function createBbcodeWrapRegex(tag) {
 }
 
 function createBbcodeOptionRegex(tag) {
-  return new RegExp(`\\[\\s*${tag}\\s*=\\s*([^\\]\\n]+?)\\s*\\]([\\s\\S]*?)\\[\\s*\\/\\s*${tag}\\s*\\]`, "gi");
+  return new RegExp(`\\[\\s*${tag}\\s*=\\s*([^\\]]+?)\\s*\\]([\\s\\S]*?)\\[\\s*\\/\\s*${tag}\\s*\\]`, "gi");
 }
 
 function createBbcodeSingleRegex(tag) {
   return new RegExp(`\\[\\s*${tag}\\s*\\]`, "gi");
+}
+
+function normalizeBbcodeMarkup(rawContent) {
+  return String(rawContent || "")
+    .replace(/[［【]/g, "[")
+    .replace(/[］】]/g, "]")
+    .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
+      const normalizedInner = String(inner || "")
+        .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, "")
+        .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
+      return `[${normalizedInner}]`;
+    });
+}
+
+function normalizeBbcodeInput(rawContent, maxLength) {
+  return normalizeBbcodeMarkup(String(rawContent || "").slice(0, maxLength)).trim();
 }
 
 function getCharacterByExactName(name) {
@@ -1903,7 +1919,8 @@ function getCharacterByExactName(name) {
 }
 
 function renderGuestbookBbcode(rawContent) {
-  let html = escapeHtml(String(rawContent || "").slice(0, 12000)).replace(/\r\n?/g, "\n");
+  const normalizedContent = normalizeBbcodeMarkup(String(rawContent || "").slice(0, 12000));
+  let html = escapeHtml(normalizedContent).replace(/\r\n?/g, "\n");
 
   const inlineTags = [
     ["b", "strong"],
@@ -1956,7 +1973,7 @@ function renderGuestbookBbcode(rawContent) {
   html = html.replace(createBbcodeWrapRegex("quote"), "<blockquote>$1</blockquote>");
   html = html.replace(createBbcodeWrapRegex("code"), "<code>$1</code>");
 
-  html = html.replace(/\[\s*url\s*=\s*([^\]\n]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
+  html = html.replace(/\[\s*url\s*=\s*([^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
     const safeUrl = sanitizeBbcodeUrl(rawUrl);
     if (!safeUrl) return label;
     return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
@@ -1991,7 +2008,7 @@ function renderGuestbookBbcode(rawContent) {
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
   });
 
-  html = html.replace(/\[\s*([^\]\n]*,[^\]\n]+?)\s*\]([\s\S]*?)\[\s*\/\s*gradient\s*\]/gi, (full, rawSpec, inner) => {
+  html = html.replace(/\[\s*([^\]]*?,[^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*gradient\s*\]/gi, (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
@@ -2024,7 +2041,7 @@ function normalizeGuestbookOption(input, allowedValues, fallback) {
 }
 
 function getGuestbookEditorPayload(body) {
-  const pageContent = (body.page_content || "").trim().slice(0, 12000);
+  const pageContent = normalizeBbcodeInput(body.page_content, 12000);
   const imageUrl = (body.image_url || "").trim().slice(0, 500);
   const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
   const censorLevel = normalizeGuestbookOption(
@@ -4474,7 +4491,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
     guestbookAccessState,
     requestedEntriesPageNumber
   );
-  const content = (req.body.content || "").trim().slice(0, 4000);
+  const content = normalizeBbcodeInput(req.body.content, 4000);
   if (!content) {
     setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
     return res.redirect(guestbookRedirectBase);
@@ -4574,7 +4591,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
     guestbookAccessState,
     requestedEntriesPageNumber
   );
-  const content = String(req.body.content || "").trim().slice(0, 4000);
+  const content = normalizeBbcodeInput(req.body.content, 4000);
 
   if (!content) {
     setFlash(req, "error", "Gästebucheintrag darf nicht leer sein.");
