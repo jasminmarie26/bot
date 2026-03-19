@@ -41,7 +41,7 @@ const SERVER_OPTIONS = [
 const GUESTBOOK_PAGE_SIZE = 12;
 const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
 const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
-const GUESTBOOK_THEME_STYLE_OPTIONS = new Set(["blumen", "nacht", "minimal", "neutral-weiss"]);
+const GUESTBOOK_THEME_STYLE_OPTIONS = new Set(["blumen", "nacht", "minimal", "neutral-weiss", "tiefschwarz"]);
 const GUESTBOOK_FONT_OPTIONS = [
   { id: "default", label: "Default" },
   { id: "serif", label: "Serif" },

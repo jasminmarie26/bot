@@ -3392,7 +3392,7 @@ body.theme-atari .guestbook-sticky-head {
 .guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body {
   color: inherit;
   max-width: var(--gb-content-width);
-  font-size: 1.3em;
+  font-size: 1.26em;
   line-height: 1.34;
   margin-top: 0;
   word-break: normal;
@@ -3449,6 +3449,89 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-block {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: none;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz {
+  --gb-frame-width: 710px;
+  --gb-content-width: 600px;
+  background: #030303;
+  border: 1px solid #151515;
+  border-radius: 0;
+  padding: 20px;
+  font-size: 10px;
+  box-shadow:
+    0 0 0 4px rgba(0, 0, 0, 0.98) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body {
+  color: inherit;
+  max-width: var(--gb-content-width);
+  font-size: 1.26em;
+  line-height: 1.34;
+  margin-top: 0;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body strong,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body b,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body em,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body i,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body u,
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body s {
+  color: #f2f2f2 !important;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body a {
+  color: #cfe4ff !important;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-hr {
+  border-top-color: rgba(255, 255, 255, 0.24);
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-table td {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-page-image {
+  max-height: none;
+  object-fit: contain;
+  margin-bottom: 0;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-image {
+  width: auto;
+  margin-top: 0;
+  margin-bottom: 0;
+  vertical-align: top;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-image-left {
+  width: auto;
+  max-width: 134px;
+  margin: -0.5rem 10px 0 0;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-image-right {
+  width: auto;
+  max-width: 134px;
+  margin: -0.5rem 0 0 10px;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-gradient {
+  font-weight: 400;
+}
+
+.guestbook-page-preview.gb-theme-tiefschwarz .bb-block {
   text-align: justify;
   text-justify: inter-word;
   hyphens: none;
@@ -3570,7 +3653,7 @@ body.theme-atari .guestbook-sticky-head {
   line-height: 1.56;
   word-break: break-word;
   max-width: var(--gb-content-width);
-  font-size: 1.3em;
+  font-size: 1.26em;
 }
 
 .guestbook-entry-body::after {
@@ -3633,6 +3716,11 @@ body.theme-atari .guestbook-sticky-head {
   hyphens: none;
   overflow-wrap: normal;
   word-break: normal;
+}
+
+.bb-block > .bb-gradient {
+  font-size: 1.35em;
+  line-height: 1.34;
 }
 
 .bb-table {
@@ -4171,6 +4259,12 @@ select:focus {
 
 .guestbook-entry-form {
   margin-top: 1rem;
+}
+
+.guestbook-entry-form textarea,
+.guestbook-edit-form textarea {
+  font-size: 1.26em;
+  line-height: 1.34;
 }
 
 .guestbook-reply-hint {
