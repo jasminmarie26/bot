@@ -1904,6 +1904,9 @@ function replaceInnermostBbcodeWrap(html, tag, replacement) {
   return nextHtml;
 }
 
+const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
+const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
+
 function normalizeBbcodeMarkup(rawContent) {
   return String(rawContent || "")
     .replace(/[［【]/g, "[")
@@ -1945,6 +1948,8 @@ function normalizeBbcodeMarkup(rawContent) {
   ];
 
   return String(rawContent || "")
+    .replace(/\\\[/g, BBCODE_LITERAL_OPEN_TOKEN)
+    .replace(/\\\]/g, BBCODE_LITERAL_CLOSE_TOKEN)
     .replace(/[\uFF3B\u3010\u3014\u2772\u27E6]/g, "[")
     .replace(/[\uFF3D\u3011\u3015\u2773\u27E7]/g, "]")
     .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
@@ -2123,6 +2128,9 @@ function renderGuestbookBbcode(rawContent) {
     /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
     "$1"
   );
+  html = html
+    .replace(new RegExp(BBCODE_LITERAL_OPEN_TOKEN, "g"), "[")
+    .replace(new RegExp(BBCODE_LITERAL_CLOSE_TOKEN, "g"), "]");
 
   return html;
 }
@@ -4065,6 +4073,10 @@ const HELP_BBCODE_EXAMPLES = [
   {
     title: "Bild rechts",
     code: "[img float=right]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild rechts"
+  },
+  {
+    title: "Tag als Text",
+    code: "\\[center\\]Das bleibt normaler Text\\[/center\\]"
   },
   { title: "Link", code: "[url=https://heldenhaftereisen.net]Startseite[/url]" },
   { title: "Zitat", code: "[quote]Ein stilles Zitat.[/quote]" },
