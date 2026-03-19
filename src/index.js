@@ -1888,6 +1888,22 @@ function createBbcodeSingleRegex(tag) {
   return new RegExp(`\\[\\s*${tag}\\s*\\]`, "gi");
 }
 
+function replaceInnermostBbcodeWrap(html, tag, replacement) {
+  const pattern = new RegExp(
+    `\\[\\s*${tag}\\s*\\]((?:(?!\\[\\s*${tag}\\s*\\]|\\[\\s*\\/\\s*${tag}\\s*\\])[\\s\\S])*)\\[\\s*\\/\\s*${tag}\\s*\\]`,
+    "gi"
+  );
+
+  let nextHtml = String(html || "");
+  let previousHtml = "";
+  while (nextHtml !== previousHtml) {
+    previousHtml = nextHtml;
+    nextHtml = nextHtml.replace(pattern, replacement);
+  }
+
+  return nextHtml;
+}
+
 function normalizeBbcodeMarkup(rawContent) {
   return String(rawContent || "")
     .replace(/[［【]/g, "[")
@@ -2012,9 +2028,9 @@ function renderGuestbookBbcode(rawContent) {
   html = html.replace(createBbcodeWrapRegex("right"), "<div class=\"bb-right\">$1</div>");
   html = html.replace(createBbcodeWrapRegex("block"), "<div class=\"bb-block\">$1</div>");
 
-  html = html.replace(createBbcodeWrapRegex("table"), "<table class=\"bb-table\">$1</table>");
-  html = html.replace(createBbcodeWrapRegex("tr"), "<tr>$1</tr>");
-  html = html.replace(createBbcodeWrapRegex("td"), "<td>$1</td>");
+  html = replaceInnermostBbcodeWrap(html, "table", "<table class=\"bb-table\">$1</table>");
+  html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
+  html = replaceInnermostBbcodeWrap(html, "td", "<td>$1</td>");
 
   html = html.replace(createBbcodeOptionRegex("spoiler"), (full, title, inner) => (
     `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
@@ -2093,6 +2109,14 @@ function renderGuestbookBbcode(rawContent) {
   );
   html = html.replace(
     /(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)\s*<br>/gi,
+    "$1"
+  );
+  html = html.replace(
+    /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)/gi,
+    "$1"
+  );
+  html = html.replace(
+    /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
     "$1"
   );
 

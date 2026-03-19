@@ -157,7 +157,7 @@
             </div>
             <small><%= entry.created_at %></small>
           </header>
-          <p class="guestbook-entry-body"><%- entry.content_html %></p>
+          <div class="guestbook-entry-body"><%- entry.content_html %></div>
 
           <% if (entry.can_edit || entry.can_delete) { %>
             <div class="guestbook-item-actions">
