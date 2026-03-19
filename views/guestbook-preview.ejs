@@ -1,23 +1,35 @@
-<%- include("partials/start") %>
+<%
+  const hideTopbar = true;
+  const pageClass = "page-guestbook-preview";
+%>
+<%- include("partials/start", { hideTopbar, pageClass }) %>
 
-<section class="panel">
-  <div class="header-line">
-    <div>
-      <h1>Vorschau: Gästebuch <%= character.name %></h1>
-      <p class="muted">Ungespeicherte Vorschau von Seite <strong><%= pageNumber %></strong>.</p>
+<section class="guestbook-preview-shell">
+  <header class="guestbook-preview-header">
+    <div class="guestbook-preview-header-row">
+      <div class="guestbook-preview-brandline">
+        <span class="guestbook-preview-name"><%= character.name %></span>
+        <span class="guestbook-preview-separator">-</span>
+        <span class="guestbook-preview-label">G&auml;stebuch-Vorschau</span>
+      </div>
+
+      <div class="guestbook-preview-actions">
+        <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zur&uuml;ck zum Editor</a>
+        <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes G&auml;stebuch</a>
+      </div>
     </div>
-    <div class="dashboard-server-actions">
-      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zurück zum Editor</a>
-      <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes Gästebuch</a>
-    </div>
-  </div>
+
+    <p class="guestbook-preview-subtitle">
+      Ungespeicherte Vorschau von Seite <strong><%= pageNumber %></strong>.
+    </p>
+  </header>
 
   <article
     class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
     style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
   >
     <% if (guestbookSettings?.image_url) { %>
-      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="Gästebuch Bild" />
+      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
     <% } %>
     <% if (previewHtml) { %>
       <div class="guestbook-entry-body"><%- previewHtml %></div>
