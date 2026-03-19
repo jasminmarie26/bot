@@ -3393,6 +3393,7 @@ body.theme-atari .guestbook-sticky-head {
   max-width: var(--gb-content-width);
   font-size: 1rem;
   line-height: 1.42;
+  margin-top: 0.3rem;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss,
@@ -3418,23 +3419,35 @@ body.theme-atari .guestbook-sticky-head {
 .guestbook-page-preview.gb-theme-neutral-weiss .guestbook-page-image {
   max-height: none;
   object-fit: contain;
+  margin-bottom: 0.2rem;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image {
+  width: auto;
   margin-top: 0;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-left {
-  width: min(132px, 22%);
-  max-width: 132px;
-  margin: 0.05rem 0.85rem 0.55rem 0;
+  width: auto;
+  max-width: 135px;
+  margin: 0 10px 6px 0;
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss .bb-image-right {
-  width: min(132px, 22%);
-  max-width: 132px;
-  margin: 0.05rem 0 0.55rem 0.85rem;
+  width: auto;
+  max-width: 135px;
+  margin: 0 0 6px 10px;
+}
+
+.guestbook-page-preview.gb-theme-neutral-weiss .bb-gradient {
+  font-weight: 400;
+}
+
+.guestbook-page-preview.gb-theme-neutral-weiss .bb-block {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 
 .guestbook-page-preview.gb-font-default {
