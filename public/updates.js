@@ -32,8 +32,79 @@
   const larpCharacterCountElement = document.getElementById("home-larp-character-count");
   const larpOnlineCountElement = document.getElementById("home-larp-online-count");
   const staffCardElement = staffCountElement?.closest(".home-stat") || null;
+  const liveUpdatesLink = document.querySelector("[data-live-updates-link-root]");
+  const liveUpdatesBadge = liveUpdatesLink?.querySelector("[data-live-updates-badge]") || null;
+  const liveUpdatesPageRoot = document.querySelector("[data-live-updates-page-root]");
+  const initialLiveUpdatesRevision = String(
+    liveUpdatesPageRoot?.dataset.liveUpdatesInitialRevision ||
+    liveUpdatesLink?.dataset.liveUpdatesInitialRevision ||
+    ""
+  ).trim();
 
   const canEditUpdates = Boolean(updateForm);
+  const LIVE_UPDATES_LAST_SEEN_KEY = "site-updates:last-seen-revision";
+  const LIVE_UPDATES_LATEST_KEY = "site-updates:latest-revision";
+
+  function readLocalStorage(key) {
+    try {
+      return String(window.localStorage.getItem(key) || "").trim();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function writeLocalStorage(key, value) {
+    const prepared = String(value || "").trim();
+    if (!prepared) return;
+
+    try {
+      window.localStorage.setItem(key, prepared);
+    } catch (_error) {
+      // Ignore storage failures and keep the live badge best-effort only.
+    }
+  }
+
+  function getLatestLiveUpdatesRevision() {
+    return readLocalStorage(LIVE_UPDATES_LATEST_KEY) || initialLiveUpdatesRevision;
+  }
+
+  function syncLatestLiveUpdatesRevision(revision) {
+    const prepared = String(revision || "").trim();
+    if (!prepared) return "";
+    writeLocalStorage(LIVE_UPDATES_LATEST_KEY, prepared);
+    return prepared;
+  }
+
+  function updateLiveUpdatesBadge() {
+    if (!liveUpdatesLink || !liveUpdatesBadge) return;
+
+    const latestRevision = getLatestLiveUpdatesRevision();
+    const lastSeenRevision = readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY);
+    const hasUnseenUpdate = Boolean(latestRevision && latestRevision !== lastSeenRevision);
+
+    liveUpdatesBadge.hidden = !hasUnseenUpdate;
+    if (hasUnseenUpdate) {
+      liveUpdatesBadge.textContent = "1";
+    }
+  }
+
+  function markLiveUpdatesAsSeen(revision = getLatestLiveUpdatesRevision()) {
+    const prepared = String(revision || "").trim();
+    if (!prepared) return;
+    writeLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY, prepared);
+    updateLiveUpdatesBadge();
+  }
+
+  function syncLiveUpdatesRevisionFromItem(item, { autoSeen = false } = {}) {
+    const revision = syncLatestLiveUpdatesRevision(item?.revision_token);
+    if (!revision) return;
+
+    if (autoSeen) {
+      markLiveUpdatesAsSeen(revision);
+    } else {
+      updateLiveUpdatesBadge();
+    }
+  }
 
   function syncBodyModalState() {
     const isAnyModalOpen =
@@ -62,7 +133,8 @@
       id: Number.parseInt(article.dataset.updateId || "", 10),
       author_name: article.dataset.updateAuthorName || "System",
       content: article.dataset.updateContent || "",
-      created_at: article.dataset.updateCreatedAt || ""
+      created_at: article.dataset.updateCreatedAt || "",
+      revision_token: article.dataset.updateRevisionToken || ""
     };
   }
 
@@ -158,8 +230,10 @@
   function applyHomeContent(homeContent) {
     if (!homeContent || typeof homeContent !== "object") return;
 
-    if (homeContent.hero_title) {
+    if (heroTitleElement && homeContent.hero_title) {
       document.title = homeContent.hero_title;
+    } else if (liveUpdatesPageRoot && homeContent.updates_title) {
+      document.title = homeContent.updates_title;
     }
 
     if (heroTitleSource) {
@@ -257,6 +331,7 @@
     article.dataset.updateAuthorName = item?.author_name || "System";
     article.dataset.updateContent = item?.content || "";
     article.dataset.updateCreatedAt = item?.created_at || "";
+    article.dataset.updateRevisionToken = item?.revision_token || "";
 
     const header = document.createElement("header");
     header.className = "update-meta";
@@ -520,6 +595,39 @@
 
   if (typeof io !== "function") return;
 
+  if (initialLiveUpdatesRevision) {
+    syncLatestLiveUpdatesRevision(initialLiveUpdatesRevision);
+    if (!readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY) && liveUpdatesLink) {
+      writeLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY, initialLiveUpdatesRevision);
+    }
+  }
+
+  if (liveUpdatesPageRoot) {
+    markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+
+    const markCurrentRevisionAsSeen = () => {
+      if (document.visibilityState !== "hidden") {
+        markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+      }
+    };
+
+    document.addEventListener("visibilitychange", markCurrentRevisionAsSeen);
+    window.addEventListener("focus", markCurrentRevisionAsSeen);
+  }
+
+  if (liveUpdatesLink) {
+    updateLiveUpdatesBadge();
+    liveUpdatesLink.addEventListener("click", () => {
+      markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+    });
+
+    window.addEventListener("storage", (event) => {
+      if (event.key === LIVE_UPDATES_LAST_SEEN_KEY || event.key === LIVE_UPDATES_LATEST_KEY) {
+        updateLiveUpdatesBadge();
+      }
+    });
+  }
+
   const socket = io({
     transports: ["websocket"]
   });
@@ -527,10 +635,16 @@
   if (list) {
     socket.on("site:update:create", (item) => {
       renderOrReplaceUpdate(item, { prepend: true });
+      syncLiveUpdatesRevisionFromItem(item, {
+        autoSeen: Boolean(liveUpdatesPageRoot && document.visibilityState !== "hidden")
+      });
     });
 
     socket.on("site:update:update", (item) => {
       renderOrReplaceUpdate(item);
+      syncLiveUpdatesRevisionFromItem(item, {
+        autoSeen: Boolean(liveUpdatesPageRoot && document.visibilityState !== "hidden")
+      });
     });
 
     socket.on("site:update:delete", (payload) => {
@@ -538,6 +652,14 @@
       if (Number.isInteger(updateId) && updateId > 0) {
         deleteUpdate(updateId);
       }
+    });
+  } else {
+    socket.on("site:update:create", (item) => {
+      syncLiveUpdatesRevisionFromItem(item);
+    });
+
+    socket.on("site:update:update", (item) => {
+      syncLiveUpdatesRevisionFromItem(item);
     });
   }
 

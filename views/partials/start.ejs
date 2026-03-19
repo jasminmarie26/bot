@@ -127,6 +127,11 @@
     <% const showTopbarGuestbookCreatedAt = Boolean(
       topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
     ); %>
+    <% const currentPagePath = String(currentPath || "").trim(); %>
+    <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive && currentPagePath === "/"); %>
+    <% const topbarLiveUpdatesInitialRevision = String(
+      typeof latestSiteUpdateRevisionToken !== "undefined" ? latestSiteUpdateRevisionToken || "" : ""
+    ).trim(); %>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner<%= showTopbarGuestbookCreatedAt ? " has-guestbook-created-at" : "" %>">
@@ -168,6 +173,19 @@
             <% } else { %>
               <a href="/login">Login</a>
               <a href="/register">Registrieren</a>
+            <% } %>
+            <% if (showTopbarLiveUpdatesLink) { %>
+              <a
+                class="live-updates-nav-link"
+                href="/live-updates"
+                target="site-live-updates"
+                rel="noopener noreferrer"
+                data-live-updates-link-root
+                data-live-updates-initial-revision="<%= topbarLiveUpdatesInitialRevision %>"
+              >
+                <span>Live Updates</span>
+                <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+              </a>
             <% } %>
             <% if (!topbarGuestbookModeActive) { %>
               <form method="POST" action="/settings/theme" class="inline-form theme-form">

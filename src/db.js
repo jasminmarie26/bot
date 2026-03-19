@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const Database = require("better-sqlite3");
 
 const dataDir = path.join(__dirname, "..", "data");
@@ -27,6 +28,7 @@ db.exec(`
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
     email TEXT DEFAULT '',
     birth_date TEXT DEFAULT '',
+    account_number TEXT NOT NULL DEFAULT '',
     email_verified INTEGER NOT NULL DEFAULT 1,
     email_verification_token TEXT DEFAULT '',
     password_reset_token TEXT DEFAULT '',
@@ -147,6 +149,7 @@ db.exec(`
     author_id INTEGER NOT NULL,
     author_name TEXT NOT NULL,
     content TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
   );
@@ -154,7 +157,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS site_home_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
-    hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.',
+    hero_body TEXT NOT NULL DEFAULT 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.',
     updates_title TEXT NOT NULL DEFAULT 'Live Updates'
   );
 
@@ -209,6 +212,11 @@ const siteHomeSettingsColumns = db
   .all()
   .map((column) => column.name);
 
+const siteUpdateColumns = db
+  .prepare("PRAGMA table_info(site_updates)")
+  .all()
+  .map((column) => column.name);
+
 if (!userColumns.includes("is_admin")) {
   db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
 }
@@ -243,6 +251,10 @@ if (!userColumns.includes("email")) {
 
 if (!userColumns.includes("birth_date")) {
   db.exec("ALTER TABLE users ADD COLUMN birth_date TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("account_number")) {
+  db.exec("ALTER TABLE users ADD COLUMN account_number TEXT NOT NULL DEFAULT ''");
 }
 
 if (!userColumns.includes("email_verified")) {
@@ -315,12 +327,16 @@ if (!siteHomeSettingsColumns.includes("hero_title")) {
 
 if (!siteHomeSettingsColumns.includes("hero_body")) {
   db.exec(
-    "ALTER TABLE site_home_settings ADD COLUMN hero_body TEXT NOT NULL DEFAULT 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.'"
+    "ALTER TABLE site_home_settings ADD COLUMN hero_body TEXT NOT NULL DEFAULT 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.'"
   );
 }
 
 if (!siteHomeSettingsColumns.includes("updates_title")) {
   db.exec("ALTER TABLE site_home_settings ADD COLUMN updates_title TEXT NOT NULL DEFAULT 'Live Updates'");
+}
+
+if (!siteUpdateColumns.includes("updated_at")) {
+  db.exec("ALTER TABLE site_updates ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''");
 }
 
 if (!guestbookEntryColumns.includes("guestbook_page_id")) {
@@ -454,16 +470,52 @@ db.prepare(
   "UPDATE site_home_settings SET hero_title = 'Heldenhaft Reisen' WHERE hero_title IS NULL OR trim(hero_title) = ''"
 ).run();
 db.prepare(
-  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
 ).run();
 db.prepare(
-  "UPDATE site_home_settings SET hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.'"
 ).run();
 db.prepare(
   "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"
 ).run();
+db.prepare(
+  "UPDATE site_updates SET updated_at = created_at WHERE updated_at IS NULL OR trim(updated_at) = ''"
+).run();
+
+function generateUniqueAccountNumber() {
+  const existingUser = db.prepare("SELECT id FROM users WHERE account_number = ?");
+  let candidate = "";
+
+  do {
+    candidate = String(10000000 + crypto.randomInt(90000000));
+  } while (existingUser.get(candidate));
+
+  return candidate;
+}
+
+const usersMissingAccountNumbers = db
+  .prepare("SELECT id FROM users WHERE account_number IS NULL OR trim(account_number) = ''")
+  .all();
+
+if (usersMissingAccountNumbers.length > 0) {
+  const assignAccountNumber = db.prepare("UPDATE users SET account_number = ? WHERE id = ?");
+  const fillMissingAccountNumbers = db.transaction((rows) => {
+    rows.forEach((row) => {
+      assignAccountNumber.run(generateUniqueAccountNumber(), row.id);
+    });
+  });
+
+  fillMissingAccountNumbers(usersMissingAccountNumbers);
+}
 
 db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_number_unique
+  ON users(account_number)
+  WHERE account_number IS NOT NULL AND account_number != '';
+
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique
   ON users(email)
   WHERE email IS NOT NULL AND email != '';

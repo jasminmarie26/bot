@@ -79,7 +79,7 @@ const DEFAULT_SERVER_ID = "free-rp";
 const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
 const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
 const DEFAULT_HOME_HERO_BODY =
-  "Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.";
+  "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
@@ -1313,21 +1313,31 @@ function getValidPasswordResetUser(token) {
 }
 
 function getAccountNumberByUserId(userId) {
-  const user = db
-    .prepare("SELECT id, created_at FROM users WHERE id = ?")
-    .get(userId);
-  if (!user) return null;
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
 
-  const rank = db
-    .prepare(
-      `SELECT COUNT(*) AS count
-       FROM users
-       WHERE created_at < ?
-          OR (created_at = ? AND id <= ?)`
-    )
-    .get(user.created_at, user.created_at, user.id);
+  const existingUser = db
+    .prepare("SELECT id, account_number FROM users WHERE id = ?")
+    .get(parsedUserId);
+  if (!existingUser) {
+    return null;
+  }
 
-  return Number(rank?.count) || null;
+  const currentAccountNumber = String(existingUser.account_number || "").trim();
+  if (currentAccountNumber) {
+    return currentAccountNumber;
+  }
+
+  const existingAccountRow = db.prepare("SELECT id FROM users WHERE account_number = ?");
+  let nextAccountNumber = "";
+  do {
+    nextAccountNumber = String(10000000 + crypto.randomInt(90000000));
+  } while (existingAccountRow.get(nextAccountNumber));
+
+  db.prepare("UPDATE users SET account_number = ? WHERE id = ?").run(nextAccountNumber, parsedUserId);
+  return nextAccountNumber;
 }
 
 function normalizeStaffDisplayName(value) {
@@ -1596,6 +1606,7 @@ function findOrCreateOAuthUser(provider, profile) {
       facebookId
     );
 
+  getAccountNumberByUserId(info.lastInsertRowid);
   const created = getUserForSessionById(info.lastInsertRowid);
   return toSessionUser(created);
 }
@@ -2962,8 +2973,14 @@ function decorateSiteUpdate(siteUpdate) {
     return null;
   }
 
+  const revisionBase = String(siteUpdate.updated_at || siteUpdate.created_at || "").trim();
+  const revisionToken = revisionBase
+    ? `${revisionBase}:${Number(siteUpdate.id) || 0}`
+    : "";
+
   return {
     ...siteUpdate,
+    revision_token: revisionToken,
     content_html: renderGuestbookBbcode(siteUpdate.content || "")
   };
 }
@@ -2971,7 +2988,7 @@ function decorateSiteUpdate(siteUpdate) {
 function getSiteUpdateById(updateId) {
   const siteUpdate = db
     .prepare(
-      `SELECT id, author_name, content, created_at
+      `SELECT id, author_name, content, created_at, updated_at
        FROM site_updates
        WHERE id = ?`
     )
@@ -2983,13 +3000,26 @@ function getSiteUpdateById(updateId) {
 function getRecentSiteUpdates(limit = 10) {
   return db
     .prepare(
-      `SELECT id, author_name, content, created_at
+      `SELECT id, author_name, content, created_at, updated_at
        FROM site_updates
        ORDER BY id DESC
        LIMIT ?`
     )
     .all(limit)
     .map((siteUpdate) => decorateSiteUpdate(siteUpdate));
+}
+
+function getLatestSiteUpdateRevisionToken() {
+  const latestSiteUpdate = db
+    .prepare(
+      `SELECT id, created_at, updated_at
+       FROM site_updates
+       ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC
+       LIMIT 1`
+    )
+    .get();
+
+  return decorateSiteUpdate(latestSiteUpdate)?.revision_token || "";
 }
 
 function getUsersTableColumnSet() {
@@ -3144,9 +3174,20 @@ app.get("/", (req, res) => {
   return res.render("home", {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
     stats: getLoginStats(),
-    siteUpdates: getRecentSiteUpdates(12),
     homeContent,
+    latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
     pageClass: "page-home-screen"
+  });
+});
+
+app.get("/live-updates", (req, res) => {
+  const homeContent = getHomeContent();
+  return res.render("live-updates", {
+    title: homeContent.updates_title || DEFAULT_UPDATES_TITLE,
+    homeContent,
+    siteUpdates: getRecentSiteUpdates(30),
+    latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
+    pageClass: "page-live-updates"
   });
 });
 
@@ -3295,6 +3336,7 @@ app.post("/register", async (req, res) => {
         getRequestIp(req)
       );
     createdUserId = info.lastInsertRowid;
+    getAccountNumberByUserId(createdUserId);
 
     await sendVerificationEmail(req, {
       username,
@@ -3897,8 +3939,8 @@ app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
 
   const info = db
     .prepare(
-      `INSERT INTO site_updates (author_id, author_name, content)
-       VALUES (?, ?, ?)`
+      `INSERT INTO site_updates (author_id, author_name, content, updated_at)
+       VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
     )
     .run(req.session.user.id, req.session.user.username, content);
 
@@ -3927,7 +3969,11 @@ app.post("/updates/:id/edit", requireAuth, requireSiteUpdateEditor, (req, res) =
     return res.redirect(req.get("referer") || "/");
   }
 
-  db.prepare("UPDATE site_updates SET content = ? WHERE id = ?").run(content, updateId);
+  db
+    .prepare(
+      "UPDATE site_updates SET content = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE id = ?"
+    )
+    .run(content, updateId);
 
   const saved = getSiteUpdateById(updateId);
   io.emit("site:update:update", saved);
@@ -5332,6 +5378,9 @@ function getAdminUsersOverview() {
   const birthDateExpr = userColumns.has("birth_date")
     ? "u.birth_date"
     : "'' AS birth_date";
+  const accountNumberExpr = userColumns.has("account_number")
+    ? "u.account_number"
+    : "'' AS account_number";
   const loginIpExpr = userColumns.has("last_login_ip")
     ? "u.last_login_ip"
     : "'' AS last_login_ip";
@@ -5343,19 +5392,18 @@ function getAdminUsersOverview() {
     .prepare(
       `SELECT u.id, u.username, ${emailExpr}, ${birthDateExpr}, ${loginIpExpr}, ${loginAtExpr},
               u.is_admin, u.is_moderator, u.admin_display_name, u.moderator_display_name, u.created_at,
-              (
-                SELECT COUNT(*)
-                FROM users ux
-                WHERE ux.created_at < u.created_at
-                   OR (ux.created_at = u.created_at AND ux.id <= u.id)
-              ) AS account_number,
+              ${accountNumberExpr},
               COUNT(c.id) AS character_count
        FROM users u
        LEFT JOIN characters c ON c.user_id = u.id
        GROUP BY u.id
        ORDER BY lower(u.username) ASC, u.id ASC`
     )
-    .all();
+    .all()
+    .map((user) => ({
+      ...user,
+      account_number: getAccountNumberByUserId(user.id)
+    }));
 }
 
 function decorateAdminUsers(users) {
