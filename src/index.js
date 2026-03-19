@@ -1888,6 +1888,12 @@ function createBbcodeSingleRegex(tag) {
   return new RegExp(`\\[\\s*${tag}\\s*\\]`, "gi");
 }
 
+function createBbcodeShortGradientRegex() {
+  const colorTokenPattern = "(?:#?[0-9a-f]{3}(?:[0-9a-f]{3})?|[a-z]{3,20})";
+  const specPattern = `((?:[01]\\s*,\\s*[01]\\s*,\\s*)?(?:${colorTokenPattern}\\s*,\\s*)+${colorTokenPattern})`;
+  return new RegExp(`\\[\\s*${specPattern}\\s*\\]([\\s\\S]*?)\\[\\s*\\/\\s*gradient\\s*\\]`, "gi");
+}
+
 function replaceInnermostBbcodeWrap(html, tag, replacement) {
   const pattern = new RegExp(
     `\\[\\s*${tag}\\s*\\]((?:(?!\\[\\s*${tag}\\s*\\]|\\[\\s*\\/\\s*${tag}\\s*\\])[\\s\\S])*)\\[\\s*\\/\\s*${tag}\\s*\\]`,
@@ -2105,7 +2111,7 @@ function renderGuestbookBbcode(rawContent) {
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
   });
 
-  html = html.replace(/\[\s*([^\]]*?,[^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*gradient\s*\]/gi, (full, rawSpec, inner) => {
+  html = html.replace(createBbcodeShortGradientRegex(), (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
