@@ -543,6 +543,21 @@
     updateTypingIndicator(targetNode, typingStateByUserId.get(parsedUserId) === true);
   }
 
+  function setTypingStateForUser(userId, isTyping) {
+    const parsedUserId = Number(userId);
+    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+      return;
+    }
+
+    if (isTyping) {
+      typingStateByUserId.set(parsedUserId, true);
+    } else {
+      typingStateByUserId.delete(parsedUserId);
+    }
+
+    syncTypingIndicatorForUser(parsedUserId);
+  }
+
   function emitTypingState(isTyping) {
     const nextState = Boolean(isTyping);
     if (typingEmitActive === nextState) {
@@ -550,6 +565,7 @@
     }
 
     typingEmitActive = nextState;
+    setTypingStateForUser(currentUserId, nextState);
     socket.emit("chat:typing", { isTyping: nextState });
   }
 
@@ -662,7 +678,14 @@
   });
 
   input.addEventListener("input", handleTypingInput);
+  input.addEventListener("keydown", handleTypingInput);
   input.addEventListener("blur", stopTypingIndicator);
+  window.addEventListener("beforeunload", stopTypingIndicator);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      stopTypingIndicator();
+    }
+  });
 
   if (onlineCharList) {
     onlineCharList.addEventListener("click", (event) => {
@@ -763,17 +786,11 @@
   socket.on("chat:online-characters", renderOnlineCharacters);
   socket.on("chat:typing", (payload) => {
     const userId = Number(payload?.user_id);
-    if (!Number.isInteger(userId) || userId < 1 || userId === currentUserId) {
+    if (!Number.isInteger(userId) || userId < 1) {
       return;
     }
 
-    if (payload?.is_typing) {
-      typingStateByUserId.set(userId, true);
-    } else {
-      typingStateByUserId.delete(userId);
-    }
-
-    syncTypingIndicatorForUser(userId);
+    setTypingStateForUser(userId, Boolean(payload?.is_typing));
   });
   socket.on("chat:room-state", updateRoomLockState);
 
