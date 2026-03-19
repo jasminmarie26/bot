@@ -69,6 +69,16 @@
 
   if (!chatBox || !form || !input) return;
 
+  function normalizeChatTextColor(rawColor) {
+    const value = String(rawColor || "").trim();
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
+  }
+
+  function applyChatTextColor(node, rawColor) {
+    if (!node) return;
+    node.style.color = normalizeChatTextColor(rawColor);
+  }
+
   const socket = io({
     transports: ["websocket"]
   });
@@ -294,6 +304,7 @@
 
     const line = document.createElement("p");
     const body = document.createElement("span");
+    const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     if (isSystemMessage) {
       const content = String(msg?.content || "");
       const matchingSuffix = systemMessageSuffixes.find((suffix) => content.endsWith(suffix));
@@ -302,6 +313,8 @@
         const actorName = content.slice(0, -matchingSuffix.length).trim();
         strong.textContent = actorName;
         body.textContent = matchingSuffix;
+        applyChatTextColor(strong, chatTextColor);
+        applyChatTextColor(body, chatTextColor);
         line.appendChild(strong);
         if (
           actorName &&
@@ -321,6 +334,8 @@
         actor.classList.add(`role-name-${roleStyle}`);
       }
       actor.textContent = String(msg?.username || "").trim() || "Unbekannt";
+      applyChatTextColor(actor, chatTextColor);
+      applyChatTextColor(emote, chatTextColor);
       emote.appendChild(actor);
       if (emoteActionText) {
         emote.appendChild(document.createTextNode(" "));
@@ -337,6 +352,8 @@
         strong.classList.add(`role-name-${roleStyle}`);
       }
       strong.textContent = `${msg.username}:`;
+      applyChatTextColor(strong, chatTextColor);
+      applyChatTextColor(body, chatTextColor);
       line.appendChild(strong);
       appendFormattedChatText(body, msg.content, { leadingSpace: true });
     }
@@ -505,6 +522,7 @@
       const characterId = Number(entry?.character_id);
       const label = String(entry?.name || "").trim();
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
+      const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
       const text = label || "Unbekannt";
       const node = document.createElement("button");
       const textNode = document.createElement("span");
@@ -518,6 +536,8 @@
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
       node.dataset.name = text;
       node.dataset.roleStyle = roleStyle;
+      node.dataset.chatTextColor = chatTextColor;
+      applyChatTextColor(textNode, chatTextColor);
       textNode.textContent = text;
       node.appendChild(textNode);
       onlineCharList.appendChild(node);

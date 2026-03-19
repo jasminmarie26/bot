@@ -3982,7 +3982,7 @@ body.page-guestbook-preview::after {
 .gb-editor-shell textarea,
 .gb-editor-shell select,
 .gb-editor-shell button {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .gb-editor-topbar {
@@ -4057,7 +4057,7 @@ body.page-guestbook-preview::after {
 
 .gb-editor-subheading {
   display: block;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -4076,21 +4076,24 @@ body.page-guestbook-preview::after {
   display: grid;
   gap: 0.42rem;
   font-weight: 400;
+  justify-items: start;
 }
 
 .gb-radio-list label {
   display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.42rem;
   font-weight: 500;
   width: fit-content;
+  line-height: 1.2;
 }
 
 .gb-radio-list input[type="radio"] {
   appearance: auto;
-  width: 1rem;
-  height: 1rem;
+  width: 0.84rem;
+  height: 0.84rem;
   margin: 0;
+  margin-top: 0.16rem;
   padding: 0;
   border: 0;
   border-radius: 50%;

@@ -1330,9 +1330,14 @@ function getUserRoleCharacter(user, role) {
   return (
     db
       .prepare(
-        `SELECT id, user_id, name, server_id
-         FROM characters
-         WHERE id = ? AND user_id = ?`
+        `SELECT c.id,
+                c.user_id,
+                c.name,
+                c.server_id,
+                COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+         FROM characters c
+         LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+         WHERE c.id = ? AND c.user_id = ?`
       )
       .get(parsedCharacterId, parsedUserId) || null
   );
@@ -1355,27 +1360,35 @@ function getUserDisplayProfile(user, activeCharacter = null) {
   const fallbackName = String(user?.username || "").trim() || "User";
   const activeCharacterId = Number(activeCharacter?.id);
   const activeCharacterName = String(activeCharacter?.name || "").trim();
+  const activeCharacterChatTextColor = /^#[0-9a-f]{6}$/i.test(String(activeCharacter?.chat_text_color || "").trim())
+    ? normalizeGuestbookColor(activeCharacter.chat_text_color)
+    : "";
 
   if (Number.isInteger(activeCharacterId) && activeCharacterId > 0 && activeCharacterName) {
     if (Number(user?.admin_character_id) === activeCharacterId && (user?.is_admin === 1 || user?.is_admin === true)) {
-      return { label: activeCharacterName, role_style: "admin" };
+      return { label: activeCharacterName, role_style: "admin", chat_text_color: activeCharacterChatTextColor };
     }
 
     if (
       Number(user?.moderator_character_id) === activeCharacterId &&
       (user?.is_moderator === 1 || user?.is_moderator === true)
     ) {
-      return { label: `${activeCharacterName} (M)`, role_style: "moderator" };
+      return {
+        label: `${activeCharacterName} (M)`,
+        role_style: "moderator",
+        chat_text_color: activeCharacterChatTextColor
+      };
     }
 
-    return { label: activeCharacterName, role_style: "" };
+    return { label: activeCharacterName, role_style: "", chat_text_color: activeCharacterChatTextColor };
   }
 
   const adminCharacter = getUserRoleCharacter(user, "admin");
   if (adminCharacter?.name) {
     return {
       label: String(adminCharacter.name).trim(),
-      role_style: "admin"
+      role_style: "admin",
+      chat_text_color: normalizeGuestbookColor(adminCharacter.chat_text_color)
     };
   }
 
@@ -1383,11 +1396,12 @@ function getUserDisplayProfile(user, activeCharacter = null) {
   if (moderatorCharacter?.name) {
     return {
       label: `${String(moderatorCharacter.name).trim()} (M)`,
-      role_style: "moderator"
+      role_style: "moderator",
+      chat_text_color: normalizeGuestbookColor(moderatorCharacter.chat_text_color)
     };
   }
 
-  return { label: fallbackName, role_style: "" };
+  return { label: fallbackName, role_style: "", chat_text_color: "" };
 }
 
 function getUserDefaultDisplayName(user) {
@@ -1407,6 +1421,7 @@ function toSessionUser(user) {
     moderator_display_name: normalizeStaffDisplayName(user.moderator_display_name),
     display_name: displayProfile.label,
     display_role_style: displayProfile.role_style,
+    display_chat_text_color: displayProfile.chat_text_color || "",
     theme: normalizeTheme(user.theme),
     account_number: getAccountNumberByUserId(user.id)
   };
@@ -2156,34 +2171,43 @@ function normalizeGuestbookOption(input, allowedValues, fallback) {
 
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeBbcodeInput(body.page_content, 12000);
+  const safeBody = body || {};
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
-  const hasImageUrlField = Object.prototype.hasOwnProperty.call(body || {}, "image_url");
-  const imageUrl = hasImageUrlField
-    ? String(body.image_url || "").trim().slice(0, 500)
-    : existingImageUrl;
-  const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
-  const censorLevel = normalizeGuestbookOption(
-    body.censor_level,
+  const existingCensorLevel = normalizeGuestbookOption(
+    existingSettings?.censor_level,
     GUESTBOOK_CENSOR_OPTIONS,
     "none"
   );
-  const chatTextColor = normalizeGuestbookColor(body.chat_text_color);
-  const pageStyle = normalizeGuestbookOption(
-    body.page_style,
+  const existingPageStyle = normalizeGuestbookOption(
+    existingSettings?.page_style,
     GUESTBOOK_PAGE_STYLE_OPTIONS,
     "scroll"
   );
+  const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
+  const hasCensorLevelField = Object.prototype.hasOwnProperty.call(safeBody, "censor_level");
+  const hasPageStyleField = Object.prototype.hasOwnProperty.call(safeBody, "page_style");
+  const imageUrl = hasImageUrlField
+    ? String(safeBody.image_url || "").trim().slice(0, 500)
+    : existingImageUrl;
+  const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
+  const censorLevel = hasCensorLevelField
+    ? normalizeGuestbookOption(safeBody.censor_level, GUESTBOOK_CENSOR_OPTIONS, existingCensorLevel)
+    : existingCensorLevel;
+  const chatTextColor = normalizeGuestbookColor(safeBody.chat_text_color);
+  const pageStyle = hasPageStyleField
+    ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
+    : existingPageStyle;
   const themeStyle = normalizeGuestbookOption(
-    body.theme_style,
+    safeBody.theme_style,
     GUESTBOOK_THEME_STYLE_OPTIONS,
     "blumen"
   );
   const fontStyle = normalizeGuestbookOption(
-    body.font_style,
+    safeBody.font_style,
     GUESTBOOK_FONT_STYLE_OPTIONS,
     "default"
   );
-  const tags = (body.tags || "").trim().slice(0, 500);
+  const tags = (safeBody.tags || "").trim().slice(0, 500);
 
   return {
     pageContent,
@@ -5196,7 +5220,8 @@ app.get("/chat", requireAuth, (req, res) => {
         id: preferredCharacter.id,
         name: preferredCharacter.name,
         is_owner: true,
-        server_id: normalizeServer(preferredCharacter.server_id)
+        server_id: normalizeServer(preferredCharacter.server_id),
+        chat_text_color: normalizeGuestbookColor(preferredCharacter.chat_text_color)
       };
     }
   }
@@ -5760,9 +5785,13 @@ function getPreferredCharacterForUser(
   if (Number.isInteger(parsedPreferredCharacterId) && parsedPreferredCharacterId > 0) {
     const preferredCharacter = db
       .prepare(
-        `SELECT id, name, server_id
-         FROM characters
-         WHERE id = ? AND user_id = ? AND server_id = ?`
+        `SELECT c.id,
+                c.name,
+                c.server_id,
+                COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+         FROM characters c
+         LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+         WHERE c.id = ? AND c.user_id = ? AND c.server_id = ?`
       )
       .get(parsedPreferredCharacterId, parsedUserId, normalizedServerId);
     if (preferredCharacter) {
@@ -5772,10 +5801,14 @@ function getPreferredCharacterForUser(
 
   return db
     .prepare(
-      `SELECT id, name, server_id
-       FROM characters
-       WHERE user_id = ? AND server_id = ?
-       ORDER BY lower(name) ASC, id ASC
+      `SELECT c.id,
+              c.name,
+              c.server_id,
+              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+       FROM characters c
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+       WHERE c.user_id = ? AND c.server_id = ?
+       ORDER BY lower(c.name) ASC, c.id ASC
        LIMIT 1`
     )
     .get(parsedUserId, normalizedServerId);
@@ -6502,22 +6535,27 @@ function buildRoomPresenceMessage(kind, displayName) {
   return template(safeName);
 }
 
-function emitSystemChatMessage(roomId, serverId, content) {
+function emitSystemChatMessage(roomId, serverId, content, options = {}) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const text = String(content || "").trim();
   if (!text) return;
   const createdAt = formatChatTimestamp();
+  const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
+    ? normalizeGuestbookColor(options.chat_text_color)
+    : "";
 
   appendMessageToActiveRoomLog(normalizedRoomId, normalizedServerId, {
     type: "system",
     content: text,
+    chat_text_color: chatTextColor,
     created_at: createdAt
   });
 
   io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", {
     type: "system",
     content: text,
+    chat_text_color: chatTextColor,
     created_at: createdAt
   });
 }
@@ -6570,7 +6608,8 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       user_id: userId,
       name: displayProfile.label || `User ${userId}`,
       character_id: chosenCharacter?.id || null,
-      role_style: displayProfile.role_style || ""
+      role_style: displayProfile.role_style || "",
+      chat_text_color: displayProfile.chat_text_color || ""
     });
   }
 
@@ -6787,9 +6826,10 @@ io.on("connection", (socket) => {
     const isSameChannel =
       previousServerId === nextServerId &&
       previousRoomId === nextRoomId;
-    const previousDisplayName = previousServerId
-      ? getSocketDisplayProfile(socket, previousServerId).label
-      : "";
+    const previousDisplayProfile = previousServerId
+      ? getSocketDisplayProfile(socket, previousServerId)
+      : null;
+    const previousDisplayName = previousDisplayProfile?.label || "";
     const preferredCharacterId =
       Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
         ? parsedCharacterId
@@ -6799,9 +6839,10 @@ io.on("connection", (socket) => {
       nextServerId,
       preferredCharacterId
     );
-    const nextDisplayName = preferredCharacter?.name
-      ? String(preferredCharacter.name).trim()
-      : getUserDefaultDisplayName(socket.data.user);
+    const nextDisplayProfile = preferredCharacter?.name
+      ? getUserDisplayProfile(socket.data.user, preferredCharacter)
+      : getUserDisplayProfile(socket.data.user);
+    const nextDisplayName = nextDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
 
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
@@ -6809,7 +6850,8 @@ io.on("connection", (socket) => {
         emitSystemChatMessage(
           previousRoomId,
           previousServerId,
-          buildRoomPresenceMessage("leave", previousDisplayName)
+          buildRoomPresenceMessage("leave", previousDisplayName),
+          { chat_text_color: previousDisplayProfile?.chat_text_color || "" }
         );
       }
     }
@@ -6836,7 +6878,8 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         nextRoomId,
         nextServerId,
-        buildRoomPresenceMessage("enter", nextDisplayName)
+        buildRoomPresenceMessage("enter", nextDisplayName),
+        { chat_text_color: nextDisplayProfile?.chat_text_color || "" }
       );
     }
     clearPendingRoomDeletion(nextRoomId);
@@ -7046,6 +7089,7 @@ io.on("connection", (socket) => {
       user_id: socket.data.user.id,
       username: displayProfile.label,
       role_style: displayProfile.role_style || "",
+      chat_text_color: displayProfile.chat_text_color || "",
       content,
       created_at: createdAt
     });
@@ -7053,6 +7097,7 @@ io.on("connection", (socket) => {
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
       username: displayProfile.label,
       role_style: displayProfile.role_style || "",
+      chat_text_color: displayProfile.chat_text_color || "",
       content,
       created_at: createdAt
     });
@@ -7141,12 +7186,13 @@ io.on("connection", (socket) => {
       ? normalizeServer(socket.data.serverId)
       : null;
     if (previousServerId) {
-      const displayName = getSocketDisplayProfile(socket, previousServerId).label ||
-        `User ${socket.data.user?.id || "?"}`;
+      const displayProfile = getSocketDisplayProfile(socket, previousServerId);
+      const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
       emitSystemChatMessage(
         previousRoomId,
         previousServerId,
-        buildRoomPresenceMessage("leave", displayName)
+        buildRoomPresenceMessage("leave", displayName),
+        { chat_text_color: displayProfile.chat_text_color || "" }
       );
       emitOnlineCharacters(previousRoomId, previousServerId);
       void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);

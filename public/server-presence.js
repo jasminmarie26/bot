@@ -13,20 +13,32 @@
     transports: ["websocket"]
   });
 
+  function normalizeChatTextColor(rawColor) {
+    const value = String(rawColor || "").trim();
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
+  }
+
   function createOccupantNode(entry) {
     const displayName = String(entry?.name || "").trim() || "Unbekannt";
     const characterId = Number(entry?.character_id);
+    const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
     if (Number.isInteger(characterId) && characterId > 0) {
       const link = document.createElement("a");
       link.className = "rp-room-occupant";
       link.href = `/characters/${characterId}/guestbook`;
       link.textContent = displayName;
+      if (chatTextColor) {
+        link.style.color = chatTextColor;
+      }
       return link;
     }
 
     const text = document.createElement("span");
     text.className = "rp-room-occupant";
     text.textContent = displayName;
+    if (chatTextColor) {
+      text.style.color = chatTextColor;
+    }
     return text;
   }
 
