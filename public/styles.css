@@ -3380,6 +3380,58 @@ body.theme-atari .guestbook-sticky-head {
   font-size: 10.16px;
 }
 
+.guestbook-page-shell {
+  position: relative;
+  width: min(100%, var(--gb-frame-width));
+  max-width: var(--gb-frame-width);
+  margin: 0 auto 0.8rem;
+}
+
+.guestbook-page-shell .guestbook-page-preview {
+  margin-bottom: 0;
+}
+
+.guestbook-page-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  padding: 0.2rem;
+  color: var(--link);
+  text-decoration: none;
+  font-size: 2rem;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  z-index: 5;
+  transition:
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.guestbook-page-nav:hover {
+  color: color-mix(in srgb, var(--link) 82%, white 18%);
+  text-decoration: none;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.guestbook-page-nav.is-disabled {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  pointer-events: none;
+}
+
+.guestbook-page-nav-prev {
+  left: calc(-1.8rem - 0.55rem);
+}
+
+.guestbook-page-nav-next {
+  right: calc(-1.8rem - 0.55rem);
+}
+
 .guestbook-page-preview.gb-theme-neutral-weiss {
   --gb-frame-width: 710px;
   --gb-content-width: 600px;
@@ -3896,6 +3948,30 @@ body.page-guestbook-preview::after {
 
   .guestbook-page-preview.gb-theme-neutral-weiss {
     padding: 14px;
+  }
+
+  .guestbook-page-shell {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .guestbook-page-nav {
+    top: auto;
+    bottom: calc(100% + 0.35rem);
+    transform: none;
+    font-size: 1.55rem;
+  }
+
+  .guestbook-page-nav:hover {
+    transform: scale(1.04);
+  }
+
+  .guestbook-page-nav-prev {
+    left: 0;
+  }
+
+  .guestbook-page-nav-next {
+    right: 0;
   }
 }
 

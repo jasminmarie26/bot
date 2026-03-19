@@ -14,6 +14,27 @@
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 <% const guestbookEntryPage = guestbookEntryPagination?.currentPage || 1; %>
 <%
+  const orderedGuestbookPages = Array.isArray(guestbookPages)
+    ? [...guestbookPages].sort((left, right) => {
+        const leftPageNumber = Number(left.page_number) || 0;
+        const rightPageNumber = Number(right.page_number) || 0;
+        if (leftPageNumber !== rightPageNumber) return leftPageNumber - rightPageNumber;
+        return (Number(left.id) || 0) - (Number(right.id) || 0);
+      })
+    : [];
+  const activeGuestbookPageIndex = orderedGuestbookPages.findIndex(
+    (page) => Number(page.id) === Number(activeGuestbookPage?.id)
+  );
+  const previousGuestbookPage =
+    activeGuestbookPageIndex > 0 ? orderedGuestbookPages[activeGuestbookPageIndex - 1] : null;
+  const nextGuestbookPage =
+    activeGuestbookPageIndex >= 0 && activeGuestbookPageIndex < orderedGuestbookPages.length - 1
+      ? orderedGuestbookPages[activeGuestbookPageIndex + 1]
+      : null;
+  const buildGuestbookPageUrl = (pageId) =>
+    `/characters/${character.id}/guestbook?page_id=${pageId}` +
+    (guestbookEntryPage > 1 ? `&entries_page=${guestbookEntryPage}` : "") +
+    guestbookContextQuery;
   const buildGuestbookEntryPageUrl = (entriesPageNumber) =>
     `/characters/${character.id}/guestbook?page_id=${activeGuestbookPage.id}` +
     (entriesPageNumber > 1 ? `&entries_page=${entriesPageNumber}` : "") +
@@ -29,19 +50,49 @@
     </div>
   <% } %>
 
-  <article
-    class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
-    style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
-  >
-    <% if (guestbookSettings?.image_url) { %>
-      <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+  <div class="guestbook-page-shell">
+    <% if (orderedGuestbookPages.length > 1) { %>
+      <% if (previousGuestbookPage) { %>
+        <a
+          class="guestbook-page-nav guestbook-page-nav-prev"
+          href="<%= buildGuestbookPageUrl(previousGuestbookPage.id) %>"
+          aria-label="Vorherige Gästebuch-Seite"
+          title="Vorherige Seite"
+        >
+          &#8249;
+        </a>
+      <% } else { %>
+        <span class="guestbook-page-nav guestbook-page-nav-prev is-disabled" aria-hidden="true">&#8249;</span>
+      <% } %>
+
+      <% if (nextGuestbookPage) { %>
+        <a
+          class="guestbook-page-nav guestbook-page-nav-next"
+          href="<%= buildGuestbookPageUrl(nextGuestbookPage.id) %>"
+          aria-label="Nächste Gästebuch-Seite"
+          title="Nächste Seite"
+        >
+          &#8250;
+        </a>
+      <% } else { %>
+        <span class="guestbook-page-nav guestbook-page-nav-next is-disabled" aria-hidden="true">&#8250;</span>
+      <% } %>
     <% } %>
-    <% if (activeGuestbookPage?.content_html) { %>
-      <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
-    <% } else { %>
-      <p class="muted">Diese Seite ist noch leer.</p>
-    <% } %>
-  </article>
+
+    <article
+      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+      style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+    >
+      <% if (guestbookSettings?.image_url) { %>
+        <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+      <% } %>
+      <% if (activeGuestbookPage?.content_html) { %>
+        <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
+      <% } else { %>
+        <p class="muted">Diese Seite ist noch leer.</p>
+      <% } %>
+    </article>
+  </div>
 </section>
 
 <section
