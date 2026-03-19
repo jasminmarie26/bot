@@ -3654,14 +3654,14 @@ body.theme-atari .guestbook-sticky-head {
   float: left;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: 0.12rem 0.9rem 0.65rem 0;
+  margin: 0 0.9rem 0.65rem 0;
 }
 
 .bb-image-right {
   float: right;
   width: min(120px, 16%);
   max-width: 120px;
-  margin: 0.12rem 0 0.65rem 0.9rem;
+  margin: 0 0 0.65rem 0.9rem;
 }
 
 .bb-gradient {
