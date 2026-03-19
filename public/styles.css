@@ -3499,9 +3499,7 @@ body.theme-atari .guestbook-entry-panel {
   padding: 16px;
   font-size: 10.16px;
   box-shadow:
-    0 0 0 4px rgba(0, 0, 0, 0.98) inset,
-    0 0 0 1px rgba(255, 255, 255, 0.28),
-    0 0 0 6px rgba(255, 255, 255, 0.08);
+    0 0 0 4px rgba(0, 0, 0, 0.98) inset;
 }
 
 .guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body {
