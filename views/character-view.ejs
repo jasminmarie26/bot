@@ -11,11 +11,27 @@
   <% const roomlistIdentityName = isOwner
     ? (roomlistIdentityRoleStyle === "moderator" ? `${character.name} (M)` : character.name)
     : roomlistDisplayName; %>
+  <% const roomlistLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
+  <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
+    ? recentSiteUpdateRevisions
+    : []; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
       <a href="#roomlist">Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a
+        class="live-updates-nav-link"
+        href="/live-updates"
+        target="site-live-updates"
+        data-live-updates-link-root
+        data-live-updates-target="site-live-updates"
+        data-live-updates-initial-revision="<%= roomlistLiveUpdatesInitialRevision %>"
+        data-live-updates-initial-revisions="<%= roomlistLiveUpdatesInitialRevisions.join('|') %>"
+      >
+        <span>Live Updates</span>
+        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+      </a>
     </nav>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-roomlist">Design</label>

@@ -11,6 +11,10 @@
   ? (chatIdentityRoleStyle === "moderator" ? `${activeCharacter.name} (M)` : activeCharacter.name)
   : chatDisplayName; %>
 <% const chatIdentityColor = activeCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+<% const chatLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
+<% const chatLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
+  ? recentSiteUpdateRevisions
+  : []; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -22,6 +26,18 @@
         <a href="/dashboard">Dashboard</a>
       <% } %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a
+        class="live-updates-nav-link"
+        href="/live-updates"
+        target="site-live-updates"
+        data-live-updates-link-root
+        data-live-updates-target="site-live-updates"
+        data-live-updates-initial-revision="<%= chatLiveUpdatesInitialRevision %>"
+        data-live-updates-initial-revisions="<%= chatLiveUpdatesInitialRevisions.join('|') %>"
+      >
+        <span>Live Updates</span>
+        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+      </a>
     </nav>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
       <label for="rp-theme-select-chat">Design</label>
