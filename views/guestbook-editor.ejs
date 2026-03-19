@@ -143,17 +143,40 @@
   (() => {
     const colorText = document.getElementById("gb-chat-color-text");
     const colorPicker = document.getElementById("gb-chat-color-picker");
-    if (!colorText || !colorPicker) return;
+    const censorRadios = Array.from(document.querySelectorAll('input[name="censor_level"]'));
 
-    colorPicker.addEventListener("input", () => {
-      colorText.value = colorPicker.value.toUpperCase();
-    });
+    if (colorText && colorPicker) {
+      colorPicker.addEventListener("input", () => {
+        colorText.value = colorPicker.value.toUpperCase();
+      });
 
-    colorText.addEventListener("input", () => {
-      const value = colorText.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(value)) {
-        colorPicker.value = value;
-      }
+      colorText.addEventListener("input", () => {
+        const value = colorText.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+          colorPicker.value = value;
+        }
+      });
+    }
+
+    censorRadios.forEach((radio) => {
+      radio.addEventListener("pointerdown", () => {
+        radio.dataset.wasChecked = radio.checked ? "1" : "";
+      });
+
+      radio.addEventListener("keydown", (event) => {
+        if (event.key === " " || event.key === "Spacebar" || event.key === "Enter") {
+          radio.dataset.wasChecked = radio.checked ? "1" : "";
+        }
+      });
+
+      radio.addEventListener("click", () => {
+        if (radio.dataset.wasChecked === "1") {
+          window.requestAnimationFrame(() => {
+            radio.checked = true;
+          });
+        }
+        delete radio.dataset.wasChecked;
+      });
     });
   })();
 </script>

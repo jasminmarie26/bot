@@ -672,6 +672,32 @@ function formatGermanDate(value) {
   }).format(parsed);
 }
 
+function getAgeFromBirthDate(rawBirthDate, referenceDate = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  let age = now.getFullYear() - year;
+  const hasHadBirthdayThisYear =
+    now.getMonth() + 1 > month ||
+    (now.getMonth() + 1 === month && now.getDate() >= day);
+
+  if (!hasHadBirthdayThisYear) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 function getUsernameChangeAvailability(user) {
   const isAdmin = Boolean(user?.is_admin === 1 || user?.is_admin === true);
   if (isAdmin) {
@@ -2458,16 +2484,70 @@ function getGuestbookAccessState(req, targetCharacter) {
     replyContextEntryId,
     replyContextCharacterId
   );
+  const canAccessBase = canAccessDirectly || viaReplyAccess;
+  const guestbookSettings = canAccessBase ? getOrCreateGuestbookSettings(targetCharacter?.id) : null;
+  const censorLevel = canAccessBase
+    ? normalizeGuestbookOption(guestbookSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none")
+    : "none";
+  const isAgeRestricted = censorLevel === "ab18" || censorLevel === "sexual";
+  let viewerAge = null;
+  let missingBirthDate = false;
+  let passesAgeGate = true;
+
+  if (canAccessBase && isAgeRestricted && !isOwner && !isAdmin) {
+    const viewerAccount = getAccountUserById(currentUserId);
+    viewerAge = getAgeFromBirthDate(viewerAccount?.birth_date);
+    missingBirthDate = viewerAge === null;
+    passesAgeGate = viewerAge !== null && viewerAge >= 18;
+  }
+
+  const denialReason = !canAccessBase
+    ? "private"
+    : (!passesAgeGate ? "age-restricted" : null);
 
   return {
     isOwner,
     isAdmin,
-    canAccess: canAccessDirectly || viaReplyAccess,
+    canAccess: canAccessBase && passesAgeGate,
     viaReplyAccess,
+    denialReason,
+    censorLevel,
+    minimumAge: isAgeRestricted ? 18 : null,
+    viewerAge,
+    missingBirthDate,
     replyContextEntryId: Number.isInteger(replyContextEntryId) && replyContextEntryId > 0 ? replyContextEntryId : null,
     replyContextCharacterId:
       Number.isInteger(replyContextCharacterId) && replyContextCharacterId > 0 ? replyContextCharacterId : null
   };
+}
+
+function buildGuestbookAccessDeniedPayload(accessState = {}) {
+  if (accessState?.denialReason === "age-restricted") {
+    if (accessState?.censorLevel === "sexual") {
+      return {
+        title: "Du bist nicht alt genug",
+        message: accessState?.missingBirthDate
+          ? "Dieses Gästebuch enthält sexuelle Darstellung. Ohne hinterlegtes Geburtsdatum bleibt der Vorhang leider zu."
+          : "Dieses Gästebuch enthält sexuelle Darstellung. Der Vorhang bleibt bis zu deinem 18. Geburtstag noch geschlossen."
+      };
+    }
+
+    return {
+      title: "Du bist nicht alt genug",
+      message: accessState?.missingBirthDate
+        ? "Dieses Gästebuch ist ab 18 freigeschaltet. Ohne hinterlegtes Geburtsdatum nickt der Türsteher dich leider nicht durch."
+        : "Dieses Gästebuch ist ab 18 freigeschaltet. Der Türsteher hat deinen Ausweis geprüft und dich diesmal noch nicht reingewunken."
+    };
+  }
+
+  return {
+    title: "Kein Zugriff",
+    message: "Dieser Charakter ist privat."
+  };
+}
+
+function renderGuestbookAccessDenied(res, accessState) {
+  return res.status(403).render("error", buildGuestbookAccessDeniedPayload(accessState));
 }
 
 function buildGuestbookContextQuery(accessState = {}) {
@@ -4618,10 +4698,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
   if (!guestbookAccessState.canAccess) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Dieser Charakter ist privat."
-    });
+    return renderGuestbookAccessDenied(res, guestbookAccessState);
   }
 
   const guestbookPages = ensureGuestbookPages(id);
@@ -4704,10 +4781,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
   if (!guestbookAccessState.canAccess) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Dieser Charakter ist privat."
-    });
+    return renderGuestbookAccessDenied(res, guestbookAccessState);
   }
 
   const pages = ensureGuestbookPages(id);
@@ -4789,10 +4863,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
   if (!guestbookAccessState.canAccess) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Dieser Charakter ist privat."
-    });
+    return renderGuestbookAccessDenied(res, guestbookAccessState);
   }
 
   const entry = getGuestbookEntryById(entryId);
@@ -4849,10 +4920,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
   if (!guestbookAccessState.canAccess) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Dieser Charakter ist privat."
-    });
+    return renderGuestbookAccessDenied(res, guestbookAccessState);
   }
 
   const entry = getGuestbookEntryById(entryId);
