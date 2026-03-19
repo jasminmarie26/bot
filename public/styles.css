@@ -3363,8 +3363,8 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .guestbook-page-preview {
-  --gb-frame-width: 710px;
-  --gb-content-width: 600px;
+  --gb-frame-width: 722px;
+  --gb-content-width: 612px;
   border: 1px solid var(--field-edge);
   border-radius: 12px;
   background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
@@ -3378,8 +3378,8 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss {
-  --gb-frame-width: 710px;
-  --gb-content-width: 600px;
+  --gb-frame-width: 722px;
+  --gb-content-width: 612px;
   background: #ffffff;
   border: 1px solid #181818;
   border-radius: 0;
@@ -3458,8 +3458,8 @@ body.theme-atari .guestbook-sticky-head {
 }
 
 .guestbook-page-preview.gb-theme-tiefschwarz {
-  --gb-frame-width: 710px;
-  --gb-content-width: 600px;
+  --gb-frame-width: 722px;
+  --gb-content-width: 612px;
   background: #030303;
   border: 1px solid #151515;
   border-radius: 0;
