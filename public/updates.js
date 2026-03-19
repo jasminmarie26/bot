@@ -617,8 +617,37 @@
 
   if (liveUpdatesLink) {
     updateLiveUpdatesBadge();
-    liveUpdatesLink.addEventListener("click", () => {
+    liveUpdatesLink.addEventListener("click", (event) => {
       markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+
+      const shouldHandleInNamedTab =
+        event.button === 0 &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey;
+      if (!shouldHandleInNamedTab) {
+        return;
+      }
+
+      const liveUpdatesHref = liveUpdatesLink.href;
+      const liveUpdatesTarget =
+        liveUpdatesLink.dataset.liveUpdatesTarget ||
+        liveUpdatesLink.getAttribute("target") ||
+        "site-live-updates";
+      if (!liveUpdatesHref || !liveUpdatesTarget) {
+        return;
+      }
+
+      event.preventDefault();
+      const openedWindow = window.open(liveUpdatesHref, liveUpdatesTarget);
+      if (openedWindow && typeof openedWindow.focus === "function") {
+        openedWindow.focus();
+      }
+    });
+
+    window.addEventListener("pageshow", () => {
+      updateLiveUpdatesBadge();
     });
 
     window.addEventListener("storage", (event) => {
