@@ -3134,27 +3134,14 @@ body:has(.guestbook-layout) .guestbook-layout {
   margin-top: -1px;
 }
 
-.guestbook-stage {
-  overflow-x: auto;
-  overflow-y: visible;
-  padding-bottom: 0.15rem;
-}
-
-.guestbook-stage-inner {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2.75rem;
-  width: max-content;
-  min-width: 100%;
-  margin: 0 auto;
-  padding: 0 2.6rem 0.15rem;
-}
-
-.guestbook-side-meta {
-  flex: 0 0 auto;
-  min-width: max-content;
-  padding-top: 0.25rem;
+.guestbook-meta-floating {
+  position: absolute;
+  top: 0.3rem;
+  right: 1rem;
+  z-index: 6;
+  max-width: min(46%, 20rem);
+  text-align: right;
+  pointer-events: none;
 }
 
 .guestbook-meta-created {
@@ -3268,14 +3255,16 @@ body.theme-atari .guestbook-entry-panel {
     padding-top: 0;
   }
 
-  .guestbook-stage-inner {
-    justify-content: flex-start;
-    gap: 1.5rem;
-    padding-inline: 2rem 0.9rem;
+  .guestbook-meta-floating {
+    top: 0.38rem;
+    right: 0.75rem;
+    max-width: min(62%, 14rem);
   }
 
   .guestbook-meta-created {
     font-size: 0.88rem;
+    white-space: normal;
+    line-height: 1.2;
   }
 
   .guestbook-entry-toggle {
@@ -3366,10 +3355,9 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-shell {
   position: relative;
-  flex: 0 0 auto;
-  width: var(--guestbook-frame-width);
-  max-width: none;
-  margin: 0;
+  width: min(100%, var(--guestbook-frame-width));
+  max-width: var(--guestbook-frame-width);
+  margin: 0 auto 0.8rem;
 }
 
 .guestbook-page-shell .guestbook-page-preview {
