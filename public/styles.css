@@ -3,6 +3,7 @@
 :root {
   --font-ui: "Manrope", "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
   --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
+  --guestbook-frame-width: 680px;
 }
 
 html {
@@ -3149,7 +3150,6 @@ body.page-home-screen .hero-actions {
 }
 
 .guestbook-layout {
-  --guestbook-frame-width: 710px;
   position: relative;
   padding-top: 0;
 }
@@ -3336,7 +3336,7 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .guestbook-page-preview {
-  --gb-frame-width: 710px;
+  --gb-frame-width: var(--guestbook-frame-width);
   --gb-content-width: 600px;
   position: relative;
   border: 1px solid var(--field-edge);
@@ -3412,7 +3412,6 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .guestbook-page-preview.gb-theme-neutral-weiss {
-  --gb-frame-width: 710px;
   --gb-content-width: 600px;
   background: #ffffff;
   border: 1px solid #181818;
@@ -3493,7 +3492,6 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .guestbook-page-preview.gb-theme-tiefschwarz {
-  --gb-frame-width: 710px;
   --gb-content-width: 600px;
   background: #030303;
   border: 1px solid #151515;
