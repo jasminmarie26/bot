@@ -3804,8 +3804,19 @@ body.theme-atari .guestbook-entry-panel {
   background-repeat: repeat;
   -webkit-background-clip: text;
   background-clip: text;
-  color: transparent;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
   font-weight: 700;
+}
+
+.bb-gradient :is(strong, b, em, i, u, s, a, span) {
+  background-image: inherit;
+  background-size: inherit;
+  background-repeat: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .bb-spoiler {
