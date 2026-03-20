@@ -5201,12 +5201,15 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         Number(room.can_manage_room) === 1 ||
         hasRoomInviteAccess(req.session.user, room)
     }));
+  const ownedRooms = isOwner
+    ? rooms.filter((room) => Number(room.created_by_user_id) === Number(req.session.user.id))
+    : [];
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
     standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
   );
   const roomUsers = Object.fromEntries(
-    rooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
+    ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
@@ -5240,7 +5243,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     standardRooms,
     standardRoomUsers,
     roomUsers,
-    rooms,
+    ownedRooms,
     activeGuestbookPage
   });
 });
@@ -5553,6 +5556,13 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     });
   }
 
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf mit diesem Charakter einen eigenen Raum anlegen."
+    });
+  }
+
   const roomName = normalizeRoomName(req.body.room_name);
   const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
   if (roomName.length < 2) {
@@ -5570,7 +5580,8 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}#roomlist`);
   }
 
-  return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
+  setFlash(req, "success", `Raum "${targetRoom.name}" wurde angelegt.`);
+  return res.redirect(`/characters/${id}#roomlist`);
 });
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
