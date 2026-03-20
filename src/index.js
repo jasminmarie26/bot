@@ -2428,11 +2428,13 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingChatTextColor = normalizeGuestbookColor(existingSettings?.chat_text_color);
   const existingFrameColor = normalizeOptionalGuestbookColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookColor(existingSettings?.background_color);
+  const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
   const hasCensorLevelField = Object.prototype.hasOwnProperty.call(safeBody, "censor_level");
   const hasChatTextColorField = Object.prototype.hasOwnProperty.call(safeBody, "chat_text_color");
   const hasFrameColorField = Object.prototype.hasOwnProperty.call(safeBody, "frame_color");
   const hasBackgroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "background_color");
+  const hasSurroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "surround_color");
   const hasPageStyleField = Object.prototype.hasOwnProperty.call(safeBody, "page_style");
   const imageUrl = hasImageUrlField
     ? String(safeBody.image_url || "").trim().slice(0, 500)
@@ -2450,6 +2452,9 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const backgroundColor = hasBackgroundColorField
     ? normalizeOptionalGuestbookColor(safeBody.background_color)
     : existingBackgroundColor;
+  const surroundColor = hasSurroundColorField
+    ? normalizeOptionalGuestbookColor(safeBody.surround_color)
+    : existingSurroundColor;
   const pageStyle = hasPageStyleField
     ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
     : existingPageStyle;
@@ -2473,6 +2478,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       chat_text_color: chatTextColor,
       frame_color: frameColor,
       background_color: backgroundColor,
+      surround_color: surroundColor,
       page_style: pageStyle,
       theme_style: themeStyle,
       font_style: fontStyle,
@@ -2566,7 +2572,7 @@ function renumberGuestbookPages(characterId) {
 function getOrCreateGuestbookSettings(characterId) {
   let settings = db
     .prepare(
-      `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, page_style, theme_style, font_style, tags
+      `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
        FROM guestbook_settings
        WHERE character_id = ?`
     )
@@ -2579,7 +2585,7 @@ function getOrCreateGuestbookSettings(characterId) {
     ).run(characterId);
     settings = db
       .prepare(
-        `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, page_style, theme_style, font_style, tags
+        `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
          FROM guestbook_settings
          WHERE character_id = ?`
       )
@@ -5635,6 +5641,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
          chat_text_color = ?,
          frame_color = ?,
          background_color = ?,
+         surround_color = ?,
          page_style = ?,
          theme_style = ?,
          font_style = ?,
@@ -5647,6 +5654,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     payload.settings.chat_text_color,
     payload.settings.frame_color,
     payload.settings.background_color,
+    payload.settings.surround_color,
     payload.settings.page_style,
     payload.settings.theme_style,
     payload.settings.font_style,

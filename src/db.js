@@ -85,6 +85,7 @@ db.exec(`
     chat_text_color TEXT NOT NULL DEFAULT '#AEE7B7',
     frame_color TEXT NOT NULL DEFAULT '',
     background_color TEXT NOT NULL DEFAULT '',
+    surround_color TEXT NOT NULL DEFAULT '',
     page_style TEXT NOT NULL DEFAULT 'scroll',
     theme_style TEXT NOT NULL DEFAULT 'blumen',
     font_style TEXT NOT NULL DEFAULT 'default',
@@ -321,6 +322,10 @@ if (!guestbookSettingsColumns.includes("background_color")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN background_color TEXT NOT NULL DEFAULT ''");
 }
 
+if (!guestbookSettingsColumns.includes("surround_color")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN surround_color TEXT NOT NULL DEFAULT ''");
+}
+
 if (!chatRoomColumns.includes("server_id")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
@@ -402,6 +407,7 @@ db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
 db.prepare("UPDATE users SET birth_date = '' WHERE birth_date IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET frame_color = '' WHERE frame_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET background_color = '' WHERE background_color IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET surround_color = '' WHERE surround_color IS NULL").run();
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();
 db.prepare("UPDATE users SET password_reset_token = '' WHERE password_reset_token IS NULL").run();

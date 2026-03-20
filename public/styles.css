@@ -3545,6 +3545,7 @@ body.page-home-screen .home-hero-actions {
 .guestbook-layout {
   position: relative;
   padding-top: 0;
+  background: var(--gb-surround-color, transparent);
 }
 
 body:has(.guestbook-layout) .container {
@@ -4262,6 +4263,7 @@ body.page-guestbook-preview::after {
 .guestbook-preview-shell {
   min-height: 100vh;
   padding: 0 0 2.4rem;
+  background: var(--gb-surround-color, transparent);
 }
 
 .guestbook-preview-header {

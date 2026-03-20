@@ -161,6 +161,40 @@
       </div>
     </div>
 
+    <div class="gb-color-row">
+      <div>
+        <span class="gb-editor-subheading">Fl&auml;che hinter dem Rahmen</span>
+        <span class="gb-editor-helptext">F&auml;rbt den gro&szlig;en Bereich um das G&auml;stebuch, aber nicht den Header oben.</span>
+      </div>
+
+      <div class="gb-color-input-wrap">
+        <input
+          id="guestbook-surround-color-text"
+          name="surround_color"
+          value="<%= settings.surround_color || '' %>"
+          maxlength="7"
+          placeholder="#2C2118"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <input
+          id="guestbook-surround-color-picker"
+          class="gb-color-picker"
+          type="color"
+          value="<%= settings.surround_color || '#2C2118' %>"
+          aria-label="Fl&auml;chenfarbe ausw&auml;hlen"
+        />
+        <span
+          id="guestbook-surround-color-preview"
+          class="gb-color-preview gb-color-preview-swatch"
+          aria-hidden="true"
+        ></span>
+        <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-surround-color">
+          Standard
+        </button>
+      </div>
+    </div>
+
     <label>
       Font
       <select name="font_style">
@@ -271,6 +305,7 @@
 
     bindColorField("guestbook-frame-color", "#7A6855");
     bindColorField("guestbook-background-color", "#3E3935");
+    bindColorField("guestbook-surround-color", "#2C2118");
   })();
 </script>
 

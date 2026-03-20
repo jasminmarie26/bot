@@ -6,10 +6,13 @@
     guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
     guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
   ].filter(Boolean).join(";");
+  const guestbookPreviewShellStyle = [
+    guestbookSettings?.surround_color ? `--gb-surround-color:${guestbookSettings.surround_color}` : ""
+  ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", { hideTopbar, pageClass, enableRealtime: false }) %>
 
-<section class="guestbook-preview-shell">
+<section class="guestbook-preview-shell" style="<%= guestbookPreviewShellStyle %>">
   <header class="guestbook-preview-header">
     <div class="guestbook-preview-header-row">
       <div class="guestbook-preview-brandline">
