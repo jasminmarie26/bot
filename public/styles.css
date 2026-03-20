@@ -3143,10 +3143,6 @@ body.page-home-screen .home-hero-actions {
   margin-bottom: 0.95rem;
 }
 
-.rp-room-form-in-section {
-  margin-bottom: 0;
-}
-
 .rp-room-input {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -222,24 +222,6 @@
           <span>Meine Räume</span>
         </summary>
         <div class="rp-room-section-divider" aria-hidden="true"></div>
-        <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form rp-room-form-in-section">
-          <div class="rp-room-input">
-            <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
-            <input
-              id="room_name"
-              name="room_name"
-              maxlength="80"
-              placeholder="Raumname (neu anlegen)"
-              required
-            />
-          </div>
-          <input
-            name="room_teaser"
-            maxlength="160"
-            placeholder="Raumbeschreibung"
-          />
-          <button class="rp-enter-btn" type="submit">Raum anlegen</button>
-        </form>
         <% if (!rooms || !rooms.length) { %>
           <p class="muted">Noch keine serverweiten R&auml;ume vorhanden.</p>
         <% } else { %>
