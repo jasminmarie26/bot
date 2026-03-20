@@ -512,17 +512,34 @@ function getActiveSessionUserIds() {
   }
 }
 
+function getConnectedSocketUserIds() {
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return [];
+  }
+
+  const connectedUserIds = new Set();
+  for (const socket of sockets.values()) {
+    const userId = Number(socket?.data?.user?.id);
+    if (Number.isInteger(userId) && userId > 0) {
+      connectedUserIds.add(userId);
+    }
+  }
+
+  return Array.from(connectedUserIds);
+}
+
 function getLoggedInUsersCount(activeUserIds = null) {
   if (Array.isArray(activeUserIds)) {
     return activeUserIds.length;
   }
-  return getActiveSessionUserIds().length;
+  return getConnectedSocketUserIds().length;
 }
 
 function getOnlineStaffStats(activeUserIds = null) {
   const sessionUserIds = Array.isArray(activeUserIds)
     ? activeUserIds
-    : getActiveSessionUserIds();
+    : getConnectedSocketUserIds();
   if (!sessionUserIds.length) {
     return {
       adminOnlineCount: 0,
@@ -601,7 +618,7 @@ function getOnlineUserCountForServers(serverIds) {
 }
 
 function getLoginStats() {
-  const activeUserIds = getActiveSessionUserIds();
+  const activeUserIds = getConnectedSocketUserIds();
   const accountCount =
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
   const characterCount =
@@ -7486,6 +7503,7 @@ io.on("connection", (socket) => {
       "guestbook:notification:update",
       buildGuestbookNotificationPayloadForUser(socket.data.user.id)
     );
+    emitHomeStatsUpdate();
   }
 
   socket.on("presence:set", (payload) => {
@@ -8023,7 +8041,7 @@ io.on("connection", (socket) => {
       void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
       scheduleRoomDeletion(previousRoomId);
     }
-    if (socket.data.presenceServerId) {
+    if (socket.data.user?.id) {
       emitHomeStatsUpdate();
     }
   });
