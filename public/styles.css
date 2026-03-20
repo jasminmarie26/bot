@@ -1413,6 +1413,14 @@ a:hover {
   background: var(--gb-page-fill, transparent);
 }
 
+.page-guestbook-view .guestbook-layout {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .page-rp-screen {
   height: 100vh;
   height: 100dvh;
