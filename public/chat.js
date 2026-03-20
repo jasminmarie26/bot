@@ -553,8 +553,8 @@
     const strong = document.createElement("strong");
     const body = document.createElement("span");
     strong.textContent = msg?.outgoing
-      ? `Fluestern an ${msg?.to_name || "Unbekannt"}:`
-      : `Fluestern von ${msg?.from_name || "Unbekannt"}:`;
+      ? `Flüstern an ${msg?.to_name || "Unbekannt"}:`
+      : `Flüstern von ${msg?.from_name || "Unbekannt"}:`;
     line.appendChild(strong);
     appendFormattedChatText(body, msg?.content, { leadingSpace: true });
     line.appendChild(body);
@@ -593,7 +593,7 @@
     ensureWhisperThread(userId, name);
 
     whisperTargetUserIdInput.value = String(userId);
-    whisperModalTitle.textContent = `Fluestern mit ${name}`;
+    whisperModalTitle.textContent = `Flüstern mit ${name}`;
     renderWhisperThread(userId);
     whisperModal.hidden = false;
     whisperModal.classList.add("is-open");

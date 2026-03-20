@@ -4184,16 +4184,16 @@ app.post("/account/update", requireAuth, (req, res) => {
   }
 
   if (email && !EMAIL_PATTERN.test(email)) {
-    return renderWithError("Bitte eine gueltige E-Mail-Adresse verwenden.");
+    return renderWithError("Bitte eine gültige E-Mail-Adresse verwenden.");
   }
 
   if (rawBirthDate && !birthDate) {
-    return renderWithError("Bitte ein gueltiges Geburtsdatum verwenden.");
+    return renderWithError("Bitte ein gültiges Geburtsdatum verwenden.");
   }
 
   if (usernameChanged && !usernameChangeInfo.can_change) {
     return renderWithError(
-      `Du kannst deinen Account-Namen erst wieder ab ${usernameChangeInfo.available_at_text} aendern.`
+      `Du kannst deinen Account-Namen erst wieder ab ${usernameChangeInfo.available_at_text} ändern.`
     );
   }
 
@@ -4230,7 +4230,7 @@ app.post("/account/update", requireAuth, (req, res) => {
       setFlash(
         req,
         "success",
-        `Account gespeichert. Dein Account-Name wurde aktualisiert. Die naechste Aenderung ist fuer normale Nutzer wieder in ${USERNAME_CHANGE_COOLDOWN_DAYS} Tagen moeglich.`
+        `Account gespeichert. Dein Account-Name wurde aktualisiert. Die nächste Änderung ist für normale Nutzer wieder in ${USERNAME_CHANGE_COOLDOWN_DAYS} Tagen möglich.`
       );
     }
   } else {
@@ -4679,9 +4679,9 @@ const HELP_BBCODE_EXAMPLES = [
   { title: "Unterstrichen", code: "[u]Das ist unterstrichen[/u]" },
   { title: "Farbe", code: "[color=#6ec8ff]Blauer Text[/color]" },
   { title: "Gradient", code: "[0,0,ff7a7a,ffd36e]Leuchtender Titel[/gradient]" },
-  { title: "Ueberschrift 1", code: "[h1]Ueberschrift 1[/h1]" },
-  { title: "Ueberschrift 2", code: "[h2]Ueberschrift 2[/h2]" },
-  { title: "Ueberschrift 3", code: "[h3]Ueberschrift 3[/h3]" },
+  { title: "Überschrift 1", code: "[h1]Überschrift 1[/h1]" },
+  { title: "Überschrift 2", code: "[h2]Überschrift 2[/h2]" },
+  { title: "Überschrift 3", code: "[h3]Überschrift 3[/h3]" },
   { title: "Zentriert", code: "[center]Zentrierter Text[/center]" },
   { title: "Rechts", code: "[right]Rechts formatierter Text[/right]" },
   { title: "Block", code: "[block]Blocktext[/block]" },
@@ -5028,7 +5028,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     return res.status(400).render("character-form", {
       title: `Bearbeiten: ${character.name}`,
       mode: "edit",
-      error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geaendert werden.`,
+      error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geändert werden.`,
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
@@ -5083,7 +5083,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     req,
     "success",
     nameChanged
-      ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geaendert werden.`
+      ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geändert werden.`
       : "Charakter aktualisiert."
   );
   return res.redirect(`/characters/${id}`);
@@ -5987,7 +5987,7 @@ function getStaffPanelConfig(user) {
       panelTitle: "Adminbereich",
       panelBasePath: "/admin",
       userDetailsBasePath: "/admin/users",
-      backLabel: "Zurueck zum Adminbereich",
+      backLabel: "Zurück zum Adminbereich",
       canEditUsers: true,
       canResetPasswords: true,
       canManageUsers: true,
@@ -6001,7 +6001,7 @@ function getStaffPanelConfig(user) {
     panelTitle: "Moderatorenbereich",
     panelBasePath: "/staff",
     userDetailsBasePath: "/staff/users",
-    backLabel: "Zurueck zum Moderatorenbereich",
+    backLabel: "Zurück zum Moderatorenbereich",
     canEditUsers: false,
     canResetPasswords: false,
     canManageUsers: false,
@@ -6048,7 +6048,7 @@ function renderStaffUserDetails(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungueltig.");
+    setFlash(req, "error", "User-ID ist ungültig.");
     return res.redirect(panelConfig.panelBasePath);
   }
 
@@ -7818,7 +7818,7 @@ io.on("connection", (socket) => {
       if (!canManageRoomState) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn abschliessen.",
+          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn abschließen.",
           created_at: formatChatTimestamp()
         });
         return;
@@ -7830,7 +7830,7 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         roomId,
         serverId,
-        nextLockState === 1 ? "Der Raum wurde abgeschlossen." : "Der Raum wurde geoeffnet."
+        nextLockState === 1 ? "Der Raum wurde abgeschlossen." : "Der Raum wurde geöffnet."
       );
       emitRoomStateUpdate(roomId, serverId, refreshedRoom);
       io.to(socketChannelForRoom(roomId, serverId)).emit("chat:room-state", {

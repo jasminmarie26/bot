@@ -508,6 +508,21 @@ db.prepare(
   "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.'"
 ).run();
 db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body IS NULL OR trim(hero_body) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Aktuelle Neuigkeiten findest du oben Ã¼ber den Live-Updates-Tab im Header. Dort kÃ¶nnen Admins und Moderatoren neue Meldungen direkt verÃ¶ffentlichen und bearbeiten.'"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren koennen sie direkt hier veroeffentlichen und bearbeiten.'"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren können sie direkt hier veröffentlichen und bearbeiten.'"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET hero_body = 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.' WHERE hero_body = 'Alle Neuigkeiten laufen hier auf der Startseite im Live-Update-Bereich. Admins und Moderatoren kÃ¶nnen sie direkt hier verÃ¶ffentlichen und bearbeiten.'"
+).run();
+db.prepare(
   "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"
 ).run();
 db.prepare(

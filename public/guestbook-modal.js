@@ -49,8 +49,8 @@
     persistPanelState(expanded);
 
     const actionLabel = expanded
-      ? "Gaestebuch-Eintraege schliessen"
-      : "Gaestebuch-Eintraege oeffnen";
+      ? "Gästebuch-Einträge schließen"
+      : "Gästebuch-Einträge öffnen";
 
     toggle.setAttribute("aria-label", actionLabel);
     toggle.setAttribute("title", actionLabel);
