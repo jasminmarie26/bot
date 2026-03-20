@@ -3078,7 +3078,7 @@ body.page-home-screen .home-hero-actions {
 
 .rp-dropdown-menu {
   position: absolute;
-  top: calc(100% + 0.34rem);
+  top: calc(100% - 1px);
   left: 0;
   min-width: 190px;
   z-index: 30;
