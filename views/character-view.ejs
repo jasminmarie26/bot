@@ -111,13 +111,6 @@
             >
               Charakter editieren
             </a>
-            <a
-              href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= activeGuestbookPage.id %>"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              G&auml;stebuch bearbeiten
-            </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
           <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
