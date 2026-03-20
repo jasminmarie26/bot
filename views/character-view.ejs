@@ -3,6 +3,11 @@
 <section class="rp-shell">
   <% const roomlistDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
   <% const roomlistAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
+  <% const roomlistIdentityRoleStyle = currentHeaderCharacter && currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(currentHeaderCharacter.id)
+    ? "admin"
+    : currentHeaderCharacter && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(currentHeaderCharacter.id)
+      ? "moderator"
+      : (currentHeaderCharacter ? "" : (currentUserDisplayRoleStyle || "")); %>
   <% const roomlistIdentityName = currentHeaderCharacter?.name || roomlistDisplayName; %>
   <% const roomlistIdentityColor = currentHeaderCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const roomlistLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
