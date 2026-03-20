@@ -4870,6 +4870,9 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   }
 
   const payload = normalizeCharacterInput(req.body);
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
+    payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
+  }
 
   if (!payload.name) {
     return res.status(400).render("character-form", {
