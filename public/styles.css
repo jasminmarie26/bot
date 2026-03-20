@@ -3392,6 +3392,52 @@ body.page-home-screen .home-hero-actions {
   gap: 0;
 }
 
+.rp-room-inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1.7rem;
+  margin-top: 0.15rem;
+}
+
+.rp-room-inline-item {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.45;
+  max-width: 100%;
+}
+
+.rp-room-inline-item:hover {
+  color: color-mix(in srgb, var(--accent) 76%, white 24%);
+  text-decoration: none;
+}
+
+.rp-room-inline-item.is-disabled {
+  color: var(--muted);
+  pointer-events: none;
+  cursor: default;
+}
+
+.rp-room-inline-item .rp-room-lock-indicator {
+  margin-right: 0.02rem;
+  align-self: center;
+}
+
+.rp-room-inline-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.rp-room-inline-teaser {
+  color: var(--muted);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
 .rp-room-standard-card {
   display: grid;
   gap: 0.3rem;
