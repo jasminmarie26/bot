@@ -4976,6 +4976,7 @@ app.get("/members", requireAuth, (req, res) => {
 
 const HELP_TOPICS = [
   { slug: "charakter-anlegen", title: "Charakter anlegen" },
+  { slug: "eigene-raeume", title: "Eigene Räume" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },
   { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },
   { slug: "admin-moderatorname", title: "Admin- und Moderatorname" },
@@ -5267,10 +5268,23 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   }
 
   rememberPreferredCharacter(req, character);
+  const ownedRooms = db
+    .prepare(
+      `SELECT id, name, is_locked
+       FROM chat_rooms
+       WHERE server_id = ? AND created_by_user_id = ?
+       ORDER BY created_at ASC, id ASC`
+    )
+    .all(normalizeServer(character.server_id), req.session.user.id)
+    .map((room) => ({
+      ...room,
+      is_locked: Number(room.is_locked) === 1
+    }));
 
   return res.render("room-create", {
     title: `Raum erstellen: ${character.name}`,
-    character
+    character,
+    ownedRooms
   });
 });
 
@@ -5564,24 +5578,23 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   const roomName = normalizeRoomName(req.body.room_name);
-  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
-    return res.redirect(`/characters/${id}#roomlist`);
+    return res.redirect(`/characters/${id}/rooms/new`);
   }
 
   if (character.user_id === req.session.user.id) {
     rememberPreferredCharacter(req, character);
   }
 
-  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomTeaser);
+  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, "");
   if (!targetRoom) {
     setFlash(req, "error", "Raum konnte nicht angelegt werden.");
-    return res.redirect(`/characters/${id}#roomlist`);
+    return res.redirect(`/characters/${id}/rooms/new`);
   }
 
   setFlash(req, "success", `Raum "${targetRoom.name}" wurde angelegt.`);
-  return res.redirect(`/characters/${id}#roomlist`);
+  return res.redirect(`/characters/${id}/rooms/new`);
 });
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {

@@ -3137,10 +3137,27 @@ body.page-home-screen .home-hero-actions {
   border-radius: 0 0 16px 16px;
 }
 
+.rp-room-panel-create {
+  grid-template-rows: none;
+  grid-auto-rows: min-content;
+  align-content: start;
+  gap: 1rem;
+}
+
 .rp-room-form {
   display: grid;
   gap: 0.75rem;
   margin-bottom: 0.95rem;
+}
+
+.rp-room-create-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.rp-room-create-list h2 {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .rp-room-input {

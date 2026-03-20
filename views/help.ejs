@@ -52,10 +52,35 @@
         <h2>Raumliste &amp; R&auml;ume</h2>
         <p>Auf der Charakterseite findest du die gesamte Raumliste f&uuml;r den jeweiligen Bereich.</p>
         <ul class="help-list">
-          <li><code>Raumname</code> und <code>Raumbeschreibung</code> oben ausf&uuml;llen.</li>
-          <li><code>Raum anlegen</code> erstellt einen neuen serverweiten Raum.</li>
           <li><code>Gemeinsamer Treffpunkt</code> sind feste Standardr&auml;ume.</li>
-          <li>Unter <code>Free RP</code> siehst du alle angelegten R&auml;ume darunter aufgelistet.</li>
+          <li>&Uuml;ber <code>Raumliste</code> kommst du immer zur &Uuml;bersicht der R&auml;ume deines Bereichs.</li>
+          <li>Ein kleines Schloss vor dem Raumnamen zeigt: Dieser Raum ist gerade abgeschlossen.</li>
+          <li>Eigene private R&auml;ume werden nicht f&uuml;r andere Nutzer angezeigt.</li>
+          <li>F&uuml;r die genaue Anleitung zu privaten R&auml;umen gibt es das eigene Hilfethema <code>Eigene R&auml;ume</code>.</li>
+        </ul>
+      </section>
+    <% } %>
+
+    <% if (helpTopic.slug === "eigene-raeume") { %>
+      <section class="panel help-section">
+        <h2>Eigene R&auml;ume</h2>
+        <p>Eigene R&auml;ume sind gespeicherte Privatr&auml;ume, die nur dein eigener Account in der Raumliste sieht.</p>
+
+        <h3>Anleitung</h3>
+        <ul class="help-list">
+          <li>Auf deiner Charakterseite oben bei <code>Raumliste</code> mit der Maus aufklappen.</li>
+          <li><code>+ Raum erstellen</code> anklicken.</li>
+          <li>Deinen gew&uuml;nschten Raumnamen eingeben und <code>Raum anlegen</code> klicken.</li>
+          <li>Danach bleibst du auf derselben Seite und der neue Raum erscheint direkt darunter im Bereich <code>Eigene R&auml;ume</code>.</li>
+          <li>Ein Klick auf den angezeigten Namen &ouml;ffnet den Raum.</li>
+        </ul>
+
+        <h3>Wichtig</h3>
+        <ul class="help-list">
+          <li>Eigene R&auml;ume bleiben gespeichert, bis du sie l&ouml;schst oder nicht mehr nutzt.</li>
+          <li>Sie sind nur f&uuml;r den Nutzer sichtbar, der sie selbst angelegt hat.</li>
+          <li>Der Raumname ist an deinen eigenen Account gebunden. Derselbe private Raumname wird nicht als fremde Kopie f&uuml;r andere Nutzer angelegt.</li>
+          <li>Aktuell gibt es auf der Seite f&uuml;r eigene R&auml;ume keinen separaten Bild-Upload.</li>
           <li>Ein kleines Schloss vor dem Raumnamen zeigt: Dieser Raum ist gerade abgeschlossen.</li>
         </ul>
       </section>

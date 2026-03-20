@@ -112,9 +112,8 @@
     </details>
   </header>
 
-  <section class="rp-room-panel" id="room-create">
+  <section class="rp-room-panel rp-room-panel-create" id="room-create">
     <h1>Eigenen Raum erstellen</h1>
-    <p class="muted">Hier legst du einen eigenen Raum an. Nach dem Speichern erscheint er in deiner Raumliste und ist nur für deinen Account sichtbar.</p>
 
     <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
       <div class="rp-room-input">
@@ -127,13 +126,37 @@
           required
         />
       </div>
-      <input
-        name="room_teaser"
-        maxlength="160"
-        placeholder="Raumbeschreibung"
-      />
       <button class="rp-enter-btn" type="submit">Raum anlegen</button>
     </form>
+
+    <section class="rp-room-create-list" aria-label="Eigene Räume">
+      <h2>Eigene Räume</h2>
+      <% if (!ownedRooms || !ownedRooms.length) { %>
+        <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
+      <% } else { %>
+        <div class="rp-room-inline-list">
+          <% ownedRooms.forEach((room) => { %>
+            <a
+              class="rp-room-inline-item"
+              href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+              title="Raum betreten"
+            >
+              <span
+                class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
+                aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
+                title="Raum ist abgeschlossen"
+              ><svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>
+                <path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>
+                <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
+                <path d="M12 13.15v2.8"/>
+              </svg></span>
+              <span class="rp-room-inline-name"><%= room.name %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
   </section>
 </section>
 
