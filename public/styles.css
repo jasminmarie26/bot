@@ -3539,9 +3539,12 @@ body.page-home-screen .home-hero-actions {
   min-height: 1.1rem;
   padding: 0 0.08rem;
   font-size: 0.78rem;
-  font-style: italic;
   color: var(--muted);
   line-height: 1.35;
+}
+
+.rp-room-occupant.has-room-rights {
+  font-style: italic;
 }
 
 .rp-room-occupant {

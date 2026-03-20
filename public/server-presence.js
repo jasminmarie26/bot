@@ -34,9 +34,13 @@
     const displayName = String(entry?.name || "").trim() || "Unbekannt";
     const characterId = Number(entry?.character_id);
     const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
+    const hasRoomRights = Boolean(entry?.has_room_rights);
     if (Number.isInteger(characterId) && characterId > 0) {
       const link = document.createElement("a");
       link.className = "rp-room-occupant";
+      if (hasRoomRights) {
+        link.classList.add("has-room-rights");
+      }
       link.href = `/characters/${characterId}/guestbook`;
       link.textContent = displayName;
       if (chatTextColor) {
@@ -47,6 +51,9 @@
 
     const text = document.createElement("span");
     text.className = "rp-room-occupant";
+    if (hasRoomRights) {
+      text.classList.add("has-room-rights");
+    }
     text.textContent = displayName;
     if (chatTextColor) {
       text.style.color = chatTextColor;

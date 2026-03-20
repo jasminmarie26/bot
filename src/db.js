@@ -148,6 +148,17 @@ db.exec(`
     FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS chat_room_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    granted_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS site_updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     author_id INTEGER NOT NULL,
@@ -180,6 +191,10 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key
     ON chat_rooms(server_id, created_by_user_id, name_key);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user
+    ON chat_room_permissions(room_id, user_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id
+    ON chat_room_permissions(user_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
   CREATE INDEX IF NOT EXISTS idx_registration_guard_ip_created_at
@@ -391,6 +406,10 @@ db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_guestbook_notifications_user_entr
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user ON chat_room_permissions(room_id, user_id)"
+);
+db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id ON chat_room_permissions(user_id)");
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_character_name_key");
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key ON chat_rooms(server_id, created_by_user_id, name_key)"

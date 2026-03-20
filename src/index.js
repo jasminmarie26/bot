@@ -3250,9 +3250,89 @@ function getRoomWithCharacter(roomId) {
     .get(roomId);
 }
 
-function canBypassRoomLock(user, room = null) {
+function isRoomOwner(user, room = null) {
   if (!user || !room) return false;
   return Number(room.created_by_user_id) === Number(user.id);
+}
+
+function hasPersistentRoomRights(userOrId, roomOrId) {
+  const parsedUserId =
+    Number.isInteger(Number(userOrId?.id)) ? Number(userOrId.id) : Number(userOrId);
+  const parsedRoomId =
+    Number.isInteger(Number(roomOrId?.id)) ? Number(roomOrId.id) : Number(roomOrId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    db
+      .prepare(
+        `SELECT 1
+         FROM chat_room_permissions
+         WHERE room_id = ? AND user_id = ?
+         LIMIT 1`
+      )
+      .get(parsedRoomId, parsedUserId)
+  );
+}
+
+function grantPersistentRoomRights(roomId, userId, grantedByUserId) {
+  const parsedRoomId = Number(roomId);
+  const parsedUserId = Number(userId);
+  const parsedGrantedByUserId = Number(grantedByUserId);
+  if (
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedGrantedByUserId) ||
+    parsedGrantedByUserId < 1
+  ) {
+    return false;
+  }
+
+  const result = db
+    .prepare(
+      `INSERT OR IGNORE INTO chat_room_permissions (room_id, user_id, granted_by_user_id)
+       VALUES (?, ?, ?)`
+    )
+    .run(parsedRoomId, parsedUserId, parsedGrantedByUserId);
+  return Number(result.changes) > 0;
+}
+
+function revokePersistentRoomRights(roomId, userId) {
+  const parsedRoomId = Number(roomId);
+  const parsedUserId = Number(userId);
+  if (
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return false;
+  }
+
+  const result = db
+    .prepare(
+      `DELETE FROM chat_room_permissions
+       WHERE room_id = ? AND user_id = ?`
+    )
+    .run(parsedRoomId, parsedUserId);
+  return Number(result.changes) > 0;
+}
+
+function canBypassRoomLock(user, room = null) {
+  if (!user || !room) return false;
+  return isRoomOwner(user, room) || hasPersistentRoomRights(user, room);
+}
+
+function canGrantRoomPermissions(user, room = null) {
+  return isRoomOwner(user, room);
 }
 
 const roomInviteAccessGrants = new Map();
@@ -5064,20 +5144,29 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     .prepare(
       `SELECT r.id, r.name, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
               u.username AS creator_name,
-               CASE WHEN r.created_by_user_id = ? THEN 1 ELSE 0 END AS can_manage_room
+               CASE
+                 WHEN r.created_by_user_id = ? THEN 1
+                 WHEN EXISTS (
+                   SELECT 1
+                   FROM chat_room_permissions crp
+                   WHERE crp.room_id = r.id AND crp.user_id = ?
+                 ) THEN 1
+                 ELSE 0
+               END AS can_manage_room
        FROM chat_rooms r
         JOIN users u ON u.id = r.created_by_user_id
         WHERE r.server_id = ?
         ORDER BY r.created_at ASC, r.id ASC`
     )
-    .all(req.session.user.id, normalizeServer(character.server_id))
+    .all(req.session.user.id, req.session.user.id, normalizeServer(character.server_id))
     .map((room) => ({
       ...room,
       is_locked: Number(room.is_locked) === 1,
       can_manage_room: Number(room.can_manage_room) === 1,
       can_enter:
         Number(room.is_locked) !== 1 ||
-        Number(room.can_manage_room) === 1
+        Number(room.can_manage_room) === 1 ||
+        hasRoomInviteAccess(req.session.user, room)
     }));
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
@@ -7353,7 +7442,7 @@ function canManageRoomLog(user, room = null) {
     return true;
   }
 
-  return Boolean(room) && Number(room.created_by_user_id) === Number(user.id);
+  return canBypassRoomLock(user, room);
 }
 
 function rememberRoomLogParticipant(roomId, serverId, user, displayName = "") {
@@ -7740,6 +7829,10 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
     return [];
   }
 
+  const room =
+    Number.isInteger(roomId) && roomId > 0
+      ? getRoomWithCharacter(Number(roomId))
+      : null;
   const onlineCharacters = [];
   const seenUserIds = new Set();
   for (const memberSocket of sockets) {
@@ -7763,7 +7856,8 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       name: displayProfile.label || `User ${userId}`,
       character_id: chosenCharacter?.id || null,
       role_style: displayProfile.role_style || "",
-      chat_text_color: displayProfile.chat_text_color || ""
+      chat_text_color: displayProfile.chat_text_color || "",
+      has_room_rights: room ? canBypassRoomLock(user, room) : false
     });
   }
 
@@ -8206,6 +8300,7 @@ io.on("connection", (socket) => {
     const normalizedCommand = content.toLowerCase();
     const canUseRoomLog = canManageRoomLog(socket.data.user, room);
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
+    const canGrantRoomRights = canGrantRoomPermissions(socket.data.user, room);
 
     if (normalizedCommand === "/s") {
       if (!roomId || !room) {
@@ -8220,7 +8315,7 @@ io.on("connection", (socket) => {
       if (!canManageRoomState) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Nur die Person, die diesen Raum erstellt hat, kann ihn abschließen.",
+          content: "Nur Personen mit Raumrechten können diesen Raum abschließen oder öffnen.",
           created_at: formatChatTimestamp()
         });
         return;
@@ -8247,7 +8342,7 @@ io.on("connection", (socket) => {
         socket.emit("chat:message", {
           type: "system",
           content: roomId
-            ? "Nur die Person, die diesen Raum erstellt hat, kann das Log hier starten."
+            ? "Nur Personen mit Raumrechten können das Log hier starten."
             : "Nur Admins und Moderatoren können das Log hier starten.",
           created_at: formatChatTimestamp()
         });
@@ -8282,7 +8377,7 @@ io.on("connection", (socket) => {
         socket.emit("chat:message", {
           type: "system",
           content: roomId
-            ? "Nur die Person, die diesen Raum erstellt hat, kann das Log hier beenden."
+            ? "Nur Personen mit Raumrechten können das Log hier beenden."
             : "Nur Admins und Moderatoren können das Log hier beenden.",
           created_at: formatChatTimestamp()
         });
@@ -8357,12 +8452,185 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const revokeRoomRightsMatch = content.match(/^\/rrw(?:\s+(.+))?$/i);
+    if (revokeRoomRightsMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Raumrechte können nur in einem geöffneten Raum entzogen werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canGrantRoomRights) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur der Raumbesitzer kann Raumrechte entziehen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const requestedTargetName = parseInviteCommandArguments(revokeRoomRightsMatch[1] || "");
+      if (requestedTargetName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /rrw Charaktername. Bei Namen mit Leerzeichen geht auch /rrw "Charaktername".',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const targets = findInviteTargetsByDisplayName(requestedTargetName, serverId);
+      if (!targets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${requestedTargetName} ist gerade nicht online auf diesem Server.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (targets.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Der Name ${requestedTargetName} ist nicht eindeutig. Bitte nutze den genauen Online-Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const target = targets[0];
+      if (Number(target.userId) === Number(room.created_by_user_id)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${target.name} besitzt diesen Raum bereits.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const removed = revokePersistentRoomRights(roomId, target.userId);
+      if (!removed) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${target.name} hat in diesem Raum gerade keine Raumrechte.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      emitDirectSystemMessageToSocket(
+        socket,
+        `${target.name} hat nun keine Raumrechte mehr für ${room.name}.`
+      );
+      emitDirectSystemMessageToUser(
+        target.userId,
+        `Deine Raumrechte für ${room.name} wurden entzogen.`
+      );
+      emitOnlineCharacters(roomId, serverId);
+      emitRoomStateUpdate(roomId, serverId, getRoomWithCharacter(roomId));
+      return;
+    }
+
+    const grantRoomRightsMatch = content.match(/^\/rr(?:\s+(.+))?$/i);
+    if (grantRoomRightsMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Raumrechte können nur in einem geöffneten Raum vergeben werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canGrantRoomRights) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur der Raumbesitzer kann Raumrechte vergeben.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const requestedTargetName = parseInviteCommandArguments(grantRoomRightsMatch[1] || "");
+      if (requestedTargetName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /rr Charaktername. Bei Namen mit Leerzeichen geht auch /rr "Charaktername".',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const targets = findInviteTargetsByDisplayName(requestedTargetName, serverId);
+      if (!targets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${requestedTargetName} ist gerade nicht online auf diesem Server.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (targets.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Der Name ${requestedTargetName} ist nicht eindeutig. Bitte nutze den genauen Online-Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const target = targets[0];
+      if (Number(target.userId) === Number(room.created_by_user_id)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${target.name} besitzt diesen Raum bereits.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const granted = grantPersistentRoomRights(roomId, target.userId, socket.data.user.id);
+      if (!granted) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${target.name} hat in diesem Raum bereits Raumrechte.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      emitDirectSystemMessageToSocket(
+        socket,
+        `${target.name} hat nun Raumrechte für ${room.name}.`
+      );
+      emitDirectSystemMessageToUser(
+        target.userId,
+        `Du hast nun Raumrechte für ${room.name}.`
+      );
+      emitOnlineCharacters(roomId, serverId);
+      emitRoomStateUpdate(roomId, serverId, getRoomWithCharacter(roomId));
+      return;
+    }
+
     const inviteMatch = content.match(/^\/i(?:\s+(.+))?$/i);
     if (inviteMatch) {
       if (!roomId || !room) {
         socket.emit("chat:message", {
           type: "system",
           content: "Du kannst nur aus einem offenen Raum heraus Einladungen senden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canManageRoomState) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur Personen mit Raumrechten können Einladungen in diesen Raum verschicken.",
           created_at: formatChatTimestamp()
         });
         return;
