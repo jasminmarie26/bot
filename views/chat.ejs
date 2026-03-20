@@ -14,9 +14,16 @@
   ? recentSiteUpdateRevisions
   : []; %>
 <% const showChatHeaderIdentity = Boolean(currentUser && chatIdentityName); %>
-<% const chatHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-  ? "/staff"
-  : ""; %>
+<% const chatHeaderIdentityHref = currentUser?.is_admin
+  ? "/admin"
+  : currentUser?.is_moderator
+    ? "/staff"
+    : ""; %>
+<% const chatHeaderIdentityTitle = currentUser?.is_admin
+  ? "Adminbereich im neuen Tab oeffnen"
+  : currentUser?.is_moderator
+    ? "Moderatorenbereich im neuen Tab oeffnen"
+    : chatIdentityName; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -47,7 +54,9 @@
           class="rp-header-identity rp-header-identity-link"
           data-header-identity
           href="<%= chatHeaderIdentityHref %>"
-          title="Zum Admin- und Moderatorenbereich"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="<%= chatHeaderIdentityTitle %>"
           style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
         ><%= chatIdentityName %></a>
       <% } else { %>

@@ -15,9 +15,16 @@
     ? recentSiteUpdateRevisions
     : []; %>
   <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
-  <% const roomlistHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "/staff"
-    : ""; %>
+  <% const roomlistHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const roomlistHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab oeffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab oeffnen"
+      : roomlistIdentityName; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -42,7 +49,9 @@
           class="rp-header-identity rp-header-identity-link"
           data-header-identity
           href="<%= roomlistHeaderIdentityHref %>"
-          title="Zum Admin- und Moderatorenbereich"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="<%= roomlistHeaderIdentityTitle %>"
           style="<%= roomlistIdentityColor ? `color:${roomlistIdentityColor};` : '' %>"
         ><%= roomlistIdentityName %></a>
       <% } else { %>

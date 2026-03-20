@@ -1,6 +1,18 @@
 <%- include("partials/start") %>
 
-<% const characters = Array.isArray(userCharacters) ? userCharacters : []; %>
+<%
+  const characters = Array.isArray(userCharacters) ? userCharacters : [];
+  const panelHomePath = panelBasePath || "/admin";
+  const panelHomeLabel = panelTitle || "Adminbereich";
+  const canEditUserBasics =
+    typeof canEditUsers === "undefined" ? true : Boolean(canEditUsers);
+  const canResetUserPassword =
+    typeof canResetPasswords === "undefined" ? true : Boolean(canResetPasswords);
+  const canManageUserRoles =
+    typeof canManageUsers === "undefined" ? true : Boolean(canManageUsers);
+  const canClearUserGuestbooks =
+    typeof canClearGuestbooks === "undefined" ? true : Boolean(canClearGuestbooks);
+%>
 
 <section class="panel admin-user-page">
   <div class="header-line">
@@ -9,7 +21,7 @@
       <p class="muted">Account #<%= targetUser.account_number %></p>
     </div>
     <div class="dashboard-server-actions">
-      <a class="btn btn-secondary" href="/admin">Zurück zum Admin-Panel</a>
+      <a class="btn btn-secondary" href="<%= panelHomePath %>">Zur&uuml;ck zum <%= panelHomeLabel %></a>
     </div>
   </div>
 
@@ -24,7 +36,7 @@
       <span class="admin-role-badge">User</span>
     <% } %>
     <% if (targetUser.is_suspicious) { %>
-      <span class="admin-role-badge is-suspicious">Verdächtig</span>
+      <span class="admin-role-badge is-suspicious">Verd&auml;chtig</span>
     <% } %>
   </div>
 
@@ -40,7 +52,7 @@
 
 <% if (targetUser.is_suspicious) { %>
   <section class="panel suspicious-user-card">
-    <h2>Verdachtsgründe</h2>
+    <h2>Verdachtsgr&uuml;nde</h2>
     <div class="admin-user-meta">
       <% targetUser.suspicion_reasons.forEach((reason) => { %>
         <span><%= reason %></span>
@@ -51,85 +63,101 @@
 
 <section class="panel">
   <h2>Basisdaten</h2>
-  <form method="POST" action="/admin/users/<%= targetUser.id %>/update-basic" class="admin-inline-form">
-    <label>
-      Name
-      <input name="username" maxlength="24" value="<%= targetUser.username %>" required />
-    </label>
-    <label>
-      E-Mail
-      <input name="email" maxlength="255" value="<%= targetUser.email %>" placeholder="name@domain.tld" />
-    </label>
-    <label>
-      Geburtsdatum
-      <input
-        type="date"
-        name="birth_date"
-        max="<%= new Date().toISOString().slice(0, 10) %>"
-        value="<%= targetUser.birth_date || "" %>"
-      />
-    </label>
-    <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
-  </form>
-  <p class="muted">
-    Admin- und Moderatornamen werden jetzt direkt im gewünschten Charakter gesetzt.
-    Öffne dafür den Charakter und aktiviere dort „Als Admin-Charakter verwenden“
-    oder „Als Moderator-Charakter verwenden“.
-  </p>
+  <% if (canEditUserBasics) { %>
+    <form method="POST" action="/admin/users/<%= targetUser.id %>/update-basic" class="admin-inline-form">
+      <label>
+        Name
+        <input name="username" maxlength="24" value="<%= targetUser.username %>" required />
+      </label>
+      <label>
+        E-Mail
+        <input name="email" maxlength="255" value="<%= targetUser.email %>" placeholder="name@domain.tld" />
+      </label>
+      <label>
+        Geburtsdatum
+        <input
+          type="date"
+          name="birth_date"
+          max="<%= new Date().toISOString().slice(0, 10) %>"
+          value="<%= targetUser.birth_date || "" %>"
+        />
+      </label>
+      <button class="btn btn-secondary" type="submit">Basisdaten speichern</button>
+    </form>
+    <p class="muted">
+      Admin- und Moderatornamen werden direkt im gew&uuml;nschten Charakter gesetzt.
+      &Ouml;ffne daf&uuml;r den Charakter und aktiviere dort
+      &bdquo;Als Admin-Charakter verwenden&ldquo; oder
+      &bdquo;Als Moderator-Charakter verwenden&ldquo;.
+    </p>
+  <% } else { %>
+    <p class="muted">Im Moderatorenbereich ist dieser Abschnitt nur lesbar.</p>
+    <div class="admin-user-meta">
+      <span>Name: <%= targetUser.username %></span>
+      <span>E-Mail: <%= targetUser.email || "-" %></span>
+      <span>Geburtsdatum: <%= targetUser.birth_date || "-" %></span>
+    </div>
+  <% } %>
 </section>
 
-<section class="panel">
-  <h2>Passwort</h2>
-  <p class="muted">Passwörter sind aus Sicherheitsgründen nicht lesbar. Du kannst sie hier nur zurücksetzen.</p>
-  <form method="POST" action="/admin/users/<%= targetUser.id %>/reset-password" class="admin-inline-form">
-    <label>
-      Neues Passwort
-      <input name="new_password" type="password" minlength="6" required placeholder="Mind. 6 Zeichen" />
-    </label>
-    <button class="btn btn-secondary" type="submit">Passwort zurücksetzen</button>
-  </form>
-</section>
+<% if (canResetUserPassword) { %>
+  <section class="panel">
+    <h2>Passwort</h2>
+    <p class="muted">
+      Passw&ouml;rter sind aus Sicherheitsgr&uuml;nden nicht lesbar. Du kannst sie hier nur zur&uuml;cksetzen.
+    </p>
+    <form method="POST" action="/admin/users/<%= targetUser.id %>/reset-password" class="admin-inline-form">
+      <label>
+        Neues Passwort
+        <input name="new_password" type="password" minlength="6" required placeholder="Mind. 6 Zeichen" />
+      </label>
+      <button class="btn btn-secondary" type="submit">Passwort zur&uuml;cksetzen</button>
+    </form>
+  </section>
+<% } %>
 
-<section class="panel">
-  <h2>Rollen und Aktionen</h2>
-  <div class="dashboard-server-actions">
-    <% if (targetUser.id === currentUser.id) { %>
-      <small>Dein eigener Account</small>
-    <% } else { %>
-      <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-admin" class="inline-form">
-        <% if (targetUser.is_admin) { %>
+<% if (canManageUserRoles) { %>
+  <section class="panel">
+    <h2>Rollen und Aktionen</h2>
+    <div class="dashboard-server-actions">
+      <% if (targetUser.id === currentUser.id) { %>
+        <small>Dein eigener Account</small>
+      <% } else { %>
+        <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-admin" class="inline-form">
+          <% if (targetUser.is_admin) { %>
+            <input type="hidden" name="action" value="demote" />
+            <button class="btn btn-danger" type="submit">Admin entfernen</button>
+          <% } else { %>
+            <input type="hidden" name="action" value="promote" />
+            <button class="btn" type="submit">Zu Admin machen</button>
+          <% } %>
+        </form>
+      <% } %>
+
+      <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-moderator" class="inline-form">
+        <% if (targetUser.is_moderator) { %>
           <input type="hidden" name="action" value="demote" />
-          <button class="btn btn-danger" type="submit">Admin entfernen</button>
+          <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
         <% } else { %>
           <input type="hidden" name="action" value="promote" />
-          <button class="btn" type="submit">Zu Admin machen</button>
+          <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
         <% } %>
       </form>
-    <% } %>
 
-    <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-moderator" class="inline-form">
-      <% if (targetUser.is_moderator) { %>
-        <input type="hidden" name="action" value="demote" />
-        <button class="btn btn-secondary" type="submit">Moderator entfernen</button>
-      <% } else { %>
-        <input type="hidden" name="action" value="promote" />
-        <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
+      <% if (targetUser.id !== currentUser.id) { %>
+        <form method="POST" action="/admin/users/<%= targetUser.id %>/delete" class="inline-form">
+          <button class="btn btn-danger" type="submit">Account l&ouml;schen</button>
+        </form>
       <% } %>
-    </form>
-
-    <% if (targetUser.id !== currentUser.id) { %>
-      <form method="POST" action="/admin/users/<%= targetUser.id %>/delete" class="inline-form">
-        <button class="btn btn-danger" type="submit">Account löschen</button>
-      </form>
-    <% } %>
-  </div>
-</section>
+    </div>
+  </section>
+<% } %>
 
 <section class="panel">
   <div class="header-line">
     <div>
-      <h2>Charaktere und Gästebücher</h2>
-      <p class="muted">Klicke auf einen Charakter, um direkt sein Gästebuch zu öffnen.</p>
+      <h2>Charaktere und G&auml;steb&uuml;cher</h2>
+      <p class="muted">Klicke auf einen Charakter, um direkt sein G&auml;stebuch zu &ouml;ffnen.</p>
     </div>
   </div>
 
@@ -142,7 +170,7 @@
           <a
             class="admin-character-primary"
             href="/characters/<%= character.id %>/guestbook"
-            title="Gästebuch von <%= character.name %> öffnen"
+            title="G&auml;stebuch von <%= character.name %> &ouml;ffnen"
           >
             <span class="admin-character-name"><%= character.name %></span>
             <span class="admin-character-server">
@@ -150,17 +178,20 @@
             </span>
             <div class="admin-character-meta">
               <span><%= character.page_count %> Seiten</span>
-              <span><%= character.entry_count %> Einträge</span>
-              <span><%= character.is_public ? "öffentlich" : "privat" %></span>
+              <span><%= character.entry_count %> Eintr&auml;ge</span>
+              <span><%= character.is_public ? "oeffentlich" : "privat" %></span>
             </div>
           </a>
 
           <div class="dashboard-server-actions admin-character-actions">
-            <a class="btn btn-secondary" href="/characters/<%= character.id %>">Charakter öffnen</a>
-            <a class="btn" href="/characters/<%= character.id %>/guestbook/edit">Gästebuch bearbeiten</a>
-            <form method="POST" action="/admin/guestbooks/<%= character.id %>/clear" class="inline-form">
-              <button class="btn btn-danger" type="submit">Gästebuch leeren</button>
-            </form>
+            <a class="btn btn-secondary" href="/characters/<%= character.id %>">Charakter &ouml;ffnen</a>
+            <a class="btn" href="/characters/<%= character.id %>/guestbook">G&auml;stebuch &ouml;ffnen</a>
+            <% if (canClearUserGuestbooks) { %>
+              <a class="btn" href="/characters/<%= character.id %>/guestbook/edit">G&auml;stebuch bearbeiten</a>
+              <form method="POST" action="/admin/guestbooks/<%= character.id %>/clear" class="inline-form">
+                <button class="btn btn-danger" type="submit">G&auml;stebuch leeren</button>
+              </form>
+            <% } %>
           </div>
         </article>
       <% }) %>

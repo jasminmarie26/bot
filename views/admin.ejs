@@ -18,10 +18,14 @@
   const userLetters = Object.keys(groupedUsers).sort((a, b) =>
     a.localeCompare(b, "de", { sensitivity: "base" })
   );
+  const overviewTitle = panelTitle || "Adminbereich";
+  const detailBasePath = userDetailsBasePath || "/admin/users";
+  const allowUserDeletion =
+    typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
 %>
 
 <section class="panel">
-  <h1>Adminbereich</h1>
+  <h1><%= overviewTitle %></h1>
   <p class="muted">Accounts gesamt: <strong><%= accountCount %></strong></p>
   <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
   <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
@@ -48,13 +52,13 @@
           <div class="dashboard-server-actions">
             <a
               class="btn btn-secondary"
-              href="/admin/users/<%= user.id %>"
+              href="<%= `${detailBasePath}/${user.id}` %>"
               target="_blank"
               rel="noopener noreferrer"
             >
               Prüfen
             </a>
-            <% if (user.id !== currentUser.id) { %>
+            <% if (allowUserDeletion && user.id !== currentUser.id) { %>
               <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
                 <button class="btn btn-danger" type="submit">Löschen</button>
               </form>
@@ -128,7 +132,7 @@
               %>
               <a
                 class="admin-user-link"
-                href="/admin/users/<%= user.id %>"
+                href="<%= `${detailBasePath}/${user.id}` %>"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-user-link

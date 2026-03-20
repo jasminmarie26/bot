@@ -5795,7 +5795,38 @@ function getAdminUserCharacters(userId) {
     .all(userId);
 }
 
-app.get("/admin", requireAuth, requireAdmin, (req, res) => {
+function getStaffPanelConfig(user) {
+  if (user?.is_admin) {
+    return {
+      pageTitle: "Adminbereich",
+      panelTitle: "Adminbereich",
+      panelBasePath: "/admin",
+      userDetailsBasePath: "/admin/users",
+      backLabel: "Zurueck zum Adminbereich",
+      canEditUsers: true,
+      canResetPasswords: true,
+      canManageUsers: true,
+      canDeleteUsers: true,
+      canClearGuestbooks: true
+    };
+  }
+
+  return {
+    pageTitle: "Moderatorenbereich",
+    panelTitle: "Moderatorenbereich",
+    panelBasePath: "/staff",
+    userDetailsBasePath: "/staff/users",
+    backLabel: "Zurueck zum Moderatorenbereich",
+    canEditUsers: false,
+    canResetPasswords: false,
+    canManageUsers: false,
+    canDeleteUsers: false,
+    canClearGuestbooks: false
+  };
+}
+
+function renderStaffOverview(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
   const users = decorateAdminUsers(getAdminUsersOverview());
   const suspiciousUsers = users.filter((user) => user.is_suspicious);
 
@@ -5810,43 +5841,63 @@ app.get("/admin", requireAuth, requireAdmin, (req, res) => {
     .get().count;
 
   return res.render("admin", {
-    title: "Adminbereich",
+    title: panelConfig.pageTitle,
+    panelTitle: panelConfig.panelTitle,
+    panelBasePath: panelConfig.panelBasePath,
+    userDetailsBasePath: panelConfig.userDetailsBasePath,
+    backLabel: panelConfig.backLabel,
+    canEditUsers: panelConfig.canEditUsers,
+    canResetPasswords: panelConfig.canResetPasswords,
+    canManageUsers: panelConfig.canManageUsers,
+    canDeleteUsers: panelConfig.canDeleteUsers,
+    canClearGuestbooks: panelConfig.canClearGuestbooks,
     users,
     suspiciousUsers,
     accountCount,
     adminCount,
     moderatorCount
   });
-});
+}
 
-app.get("/staff", requireAuth, requireStaff, (req, res) => {
-  return res.render("staff", {
-    title: "Admin- und Moderatorenbereich"
-  });
-});
-
-app.get("/admin/users/:id", requireAuth, requireAdmin, (req, res) => {
+function renderStaffUserDetails(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungültig.");
-    return res.redirect("/admin");
+    setFlash(req, "error", "User-ID ist ungueltig.");
+    return res.redirect(panelConfig.panelBasePath);
   }
 
   const users = decorateAdminUsers(getAdminUsersOverview());
   const targetUser = users.find((user) => Number(user.id) === targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
-    return res.redirect("/admin");
+    return res.redirect(panelConfig.panelBasePath);
   }
 
   const userCharacters = getAdminUserCharacters(targetId);
 
   return res.render("admin-user", {
-    title: `Admin: ${targetUser.username}`,
+    title: `${panelConfig.panelTitle}: ${targetUser.username}`,
+    panelTitle: panelConfig.panelTitle,
+    panelBasePath: panelConfig.panelBasePath,
+    userDetailsBasePath: panelConfig.userDetailsBasePath,
+    backLabel: panelConfig.backLabel,
+    canEditUsers: panelConfig.canEditUsers,
+    canResetPasswords: panelConfig.canResetPasswords,
+    canManageUsers: panelConfig.canManageUsers,
+    canDeleteUsers: panelConfig.canDeleteUsers,
+    canClearGuestbooks: panelConfig.canClearGuestbooks,
     targetUser,
     userCharacters
   });
-});
+}
+
+app.get("/admin", requireAuth, requireAdmin, renderStaffOverview);
+
+app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
+
+app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
+app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
 
 app.post("/admin/festplays", requireAuth, requireAdmin, (req, res) => {
   const name = (req.body.name || "").trim().slice(0, 80);
