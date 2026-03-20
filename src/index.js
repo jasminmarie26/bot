@@ -2092,6 +2092,11 @@ function normalizeRoomTeaser(rawValue) {
   return String(rawValue || "").trim().slice(0, 160);
 }
 
+function normalizeRoomImageUrl(rawValue) {
+  const value = String(rawValue || "").trim().slice(0, 500);
+  return /^https?:\/\/.+/i.test(value) ? value : "";
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -5271,7 +5276,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   rememberPreferredCharacter(req, character);
   const ownedRooms = db
     .prepare(
-      `SELECT id, name, teaser, is_locked
+      `SELECT id, name, teaser, image_url, is_locked
        FROM chat_rooms
        WHERE server_id = ? AND created_by_user_id = ?
        ORDER BY created_at ASC, id ASC`
@@ -5281,11 +5286,19 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
       ...room,
       is_locked: Number(room.is_locked) === 1
     }));
+  const selectedRoomId = Number(req.query.selected_room);
+  const selectedRoom =
+    ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
+  const selectedRoomTab = String(req.query.room_tab || "overview").trim().toLowerCase() === "image"
+    ? "image"
+    : "overview";
 
   return res.render("room-create", {
     title: `Raum erstellen: ${character.name}`,
     character,
-    ownedRooms
+    ownedRooms,
+    selectedRoom,
+    selectedRoomTab
   });
 });
 
@@ -5595,7 +5608,70 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
-  return res.redirect(`/characters/${id}/rooms/new`);
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}&room_tab=overview`);
+});
+
+app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const roomId = Number(req.params.roomId);
+  const roomTab = String(req.body.room_tab || "overview").trim().toLowerCase() === "image"
+    ? "image"
+    : "overview";
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf eigene Räume bearbeiten."
+    });
+  }
+
+  const room = db
+    .prepare(
+      `SELECT id, server_id, created_by_user_id, teaser, image_url, is_locked
+       FROM chat_rooms
+       WHERE id = ?`
+    )
+    .get(roomId);
+  if (
+    !room ||
+    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
+  ) {
+    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/rooms/new`);
+  }
+
+  const roomTeaser =
+    roomTab === "overview"
+      ? normalizeRoomTeaser(req.body.room_teaser)
+      : String(room.teaser || "");
+  const roomImageUrl =
+    roomTab === "image"
+      ? normalizeRoomImageUrl(req.body.room_image_url)
+      : String(room.image_url || "");
+  const isLocked =
+    roomTab === "overview"
+      ? (req.body.is_locked ? 1 : 0)
+      : (Number(room.is_locked) === 1 ? 1 : 0);
+
+  db.prepare(
+    `UPDATE chat_rooms
+     SET teaser = ?,
+         image_url = ?,
+         is_locked = ?
+     WHERE id = ?`
+  ).run(roomTeaser, roomImageUrl, isLocked, roomId);
+
+  emitRoomStateUpdate(roomId, room.server_id, getRoomWithCharacter(roomId));
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}`);
 });
 
 app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {

@@ -18,9 +18,9 @@
       ? "/staff"
       : ""; %>
   <% const roomcreateHeaderIdentityTitle = currentUser?.is_admin
-    ? "Adminbereich im neuen Tab öffnen"
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
     : currentUser?.is_moderator
-      ? "Moderatorenbereich im neuen Tab öffnen"
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
       : roomcreateIdentityName; %>
 
   <header class="rp-topline">
@@ -48,7 +48,7 @@
         href="<%= roomcreateHeaderIdentityHref %>"
         target="_blank"
         rel="noopener noreferrer"
-        title="<%= roomcreateHeaderIdentityTitle %>"
+        title="<%- roomcreateHeaderIdentityTitle %>"
         style="<%= roomcreateIdentityColor ? `color:${roomcreateIdentityColor};` : '' %>"
       ><%= roomcreateIdentityName %></a>
     <% } else { %>
@@ -78,8 +78,8 @@
     <details class="rp-user-menu">
       <summary
         class="rp-user-menu-toggle"
-        aria-label="Benutzermenü öffnen"
-        title="Benutzermenü"
+        aria-label="Benutzermen&uuml; &ouml;ffnen"
+        title="Benutzermen&uuml;"
       >
         <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
       </summary>
@@ -96,12 +96,12 @@
           <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
 
-        <nav class="rp-user-menu-links" aria-label="Benutzermenü">
+        <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
           <a href="/characters/<%= character.id %>">Charakter</a>
           <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
-          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">Gästebuch</a>
+          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
         </nav>
 
@@ -118,18 +118,20 @@
       <button class="rp-room-create-save" type="submit" form="room-create-form">Speichern</button>
     </div>
 
-    <section class="rp-room-create-list" aria-label="Eigene Räume">
+    <section class="rp-room-create-list" aria-label="Eigene R&auml;ume">
       <% if (!ownedRooms || !ownedRooms.length) { %>
-        <p class="muted">Noch keine eigenen Räume vorhanden.</p>
+        <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
       <% } else { %>
         <div class="rp-room-manage-list">
           <% ownedRooms.forEach((room) => { %>
+            <% const isSelectedRoom = selectedRoom && Number(selectedRoom.id) === Number(room.id); %>
             <div class="rp-room-manage-row">
               <div class="rp-room-manage-main">
                 <a
-                  class="rp-room-inline-item rp-room-manage-link"
-                  href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
-                  title="Raum betreten"
+                  class="rp-room-inline-item rp-room-manage-link<%= isSelectedRoom ? ' is-active' : '' %>"
+                  href="/characters/<%= character.id %>/rooms/new?selected_room=<%= room.id %>&room_tab=overview#room-selected-editor"
+                  title="Raum ausw&auml;hlen"
+                  aria-current="<%= isSelectedRoom ? 'page' : 'false' %>"
                 >
                   <span
                     class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
@@ -154,8 +156,8 @@
                   <button
                     class="rp-room-delete-btn"
                     type="submit"
-                    aria-label="Raum <%= room.name %> löschen"
-                    title="Raum löschen"
+                    aria-label="Raum <%= room.name %> l&ouml;schen"
+                    title="Raum l&ouml;schen"
                   >X</button>
                 </form>
               </div>
@@ -164,6 +166,114 @@
         </div>
       <% } %>
     </section>
+
+    <% if (selectedRoom) { %>
+      <section class="rp-room-editor" id="room-selected-editor" aria-label="Raumdetails">
+        <div class="rp-room-editor-bar">
+          <div class="rp-room-editor-title-wrap">
+            <strong class="rp-room-editor-title"><%= selectedRoom.name %></strong>
+            <% if (selectedRoom.teaser) { %>
+              <span class="rp-room-editor-subtitle">[<%= selectedRoom.teaser %>]</span>
+            <% } %>
+          </div>
+          <a
+            class="rp-room-editor-enter"
+            href="/chat?room_id=<%= selectedRoom.id %>&character_id=<%= character.id %>"
+          >Raum betreten</a>
+        </div>
+
+        <nav class="rp-room-editor-tabs" aria-label="Raum bearbeiten">
+          <a
+            class="rp-room-editor-tab<%= selectedRoomTab === 'overview' ? ' is-active' : '' %>"
+            href="/characters/<%= character.id %>/rooms/new?selected_room=<%= selectedRoom.id %>&room_tab=overview#room-selected-editor"
+          >&Uuml;bersicht</a>
+          <a
+            class="rp-room-editor-tab<%= selectedRoomTab === 'image' ? ' is-active' : '' %>"
+            href="/characters/<%= character.id %>/rooms/new?selected_room=<%= selectedRoom.id %>&room_tab=image#room-selected-editor"
+          >Bild</a>
+        </nav>
+
+        <% if (selectedRoomTab === "image") { %>
+          <form
+            id="room-editor-form-<%= selectedRoom.id %>"
+            method="POST"
+            action="/characters/<%= character.id %>/rooms/<%= selectedRoom.id %>/update"
+            class="rp-room-editor-body"
+          >
+            <input type="hidden" name="room_tab" value="image" />
+
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Bild-URL</span>
+              <input
+                type="url"
+                name="room_image_url"
+                maxlength="500"
+                placeholder="https://beispiel.de/bild.jpg"
+                value="<%= selectedRoom.image_url || '' %>"
+              />
+            </label>
+
+            <% if (selectedRoom.image_url) { %>
+              <div class="rp-room-editor-preview-wrap">
+                <span class="rp-room-editor-field-label">Vorschau</span>
+                <img
+                  class="rp-room-image-preview"
+                  src="<%= selectedRoom.image_url %>"
+                  alt="Raumbild von <%= selectedRoom.name %>"
+                />
+              </div>
+            <% } else { %>
+              <p class="rp-room-editor-note">Noch kein Bild gesetzt.</p>
+            <% } %>
+
+            <div class="rp-room-editor-actions">
+              <button type="submit">Speichern</button>
+            </div>
+          </form>
+        <% } else { %>
+          <form
+            id="room-editor-form-<%= selectedRoom.id %>"
+            method="POST"
+            action="/characters/<%= character.id %>/rooms/<%= selectedRoom.id %>/update"
+            class="rp-room-editor-body"
+          >
+            <input type="hidden" name="room_tab" value="overview" />
+
+            <div class="rp-room-editor-checks">
+              <label class="rp-room-editor-check">
+                <input
+                  type="checkbox"
+                  name="is_locked"
+                  value="1"
+                  <%= selectedRoom.is_locked ? "checked" : "" %>
+                />
+                Raum abschlie&szlig;en
+              </label>
+            </div>
+
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Beschreibung</span>
+              <textarea
+                name="room_teaser"
+                rows="9"
+                maxlength="160"
+                placeholder="Kurze Beschreibung f&uuml;r deinen Raum"
+              ><%= selectedRoom.teaser || '' %></textarea>
+            </label>
+
+            <div class="rp-room-editor-actions">
+              <button type="submit">Speichern</button>
+            </div>
+          </form>
+        <% } %>
+      </section>
+    <% } else if (ownedRooms && ownedRooms.length) { %>
+      <section class="rp-room-editor rp-room-editor-placeholder" id="room-selected-editor" aria-label="Raumdetails">
+        <div class="rp-room-editor-body">
+          <p class="rp-room-editor-note">Klicke oben auf einen Raum, dann wird er hervorgehoben und hier ge&ouml;ffnet.</p>
+        </div>
+      </section>
+    <% } %>
 
     <form
       id="room-create-form"
