@@ -4779,8 +4779,19 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
   const preferredViewerCharacterId = getPreferredCharacterIdFromSession(req, character.server_id);
-  const currentHeaderCharacter =
-    getPreferredCharacterForUser(req.session.user.id, character.server_id, preferredViewerCharacterId) || null;
+  const currentHeaderCharacter = isOwner
+    ? {
+        id: character.id,
+        user_id: character.user_id,
+        name: character.name,
+        server_id: character.server_id,
+        chat_text_color: character.chat_text_color
+      }
+    : (getPreferredCharacterForUser(
+        req.session.user.id,
+        character.server_id,
+        preferredViewerCharacterId
+      ) || null);
 
   if (currentHeaderCharacter) {
     rememberPreferredCharacter(req, currentHeaderCharacter);
