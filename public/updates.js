@@ -35,6 +35,7 @@
   const liveUpdatesLink = document.querySelector("[data-live-updates-link-root]");
   const liveUpdatesBadge = liveUpdatesLink?.querySelector("[data-live-updates-badge]") || null;
   const liveUpdatesPageRoot = document.querySelector("[data-live-updates-page-root]");
+  const liveUpdatesPagination = document.getElementById("site-updates-pagination");
   const initialLiveUpdatesRevision = String(
     liveUpdatesPageRoot?.dataset.liveUpdatesInitialRevision ||
     liveUpdatesLink?.dataset.liveUpdatesInitialRevision ||
@@ -57,6 +58,12 @@
   const LIVE_UPDATES_LAST_SEEN_KEY = "site-updates:last-seen-revision";
   const LIVE_UPDATES_LATEST_KEY = "site-updates:latest-revision";
   const LIVE_UPDATES_REVISIONS_LIMIT = Math.max(initialLiveUpdatesRevisions.length, 50);
+  const liveUpdatesPageSize = Math.max(
+    1,
+    Number.parseInt(liveUpdatesPageRoot?.dataset.liveUpdatesPageSize || "10", 10) || 10
+  );
+  const isPaginatedLiveUpdatesPage = Boolean(liveUpdatesPageRoot && list && liveUpdatesPagination);
+  let currentLiveUpdatesPage = 1;
   let currentLiveUpdatesRevisions = initialLiveUpdatesRevisions.length
     ? [...initialLiveUpdatesRevisions]
     : initialLiveUpdatesRevision
@@ -410,6 +417,105 @@
     list.appendChild(emptyState);
   }
 
+  function parsePositivePageNumber(value, fallback = 1) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      return fallback;
+    }
+
+    return parsed;
+  }
+
+  function getLiveUpdatesPageHref(pageNumber) {
+    const nextPage = Math.max(1, parsePositivePageNumber(pageNumber, 1));
+    const nextUrl = new URL(window.location.href);
+    if (nextPage <= 1) {
+      nextUrl.searchParams.delete("page");
+    } else {
+      nextUrl.searchParams.set("page", String(nextPage));
+    }
+
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+  }
+
+  function syncLiveUpdatesPageUrl(pageNumber) {
+    if (!isPaginatedLiveUpdatesPage || typeof window.history?.replaceState !== "function") {
+      return;
+    }
+
+    window.history.replaceState(null, "", getLiveUpdatesPageHref(pageNumber));
+  }
+
+  function sortLiveUpdateItems() {
+    if (!list) return [];
+
+    const articles = Array.from(list.querySelectorAll(".update-item"));
+    articles.sort((leftArticle, rightArticle) => {
+      const leftToken = String(leftArticle.dataset.updateRevisionToken || "").trim();
+      const rightToken = String(rightArticle.dataset.updateRevisionToken || "").trim();
+      return compareRevisionTokens(rightToken, leftToken);
+    });
+
+    if (articles.length > 1) {
+      const fragment = document.createDocumentFragment();
+      articles.forEach((article) => {
+        fragment.appendChild(article);
+      });
+      list.appendChild(fragment);
+    }
+
+    return articles;
+  }
+
+  function renderLiveUpdatesPagination() {
+    if (!isPaginatedLiveUpdatesPage || !list || !liveUpdatesPagination) {
+      return;
+    }
+
+    const articles = sortLiveUpdateItems();
+    const totalItems = articles.length;
+    if (!totalItems) {
+      currentLiveUpdatesPage = 1;
+      liveUpdatesPagination.innerHTML = "";
+      liveUpdatesPagination.hidden = true;
+      syncLiveUpdatesPageUrl(1);
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / liveUpdatesPageSize));
+    currentLiveUpdatesPage = Math.min(Math.max(currentLiveUpdatesPage, 1), totalPages);
+
+    const startIndex = (currentLiveUpdatesPage - 1) * liveUpdatesPageSize;
+    const endIndex = startIndex + liveUpdatesPageSize;
+    articles.forEach((article, index) => {
+      article.hidden = index < startIndex || index >= endIndex;
+    });
+
+    liveUpdatesPagination.innerHTML = "";
+    if (totalPages <= 1) {
+      liveUpdatesPagination.hidden = true;
+      syncLiveUpdatesPageUrl(1);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      const link = document.createElement("a");
+      link.className = `site-updates-page-link${pageNumber === currentLiveUpdatesPage ? " is-active" : ""}`;
+      link.href = getLiveUpdatesPageHref(pageNumber);
+      link.textContent = String(pageNumber);
+      link.setAttribute("aria-label", `Seite ${pageNumber}`);
+      if (pageNumber === currentLiveUpdatesPage) {
+        link.setAttribute("aria-current", "page");
+      }
+      fragment.appendChild(link);
+    }
+
+    liveUpdatesPagination.appendChild(fragment);
+    liveUpdatesPagination.hidden = false;
+    syncLiveUpdatesPageUrl(currentLiveUpdatesPage);
+  }
+
   function createDeleteForm(updateId) {
     const formElement = document.createElement("form");
     formElement.method = "POST";
@@ -459,7 +565,7 @@
     }
     article.dataset.updateAuthorName = item?.author_name || "System";
     article.dataset.updateContent = item?.content || "";
-    article.dataset.updateCreatedAt = item?.created_at || "";
+    article.dataset.updateCreatedAt = item?.display_timestamp || item?.created_at || "";
     article.dataset.updateRevisionToken = item?.revision_token || "";
 
     const header = document.createElement("header");
@@ -473,7 +579,7 @@
     metaRight.className = "update-meta-right";
 
     const time = document.createElement("small");
-    time.textContent = item?.created_at || "";
+    time.textContent = item?.display_timestamp || item?.created_at || "";
     metaRight.appendChild(time);
 
     if (canEditUpdates && Number.isInteger(updateId) && updateId > 0) {
@@ -509,9 +615,13 @@
       list.appendChild(article);
     }
 
-    while (list.querySelectorAll(".update-item").length > 30) {
-      const updates = list.querySelectorAll(".update-item");
-      updates[updates.length - 1].remove();
+    if (isPaginatedLiveUpdatesPage) {
+      renderLiveUpdatesPagination();
+    } else {
+      while (list.querySelectorAll(".update-item").length > 30) {
+        const updates = list.querySelectorAll(".update-item");
+        updates[updates.length - 1].remove();
+      }
     }
   }
 
@@ -522,6 +632,9 @@
       existing.remove();
     }
     ensureEmptyState();
+    if (isPaginatedLiveUpdatesPage) {
+      renderLiveUpdatesPagination();
+    }
   }
 
   function setUpdateFormMode(mode, item = null) {
@@ -720,6 +833,14 @@
         openUpdateModal(item);
       }
     });
+  }
+
+  if (isPaginatedLiveUpdatesPage) {
+    currentLiveUpdatesPage = parsePositivePageNumber(
+      new URLSearchParams(window.location.search).get("page"),
+      1
+    );
+    renderLiveUpdatesPagination();
   }
 
   if (typeof io !== "function") return;

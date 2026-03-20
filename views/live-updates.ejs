@@ -3,6 +3,7 @@
 <section
   class="panel updates-panel live-updates-page-panel"
   data-live-updates-page-root
+  data-live-updates-page-size="10"
   data-live-updates-initial-revision="<%= latestSiteUpdateRevisionToken || '' %>"
   data-live-updates-initial-revisions="<%= Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions.join('|') : '' %>"
 >
@@ -46,13 +47,13 @@
           data-update-id="<%= item.id %>"
           data-update-author-name="<%= item.author_name %>"
           data-update-content="<%= item.content %>"
-          data-update-created-at="<%= item.created_at %>"
+          data-update-created-at="<%= item.display_timestamp || item.created_at %>"
           data-update-revision-token="<%= item.revision_token || '' %>"
         >
           <header class="update-meta">
             <strong><%= item.author_name %></strong>
             <div class="update-meta-right">
-              <small><%= item.created_at %></small>
+              <small><%= item.display_timestamp || item.created_at %></small>
               <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
                 <div class="update-item-actions">
                   <button
@@ -88,6 +89,13 @@
       <% }) %>
     <% } %>
   </div>
+
+  <nav
+    id="site-updates-pagination"
+    class="site-updates-pagination"
+    aria-label="Live-Updates Seiten"
+    hidden
+  ></nav>
 </section>
 
 <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>

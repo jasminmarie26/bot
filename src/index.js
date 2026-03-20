@@ -3475,6 +3475,20 @@ function normalizeSiteUpdateContent(rawContent) {
   return String(rawContent || "").trim().slice(0, 1200);
 }
 
+function normalizeSiteUpdateDisplayTimestamp(rawValue) {
+  const prepared = String(rawValue || "").trim();
+  if (!prepared) {
+    return "";
+  }
+
+  const match = prepared.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (match) {
+    return `${match[1]} ${match[2]}`;
+  }
+
+  return prepared;
+}
+
 function decorateSiteUpdate(siteUpdate) {
   if (!siteUpdate) {
     return null;
@@ -3487,6 +3501,7 @@ function decorateSiteUpdate(siteUpdate) {
 
   return {
     ...siteUpdate,
+    display_timestamp: normalizeSiteUpdateDisplayTimestamp(revisionBase),
     revision_token: revisionToken,
     content_html: renderGuestbookBbcode(siteUpdate.content || "")
   };
@@ -3505,6 +3520,11 @@ function getSiteUpdateById(updateId) {
 }
 
 function getRecentSiteUpdates(limit = 10) {
+  const parsedLimit = Number(limit);
+  if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+    return [];
+  }
+
   return db
     .prepare(
       `SELECT id, author_name, content, created_at, updated_at
@@ -3512,7 +3532,18 @@ function getRecentSiteUpdates(limit = 10) {
        ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC
        LIMIT ?`
     )
-    .all(limit)
+    .all(parsedLimit)
+    .map((siteUpdate) => decorateSiteUpdate(siteUpdate));
+}
+
+function getAllSiteUpdates() {
+  return db
+    .prepare(
+      `SELECT id, author_name, content, created_at, updated_at
+       FROM site_updates
+       ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC`
+    )
+    .all()
     .map((siteUpdate) => decorateSiteUpdate(siteUpdate));
 }
 
@@ -3746,14 +3777,16 @@ app.get("/", (req, res) => {
 
 app.get("/live-updates", (req, res) => {
   const homeContent = getHomeContent();
-  const siteUpdates = getRecentSiteUpdates(30);
+  const siteUpdates = getAllSiteUpdates();
+  const recentSiteUpdateRevisions = siteUpdates
+    .slice(0, 50)
+    .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
+    .filter(Boolean);
   return res.render("live-updates", {
     title: homeContent.updates_title || DEFAULT_UPDATES_TITLE,
     homeContent,
     siteUpdates,
-    recentSiteUpdateRevisions: siteUpdates
-      .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
-      .filter(Boolean),
+    recentSiteUpdateRevisions,
     latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
     pageClass: "page-live-updates"
   });
