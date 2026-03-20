@@ -7497,6 +7497,8 @@ io.on("connection", (socket) => {
   socket.data.roomWatchChannels = new Set();
   socket.data.isTyping = false;
 
+  socket.emit("site:stats:update", getLoginStats());
+
   if (socket.data.user?.id) {
     socket.join(socketChannelForGuestbookNotifications(socket.data.user.id));
     socket.emit(
