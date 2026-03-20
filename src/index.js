@@ -5594,7 +5594,6 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
-  setFlash(req, "success", `Raum "${targetRoom.name}" wurde angelegt.`);
   return res.redirect(`/characters/${id}/rooms/new`);
 });
 

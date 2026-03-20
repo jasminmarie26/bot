@@ -3144,6 +3144,14 @@ body.page-home-screen .home-hero-actions {
   gap: 1rem;
 }
 
+.rp-room-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
 .rp-room-form {
   display: grid;
   gap: 0.75rem;
@@ -3155,16 +3163,23 @@ body.page-home-screen .home-hero-actions {
   gap: 0.6rem;
 }
 
-.rp-room-submit-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+.rp-room-create-save {
+  width: fit-content;
+  min-width: auto;
+  padding: 0.38rem 0.82rem;
+  border: 1px solid var(--accent-2);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.rp-room-create-save:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
 }
 
 .rp-room-input {

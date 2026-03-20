@@ -113,7 +113,10 @@
   </header>
 
   <section class="rp-room-panel rp-room-panel-create" id="room-create">
-    <h1>Eigenen Raum erstellen</h1>
+    <div class="rp-room-create-header">
+      <h1>Eigenen Raum erstellen</h1>
+      <button class="rp-room-create-save" type="submit" form="room-create-form">Speichern</button>
+    </div>
 
     <section class="rp-room-create-list" aria-label="Eigene Räume">
       <% if (!ownedRooms || !ownedRooms.length) { %>
@@ -146,7 +149,12 @@
       <% } %>
     </section>
 
-    <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
+    <form
+      id="room-create-form"
+      method="POST"
+      action="/characters/<%= character.id %>/enter-room"
+      class="rp-room-form"
+    >
       <div class="rp-room-input">
         <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
         <input
@@ -162,7 +170,6 @@
         maxlength="160"
         placeholder="Raumbeschreibung"
       />
-      <button class="rp-room-submit-hidden" type="submit" tabindex="-1" aria-hidden="true">Raum anlegen</button>
     </form>
   </section>
 </section>
