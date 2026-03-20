@@ -127,25 +127,6 @@
   </header>
 
   <section class="rp-room-panel" id="roomlist">
-    <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
-      <div class="rp-room-input">
-        <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
-        <input
-          id="room_name"
-          name="room_name"
-          maxlength="80"
-          placeholder="Raumname (neu anlegen)"
-          required
-        />
-      </div>
-      <input
-        name="room_teaser"
-        maxlength="160"
-        placeholder="Raumbeschreibung"
-      />
-      <button class="rp-enter-btn" type="submit">Raum anlegen</button>
-    </form>
-
     <% if (isOwner && currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
       <form method="POST" action="/characters/<%= character.id %>/role-character" class="rp-role-character-form">
         <fieldset class="gb-role-character-box">
@@ -236,11 +217,29 @@
         </details>
       <% } %>
 
-      <details class="rp-room-section rp-room-accordion" open>
+      <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
         <summary class="rp-room-section-summary">
-          <span>Free RP</span>
+          <span>Meine Räume</span>
         </summary>
         <div class="rp-room-section-divider" aria-hidden="true"></div>
+        <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form rp-room-form-in-section">
+          <div class="rp-room-input">
+            <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+            <input
+              id="room_name"
+              name="room_name"
+              maxlength="80"
+              placeholder="Raumname (neu anlegen)"
+              required
+            />
+          </div>
+          <input
+            name="room_teaser"
+            maxlength="160"
+            placeholder="Raumbeschreibung"
+          />
+          <button class="rp-enter-btn" type="submit">Raum anlegen</button>
+        </form>
         <% if (!rooms || !rooms.length) { %>
           <p class="muted">Noch keine serverweiten R&auml;ume vorhanden.</p>
         <% } else { %>
