@@ -4,8 +4,10 @@
   const activityEvents = [
     "click",
     "keydown",
+    "input",
+    "change",
+    "paste",
     "pointerdown",
-    "scroll",
     "touchstart"
   ];
 
@@ -31,14 +33,6 @@
   activityEvents.forEach((eventName) => {
     window.addEventListener(eventName, () => registerActivity(false), { passive: true });
   });
-
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      registerActivity(true);
-    }
-  });
-
-  window.addEventListener("focus", () => registerActivity(true));
 
   scheduleLogout();
 })();
