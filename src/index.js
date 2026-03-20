@@ -82,7 +82,7 @@ const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
 const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
-const ROOM_EMPTY_DELETE_DELAY_MS = 8000;
+const ROOM_EMPTY_DELETE_DELAY_MS = 1000 * 60 * 60;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
@@ -7715,7 +7715,7 @@ function maybeRemoveEmptyRoom(roomId) {
 function pruneEmptyRooms() {
   const rooms = db.prepare("SELECT id FROM chat_rooms").all();
   rooms.forEach((room) => {
-    maybeRemoveEmptyRoom(room.id);
+    scheduleRoomDeletion(Number(room.id));
   });
 }
 
