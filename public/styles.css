@@ -4097,6 +4097,11 @@ body.theme-atari .guestbook-entry-panel {
   font-size: var(--gb-copy-font-size, 1.26em);
 }
 
+.guestbook-item .guestbook-entry-body {
+  font-size: 1.08em;
+  line-height: 1.48;
+}
+
 .guestbook-entry-body :where(p, div, span, a, strong, b, em, i, u, s, blockquote, table, tbody, thead, tfoot, tr, td, th) {
   font-size: inherit;
   line-height: inherit;
