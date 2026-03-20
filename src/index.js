@@ -5208,7 +5208,6 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const roomUsers = Object.fromEntries(
     rooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
-
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =

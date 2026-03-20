@@ -230,17 +230,16 @@
         </details>
       <% } %>
 
-      <% if (isOwner) { %>
         <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
         <summary class="rp-room-section-summary">
-          <span>Meine Räume</span>
+          <span><%= isOwner ? "Meine Räume" : "Räume" %></span>
         </summary>
         <div class="rp-room-section-divider" aria-hidden="true"></div>
-        <% if (!ownedRooms || !ownedRooms.length) { %>
-          <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
+        <% if (!rooms || !rooms.length) { %>
+          <p class="muted">Noch keine R&auml;ume vorhanden.</p>
         <% } else { %>
           <div class="rp-room-inline-list">
-            <% ownedRooms.forEach((room) => { %>
+            <% rooms.forEach((room) => { %>
               <a
                 class="rp-room-inline-item<%= room.can_enter ? '' : ' is-disabled' %>"
                 href="<%= room.can_enter ? `/chat?room_id=${room.id}&character_id=${character.id}` : '#' %>"
@@ -273,7 +272,6 @@
           </div>
         <% } %>
         </details>
-      <% } %>
     </div>
   </section>
 </section>
