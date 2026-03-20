@@ -1,5 +1,6 @@
 (() => {
   const presenceSource = document.querySelector("[data-server-presence]");
+  const headerIdentity = document.querySelector("[data-header-identity]");
   const roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
   const roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
   const roomLinkTargets = Array.from(document.querySelectorAll("[data-room-link-target]"));
@@ -16,6 +17,17 @@
   function normalizeChatTextColor(rawColor) {
     const value = String(rawColor || "").trim();
     return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
+  }
+
+  function updateHeaderIdentity(payload) {
+    if (!headerIdentity) return;
+    const nextName = String(payload?.name || "").trim();
+    const nextColor = normalizeChatTextColor(payload?.chat_text_color);
+    if (!nextName) return;
+
+    headerIdentity.textContent = nextName;
+    headerIdentity.title = nextName;
+    headerIdentity.style.color = nextColor;
   }
 
   function createOccupantNode(entry) {
@@ -106,7 +118,10 @@
 
   socket.on("connect", () => {
     if (serverId) {
-      socket.emit("presence:set", { serverId });
+      socket.emit("presence:set", {
+        serverId,
+        characterId: presenceSource?.dataset?.activeCharacterId || ""
+      });
     }
 
     roomWatchTargets.forEach((target) => {
@@ -118,6 +133,8 @@
       });
     });
   });
+
+  socket.on("user:display-profile", updateHeaderIdentity);
 
   socket.on("room:watch:update", (payload) => {
     const roomKey = payload?.roomId == null ? "" : String(payload.roomId);

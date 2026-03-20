@@ -3,19 +3,13 @@
 <section class="rp-shell">
   <% const roomlistDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
   <% const roomlistAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
-  <% const roomlistIdentityRoleStyle = isOwner && currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(character.id)
-    ? "admin"
-    : isOwner && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(character.id)
-      ? "moderator"
-      : ""; %>
-  <% const roomlistIdentityName = isOwner
-    ? (roomlistIdentityRoleStyle === "moderator" ? `${character.name} (M)` : character.name)
-    : roomlistDisplayName; %>
+  <% const roomlistIdentityName = currentHeaderCharacter?.name || roomlistDisplayName; %>
+  <% const roomlistIdentityColor = currentHeaderCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const roomlistLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
-  <% const showRoomlistHeaderIdentity = Boolean(currentUser && currentUserDisplayName); %>
+  <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
   <% const roomlistHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
     ? "/staff"
     : ""; %>
@@ -40,15 +34,19 @@
     <% if (showRoomlistHeaderIdentity) { %>
       <% if (roomlistHeaderIdentityHref) { %>
         <a
-          class="rp-header-identity rp-header-identity-link <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          class="rp-header-identity rp-header-identity-link"
+          data-header-identity
           href="<%= roomlistHeaderIdentityHref %>"
           title="Zum Admin- und Moderatorenbereich"
-        ><%= currentUserDisplayName %></a>
+          style="<%= roomlistIdentityColor ? `color:${roomlistIdentityColor};` : '' %>"
+        ><%= roomlistIdentityName %></a>
       <% } else { %>
         <span
-          class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
-          title="<%= currentUserDisplayName %>"
-        ><%= currentUserDisplayName %></span>
+          class="rp-header-identity"
+          data-header-identity
+          title="<%= roomlistIdentityName %>"
+          style="<%= roomlistIdentityColor ? `color:${roomlistIdentityColor};` : '' %>"
+        ><%= roomlistIdentityName %></span>
       <% } %>
     <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">
@@ -301,7 +299,11 @@
   </section>
 </section>
 
-<div data-server-presence="<%= character.server_id %>" hidden></div>
+<div
+  data-server-presence="<%= character.server_id %>"
+  data-active-character-id="<%= currentHeaderCharacter ? currentHeaderCharacter.id : '' %>"
+  hidden
+></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>

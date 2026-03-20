@@ -4507,14 +4507,57 @@ body.page-guestbook-preview::after {
 
 .gb-color-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
   gap: 0.45rem;
+  align-items: start;
 }
 
-.gb-color-row input[type="color"] {
-  width: 52px;
-  padding: 0;
+.gb-color-input-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.gb-color-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.9rem;
+  height: 2.7rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--field-edge);
   border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gb-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.gb-color-swatch {
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--field-edge) 68%, transparent);
+  background: var(--swatch-color);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.gb-color-swatch:hover {
+  transform: translateY(-1px) scale(1.04);
+  border-color: color-mix(in srgb, var(--text) 44%, var(--field-edge));
+}
+
+.gb-color-swatch.is-active {
+  border-color: color-mix(in srgb, var(--text) 70%, var(--accent) 30%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--panel-bg) 82%, transparent);
 }
 
 .list {

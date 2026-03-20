@@ -7,15 +7,13 @@
   : activeCharacter && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(activeCharacter.id)
     ? "moderator"
     : (activeCharacter ? "" : (currentUserDisplayRoleStyle || "")); %>
-<% const chatIdentityName = activeCharacter
-  ? (chatIdentityRoleStyle === "moderator" ? `${activeCharacter.name} (M)` : activeCharacter.name)
-  : chatDisplayName; %>
+<% const chatIdentityName = activeCharacter ? activeCharacter.name : chatDisplayName; %>
 <% const chatIdentityColor = activeCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
 <% const chatLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
 <% const chatLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
   ? recentSiteUpdateRevisions
   : []; %>
-<% const showChatHeaderIdentity = Boolean(currentUser && currentUserDisplayName); %>
+<% const showChatHeaderIdentity = Boolean(currentUser && chatIdentityName); %>
 <% const chatHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
   ? "/staff"
   : ""; %>
@@ -46,15 +44,19 @@
     <% if (showChatHeaderIdentity) { %>
       <% if (chatHeaderIdentityHref) { %>
         <a
-          class="rp-header-identity rp-header-identity-link <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
+          class="rp-header-identity rp-header-identity-link"
+          data-header-identity
           href="<%= chatHeaderIdentityHref %>"
           title="Zum Admin- und Moderatorenbereich"
-        ><%= currentUserDisplayName %></a>
+          style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
+        ><%= chatIdentityName %></a>
       <% } else { %>
         <span
-          class="rp-header-identity <%= currentUserDisplayRoleStyle ? `role-name-${currentUserDisplayRoleStyle}` : "" %>"
-          title="<%= currentUserDisplayName %>"
-        ><%= currentUserDisplayName %></span>
+          class="rp-header-identity"
+          data-header-identity
+          title="<%= chatIdentityName %>"
+          style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
+        ><%= chatIdentityName %></span>
       <% } %>
     <% } %>
     <form method="POST" action="/settings/theme" class="inline-form theme-form">

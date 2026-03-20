@@ -25,10 +25,11 @@
   const whisperTargetUserIdInput = document.getElementById("whisper-target-user-id");
   const whisperCloseBtn = document.getElementById("whisper-close-btn");
   const whisperCancelBtn = document.getElementById("whisper-cancel-btn");
+  const headerIdentity = document.querySelector("[data-header-identity]");
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
-  const currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
+  let currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
@@ -82,6 +83,21 @@
   function applyChatTextColor(node, rawColor) {
     if (!node) return;
     node.style.color = normalizeChatTextColor(rawColor);
+  }
+
+  function updateHeaderIdentity(payload) {
+    if (!headerIdentity) return;
+    const nextName = String(payload?.name || "").trim();
+    const nextColor = normalizeChatTextColor(payload?.chat_text_color);
+    if (!nextName) return;
+
+    currentDisplayName = nextName;
+    headerIdentity.textContent = nextName;
+    headerIdentity.title = nextName;
+    headerIdentity.style.color = nextColor;
+    if (chatBox) {
+      chatBox.dataset.currentDisplayName = nextName;
+    }
   }
 
   const socket = io({
@@ -784,6 +800,7 @@
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", appendWhisper);
   socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("user:display-profile", updateHeaderIdentity);
   socket.on("chat:typing", (payload) => {
     const userId = Number(payload?.user_id);
     if (!Number.isInteger(userId) || userId < 1) {

@@ -1822,10 +1822,12 @@ function isAvatarUrlValid(url) {
 function getCharacterById(id) {
   return db
     .prepare(
-      `SELECT c.*, u.username AS owner_name, f.name AS festplay_name
+      `SELECT c.*, u.username AS owner_name, f.name AS festplay_name,
+              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
        FROM characters c
        JOIN users u ON u.id = c.user_id
        LEFT JOIN festplays f ON f.id = c.festplay_id
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
        WHERE c.id = ?`
     )
     .get(id);
@@ -4776,10 +4778,18 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
+  const preferredViewerCharacterId = getPreferredCharacterIdFromSession(req, character.server_id);
+  const currentHeaderCharacter =
+    getPreferredCharacterForUser(req.session.user.id, character.server_id, preferredViewerCharacterId) || null;
+
+  if (currentHeaderCharacter) {
+    rememberPreferredCharacter(req, currentHeaderCharacter);
+  }
 
   return res.render("character-view", {
     title: character.name,
     character,
+    currentHeaderCharacter,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
     isOwner,
     standardRooms,
@@ -4882,6 +4892,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (refreshedUser) {
     req.session.user = toSessionUser(refreshedUser);
   }
+  refreshConnectedUserDisplay(req.session.user.id);
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter aktualisiert.");
@@ -5460,6 +5471,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     if (refreshedUser) {
       req.session.user = toSessionUser(refreshedUser);
     }
+    refreshConnectedUserDisplay(req.session.user.id);
   }
 
   if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
@@ -6303,6 +6315,90 @@ function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
 function getCurrentChannelDisplayProfile(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
   const preferredCharacter = getPreferredCharacterForUser(user?.id, serverId, preferredCharacterId);
   return getUserDisplayProfile(user, preferredCharacter);
+}
+
+function getAllSocketsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  const sockets = [];
+  for (const memberSocket of io.sockets.sockets.values()) {
+    if (Number(memberSocket?.data?.user?.id) === parsedUserId) {
+      sockets.push(memberSocket);
+    }
+  }
+  return sockets;
+}
+
+function getSocketHeaderDisplayProfile(memberSocket) {
+  const normalizedServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+    ? normalizeServer(memberSocket.data.serverId)
+    : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.presenceServerId)
+      : DEFAULT_SERVER_ID;
+  const activeCharacterId = Number(memberSocket?.data?.activeCharacterId);
+  return getCurrentChannelDisplayProfile(
+    memberSocket?.data?.user,
+    normalizedServerId,
+    Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null
+  );
+}
+
+function refreshConnectedUserDisplay(userId) {
+  const refreshedUser = getUserForSessionById(userId);
+  if (!refreshedUser) {
+    return null;
+  }
+
+  const sessionUser = toSessionUser(refreshedUser);
+  const sockets = getAllSocketsForUser(userId);
+  const roomsToRefresh = new Set();
+  const typingRefreshTargets = [];
+
+  sockets.forEach((memberSocket) => {
+    memberSocket.data.user = sessionUser;
+
+    if (memberSocket.request?.session) {
+      memberSocket.request.session.user = sessionUser;
+      memberSocket.request.session.save(() => {});
+    }
+
+    const profile = getSocketHeaderDisplayProfile(memberSocket);
+    memberSocket.emit("user:display-profile", {
+      name: profile.label || sessionUser.display_name || sessionUser.username || "User",
+      role_style: profile.role_style || "",
+      chat_text_color: profile.chat_text_color || ""
+    });
+
+    const roomId =
+      Number.isInteger(memberSocket.data?.roomId) && memberSocket.data.roomId > 0
+        ? memberSocket.data.roomId
+        : null;
+    const serverId = ALLOWED_SERVER_IDS.has(String(memberSocket.data?.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : null;
+
+    if (serverId) {
+      roomsToRefresh.add(`${serverId}:${roomId == null ? "lobby" : roomId}`);
+      if (memberSocket.data?.isTyping) {
+        typingRefreshTargets.push({ socket: memberSocket, roomId, serverId });
+      }
+    }
+  });
+
+  roomsToRefresh.forEach((entry) => {
+    const [serverId, roomKey] = String(entry).split(":");
+    const roomId = roomKey === "lobby" ? null : Number(roomKey);
+    emitOnlineCharacters(roomId, serverId);
+  });
+
+  typingRefreshTargets.forEach(({ socket, roomId, serverId }) => {
+    emitChatTypingState(socket, roomId, serverId);
+  });
+
+  return sessionUser;
 }
 
 function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
@@ -7198,15 +7294,32 @@ io.on("connection", (socket) => {
     if (!socket.data.user) return;
 
     const nextPresenceServerId = String(payload?.serverId || "").trim().toLowerCase();
+    const parsedCharacterId = Number(payload?.characterId);
     if (!ALLOWED_SERVER_IDS.has(nextPresenceServerId)) {
       return;
     }
 
+    if (Number.isInteger(parsedCharacterId) && parsedCharacterId > 0) {
+      socket.data.activeCharacterId = parsedCharacterId;
+    }
+
     if (socket.data.presenceServerId === nextPresenceServerId) {
+      const profile = getSocketHeaderDisplayProfile(socket);
+      socket.emit("user:display-profile", {
+        name: profile.label || socket.data.user?.display_name || socket.data.user?.username || "User",
+        role_style: profile.role_style || "",
+        chat_text_color: profile.chat_text_color || ""
+      });
       return;
     }
 
     socket.data.presenceServerId = nextPresenceServerId;
+    const profile = getSocketHeaderDisplayProfile(socket);
+    socket.emit("user:display-profile", {
+      name: profile.label || socket.data.user?.display_name || socket.data.user?.username || "User",
+      role_style: profile.role_style || "",
+      chat_text_color: profile.chat_text_color || ""
+    });
     emitHomeStatsUpdate();
   });
 
