@@ -97,6 +97,25 @@
     transports: ["websocket"]
   });
 
+  socket.on("chat:message", appendMessage);
+  socket.on("chat:whisper", handleWhisperMessage);
+  socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:redirect", (payload) => {
+    const nextUrl = String(payload?.url || "").trim();
+    if (!nextUrl.startsWith("/")) return;
+    window.location.assign(nextUrl);
+  });
+  socket.on("user:display-profile", updateHeaderIdentity);
+  socket.on("chat:typing", (payload) => {
+    const userId = Number(payload?.user_id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return;
+    }
+
+    setTypingStateForUser(userId, Boolean(payload?.is_typing));
+  });
+  socket.on("chat:room-state", updateRoomLockState);
+
   try {
     soundEnabled = window.localStorage.getItem(soundPreferenceKey) !== "0";
   } catch (_error) {
@@ -970,25 +989,6 @@
       }
     );
   }
-
-  socket.on("chat:message", appendMessage);
-  socket.on("chat:whisper", handleWhisperMessage);
-  socket.on("chat:online-characters", renderOnlineCharacters);
-  socket.on("chat:redirect", (payload) => {
-    const nextUrl = String(payload?.url || "").trim();
-    if (!nextUrl.startsWith("/")) return;
-    window.location.assign(nextUrl);
-  });
-  socket.on("user:display-profile", updateHeaderIdentity);
-  socket.on("chat:typing", (payload) => {
-    const userId = Number(payload?.user_id);
-    if (!Number.isInteger(userId) || userId < 1) {
-      return;
-    }
-
-    setTypingStateForUser(userId, Boolean(payload?.is_typing));
-  });
-  socket.on("chat:room-state", updateRoomLockState);
 
   chatBox.scrollTop = chatBox.scrollHeight;
 })();

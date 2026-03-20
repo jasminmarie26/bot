@@ -1970,6 +1970,13 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "
   const roomNameKey = toRoomNameKey(normalizedRoomName);
   const existingRoom = findOwnedRoomByNameKey(parsedUserId, normalizedServerId, roomNameKey);
   if (existingRoom) {
+    if (normalizedRoomTeaser) {
+      db.prepare(
+        `UPDATE chat_rooms
+         SET teaser = ?
+         WHERE id = ?`
+      ).run(normalizedRoomTeaser, existingRoom.id);
+    }
     return {
       id: Number(existingRoom.id),
       name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
@@ -1993,6 +2000,29 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "
     id: Number(info.lastInsertRowid),
     name: normalizedRoomName,
     created: true
+  };
+}
+
+function parseRoomSwitchCommandArguments(rawArgs) {
+  const value = String(rawArgs || "").trim();
+  if (!value) {
+    return {
+      roomName: "",
+      roomTeaser: ""
+    };
+  }
+
+  const quotedTeaserMatch = value.match(/^(.*?)\s+"([^"]+)"\s*$/);
+  if (quotedTeaserMatch) {
+    return {
+      roomName: normalizeRoomName(quotedTeaserMatch[1]),
+      roomTeaser: normalizeRoomTeaser(quotedTeaserMatch[2])
+    };
+  }
+
+  return {
+    roomName: normalizeRoomName(value),
+    roomTeaser: ""
   };
 }
 
@@ -8140,11 +8170,13 @@ io.on("connection", (socket) => {
 
     const roomSwitchMatch = content.match(/^\/rw(?:\s+(.+))?$/i);
     if (roomSwitchMatch) {
-      const requestedRoomName = normalizeRoomName(roomSwitchMatch[1] || "");
+      const roomSwitchArgs = parseRoomSwitchCommandArguments(roomSwitchMatch[1] || "");
+      const requestedRoomName = roomSwitchArgs.roomName;
+      const requestedRoomTeaser = roomSwitchArgs.roomTeaser;
       if (requestedRoomName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Bitte gib hinter /rw einen gültigen Raumnamen ein.",
+          content: 'Bitte nutze /rw Raumname "Beschreibung". Die Beschreibung ist optional.',
           created_at: formatChatTimestamp()
         });
         return;
@@ -8168,7 +8200,8 @@ io.on("connection", (socket) => {
       const targetRoom = ensureOwnedRoomForCharacter(
         socket.data.user.id,
         preferredCharacter,
-        requestedRoomName
+        requestedRoomName,
+        requestedRoomTeaser
       );
 
       if (!targetRoom?.id) {
