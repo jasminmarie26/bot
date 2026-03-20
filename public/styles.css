@@ -3163,6 +3163,55 @@ body.page-home-screen .home-hero-actions {
   gap: 0.6rem;
 }
 
+.rp-room-manage-list {
+  display: grid;
+  gap: 0;
+}
+
+.rp-room-manage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.62rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 68%, transparent);
+}
+
+.rp-room-manage-row:last-child {
+  border-bottom: none;
+}
+
+.rp-room-manage-link {
+  min-width: 0;
+}
+
+.rp-room-delete-form {
+  margin: 0;
+}
+
+.rp-room-delete-btn {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--danger) 65%, var(--field-edge));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 88%, black 12%);
+  color: color-mix(in srgb, var(--danger) 78%, white 22%);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.rp-room-delete-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--danger) 82%, white 18%);
+  color: color-mix(in srgb, var(--danger) 92%, white 8%);
+}
+
 .rp-room-create-save {
   width: fit-content;
   min-width: auto;

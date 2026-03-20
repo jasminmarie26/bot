@@ -83,6 +83,7 @@ const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 0;
+const AUTO_DELETE_EMPTY_ROOMS = false;
 const ROOM_INVITE_TTL_MS = 1000 * 60 * 10;
 const ROOM_INVITE_ACCESS_TTL_MS = 1000 * 60 * 60 * 3;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
@@ -5597,6 +5598,54 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   return res.redirect(`/characters/${id}/rooms/new`);
 });
 
+app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const roomId = Number(req.params.roomId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf eigene Räume löschen."
+    });
+  }
+
+  const room = db
+    .prepare(
+      `SELECT id, name, server_id, created_by_user_id
+       FROM chat_rooms
+       WHERE id = ?`
+    )
+    .get(roomId);
+  if (
+    !room ||
+    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
+  ) {
+    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/rooms/new`);
+  }
+
+  if (getSocketsInChannel(roomId, room.server_id).length > 0) {
+    setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
+    return res.redirect(`/characters/${id}/rooms/new`);
+  }
+
+  clearPendingRoomDeletion(roomId);
+  await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+  deleteRoomData(roomId);
+  io.emit("chat:room-removed", { room_id: roomId });
+
+  return res.redirect(`/characters/${id}/rooms/new`);
+});
+
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
@@ -8059,6 +8108,10 @@ function clearPendingRoomDeletion(roomId) {
 
 function scheduleRoomDeletion(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return;
+  if (!AUTO_DELETE_EMPTY_ROOMS) {
+    clearPendingRoomDeletion(roomId);
+    return;
+  }
   if (ROOM_EMPTY_DELETE_DELAY_MS <= 0) {
     clearPendingRoomDeletion(roomId);
     maybeRemoveEmptyRoom(roomId);
@@ -8085,6 +8138,10 @@ function deleteRoomData(roomId) {
 
 function maybeRemoveEmptyRoom(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return false;
+  if (!AUTO_DELETE_EMPTY_ROOMS) {
+    clearPendingRoomDeletion(roomId);
+    return false;
+  }
 
   const roomExists = db
     .prepare("SELECT id FROM chat_rooms WHERE id = ?")
@@ -8104,6 +8161,7 @@ function maybeRemoveEmptyRoom(roomId) {
 }
 
 function pruneEmptyRooms() {
+  if (!AUTO_DELETE_EMPTY_ROOMS) return;
   const rooms = db.prepare("SELECT id FROM chat_rooms").all();
   rooms.forEach((room) => {
     scheduleRoomDeletion(Number(room.id));
