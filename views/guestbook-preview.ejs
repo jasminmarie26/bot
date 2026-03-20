@@ -6,8 +6,9 @@
     guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
     guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
   ].filter(Boolean).join(";");
+  const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
   const guestbookPreviewShellStyle = [
-    guestbookSettings?.surround_color ? `--gb-surround-color:${guestbookSettings.surround_color}` : ""
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : ""
   ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", { hideTopbar, pageClass, enableRealtime: false }) %>
