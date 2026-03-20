@@ -2,28 +2,31 @@
   const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
   const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
   const topbarBrandModifier = "is-character";
+  const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
+  const guestbookPageStyle = [
+    `color:${guestbookSettings?.chat_text_color || '#AEE7B7'}`,
+    guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
+    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
+  ].filter(Boolean).join(";");
+  const guestbookLayoutStyle = [
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : ""
+  ].filter(Boolean).join(";");
+  const guestbookContainerStyle = [
+    effectiveGuestbookSurroundColor ? `--gb-page-fill:${effectiveGuestbookSurroundColor}` : ""
+  ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", {
   topbarCharacter,
   topbarBrandLabel,
   topbarBrandHref,
   topbarBrandModifier,
-  topbarGuestbookMode: true
+  topbarGuestbookMode: true,
+  pageClass: "page-guestbook-view",
+  containerStyle: guestbookContainerStyle
 }) %>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 <% const guestbookEntryPage = guestbookEntryPagination?.currentPage || 1; %>
-<%
-  const guestbookPageStyle = [
-    `color:${guestbookSettings?.chat_text_color || '#AEE7B7'}`,
-    guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
-    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
-  ].filter(Boolean).join(";");
-  const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
-  const guestbookLayoutStyle = [
-    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : ""
-  ].filter(Boolean).join(";");
-%>
 <%
   const buildGuestbookEntryPageUrl = (entriesPageNumber) =>
     `/characters/${character.id}/guestbook?page_id=${activeGuestbookPage.id}` +

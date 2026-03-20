@@ -340,7 +340,9 @@
       </script>
     <% } %>
 
-    <main class="container">
+    <% const mainContainerClass = typeof containerClass !== "undefined" && containerClass ? `container ${containerClass}` : "container"; %>
+    <% const mainContainerStyle = typeof containerStyle !== "undefined" ? containerStyle : ""; %>
+    <main class="<%= mainContainerClass %>"<% if (mainContainerStyle) { %> style="<%= mainContainerStyle %>"<% } %>>
       <% if (flash) { %>
         <div class="flash <%= flash.type === "error" ? "flash-error" : "flash-success" %>">
           <%= flash.text %>

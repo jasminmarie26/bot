@@ -1404,6 +1404,15 @@ a:hover {
   z-index: 1;
 }
 
+.page-guestbook-view .container {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0 1rem 2.3rem;
+  min-height: calc(100vh - var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
+  background: var(--gb-page-fill, transparent);
+}
+
 .page-rp-screen {
   height: 100vh;
   height: 100dvh;
