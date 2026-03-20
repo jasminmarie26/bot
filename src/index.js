@@ -211,6 +211,7 @@ let verificationMailer = null;
 const USERNAME_PATTERN = /^[a-zA-Z0-9_.+\- ]{3,24}$/;
 const USERNAME_CHANGE_COOLDOWN_DAYS = 182;
 const USERNAME_CHANGE_COOLDOWN_MS = USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+const CHARACTER_RENAME_COOLDOWN_MONTHS = 3;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
@@ -742,6 +743,61 @@ function getUsernameChangeAvailability(user) {
   const availableAt = new Date(lastChangedAt.getTime() + USERNAME_CHANGE_COOLDOWN_MS);
   return {
     is_admin_bypass: false,
+    can_change: Date.now() >= availableAt.getTime(),
+    available_at: availableAt,
+    available_at_text: formatGermanDate(availableAt)
+  };
+}
+
+function addUtcCalendarMonths(value, months) {
+  const parsed = value instanceof Date ? new Date(value.getTime()) : parseSqliteDateTime(value);
+  if (!parsed || !Number.isInteger(months)) return null;
+
+  const year = parsed.getUTCFullYear();
+  const month = parsed.getUTCMonth();
+  const day = parsed.getUTCDate();
+  const hours = parsed.getUTCHours();
+  const minutes = parsed.getUTCMinutes();
+  const seconds = parsed.getUTCSeconds();
+  const milliseconds = parsed.getUTCMilliseconds();
+  const shiftedMonthIndex = month + months;
+  const shiftedYear = year + Math.floor(shiftedMonthIndex / 12);
+  const normalizedMonth = ((shiftedMonthIndex % 12) + 12) % 12;
+  const lastDayOfTargetMonth = new Date(Date.UTC(shiftedYear, normalizedMonth + 1, 0)).getUTCDate();
+
+  return new Date(
+    Date.UTC(
+      shiftedYear,
+      normalizedMonth,
+      Math.min(day, lastDayOfTargetMonth),
+      hours,
+      minutes,
+      seconds,
+      milliseconds
+    )
+  );
+}
+
+function getCharacterRenameAvailability(character) {
+  const lastChangedAt = parseSqliteDateTime(character?.name_changed_at);
+  if (!lastChangedAt) {
+    return {
+      can_change: true,
+      available_at: null,
+      available_at_text: ""
+    };
+  }
+
+  const availableAt = addUtcCalendarMonths(lastChangedAt, CHARACTER_RENAME_COOLDOWN_MONTHS);
+  if (!availableAt) {
+    return {
+      can_change: true,
+      available_at: null,
+      available_at_text: ""
+    };
+  }
+
+  return {
     can_change: Date.now() >= availableAt.getTime(),
     available_at: availableAt,
     available_at_text: formatGermanDate(availableAt)
@@ -4846,6 +4902,8 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
     });
   }
 
+  const renameAvailability = getCharacterRenameAvailability(character);
+
   return res.render("character-form", {
     title: `Bearbeiten: ${character.name}`,
     mode: "edit",
@@ -4853,6 +4911,7 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
     festplays: getFestplays(),
     serverOptions: SERVER_OPTIONS,
     guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
+    renameAvailability,
     character
   });
 });
@@ -4873,10 +4932,14 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     });
   }
 
+  const renameAvailability = getCharacterRenameAvailability(character);
   const payload = normalizeCharacterInput(req.body);
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
+  const characterFormValues = renameAvailability.can_change
+    ? { ...character, ...payload }
+    : { ...character, ...payload, name: character.name };
 
   if (!payload.name) {
     return res.status(400).render("character-form", {
@@ -4886,7 +4949,8 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      character: { ...character, ...payload }
+      renameAvailability,
+      character: characterFormValues
     });
   }
 
@@ -4898,7 +4962,8 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      character: { ...character, ...payload }
+      renameAvailability,
+      character: characterFormValues
     });
   }
 
@@ -4910,7 +4975,22 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      character: { ...character, ...payload }
+      renameAvailability,
+      character: characterFormValues
+    });
+  }
+
+  const nameChanged = payload.name !== character.name;
+  if (nameChanged && !renameAvailability.can_change) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geaendert werden.`,
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
+      renameAvailability,
+      character: characterFormValues
     });
   }
 
@@ -4922,13 +5002,16 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      character: { ...character, ...payload }
+      renameAvailability,
+      character: characterFormValues
     });
   }
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, is_public = ?,
+         name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
+         updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
   ).run(
     payload.server_id,
@@ -4940,6 +5023,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.description,
     payload.avatar_url,
     payload.is_public,
+    nameChanged ? 1 : 0,
     id
   );
 
@@ -4952,7 +5036,13 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   refreshConnectedUserDisplay(req.session.user.id);
 
   emitHomeStatsUpdate();
-  setFlash(req, "success", "Charakter aktualisiert.");
+  setFlash(
+    req,
+    "success",
+    nameChanged
+      ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geaendert werden.`
+      : "Charakter aktualisiert."
+  );
   return res.redirect(`/characters/${id}`);
 });
 

@@ -56,9 +56,22 @@
       </p>
     <% } %>
 
+    <% const isNameLocked = mode === "edit" && typeof renameAvailability !== "undefined" && renameAvailability && !renameAvailability.can_change; %>
+
     <label>
       Name
-      <input name="name" required maxlength="80" value="<%= character.name %>" />
+      <% if (isNameLocked) { %>
+        <span class="gb-editor-helptext">
+          Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= renameAvailability.available_at_text %>.
+        </span>
+      <% } %>
+      <input
+        name="name"
+        required
+        maxlength="80"
+        value="<%= character.name %>"
+        <%= isNameLocked ? "readonly" : "" %>
+      />
     </label>
 
     <label>

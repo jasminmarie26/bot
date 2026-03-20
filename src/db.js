@@ -45,6 +45,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
+    name_changed_at TEXT DEFAULT '',
     server_id TEXT NOT NULL DEFAULT 'free-rp',
     festplay_id INTEGER,
     species TEXT DEFAULT '',
@@ -297,6 +298,10 @@ if (!characterColumns.includes("festplay_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_id INTEGER");
 }
 
+if (!characterColumns.includes("name_changed_at")) {
+  db.exec("ALTER TABLE characters ADD COLUMN name_changed_at TEXT DEFAULT ''");
+}
+
 if (!characterColumns.includes("server_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
@@ -394,6 +399,7 @@ db.prepare(
 db.prepare(
   "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
 ).run();
+db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS NULL").run();
 db.prepare(
   `UPDATE chat_rooms
    SET server_id = COALESCE(
