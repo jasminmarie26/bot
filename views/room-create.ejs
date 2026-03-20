@@ -1,0 +1,140 @@
+<%- include("partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+
+<section class="rp-shell">
+  <% const roomcreateDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
+  <% const roomcreateAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
+  <% const roomcreateIdentityRoleStyle = currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(character.id)
+    ? "admin"
+    : currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(character.id)
+      ? "moderator"
+      : (currentUserDisplayRoleStyle || ""); %>
+  <% const roomcreateIdentityName = character.name || roomcreateDisplayName; %>
+  <% const roomcreateIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const roomcreateLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
+  <% const roomcreateLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const roomcreateHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const roomcreateHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab öffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab öffnen"
+      : roomcreateIdentityName; %>
+
+  <header class="rp-topline">
+    <a class="rp-logo" href="/">Heldenhafte Reisen</a>
+    <nav class="rp-menu" aria-label="Raum erstellen Navigation">
+      <a href="/characters/<%= character.id %>#roomlist">Raumliste</a>
+      <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a
+        class="live-updates-nav-link"
+        href="/live-updates"
+        target="site-live-updates"
+        data-live-updates-link-root
+        data-live-updates-target="site-live-updates"
+        data-live-updates-initial-revision="<%= roomcreateLiveUpdatesInitialRevision %>"
+        data-live-updates-initial-revisions="<%= roomcreateLiveUpdatesInitialRevisions.join('|') %>"
+      >
+        <span>Live Updates</span>
+        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+      </a>
+    </nav>
+    <% if (roomcreateHeaderIdentityHref) { %>
+      <a
+        class="rp-header-identity rp-header-identity-link"
+        data-header-identity
+        href="<%= roomcreateHeaderIdentityHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="<%= roomcreateHeaderIdentityTitle %>"
+        style="<%= roomcreateIdentityColor ? `color:${roomcreateIdentityColor};` : '' %>"
+      ><%= roomcreateIdentityName %></a>
+    <% } else { %>
+      <span
+        class="rp-header-identity"
+        data-header-identity
+        title="<%= roomcreateIdentityName %>"
+        style="<%= roomcreateIdentityColor ? `color:${roomcreateIdentityColor};` : '' %>"
+      ><%= roomcreateIdentityName %></span>
+    <% } %>
+    <form method="POST" action="/settings/theme" class="inline-form theme-form">
+      <label for="rp-theme-select-room-create">Design</label>
+      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+      <select
+        id="rp-theme-select-room-create"
+        name="theme"
+        class="theme-select"
+      >
+        <% availableThemes.forEach((theme) => { %>
+          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <%= theme.label %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
+    <%- include("partials/guestbook-notification-link") %>
+    <details class="rp-user-menu">
+      <summary
+        class="rp-user-menu-toggle"
+        aria-label="Benutzermenü öffnen"
+        title="Benutzermenü"
+      >
+        <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+      </summary>
+      <div class="rp-user-menu-panel">
+        <div class="rp-user-menu-meta">
+          <strong
+            class="<%= roomcreateIdentityRoleStyle ? `role-name-${roomcreateIdentityRoleStyle}` : '' %>"
+            style="<%= roomcreateIdentityColor ? `color:${roomcreateIdentityColor};` : '' %>"
+          ><%= roomcreateIdentityName %></strong>
+          <% if (roomcreateAccountDisplayName && roomcreateAccountDisplayName !== roomcreateIdentityName) { %>
+            <span>Konto: <%= roomcreateAccountDisplayName %></span>
+          <% } %>
+          <span>Charakter: <%= character.name %></span>
+          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+        </div>
+
+        <nav class="rp-user-menu-links" aria-label="Benutzermenü">
+          <a href="/account">Account</a>
+          <a href="/dashboard">Dashboard</a>
+          <a href="/characters/<%= character.id %>">Charakter</a>
+          <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+          <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+        </nav>
+
+        <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
+          <button type="submit" class="rp-user-menu-logout">Logout</button>
+        </form>
+      </div>
+    </details>
+  </header>
+
+  <section class="rp-room-panel" id="room-create">
+    <h1>Eigenen Raum erstellen</h1>
+    <p class="muted">Hier legst du einen eigenen Raum an. Nach dem Speichern öffnet er sich direkt.</p>
+
+    <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
+      <div class="rp-room-input">
+        <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+        <input
+          id="room_name"
+          name="room_name"
+          maxlength="80"
+          placeholder="Raumname (neu anlegen)"
+          required
+        />
+      </div>
+      <input
+        name="room_teaser"
+        maxlength="160"
+        placeholder="Raumbeschreibung"
+      />
+      <button class="rp-enter-btn" type="submit">Raum anlegen</button>
+    </form>
+  </section>
+</section>
+
+<%- include("partials/end") %>

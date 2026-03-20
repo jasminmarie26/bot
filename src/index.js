@@ -5246,6 +5246,32 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   });
 });
 
+app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf mit diesem Charakter einen eigenen Raum erstellen."
+    });
+  }
+
+  rememberPreferredCharacter(req, character);
+
+  return res.render("room-create", {
+    title: `Raum erstellen: ${character.name}`,
+    character
+  });
+});
+
 app.get("/characters/:id/edit", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {

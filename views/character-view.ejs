@@ -28,7 +28,20 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Charakter Navigation">
-      <a href="#roomlist">Raumliste</a>
+      <% if (isOwner) { %>
+        <div class="rp-dropdown">
+          <a class="rp-dropdown-toggle" href="#roomlist">Raumliste</a>
+          <div class="rp-dropdown-menu" role="menu" aria-label="Raumliste Aktionen">
+            <a
+              href="/characters/<%= character.id %>/rooms/new"
+              target="_blank"
+              rel="noopener noreferrer"
+            >+ Raum erstellen</a>
+          </div>
+        </div>
+      <% } else { %>
+        <a href="#roomlist">Raumliste</a>
+      <% } %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
         class="live-updates-nav-link"
