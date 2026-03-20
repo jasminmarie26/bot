@@ -82,7 +82,7 @@ const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
 const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
-const ROOM_EMPTY_DELETE_DELAY_MS = 1000 * 60 * 60;
+const ROOM_EMPTY_DELETE_DELAY_MS = 0;
 const ROOM_INVITE_TTL_MS = 1000 * 60 * 10;
 const ROOM_INVITE_ACCESS_TTL_MS = 1000 * 60 * 60 * 3;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
@@ -7977,6 +7977,11 @@ function clearPendingRoomDeletion(roomId) {
 
 function scheduleRoomDeletion(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return;
+  if (ROOM_EMPTY_DELETE_DELAY_MS <= 0) {
+    clearPendingRoomDeletion(roomId);
+    maybeRemoveEmptyRoom(roomId);
+    return;
+  }
   if (pendingRoomDeletionTimers.has(roomId)) return;
 
   const timer = setTimeout(() => {
