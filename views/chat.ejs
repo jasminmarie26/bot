@@ -282,6 +282,20 @@
   </div>
 </div>
 
+<div id="room-invite-modal" class="room-invite-modal" hidden>
+  <div class="room-invite-card">
+    <header class="room-invite-head">
+      <h3>Raumeinladung</h3>
+    </header>
+    <p id="room-invite-message" class="room-invite-message"></p>
+    <p id="room-invite-description" class="room-invite-description" hidden></p>
+    <div class="room-invite-actions">
+      <button id="room-invite-accept" class="btn" type="button">&#10003; Annehmen</button>
+      <button id="room-invite-decline" class="btn btn-secondary room-invite-decline" type="button">&#10005; Ablehnen</button>
+    </div>
+  </div>
+</div>
+
 <script src="/chat.js?v=<%= staticAssetVersion %>"></script>
 <script>
   (() => {

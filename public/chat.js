@@ -27,6 +27,11 @@
   const whisperTargetUserIdInput = document.getElementById("whisper-target-user-id");
   const whisperCloseBtn = document.getElementById("whisper-close-btn");
   const whisperCancelBtn = document.getElementById("whisper-cancel-btn");
+  const roomInviteModal = document.getElementById("room-invite-modal");
+  const roomInviteMessage = document.getElementById("room-invite-message");
+  const roomInviteDescription = document.getElementById("room-invite-description");
+  const roomInviteAcceptBtn = document.getElementById("room-invite-accept");
+  const roomInviteDeclineBtn = document.getElementById("room-invite-decline");
   const headerIdentity = document.querySelector("[data-header-identity]");
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
@@ -43,6 +48,8 @@
   const typingStateByUserId = new Map();
   const onlineEntriesByUserId = new Map();
   const whisperThreadsByUserId = new Map();
+  const pendingRoomInvites = [];
+  let activeRoomInvite = null;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
@@ -100,9 +107,17 @@
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", handleWhisperMessage);
   socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:room-invite", handleRoomInvite);
   socket.on("chat:redirect", (payload) => {
     const nextUrl = String(payload?.url || "").trim();
+    const delayMs = Number(payload?.delayMs);
     if (!nextUrl.startsWith("/")) return;
+    if (Number.isFinite(delayMs) && delayMs > 0) {
+      window.setTimeout(() => {
+        window.location.assign(nextUrl);
+      }, delayMs);
+      return;
+    }
     window.location.assign(nextUrl);
   });
   socket.on("user:display-profile", updateHeaderIdentity);
@@ -601,6 +616,68 @@
     if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
   }
 
+  function syncRoomInviteModal() {
+    if (!roomInviteModal || !roomInviteMessage || !roomInviteDescription) return;
+
+    if (!activeRoomInvite && pendingRoomInvites.length) {
+      activeRoomInvite = pendingRoomInvites.shift();
+    }
+
+    if (!activeRoomInvite) {
+      roomInviteModal.hidden = true;
+      roomInviteModal.classList.remove("is-open");
+      roomInviteMessage.textContent = "";
+      roomInviteDescription.hidden = true;
+      roomInviteDescription.textContent = "";
+      return;
+    }
+
+    roomInviteMessage.textContent =
+      `${activeRoomInvite.inviterName || "Jemand"} lädt dich in den Raum ${activeRoomInvite.roomName || "Unbekannt"} ein.`;
+
+    const teaser = String(activeRoomInvite.roomTeaser || "").trim();
+    if (teaser) {
+      roomInviteDescription.hidden = false;
+      roomInviteDescription.textContent = teaser;
+    } else {
+      roomInviteDescription.hidden = true;
+      roomInviteDescription.textContent = "";
+    }
+
+    roomInviteModal.hidden = false;
+    roomInviteModal.classList.add("is-open");
+  }
+
+  function handleRoomInvite(payload) {
+    const inviteId = String(payload?.inviteId || "").trim();
+    if (!inviteId) {
+      return;
+    }
+
+    pendingRoomInvites.push({
+      inviteId,
+      inviterName: String(payload?.inviterName || "").trim() || "Jemand",
+      roomName: String(payload?.roomName || "").trim() || "Unbekannt",
+      roomTeaser: String(payload?.roomTeaser || "").trim()
+    });
+    playEntryTone();
+    syncRoomInviteModal();
+  }
+
+  function respondToRoomInvite(accepted) {
+    if (!activeRoomInvite) {
+      return;
+    }
+
+    socket.emit("chat:room-invite-response", {
+      inviteId: activeRoomInvite.inviteId,
+      accepted: Boolean(accepted)
+    });
+
+    activeRoomInvite = null;
+    syncRoomInviteModal();
+  }
+
   function openWhisperModal(entry, options = {}) {
     if (!whisperModal || !whisperModalTitle || !whisperTargetUserIdInput || !whisperInput) return;
     const userId = Number(entry?.userId);
@@ -943,6 +1020,18 @@
         userId: targetUserId,
         name: onlineEntriesByUserId.get(targetUserId)?.name || whisperThreadsByUserId.get(targetUserId)?.name || "Unbekannt"
       });
+    });
+  }
+
+  if (roomInviteAcceptBtn) {
+    roomInviteAcceptBtn.addEventListener("click", () => {
+      respondToRoomInvite(true);
+    });
+  }
+
+  if (roomInviteDeclineBtn) {
+    roomInviteDeclineBtn.addEventListener("click", () => {
+      respondToRoomInvite(false);
     });
   }
 

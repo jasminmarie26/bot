@@ -83,6 +83,8 @@ const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 1000 * 60 * 60;
+const ROOM_INVITE_TTL_MS = 1000 * 60 * 10;
+const ROOM_INVITE_ACCESS_TTL_MS = 1000 * 60 * 60 * 3;
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
@@ -2026,6 +2028,30 @@ function parseRoomSwitchCommandArguments(rawArgs) {
   };
 }
 
+function normalizeInviteTargetName(rawValue) {
+  return String(rawValue || "").trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
+function normalizeInviteTargetLookupKey(rawValue) {
+  return normalizeInviteTargetName(rawValue).toLocaleLowerCase("de");
+}
+
+function parseInviteCommandArguments(rawArgs) {
+  const value = String(rawArgs || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return normalizeInviteTargetName(value.slice(1, -1));
+  }
+
+  return normalizeInviteTargetName(value);
+}
+
 const STANDARD_ROOM_DEFINITIONS = Object.freeze({
   "free-rp": [
     {
@@ -3229,20 +3255,98 @@ function canBypassRoomLock(user, room = null) {
   return Number(room.created_by_user_id) === Number(user.id);
 }
 
+const roomInviteAccessGrants = new Map();
+
+function getActiveRoomInviteAccessGrantsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  const grants = roomInviteAccessGrants.get(parsedUserId);
+  if (!grants) {
+    return null;
+  }
+
+  const now = Date.now();
+  for (const [roomId, expiresAt] of grants.entries()) {
+    if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+      grants.delete(roomId);
+    }
+  }
+
+  if (!grants.size) {
+    roomInviteAccessGrants.delete(parsedUserId);
+    return null;
+  }
+
+  return grants;
+}
+
+function grantRoomInviteAccess(userId, roomId, ttlMs = ROOM_INVITE_ACCESS_TTL_MS) {
+  const parsedUserId = Number(userId);
+  const parsedRoomId = Number(roomId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1
+  ) {
+    return;
+  }
+
+  const grants =
+    getActiveRoomInviteAccessGrantsForUser(parsedUserId) || new Map();
+  grants.set(parsedRoomId, Date.now() + Math.max(1000, Number(ttlMs) || ROOM_INVITE_ACCESS_TTL_MS));
+  roomInviteAccessGrants.set(parsedUserId, grants);
+}
+
+function hasRoomInviteAccess(userOrId, roomOrId) {
+  const parsedUserId =
+    Number.isInteger(Number(userOrId?.id)) ? Number(userOrId.id) : Number(userOrId);
+  const parsedRoomId =
+    Number.isInteger(Number(roomOrId?.id)) ? Number(roomOrId.id) : Number(roomOrId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1
+  ) {
+    return false;
+  }
+
+  const grants = getActiveRoomInviteAccessGrantsForUser(parsedUserId);
+  return Boolean(grants && grants.has(parsedRoomId));
+}
+
 function isRoomLockedForUser(user, room = null) {
-  return Boolean(room) && Number(room.is_locked) === 1 && !canBypassRoomLock(user, room);
+  return (
+    Boolean(room) &&
+    Number(room.is_locked) === 1 &&
+    !canBypassRoomLock(user, room) &&
+    !hasRoomInviteAccess(user, room)
+  );
+}
+
+function canAccessRoom(user, room = null) {
+  if (!user || !room) return false;
+  return (
+    canAccessCharacter(user.id, room.character_owner_id, room.character_is_public, user.is_admin) ||
+    hasRoomInviteAccess(user, room)
+  );
 }
 
 function getRoomStatePayloadForUser(user, room = null, serverId = DEFAULT_SERVER_ID) {
   const normalizedRoomId = Number.isInteger(Number(room?.id)) ? Number(room.id) : null;
   const normalizedServerId = normalizeServer(serverId || room?.server_id);
   const isLocked = Boolean(room) && Number(room.is_locked) === 1;
+  const canAccess = !room || canAccessRoom(user, room);
 
   return {
     roomId: normalizedRoomId,
     serverId: normalizedServerId,
     isLocked,
-    canEnter: !isRoomLockedForUser(user, room)
+    canEnter: canAccess && !isRoomLockedForUser(user, room)
   };
 }
 
@@ -5889,14 +5993,7 @@ app.get("/chat", requireAuth, (req, res) => {
       return res.redirect("/dashboard");
     }
 
-    if (
-      !canAccessCharacter(
-        req.session.user.id,
-        room.character_owner_id,
-        room.character_is_public,
-        req.session.user.is_admin
-      )
-    ) {
+    if (!canAccessRoom(req.session.user, room)) {
       return res.status(403).render("error", {
         title: "Kein Zugriff",
         message: "Dieser Raum ist nicht für dich sichtbar."
@@ -6651,6 +6748,61 @@ function getAllSocketsForUser(userId) {
     }
   }
   return sockets;
+}
+
+function findInviteTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_ID, excludeUserId = null) {
+  const normalizedLookupKey = normalizeInviteTargetLookupKey(displayName);
+  const normalizedServerId = normalizeServer(serverId);
+  const parsedExcludeUserId = Number(excludeUserId);
+  if (!normalizedLookupKey) {
+    return [];
+  }
+
+  const matches = [];
+  const seenUserIds = new Set();
+
+  for (const memberSocket of io.sockets.sockets.values()) {
+    const userId = Number(memberSocket?.data?.user?.id);
+    if (
+      !Number.isInteger(userId) ||
+      userId < 1 ||
+      (Number.isInteger(parsedExcludeUserId) && userId === parsedExcludeUserId) ||
+      seenUserIds.has(userId)
+    ) {
+      continue;
+    }
+
+    const socketServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : null;
+    if (socketServerId !== normalizedServerId) {
+      continue;
+    }
+
+    const profile = getCurrentChannelDisplayProfile(
+      memberSocket?.data?.user,
+      normalizedServerId,
+      getSocketPreferredCharacterId(memberSocket, normalizedServerId)
+    );
+    const displayNameLabel = String(profile?.label || "").trim();
+    if (!displayNameLabel || normalizeInviteTargetLookupKey(displayNameLabel) !== normalizedLookupKey) {
+      continue;
+    }
+
+    matches.push({
+      userId,
+      roomId:
+        Number.isInteger(Number(memberSocket?.data?.roomId)) && Number(memberSocket.data.roomId) > 0
+          ? Number(memberSocket.data.roomId)
+          : null,
+      name: displayNameLabel,
+      roleStyle: profile?.role_style || "",
+      chatTextColor: profile?.chat_text_color || ""
+    });
+    seenUserIds.add(userId);
+  }
+
+  return matches;
 }
 
 function getSocketHeaderDisplayProfile(memberSocket) {
@@ -7507,17 +7659,15 @@ function buildRoomPresenceMessage(kind, displayName) {
   };
 }
 
-function emitSystemChatMessage(roomId, serverId, content, options = {}) {
-  const normalizedServerId = normalizeServer(serverId);
-  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+function buildSystemChatPayload(content, options = {}) {
   const text = String(content || "").trim();
-  if (!text) return;
-  const createdAt = formatChatTimestamp();
+  if (!text) return null;
+
   const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
     ? normalizeGuestbookColor(options.chat_text_color)
     : "";
 
-  appendMessageToActiveRoomLog(normalizedRoomId, normalizedServerId, {
+  return {
     type: "system",
     content: text,
     chat_text_color: chatTextColor,
@@ -7527,21 +7677,41 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
     presence_suffix: String(options?.presence_suffix || "").trim(),
     room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
-    created_at: createdAt
+    created_at: formatChatTimestamp()
+  };
+}
+
+function emitDirectSystemMessageToSocket(memberSocket, content, options = {}) {
+  const payload = buildSystemChatPayload(content, options);
+  if (!memberSocket || !payload) {
+    return;
+  }
+
+  memberSocket.emit("chat:message", payload);
+}
+
+function emitDirectSystemMessageToUser(userId, content, options = {}) {
+  const payload = buildSystemChatPayload(content, options);
+  if (!payload) {
+    return;
+  }
+
+  getAllSocketsForUser(userId).forEach((memberSocket) => {
+    memberSocket.emit("chat:message", payload);
+  });
+}
+
+function emitSystemChatMessage(roomId, serverId, content, options = {}) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const payload = buildSystemChatPayload(content, options);
+  if (!payload) return;
+
+  appendMessageToActiveRoomLog(normalizedRoomId, normalizedServerId, {
+    ...payload
   });
 
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", {
-    type: "system",
-    content: text,
-    chat_text_color: chatTextColor,
-    system_kind: String(options?.system_kind || "").trim(),
-    presence_kind: String(options?.presence_kind || "").trim(),
-    presence_actor_name: String(options?.presence_actor_name || "").trim(),
-    presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
-    presence_suffix: String(options?.presence_suffix || "").trim(),
-    room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
-    created_at: createdAt
-  });
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", payload);
 }
 
 function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
@@ -7662,6 +7832,46 @@ function emitRoomStateUpdate(roomId, serverId = DEFAULT_SERVER_ID, room = null) 
 }
 
 const pendingRoomDeletionTimers = new Map();
+const pendingRoomInvites = new Map();
+
+function getPendingRoomInvite(inviteId) {
+  const normalizedInviteId = String(inviteId || "").trim();
+  if (!normalizedInviteId) {
+    return null;
+  }
+
+  const invite = pendingRoomInvites.get(normalizedInviteId);
+  if (!invite) {
+    return null;
+  }
+
+  if (!Number.isFinite(invite.expiresAt) || invite.expiresAt <= Date.now()) {
+    pendingRoomInvites.delete(normalizedInviteId);
+    return null;
+  }
+
+  return invite;
+}
+
+function createPendingRoomInvite(payload) {
+  const inviteId = crypto.randomBytes(12).toString("hex");
+  const invite = {
+    id: inviteId,
+    roomId: Number(payload?.roomId) || null,
+    serverId: normalizeServer(payload?.serverId),
+    senderUserId: Number(payload?.senderUserId) || null,
+    senderName: String(payload?.senderName || "").trim(),
+    senderChatTextColor: String(payload?.senderChatTextColor || "").trim(),
+    targetUserId: Number(payload?.targetUserId) || null,
+    targetName: String(payload?.targetName || "").trim(),
+    roomName: String(payload?.roomName || "").trim(),
+    roomTeaser: String(payload?.roomTeaser || "").trim(),
+    expiresAt: Date.now() + ROOM_INVITE_TTL_MS
+  };
+
+  pendingRoomInvites.set(inviteId, invite);
+  return invite;
+}
 
 function clearPendingRoomDeletion(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return;
@@ -7821,14 +8031,7 @@ io.on("connection", (socket) => {
     if (nextRoomId) {
       const room = getRoomWithCharacter(nextRoomId);
       if (!room) return;
-      if (
-        !canAccessCharacter(
-          socket.data.user.id,
-          room.character_owner_id,
-          room.character_is_public,
-          socket.data.user.is_admin
-        )
-      ) {
+      if (!canAccessRoom(socket.data.user, room)) {
         return;
       }
       if (isRoomLockedForUser(socket.data.user, room)) {
@@ -7958,14 +8161,7 @@ io.on("connection", (socket) => {
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
       if (!room) return;
-      if (
-        !canAccessCharacter(
-          socket.data.user.id,
-          room.character_owner_id,
-          room.character_is_public,
-          socket.data.user.is_admin
-        )
-      ) {
+      if (!canAccessRoom(socket.data.user, room)) {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
@@ -7994,14 +8190,7 @@ io.on("connection", (socket) => {
     if (roomId) {
       room = getRoomWithCharacter(roomId);
       if (!room) return;
-      if (
-        !canAccessCharacter(
-          socket.data.user.id,
-          room.character_owner_id,
-          room.character_is_public,
-          socket.data.user.is_admin
-        )
-      ) {
+      if (!canAccessRoom(socket.data.user, room)) {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
@@ -8168,6 +8357,97 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const inviteMatch = content.match(/^\/i(?:\s+(.+))?$/i);
+    if (inviteMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du kannst nur aus einem offenen Raum heraus Einladungen senden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const requestedTargetName = parseInviteCommandArguments(inviteMatch[1] || "");
+      if (requestedTargetName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /i Charaktername. Bei Namen mit Leerzeichen kannst du /i "Charaktername" schreiben.',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const inviteTargets = findInviteTargetsByDisplayName(
+        requestedTargetName,
+        serverId,
+        socket.data.user.id
+      );
+
+      if (!inviteTargets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${requestedTargetName} ist gerade nicht online auf diesem Server.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (inviteTargets.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Der Name ${requestedTargetName} ist nicht eindeutig. Bitte nutze den genauen Online-Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const inviteTarget = inviteTargets[0];
+      if (Number(inviteTarget.roomId) === Number(roomId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${inviteTarget.name} ist bereits in diesem Raum.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const inviteSenderProfile = getSocketDisplayProfile(socket, serverId);
+      const inviteSenderName =
+        inviteSenderProfile?.label || getUserDefaultDisplayName(socket.data.user);
+      const invite = createPendingRoomInvite({
+        roomId,
+        serverId,
+        senderUserId: socket.data.user.id,
+        senderName: inviteSenderName,
+        senderChatTextColor: inviteSenderProfile?.chat_text_color || "",
+        targetUserId: inviteTarget.userId,
+        targetName: inviteTarget.name,
+        roomName: room.name,
+        roomTeaser: room.teaser || ""
+      });
+
+      emitDirectSystemMessageToSocket(
+        socket,
+        `Einladung an ${inviteTarget.name} f\u00fcr den Raum ${room.name} gesendet.`
+      );
+      emitDirectSystemMessageToUser(
+        inviteTarget.userId,
+        `${inviteSenderName} l\u00e4dt dich in den Raum ${room.name} ein.`
+      );
+      getAllSocketsForUser(inviteTarget.userId).forEach((memberSocket) => {
+        memberSocket.emit("chat:room-invite", {
+          inviteId: invite.id,
+          inviterName: inviteSenderName,
+          inviterChatTextColor: inviteSenderProfile?.chat_text_color || "",
+          roomName: room.name,
+          roomTeaser: room.teaser || "",
+          expiresAt: invite.expiresAt
+        });
+      });
+      return;
+    }
+
     const roomSwitchMatch = content.match(/^\/rw(?:\s+(.+))?$/i);
     if (roomSwitchMatch) {
       const roomSwitchArgs = parseRoomSwitchCommandArguments(roomSwitchMatch[1] || "");
@@ -8238,10 +8518,10 @@ io.on("connection", (socket) => {
           room_switch_target_name: targetRoom.name
         }
       );
-
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
-        url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`
+        url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`,
+        delayMs: 550
       });
       return;
     }
@@ -8289,14 +8569,7 @@ io.on("connection", (socket) => {
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
       if (!room) return;
-      if (
-        !canAccessCharacter(
-          socket.data.user.id,
-          room.character_owner_id,
-          room.character_is_public,
-          socket.data.user.is_admin
-        )
-      ) {
+      if (!canAccessRoom(socket.data.user, room)) {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
@@ -8342,6 +8615,81 @@ io.on("connection", (socket) => {
     });
     recipientSockets.forEach((memberSocket) => {
       memberSocket.emit("chat:whisper", recipientPayload);
+    });
+  });
+
+  socket.on("chat:room-invite-response", (payload) => {
+    if (!socket.data.user) return;
+    if (!payload || typeof payload !== "object") return;
+
+    const inviteId = String(payload.inviteId || "").trim();
+    const accepted = Boolean(payload.accepted);
+    const invite = getPendingRoomInvite(inviteId);
+    if (!invite) {
+      emitDirectSystemMessageToSocket(socket, "Diese Einladung ist nicht mehr aktuell.");
+      return;
+    }
+
+    if (Number(invite.targetUserId) !== Number(socket.data.user.id)) {
+      emitDirectSystemMessageToSocket(socket, "Diese Einladung ist nicht für dich bestimmt.");
+      return;
+    }
+
+    pendingRoomInvites.delete(inviteId);
+
+    const recipientProfile = getSocketDisplayProfile(socket, invite.serverId);
+    const recipientName =
+      String(invite.targetName || "").trim() ||
+      recipientProfile?.label ||
+      getUserDefaultDisplayName(socket.data.user);
+
+    if (!accepted) {
+      emitDirectSystemMessageToSocket(
+        socket,
+        `Du hast die Einladung in den Raum ${invite.roomName} abgelehnt.`
+      );
+      emitDirectSystemMessageToUser(
+        invite.senderUserId,
+        `${recipientName} hat die Einladung in den Raum ${invite.roomName} abgelehnt.`
+      );
+      return;
+    }
+
+    const invitedRoom = getRoomWithCharacter(invite.roomId);
+    if (!invitedRoom) {
+      emitDirectSystemMessageToSocket(
+        socket,
+        "Der eingeladene Raum existiert nicht mehr."
+      );
+      emitDirectSystemMessageToUser(
+        invite.senderUserId,
+        `${recipientName} konnte die Einladung nicht mehr annehmen, weil der Raum nicht mehr existiert.`
+      );
+      return;
+    }
+
+    grantRoomInviteAccess(socket.data.user.id, invite.roomId);
+    emitDirectSystemMessageToSocket(
+      socket,
+      `Du nimmst die Einladung in den Raum ${invite.roomName} an.`
+    );
+    emitDirectSystemMessageToUser(
+      invite.senderUserId,
+      `${recipientName} hat die Einladung in den Raum ${invite.roomName} angenommen.`
+    );
+
+    const preferredCharacter = getPreferredCharacterForUser(
+      socket.data.user.id,
+      invite.serverId,
+      getSocketPreferredCharacterId(socket, invite.serverId)
+    );
+    const redirectSuffix = preferredCharacter?.id
+      ? `&character_id=${preferredCharacter.id}`
+      : "";
+
+    socket.emit("chat:redirect", {
+      url: `/chat?room_id=${invite.roomId}${redirectSuffix}`,
+      delayMs: 450
     });
   });
 
