@@ -1,22 +1,5 @@
 <%- include("partials/start", { hideTopbar: true, enableRealtime: false }) %>
 
-<%
-  const guestbookChatColorPresets = [
-    "#AEE7B7",
-    "#FF6B81",
-    "#FFD166",
-    "#8ECAE6",
-    "#CDB4DB",
-    "#F4A261",
-    "#E9C46A",
-    "#90BE6D",
-    "#F8F4D8",
-    "#D94A1E",
-    "#58BFFF",
-    "#FFFFFF"
-  ];
-%>
-
 <section class="gb-editor-shell">
   <header class="gb-editor-topbar">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
@@ -99,39 +82,9 @@
       <div class="gb-radio-list">
         <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
         <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
-        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschränkung</label>
+        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
       </div>
     </div>
-
-    <label>
-      Charakterfarbe im Chat
-      <span class="gb-editor-helptext">Name und Schriftfarbe, wie dein Charakter im Chat angezeigt wird.</span>
-      <div class="gb-color-row">
-        <div class="gb-color-input-wrap character-color-input-wrap">
-          <input id="gb-chat-color-text" name="chat_text_color" value="<%= settings.chat_text_color %>" maxlength="7" spellcheck="false" />
-          <input
-            id="gb-chat-color-picker"
-            class="character-color-picker"
-            type="color"
-            value="<%= settings.chat_text_color %>"
-            aria-label="Chat-Farbe ausw&auml;hlen"
-          />
-          <span id="gb-chat-color-preview" class="gb-color-preview" aria-hidden="true">Aa</span>
-        </div>
-        <div class="gb-color-swatches" aria-label="Farbvorschläge">
-          <% guestbookChatColorPresets.forEach((presetColor) => { %>
-            <button
-              type="button"
-              class="gb-color-swatch"
-              data-color-swatch="<%= presetColor %>"
-              style="--swatch-color:<%= presetColor %>;"
-              title="<%= presetColor %>"
-              aria-label="Farbe <%= presetColor %> wählen"
-            ></button>
-          <% }) %>
-        </div>
-      </div>
-    </label>
 
     <label>
       Style
@@ -180,62 +133,7 @@
 
 <script>
   (() => {
-    const colorText = document.getElementById("gb-chat-color-text");
-    const colorPicker = document.getElementById("gb-chat-color-picker");
-    const colorPreview = document.getElementById("gb-chat-color-preview");
-    const colorSwatches = Array.from(document.querySelectorAll("[data-color-swatch]"));
     const censorRadios = Array.from(document.querySelectorAll('input[name="censor_level"]'));
-
-    const normalizeHexColor = (value) => {
-      const normalized = String(value || "").trim().toUpperCase();
-      return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : "";
-    };
-
-    const applyEditorColor = (value, { force = false } = {}) => {
-      if (!colorText) return;
-      const normalized = normalizeHexColor(value);
-      if (normalized || force) {
-        colorText.value = normalized || "#AEE7B7";
-      }
-
-      if (colorPreview) {
-        colorPreview.style.color = normalized || "#AEE7B7";
-      }
-
-      if (colorPicker) {
-        colorPicker.value = (normalized || "#AEE7B7").toLowerCase();
-      }
-
-      colorSwatches.forEach((swatch) => {
-        swatch.classList.toggle("is-active", swatch.dataset.colorSwatch === (normalized || colorText.value));
-      });
-    };
-
-    if (colorText) {
-      applyEditorColor(colorText.value, { force: true });
-
-      colorText.addEventListener("input", () => {
-        applyEditorColor(colorText.value);
-      });
-
-      colorText.addEventListener("blur", () => {
-        applyEditorColor(colorText.value, { force: true });
-      });
-
-      if (colorPicker) {
-        colorPicker.addEventListener("input", () => {
-          applyEditorColor(colorPicker.value, { force: true });
-        });
-      }
-
-      colorSwatches.forEach((swatch) => {
-        swatch.addEventListener("click", () => {
-          applyEditorColor(swatch.dataset.colorSwatch, { force: true });
-          colorText.focus();
-          colorText.select();
-        });
-      });
-    }
 
     censorRadios.forEach((radio) => {
       radio.addEventListener("pointerdown", () => {

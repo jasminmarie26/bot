@@ -2344,8 +2344,10 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     GUESTBOOK_PAGE_STYLE_OPTIONS,
     "scroll"
   );
+  const existingChatTextColor = normalizeGuestbookColor(existingSettings?.chat_text_color);
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
   const hasCensorLevelField = Object.prototype.hasOwnProperty.call(safeBody, "censor_level");
+  const hasChatTextColorField = Object.prototype.hasOwnProperty.call(safeBody, "chat_text_color");
   const hasPageStyleField = Object.prototype.hasOwnProperty.call(safeBody, "page_style");
   const imageUrl = hasImageUrlField
     ? String(safeBody.image_url || "").trim().slice(0, 500)
@@ -2354,7 +2356,9 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const censorLevel = hasCensorLevelField
     ? normalizeGuestbookOption(safeBody.censor_level, GUESTBOOK_CENSOR_OPTIONS, existingCensorLevel)
     : existingCensorLevel;
-  const chatTextColor = normalizeGuestbookColor(safeBody.chat_text_color);
+  const chatTextColor = hasChatTextColorField
+    ? normalizeGuestbookColor(safeBody.chat_text_color)
+    : existingChatTextColor;
   const pageStyle = hasPageStyleField
     ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
     : existingPageStyle;
