@@ -8721,6 +8721,122 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const kickMatch = content.match(/^\/werfen(?:\s+(.+))?$/i);
+    if (kickMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du kannst nur in einem geöffneten Raum Personen werfen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!canManageRoomState) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur der Raumbesitzer oder Personen mit Raumrechten können hier jemanden werfen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const requestedTargetName = parseInviteCommandArguments(kickMatch[1] || "");
+      if (requestedTargetName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content:
+            'Bitte nutze /werfen Charaktername. Bei Namen mit Leerzeichen geht auch /werfen "Charaktername".',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const kickTargets = findInviteTargetsByDisplayName(
+        requestedTargetName,
+        serverId,
+        socket.data.user.id
+      );
+
+      if (!kickTargets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${requestedTargetName} ist gerade nicht online auf diesem Server.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (kickTargets.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Der Name ${requestedTargetName} ist nicht eindeutig. Bitte nutze den genauen Online-Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const kickTarget = kickTargets[0];
+      const targetRoomSockets = getUserSocketsInChannel(roomId, serverId, kickTarget.userId);
+      if (!targetRoomSockets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${kickTarget.name} ist nicht in diesem Raum.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const kickerIsRoomOwner = isRoomOwner(socket.data.user, room);
+      const targetIsRoomOwner = Number(kickTarget.userId) === Number(room.created_by_user_id);
+      if (!kickerIsRoomOwner && targetIsRoomOwner) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${kickTarget.name} hat diesen Raum geöffnet und kann nicht von Raumrechten geworfen werden.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (Number(kickTarget.userId) === Number(socket.data.user.id)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du kannst dich nicht selbst aus dem Raum werfen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const targetPreferredCharacter = getPreferredCharacterForUser(
+        kickTarget.userId,
+        serverId,
+        getSocketPreferredCharacterId(targetRoomSockets[0], serverId)
+      );
+      const redirectSuffix = targetPreferredCharacter?.id
+        ? `&character_id=${targetPreferredCharacter.id}`
+        : "";
+      const redirectUrl = `/chat?server=${encodeURIComponent(serverId)}${redirectSuffix}`;
+
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        `${kickTarget.name} wurde aus dem Raum geworfen.`
+      );
+
+      targetRoomSockets.forEach((memberSocket) => {
+        memberSocket.data.skipDisconnectPresence = true;
+        emitDirectSystemMessageToSocket(
+          memberSocket,
+          `Du wurdest aus dem Raum ${room.name} geworfen.`
+        );
+        memberSocket.emit("chat:redirect", {
+          url: redirectUrl,
+          delayMs: 650
+        });
+      });
+      return;
+    }
+
     const roomSwitchMatch = content.match(/^\/rw(?:\s+(.+))?$/i);
     if (roomSwitchMatch) {
       const roomSwitchArgs = parseRoomSwitchCommandArguments(roomSwitchMatch[1] || "");
