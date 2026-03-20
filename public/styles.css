@@ -5614,6 +5614,56 @@ select:focus {
   padding: 0.8rem;
 }
 
+.whisper-thread-shell {
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 86%, black 14%);
+  padding: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.whisper-thread {
+  max-height: min(34vh, 280px);
+  overflow-y: auto;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.whisper-thread-empty {
+  margin: 0;
+  padding: 0.35rem 0.1rem;
+}
+
+.whisper-thread-message {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 62%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 90%, black 10%);
+}
+
+.whisper-thread-message.is-outgoing {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-bg) 84%);
+}
+
+.whisper-thread-message.is-incoming {
+  background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
+}
+
+.whisper-thread-meta,
+.whisper-thread-time {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.whisper-thread-body {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text);
+  word-break: break-word;
+}
+
 .whisper-modal-head {
   display: flex;
   align-items: center;

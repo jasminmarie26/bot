@@ -20,6 +20,8 @@
   const soundToggleIcon = document.getElementById("chat-sound-toggle-icon");
   const whisperModal = document.getElementById("whisper-modal");
   const whisperModalTitle = document.getElementById("whisper-modal-title");
+  const whisperThread = document.getElementById("whisper-thread");
+  const whisperThreadEmpty = document.getElementById("whisper-thread-empty");
   const whisperForm = document.getElementById("whisper-form");
   const whisperInput = document.getElementById("whisper-input");
   const whisperTargetUserIdInput = document.getElementById("whisper-target-user-id");
@@ -39,6 +41,8 @@
   let typingEmitActive = false;
   let typingStopTimer = null;
   const typingStateByUserId = new Map();
+  const onlineEntriesByUserId = new Map();
+  const whisperThreadsByUserId = new Map();
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const typingIdleDelayMs = 1400;
   const systemMessageSuffixes = [
@@ -410,6 +414,137 @@
       }
   }
 
+  function getWhisperPartnerUserId(msg) {
+    const fromUserId = Number(msg?.from_user_id);
+    const toUserId = Number(msg?.to_user_id);
+
+    if (Boolean(msg?.outgoing)) {
+      return Number.isInteger(toUserId) && toUserId > 0 ? toUserId : null;
+    }
+
+    if (Number.isInteger(fromUserId) && fromUserId > 0 && fromUserId !== currentUserId) {
+      return fromUserId;
+    }
+
+    if (Number.isInteger(toUserId) && toUserId > 0 && toUserId !== currentUserId) {
+      return toUserId;
+    }
+
+    return null;
+  }
+
+  function getWhisperPartnerName(msg, partnerUserId = getWhisperPartnerUserId(msg)) {
+    const explicitName = Boolean(msg?.outgoing) ? msg?.to_name : msg?.from_name;
+    const rememberedName = whisperThreadsByUserId.get(partnerUserId)?.name;
+    const onlineName = onlineEntriesByUserId.get(partnerUserId)?.name;
+    const resolvedName = String(explicitName || rememberedName || onlineName || "").trim();
+    return resolvedName || "Unbekannt";
+  }
+
+  function ensureWhisperThread(userId, name = "") {
+    const parsedUserId = Number(userId);
+    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+      return null;
+    }
+
+    const existing = whisperThreadsByUserId.get(parsedUserId);
+    if (existing) {
+      if (String(name || "").trim()) {
+        existing.name = String(name).trim();
+      }
+      return existing;
+    }
+
+    const created = {
+      userId: parsedUserId,
+      name: String(name || "").trim() || "Unbekannt",
+      messages: []
+    };
+    whisperThreadsByUserId.set(parsedUserId, created);
+    return created;
+  }
+
+  function scrollWhisperThreadToBottom() {
+    if (!whisperThread) return;
+    whisperThread.scrollTop = whisperThread.scrollHeight;
+  }
+
+  function renderWhisperThread(userId) {
+    if (!whisperThread || !whisperThreadEmpty) return;
+
+    const thread = whisperThreadsByUserId.get(Number(userId));
+    whisperThread.innerHTML = "";
+
+    if (!thread || !thread.messages.length) {
+      whisperThread.hidden = true;
+      whisperThreadEmpty.hidden = false;
+      return;
+    }
+
+    whisperThread.hidden = false;
+    whisperThreadEmpty.hidden = true;
+
+    thread.messages.forEach((entry) => {
+      const article = document.createElement("article");
+      article.className = `whisper-thread-message ${entry.outgoing ? "is-outgoing" : "is-incoming"}`;
+
+      const meta = document.createElement("div");
+      meta.className = "whisper-thread-meta";
+      meta.textContent = entry.outgoing
+        ? `An ${thread.name}`
+        : `Von ${thread.name}`;
+
+      const body = document.createElement("div");
+      body.className = "whisper-thread-body";
+      appendFormattedChatNodes(body, entry.content, {
+        allowItalic: true,
+        allowBold: true
+      });
+
+      article.appendChild(meta);
+      article.appendChild(body);
+
+      if (entry.created_at) {
+        const time = document.createElement("small");
+        time.className = "whisper-thread-time";
+        time.textContent = String(entry.created_at);
+        article.appendChild(time);
+      }
+
+      whisperThread.appendChild(article);
+    });
+
+    scrollWhisperThreadToBottom();
+  }
+
+  function rememberWhisperMessage(msg) {
+    const partnerUserId = getWhisperPartnerUserId(msg);
+    if (!Number.isInteger(partnerUserId) || partnerUserId < 1) {
+      return null;
+    }
+
+    const partnerName = getWhisperPartnerName(msg, partnerUserId);
+    const thread = ensureWhisperThread(partnerUserId, partnerName);
+    if (!thread) {
+      return null;
+    }
+
+    thread.name = partnerName;
+    thread.messages.push({
+      outgoing: Boolean(msg?.outgoing),
+      content: String(msg?.content || ""),
+      created_at: String(msg?.created_at || "").trim(),
+      from_name: String(msg?.from_name || "").trim(),
+      to_name: String(msg?.to_name || "").trim()
+    });
+
+    while (thread.messages.length > 80) {
+      thread.messages.shift();
+    }
+
+    return thread;
+  }
+
   function appendWhisper(msg) {
     const article = document.createElement("article");
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
@@ -448,15 +583,23 @@
     if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
   }
 
-  function openWhisperModal(entry) {
+  function openWhisperModal(entry, options = {}) {
     if (!whisperModal || !whisperModalTitle || !whisperTargetUserIdInput || !whisperInput) return;
-    if (!entry?.userId) return;
+    const userId = Number(entry?.userId);
+    if (!Number.isInteger(userId) || userId < 1) return;
 
-    whisperTargetUserIdInput.value = String(entry.userId);
-    whisperModalTitle.textContent = `Fluestern an ${entry.name}`;
+    const focusInput = options.focusInput !== false;
+    const name = String(entry?.name || onlineEntriesByUserId.get(userId)?.name || "Unbekannt").trim() || "Unbekannt";
+    ensureWhisperThread(userId, name);
+
+    whisperTargetUserIdInput.value = String(userId);
+    whisperModalTitle.textContent = `Fluestern mit ${name}`;
+    renderWhisperThread(userId);
     whisperModal.hidden = false;
     whisperModal.classList.add("is-open");
-    whisperInput.focus();
+    if (focusInput) {
+      whisperInput.focus();
+    }
   }
 
   function applyOnlineMenuState() {
@@ -626,6 +769,7 @@
       })
     );
     const presentUserIds = new Set();
+    onlineEntriesByUserId.clear();
 
     onlineCharList.innerHTML = "";
 
@@ -657,6 +801,11 @@
       }
       if (Number.isInteger(userId) && userId > 0) {
         presentUserIds.add(userId);
+        onlineEntriesByUserId.set(userId, {
+          userId,
+          characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
+          name: text
+        });
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
@@ -771,8 +920,11 @@
         content
       });
 
-      closeWhisperModal();
-      input.focus();
+      whisperInput.value = "";
+      openWhisperModal({
+        userId: targetUserId,
+        name: onlineEntriesByUserId.get(targetUserId)?.name || whisperThreadsByUserId.get(targetUserId)?.name || "Unbekannt"
+      });
     });
   }
 
@@ -797,8 +949,31 @@
   window.addEventListener("resize", closeOnlineMenu);
   window.addEventListener("scroll", closeOnlineMenu, true);
 
+  function handleWhisperMessage(payload) {
+    appendWhisper(payload);
+
+    const thread = rememberWhisperMessage(payload);
+    if (!thread) {
+      return;
+    }
+
+    if (!payload?.outgoing) {
+      playEntryTone();
+    }
+
+    openWhisperModal(
+      {
+        userId: thread.userId,
+        name: thread.name
+      },
+      {
+        focusInput: false
+      }
+    );
+  }
+
   socket.on("chat:message", appendMessage);
-  socket.on("chat:whisper", appendWhisper);
+  socket.on("chat:whisper", handleWhisperMessage);
   socket.on("chat:online-characters", renderOnlineCharacters);
   socket.on("user:display-profile", updateHeaderIdentity);
   socket.on("chat:typing", (payload) => {

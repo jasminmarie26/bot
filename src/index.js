@@ -8029,6 +8029,8 @@ io.on("connection", (socket) => {
 
     const senderPayload = {
       outgoing: true,
+      from_user_id: Number(socket.data.user.id),
+      to_user_id: targetUserId,
       from_name: senderName,
       to_name: recipientName,
       content,
@@ -8036,6 +8038,8 @@ io.on("connection", (socket) => {
     };
     const recipientPayload = {
       outgoing: false,
+      from_user_id: Number(socket.data.user.id),
+      to_user_id: targetUserId,
       from_name: senderName,
       to_name: recipientName,
       content,
