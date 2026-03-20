@@ -2,7 +2,7 @@
   const hideTopbar = true;
   const pageClass = "page-guestbook-preview";
 %>
-<%- include("partials/start", { hideTopbar, pageClass }) %>
+<%- include("partials/start", { hideTopbar, pageClass, enableRealtime: false }) %>
 
 <section class="guestbook-preview-shell">
   <header class="guestbook-preview-header">
@@ -43,8 +43,6 @@
   </div>
 </section>
 
-<div data-server-presence="<%= character.server_id %>" hidden></div>
-<script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>

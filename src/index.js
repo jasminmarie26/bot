@@ -1783,6 +1783,7 @@ function normalizeCharacterInput(body) {
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
     description: "",
+    chat_text_color: normalizeGuestbookColor(body.chat_text_color),
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
     is_public: 1
   };
@@ -2489,6 +2490,15 @@ function getOrCreateGuestbookSettings(characterId) {
   }
 
   return settings;
+}
+
+function saveCharacterChatColor(characterId, rawColor) {
+  getOrCreateGuestbookSettings(characterId);
+  db.prepare(
+    `UPDATE guestbook_settings
+     SET chat_text_color = ?
+     WHERE character_id = ?`
+  ).run(normalizeGuestbookColor(rawColor), characterId);
 }
 
 function getOwnedCharactersForUser(userId, preferredServerId = DEFAULT_SERVER_ID) {
@@ -4645,6 +4655,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
       age: "",
       faceclaim: "",
       description: "",
+      chat_text_color: "#AEE7B7",
       avatar_url: "",
       is_public: 1
     }
@@ -4721,6 +4732,8 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.avatar_url,
       payload.is_public
     );
+
+  saveCharacterChatColor(Number(info.lastInsertRowid), payload.chat_text_color);
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gespeichert.");
@@ -4817,7 +4830,27 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
 
-  return res.redirect(`/characters/${id}/guestbook/edit`);
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Charakter bearbeiten."
+    });
+  }
+
+  return res.render("character-form", {
+    title: `Bearbeiten: ${character.name}`,
+    mode: "edit",
+    error: null,
+    festplays: getFestplays(),
+    serverOptions: SERVER_OPTIONS,
+    guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
+    character
+  });
 });
 
 app.post("/characters/:id/update", requireAuth, (req, res) => {
@@ -4845,6 +4878,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       error: "Name ist erforderlich.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
       character: { ...character, ...payload }
     });
   }
@@ -4856,6 +4890,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       error: "Avatar-URL muss mit http:// oder https:// starten.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
       character: { ...character, ...payload }
     });
   }
@@ -4867,6 +4902,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       error: "Bitte ein gültiges Festplay auswählen.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
       character: { ...character, ...payload }
     });
   }
@@ -4878,6 +4914,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       error: "Dieser Charaktername ist bereits vergeben.",
       festplays,
       serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
       character: { ...character, ...payload }
     });
   }
@@ -4898,6 +4935,8 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.is_public,
     id
   );
+
+  saveCharacterChatColor(id, payload.chat_text_color);
 
   const refreshedUser = getUserForSessionById(req.session.user.id);
   if (refreshedUser) {

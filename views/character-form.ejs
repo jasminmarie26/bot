@@ -1,7 +1,21 @@
-<%- include("partials/start") %>
+<%- include("partials/start", { enableRealtime: false }) %>
 
-<section class="panel">
-  <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
+<section class="panel character-form-panel">
+  <div class="header-line">
+    <div>
+      <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
+      <p class="muted">
+        W&auml;hle hier direkt Name, Bereich und Chat-Farbe deines Charakters.
+      </p>
+    </div>
+    <% if (mode !== "create" && guestbookEditorUrl) { %>
+      <div class="dashboard-server-actions">
+        <a class="btn btn-secondary" href="<%= guestbookEditorUrl %>" target="_blank" rel="noopener noreferrer">
+          G&auml;stebuch bearbeiten
+        </a>
+      </div>
+    <% } %>
+  </div>
 
   <% if (error) { %>
     <div class="inline-error"><%= error %></div>
@@ -12,34 +26,36 @@
     action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
     class="form"
   >
-    <label>
-      Server
-      <select name="server_id" required>
-        <% (serverOptions || []).forEach((server) => { %>
-          <option
-            value="<%= server.id %>"
-            <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
-          >
-            <%= server.label %>
-          </option>
-        <% }) %>
-      </select>
-    </label>
+    <div class="character-editor-grid">
+      <label>
+        Server
+        <select name="server_id" required>
+          <% (serverOptions || []).forEach((server) => { %>
+            <option
+              value="<%= server.id %>"
+              <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
+            >
+              <%= server.label %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
 
-    <label>
-      Festplay
-      <select name="festplay_id" required>
-        <option value="">Festplay suchen / ausw&auml;hlen</option>
-        <% festplays.forEach((festplay) => { %>
-          <option
-            value="<%= festplay.id %>"
-            <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
-          >
-            <%= festplay.name %>
-          </option>
-        <% }) %>
-      </select>
-    </label>
+      <label>
+        Festplay
+        <select name="festplay_id" required>
+          <option value="">Festplay suchen / ausw&auml;hlen</option>
+          <% festplays.forEach((festplay) => { %>
+            <option
+              value="<%= festplay.id %>"
+              <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
+            >
+              <%= festplay.name %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
 
     <% if (!festplays.length) { %>
       <p class="muted">
@@ -57,8 +73,83 @@
       <input name="avatar_url" maxlength="500" value="<%= character.avatar_url %>" />
     </label>
 
-    <button type="submit" class="btn">Speichern</button>
+    <label>
+      Chat-Farbe
+      <span class="gb-editor-helptext">
+        Diese Farbe wird f&uuml;r Namen und Schrift deines Charakters im Chat und in Bereichen verwendet.
+      </span>
+      <div class="character-color-row">
+        <div class="character-color-input-wrap">
+          <input
+            id="character-chat-color-text"
+            name="chat_text_color"
+            value="<%= character.chat_text_color || '#AEE7B7' %>"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <input
+            id="character-chat-color-picker"
+            class="character-color-picker"
+            type="color"
+            value="<%= character.chat_text_color || '#AEE7B7' %>"
+            aria-label="Chat-Farbe ausw&auml;hlen"
+          />
+          <span id="character-chat-color-preview" class="gb-color-preview" aria-hidden="true">Aa</span>
+        </div>
+      </div>
+    </label>
+
+    <div class="character-form-actions">
+      <button type="submit" class="btn">Speichern</button>
+      <% if (mode !== "create" && guestbookEditorUrl) { %>
+        <a class="character-form-meta-link" href="<%= guestbookEditorUrl %>" target="_blank" rel="noopener noreferrer">
+          Zum G&auml;stebuch-Design
+        </a>
+      <% } %>
+    </div>
   </form>
 </section>
+
+<script>
+  (() => {
+    const colorText = document.getElementById("character-chat-color-text");
+    const colorPicker = document.getElementById("character-chat-color-picker");
+    const colorPreview = document.getElementById("character-chat-color-preview");
+
+    const normalizeHexColor = (value) => {
+      const normalized = String(value || "").trim().toUpperCase();
+      return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : "";
+    };
+
+    const applyColor = (value, { force = false } = {}) => {
+      const normalized = normalizeHexColor(value);
+      const nextColor = normalized || "#AEE7B7";
+
+      if (colorText && (normalized || force)) {
+        colorText.value = nextColor;
+      }
+
+      if (colorPicker && colorPicker.value !== nextColor.toLowerCase()) {
+        colorPicker.value = nextColor;
+      }
+
+      if (colorPreview) {
+        colorPreview.style.color = nextColor;
+      }
+    };
+
+    if (colorText) {
+      applyColor(colorText.value, { force: true });
+      colorText.addEventListener("input", () => applyColor(colorText.value));
+      colorText.addEventListener("blur", () => applyColor(colorText.value, { force: true }));
+    }
+
+    if (colorPicker) {
+      colorPicker.addEventListener("input", () => applyColor(colorPicker.value, { force: true }));
+      colorPicker.addEventListener("change", () => applyColor(colorPicker.value, { force: true }));
+    }
+  })();
+</script>
 
 <%- include("partials/end") %>

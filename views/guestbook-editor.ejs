@@ -1,4 +1,4 @@
-<%- include("partials/start", { hideTopbar: true }) %>
+<%- include("partials/start", { hideTopbar: true, enableRealtime: false }) %>
 
 <%
   const guestbookChatColorPresets = [
@@ -107,8 +107,15 @@
       Charakterfarbe im Chat
       <span class="gb-editor-helptext">Name und Schriftfarbe, wie dein Charakter im Chat angezeigt wird.</span>
       <div class="gb-color-row">
-        <div class="gb-color-input-wrap">
+        <div class="gb-color-input-wrap character-color-input-wrap">
           <input id="gb-chat-color-text" name="chat_text_color" value="<%= settings.chat_text_color %>" maxlength="7" spellcheck="false" />
+          <input
+            id="gb-chat-color-picker"
+            class="character-color-picker"
+            type="color"
+            value="<%= settings.chat_text_color %>"
+            aria-label="Chat-Farbe ausw&auml;hlen"
+          />
           <span id="gb-chat-color-preview" class="gb-color-preview" aria-hidden="true">Aa</span>
         </div>
         <div class="gb-color-swatches" aria-label="Farbvorschläge">
@@ -174,6 +181,7 @@
 <script>
   (() => {
     const colorText = document.getElementById("gb-chat-color-text");
+    const colorPicker = document.getElementById("gb-chat-color-picker");
     const colorPreview = document.getElementById("gb-chat-color-preview");
     const colorSwatches = Array.from(document.querySelectorAll("[data-color-swatch]"));
     const censorRadios = Array.from(document.querySelectorAll('input[name="censor_level"]'));
@@ -194,6 +202,10 @@
         colorPreview.style.color = normalized || "#AEE7B7";
       }
 
+      if (colorPicker) {
+        colorPicker.value = (normalized || "#AEE7B7").toLowerCase();
+      }
+
       colorSwatches.forEach((swatch) => {
         swatch.classList.toggle("is-active", swatch.dataset.colorSwatch === (normalized || colorText.value));
       });
@@ -209,6 +221,12 @@
       colorText.addEventListener("blur", () => {
         applyEditorColor(colorText.value, { force: true });
       });
+
+      if (colorPicker) {
+        colorPicker.addEventListener("input", () => {
+          applyEditorColor(colorPicker.value, { force: true });
+        });
+      }
 
       colorSwatches.forEach((swatch) => {
         swatch.addEventListener("click", () => {
@@ -241,8 +259,5 @@
     });
   })();
 </script>
-
-<div data-server-presence="<%= character.server_id %>" hidden></div>
-<script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("partials/end") %>
