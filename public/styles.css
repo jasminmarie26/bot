@@ -5762,7 +5762,7 @@ select:focus {
 }
 
 .chat-box .chat-system {
-  color: color-mix(in srgb, #17191d 62%, var(--accent));
+  color: #000000;
   font-style: italic;
 }
 
@@ -5774,7 +5774,7 @@ select:focus {
 
 .chat-box .chat-system strong {
   font-weight: 700;
-  color: color-mix(in srgb, #17191d 78%, var(--accent));
+  color: #000000;
 }
 
 .chat-box .chat-emote {

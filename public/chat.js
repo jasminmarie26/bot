@@ -45,17 +45,6 @@
   const whisperThreadsByUserId = new Map();
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const typingIdleDelayMs = 1400;
-  const systemMessageSuffixes = [
-    " schiebt den Vorhang beiseite und tritt ein.",
-    " taucht zwischen den Gesprächen auf.",
-    " findet den Weg herein und lässt sich nieder.",
-    " erscheint im Raum, als wäre es nie anders gewesen.",
-    " zieht sich leise wieder zurück.",
-    " nickt in die Runde und verschwindet zur Tür hinaus.",
-    " lässt nur ein leises Echo zurück und geht.",
-    " löst sich aus dem Gespräch und verlässt den Raum."
-  ];
-  const entrySystemSuffixes = systemMessageSuffixes.slice(0, 4);
   const soundToggleIcons = {
     on: [
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
@@ -332,19 +321,20 @@
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     if (isSystemMessage) {
       const content = String(msg?.content || "");
-      const matchingSuffix = systemMessageSuffixes.find((suffix) => content.endsWith(suffix));
-      if (matchingSuffix) {
+      const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
+      const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
+      const presenceActorName = String(msg?.presence_actor_name || "").trim();
+      const presenceSuffix = String(msg?.presence_suffix || "").trim();
+      if (systemKind === "presence" && presenceActorName && presenceSuffix) {
         const strong = document.createElement("strong");
-        const actorName = content.slice(0, -matchingSuffix.length).trim();
-        strong.textContent = actorName;
-        body.textContent = matchingSuffix;
+        strong.textContent = presenceActorName;
+        body.textContent = ` ${presenceSuffix}`;
         applyChatTextColor(strong, chatTextColor);
         applyChatTextColor(body, chatTextColor);
         line.appendChild(strong);
         if (
-          actorName &&
-          entrySystemSuffixes.includes(matchingSuffix) &&
-          actorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0
+          presenceKind === "enter" &&
+          presenceActorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0
         ) {
           playEntryTone();
         }

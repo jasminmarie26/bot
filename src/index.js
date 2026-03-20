@@ -7301,25 +7301,143 @@ async function finalizeRoomLogIfEmpty(roomId, serverId) {
   return finalizeRoomLog(roomId, serverId, { reason: "empty-room" });
 }
 
-const ROOM_ENTRY_TEMPLATES = [
-  (name) => `${name} schiebt den Vorhang beiseite und tritt ein.`,
-  (name) => `${name} taucht zwischen den Gesprächen auf.`,
-  (name) => `${name} findet den Weg herein und lässt sich nieder.`,
-  (name) => `${name} erscheint im Raum, als wäre es nie anders gewesen.`
-];
+function buildPresenceSuffixPool(basePhrases, tailPhrases, standalonePhrases) {
+  const templates = [];
 
-const ROOM_EXIT_TEMPLATES = [
-  (name) => `${name} zieht sich leise wieder zurück.`,
-  (name) => `${name} nickt in die Runde und verschwindet zur Tür hinaus.`,
-  (name) => `${name} lässt nur ein leises Echo zurück und geht.`,
-  (name) => `${name} löst sich aus dem Gespräch und verlässt den Raum.`
-];
+  basePhrases.forEach((basePhrase) => {
+    const normalizedBase = String(basePhrase || "").trim();
+    if (!normalizedBase) {
+      return;
+    }
+
+    templates.push(`${normalizedBase}.`);
+    tailPhrases.forEach((tailPhrase) => {
+      const normalizedTail = String(tailPhrase || "").trim();
+      if (!normalizedTail) {
+        return;
+      }
+      templates.push(`${normalizedBase} ${normalizedTail}.`);
+    });
+  });
+
+  standalonePhrases.forEach((standalonePhrase) => {
+    const normalizedStandalone = String(standalonePhrase || "").trim();
+    if (normalizedStandalone) {
+      templates.push(normalizedStandalone.endsWith(".") ? normalizedStandalone : `${normalizedStandalone}.`);
+    }
+  });
+
+  return Array.from(new Set(templates));
+}
+
+const ROOM_ENTRY_SUFFIXES = buildPresenceSuffixPool(
+  [
+    "schiebt den Vorhang beiseite und tritt ein",
+    "taucht zwischen den Gesprächen auf",
+    "findet den Weg herein",
+    "erscheint im Raum",
+    "tritt aus dem Halbschatten hervor",
+    "gleitet durch die Tür",
+    "löst sich aus dem Stimmengewirr",
+    "kommt mit ruhigen Schritten herein",
+    "betritt den Raum",
+    "steht plötzlich im Türrahmen",
+    "mischt sich unter die Anwesenden",
+    "tritt an die Runde heran"
+  ],
+  [
+    "mit einem leisen Nicken in die Runde",
+    "als wäre der Platz längst für diesen Moment bestimmt",
+    "und lässt den Blick aufmerksam durch den Raum wandern",
+    "ohne das Gespräch merklich zu stören",
+    "und bringt einen Hauch frischer Luft mit",
+    "mit stiller Selbstverständlichkeit",
+    "als hätte der Raum genau auf diesen Augenblick gewartet",
+    "und sammelt erst einmal die Stimmung auf",
+    "mit einer Spur Neugier im Blick",
+    "und bleibt kurz an der Schwelle stehen",
+    "mit der Ruhe von jemandem, der seinen Platz kennt",
+    "und nimmt die Stimmen um sich herum in sich auf",
+    "während die Gespräche für einen Atemzug leiser wirken",
+    "mit einem kaum hörbaren Schritt",
+    "und fügt sich mühelos ins Bild",
+    "als würde der Raum die Ankunft kommentarlos hinnehmen",
+    "und lässt die Szene einen Takt größer wirken",
+    "mit einer kleinen Geste in die Runde"
+  ],
+  [
+    "landet mitten im Gespräch, als wäre der Weg nie ein anderer gewesen",
+    "tritt ein und bringt sofort eine neue Spannung in die Runde",
+    "ist plötzlich da, als hätte der Raum nur kurz geblinzelt",
+    "erscheint zwischen zwei Sätzen und gehört sofort dazu",
+    "taucht an der Schwelle auf und nimmt den Raum still in Besitz",
+    "kommt herein, als wäre der Abend um genau diesen Schritt reicher",
+    "tritt aus dem Rand der Szene direkt ins Zentrum der Wahrnehmung",
+    "ist auf einmal Teil des Bildes, als hätte niemand etwas anderes erwartet",
+    "findet den Raum, ohne je fehl am Platz zu wirken",
+    "tritt über die Schwelle und bringt eine neue Nuance in die Stimmung"
+  ]
+);
+
+const ROOM_EXIT_SUFFIXES = buildPresenceSuffixPool(
+  [
+    "zieht sich leise wieder zurück",
+    "nickt in die Runde und verschwindet zur Tür hinaus",
+    "löst sich aus dem Gespräch und verlässt den Raum",
+    "tritt einen Schritt zurück und verschwindet wieder",
+    "wendet sich zum Ausgang",
+    "gleitet aus der Szene",
+    "verschwindet zwischen zwei Atemzügen",
+    "nimmt sich leise aus dem Raum",
+    "zieht weiter",
+    "verlässt den Raum mit ruhigen Schritten",
+    "tritt durch die Tür hinaus",
+    "geht, ohne mehr als ein kurzes Echo zu hinterlassen"
+  ],
+  [
+    "mit einem letzten Blick über die Runde",
+    "als hätte der Raum schon geahnt, dass der Moment gleich endet",
+    "und lässt die Gespräche langsam wieder ineinanderfließen",
+    "ohne mehr Lärm zu machen als ein ausklingender Gedanke",
+    "und nimmt ein kleines Stück der Stimmung mit hinaus",
+    "mit der Ruhe eines sauber gesetzten Schlussstrichs",
+    "während die Szene sich sacht neu sortiert",
+    "und hinterlässt einen Platz, der noch einen Moment nachklingt",
+    "mit einem kaum wahrnehmbaren Nicken",
+    "als würde der Raum die Bewegung still nachzeichnen",
+    "und lässt nur einen kurzen Nachhall zurück",
+    "mit derselben Selbstverständlichkeit, mit der die Person gekommen war",
+    "während die Gespräche wieder dichter zusammenrücken",
+    "und überlässt dem Raum wieder seine alte Balance",
+    "mit einem Schritt, der mehr ausblendet als unterbricht",
+    "und verschwindet, bevor die Szene ganz nachziehen kann",
+    "als wäre der Abschied nur ein leiser Wechsel im Takt",
+    "und lässt eine kleine Lücke im Bild zurück"
+  ],
+  [
+    "tritt aus dem Raum, und für einen Moment wirkt alles ein wenig stiller",
+    "verschwindet wieder aus der Szene, fast so unaufdringlich wie beim Kommen",
+    "zieht sich aus der Runde zurück und lässt nur den Nachhall des Moments stehen",
+    "ist fort, noch bevor die Gespräche den letzten Blick ganz aufgefangen haben",
+    "geht leise hinaus und nimmt einen Hauch der Szene mit",
+    "lässt den Raum hinter sich, ohne das Gespräch hart zu unterbrechen",
+    "verschwindet zur Tür hinaus, als würde der Abend nur eine Seite weiterblättern",
+    "tritt ab und übergibt die Szene wieder den Verbliebenen",
+    "verlässt den Raum mit der Ruhe eines ungesagten Schlusspunkts",
+    "zieht sich zurück, bis nur noch die Erinnerung an die Bewegung bleibt"
+  ]
+);
 
 function buildRoomPresenceMessage(kind, displayName) {
   const safeName = String(displayName || "").trim() || "Jemand";
-  const templates = kind === "leave" ? ROOM_EXIT_TEMPLATES : ROOM_ENTRY_TEMPLATES;
-  const template = templates[Math.floor(Math.random() * templates.length)] || templates[0];
-  return template(safeName);
+  const suffixes = kind === "leave" ? ROOM_EXIT_SUFFIXES : ROOM_ENTRY_SUFFIXES;
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)] || suffixes[0] || "ist da.";
+  return {
+    text: `${safeName} ${suffix}`.trim(),
+    actorName: safeName,
+    suffix,
+    kind: kind === "leave" ? "leave" : "enter"
+  };
 }
 
 function emitSystemChatMessage(roomId, serverId, content, options = {}) {
@@ -7336,6 +7454,10 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     type: "system",
     content: text,
     chat_text_color: chatTextColor,
+    system_kind: String(options?.system_kind || "").trim(),
+    presence_kind: String(options?.presence_kind || "").trim(),
+    presence_actor_name: String(options?.presence_actor_name || "").trim(),
+    presence_suffix: String(options?.presence_suffix || "").trim(),
     created_at: createdAt
   });
 
@@ -7343,6 +7465,10 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     type: "system",
     content: text,
     chat_text_color: chatTextColor,
+    system_kind: String(options?.system_kind || "").trim(),
+    presence_kind: String(options?.presence_kind || "").trim(),
+    presence_actor_name: String(options?.presence_actor_name || "").trim(),
+    presence_suffix: String(options?.presence_suffix || "").trim(),
     created_at: createdAt
   });
 }
@@ -7681,11 +7807,18 @@ io.on("connection", (socket) => {
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
       if (!isSameChannel) {
+        const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
         emitSystemChatMessage(
           previousRoomId,
           previousServerId,
-          buildRoomPresenceMessage("leave", previousDisplayName),
-          { chat_text_color: previousDisplayProfile?.chat_text_color || "" }
+          previousPresenceMessage.text,
+          {
+            chat_text_color: "#000000",
+            system_kind: "presence",
+            presence_kind: previousPresenceMessage.kind,
+            presence_actor_name: previousPresenceMessage.actorName,
+            presence_suffix: previousPresenceMessage.suffix
+          }
         );
       }
     }
@@ -7709,11 +7842,18 @@ io.on("connection", (socket) => {
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
     if (!isSameChannel) {
+      const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
       emitSystemChatMessage(
         nextRoomId,
         nextServerId,
-        buildRoomPresenceMessage("enter", nextDisplayName),
-        { chat_text_color: nextDisplayProfile?.chat_text_color || "" }
+        nextPresenceMessage.text,
+        {
+          chat_text_color: "#000000",
+          system_kind: "presence",
+          presence_kind: nextPresenceMessage.kind,
+          presence_actor_name: nextPresenceMessage.actorName,
+          presence_suffix: nextPresenceMessage.suffix
+        }
       );
     }
     clearPendingRoomDeletion(nextRoomId);
@@ -8069,11 +8209,18 @@ io.on("connection", (socket) => {
       }
       const displayProfile = getSocketDisplayProfile(socket, previousServerId);
       const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
+      const disconnectPresenceMessage = buildRoomPresenceMessage("leave", displayName);
       emitSystemChatMessage(
         previousRoomId,
         previousServerId,
-        buildRoomPresenceMessage("leave", displayName),
-        { chat_text_color: displayProfile.chat_text_color || "" }
+        disconnectPresenceMessage.text,
+        {
+          chat_text_color: "#000000",
+          system_kind: "presence",
+          presence_kind: disconnectPresenceMessage.kind,
+          presence_actor_name: disconnectPresenceMessage.actorName,
+          presence_suffix: disconnectPresenceMessage.suffix
+        }
       );
       emitOnlineCharacters(previousRoomId, previousServerId);
       void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
