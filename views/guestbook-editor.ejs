@@ -97,6 +97,70 @@
       </select>
     </label>
 
+    <div class="gb-color-row">
+      <div>
+        <span class="gb-editor-subheading">Rahmenfarbe</span>
+        <span class="gb-editor-helptext">Leer = Standard vom gew&auml;hlten Style.</span>
+      </div>
+
+      <div class="gb-color-input-wrap">
+        <input
+          id="guestbook-frame-color-text"
+          name="frame_color"
+          value="<%= settings.frame_color || '' %>"
+          maxlength="7"
+          placeholder="#7A6855"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <input
+          id="guestbook-frame-color-picker"
+          class="gb-color-picker"
+          type="color"
+          value="<%= settings.frame_color || '#7A6855' %>"
+          aria-label="Rahmenfarbe ausw&auml;hlen"
+        />
+        <span id="guestbook-frame-color-preview" class="gb-color-preview gb-color-preview-swatch" aria-hidden="true"></span>
+        <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-frame-color">
+          Standard
+        </button>
+      </div>
+    </div>
+
+    <div class="gb-color-row">
+      <div>
+        <span class="gb-editor-subheading">Hintergrundfarbe</span>
+        <span class="gb-editor-helptext">Leer = Standard vom gew&auml;hlten Style.</span>
+      </div>
+
+      <div class="gb-color-input-wrap">
+        <input
+          id="guestbook-background-color-text"
+          name="background_color"
+          value="<%= settings.background_color || '' %>"
+          maxlength="7"
+          placeholder="#3E3935"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <input
+          id="guestbook-background-color-picker"
+          class="gb-color-picker"
+          type="color"
+          value="<%= settings.background_color || '#3E3935' %>"
+          aria-label="Hintergrundfarbe ausw&auml;hlen"
+        />
+        <span
+          id="guestbook-background-color-preview"
+          class="gb-color-preview gb-color-preview-swatch"
+          aria-hidden="true"
+        ></span>
+        <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-background-color">
+          Standard
+        </button>
+      </div>
+    </div>
+
     <label>
       Font
       <select name="font_style">
@@ -155,6 +219,58 @@
         delete radio.dataset.wasChecked;
       });
     });
+
+    const normalizeHexColor = (value) => {
+      const normalized = String(value || "").trim().toUpperCase();
+      return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : "";
+    };
+
+    const bindColorField = (key, defaultColor) => {
+      const textInput = document.getElementById(`${key}-text`);
+      const pickerInput = document.getElementById(`${key}-picker`);
+      const preview = document.getElementById(`${key}-preview`);
+      const resetButton = document.querySelector(`[data-color-reset="${key}"]`);
+
+      if (!textInput || !pickerInput || !preview || !resetButton) {
+        return;
+      }
+
+      const renderColor = (value, force = false) => {
+        const normalized = normalizeHexColor(value);
+        if (force) {
+          textInput.value = normalized || "";
+        }
+        if (normalized) {
+          pickerInput.value = normalized.toLowerCase();
+        } else {
+          pickerInput.value = defaultColor.toLowerCase();
+        }
+        preview.style.backgroundColor = normalized || defaultColor;
+        preview.style.opacity = normalized ? "1" : "0.42";
+      };
+
+      renderColor(textInput.value, true);
+
+      textInput.addEventListener("input", () => {
+        renderColor(textInput.value, false);
+      });
+
+      textInput.addEventListener("blur", () => {
+        renderColor(textInput.value, true);
+      });
+
+      pickerInput.addEventListener("input", () => {
+        textInput.value = pickerInput.value.toUpperCase();
+        renderColor(textInput.value, true);
+      });
+
+      resetButton.addEventListener("click", () => {
+        renderColor("", true);
+      });
+    };
+
+    bindColorField("guestbook-frame-color", "#7A6855");
+    bindColorField("guestbook-background-color", "#3E3935");
   })();
 </script>
 

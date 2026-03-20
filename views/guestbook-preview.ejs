@@ -1,6 +1,11 @@
 <%
   const hideTopbar = true;
   const pageClass = "page-guestbook-preview";
+  const guestbookPageStyle = [
+    `color:${guestbookSettings?.chat_text_color || '#AEE7B7'}`,
+    guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
+    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
+  ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", { hideTopbar, pageClass, enableRealtime: false }) %>
 
@@ -29,7 +34,7 @@
 
     <article
       class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
-      style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+      style="<%= guestbookPageStyle %>"
     >
       <% if (guestbookSettings?.image_url) { %>
         <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />

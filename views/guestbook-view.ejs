@@ -14,6 +14,13 @@
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 <% const guestbookEntryPage = guestbookEntryPagination?.currentPage || 1; %>
 <%
+  const guestbookPageStyle = [
+    `color:${guestbookSettings?.chat_text_color || '#AEE7B7'}`,
+    guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
+    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
+  ].filter(Boolean).join(";");
+%>
+<%
   const buildGuestbookEntryPageUrl = (entriesPageNumber) =>
     `/characters/${character.id}/guestbook?page_id=${activeGuestbookPage.id}` +
     (entriesPageNumber > 1 ? `&entries_page=${entriesPageNumber}` : "") +
@@ -26,7 +33,7 @@
 
     <article
       class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
-      style="color:<%= guestbookSettings?.chat_text_color || '#AEE7B7' %>;"
+      style="<%= guestbookPageStyle %>"
     >
       <% if (guestbookSettings?.image_url) { %>
         <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />

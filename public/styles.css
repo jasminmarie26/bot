@@ -3734,9 +3734,9 @@ body.theme-atari .guestbook-entry-panel {
   --gb-base-font-size: 10.16px;
   --gb-copy-font-size: 12.8px;
   position: relative;
-  border: 1px solid var(--field-edge);
+  border: 1px solid var(--gb-frame-color, var(--field-edge));
   border-radius: 12px;
-  background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
+  background: var(--gb-background-color, color-mix(in srgb, var(--field-bg) 84%, white 16%));
   width: min(100%, var(--gb-frame-width));
   padding: 0.78rem 26px;
   margin-bottom: 0.8rem;
@@ -3808,8 +3808,8 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-preview.gb-theme-neutral-weiss {
   --gb-content-width: 600px;
-  background: #ffffff;
-  border: 1px solid #181818;
+  background: var(--gb-background-color, #ffffff);
+  border: 1px solid var(--gb-frame-color, #181818);
   border-radius: 0;
   padding: 20px;
   box-shadow:
@@ -3885,8 +3885,8 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-preview.gb-theme-tiefschwarz {
   --gb-content-width: 600px;
-  background: #030303;
-  border: 2px solid rgba(255, 255, 255, 0.92);
+  background: var(--gb-background-color, #030303);
+  border: 2px solid var(--gb-frame-color, rgba(255, 255, 255, 0.92));
   border-radius: 0;
   padding: 16px;
   box-shadow:
@@ -4514,9 +4514,33 @@ body.page-guestbook-preview::after {
 
 .gb-color-input-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 0.55rem;
   align-items: center;
+}
+
+.gb-color-picker {
+  width: 3rem;
+  height: 2.7rem;
+  padding: 0.18rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
+  cursor: pointer;
+}
+
+.gb-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.gb-color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 8px;
+}
+
+.gb-color-picker::-moz-color-swatch {
+  border: none;
+  border-radius: 8px;
 }
 
 .character-editor-grid {
@@ -4550,6 +4574,28 @@ body.page-guestbook-preview::after {
   background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.gb-color-preview-swatch {
+  color: transparent;
+}
+
+.gb-color-reset {
+  min-width: 5.8rem;
+}
+
+@media (max-width: 720px) {
+  .gb-color-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gb-color-input-wrap {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .gb-color-reset {
+    grid-column: 1 / -1;
+  }
 }
 
 .character-color-trigger {
