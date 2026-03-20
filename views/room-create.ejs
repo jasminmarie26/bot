@@ -101,7 +101,7 @@
           <a href="/dashboard">Dashboard</a>
           <a href="/characters/<%= character.id %>">Charakter</a>
           <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
-          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">Gästebuch</a>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
         </nav>
 
@@ -115,24 +115,9 @@
   <section class="rp-room-panel rp-room-panel-create" id="room-create">
     <h1>Eigenen Raum erstellen</h1>
 
-    <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
-      <div class="rp-room-input">
-        <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
-        <input
-          id="room_name"
-          name="room_name"
-          maxlength="80"
-          placeholder="Raumname (neu anlegen)"
-          required
-        />
-      </div>
-      <button class="rp-enter-btn" type="submit">Raum anlegen</button>
-    </form>
-
     <section class="rp-room-create-list" aria-label="Eigene Räume">
-      <h2>Eigene Räume</h2>
       <% if (!ownedRooms || !ownedRooms.length) { %>
-        <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
+        <p class="muted">Noch keine eigenen Räume vorhanden.</p>
       <% } else { %>
         <div class="rp-room-inline-list">
           <% ownedRooms.forEach((room) => { %>
@@ -152,11 +137,33 @@
                 <path d="M12 13.15v2.8"/>
               </svg></span>
               <span class="rp-room-inline-name"><%= room.name %></span>
+              <% if (room.teaser) { %>
+                <span class="rp-room-inline-teaser"> - [<%= room.teaser %>]</span>
+              <% } %>
             </a>
           <% }) %>
         </div>
       <% } %>
     </section>
+
+    <form method="POST" action="/characters/<%= character.id %>/enter-room" class="rp-room-form">
+      <div class="rp-room-input">
+        <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+        <input
+          id="room_name"
+          name="room_name"
+          maxlength="80"
+          placeholder="Raumname (neu anlegen)"
+          required
+        />
+      </div>
+      <input
+        name="room_teaser"
+        maxlength="160"
+        placeholder="Raumbeschreibung"
+      />
+      <button class="rp-room-submit-hidden" type="submit" tabindex="-1" aria-hidden="true">Raum anlegen</button>
+    </form>
   </section>
 </section>
 

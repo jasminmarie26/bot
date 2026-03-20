@@ -5270,7 +5270,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   rememberPreferredCharacter(req, character);
   const ownedRooms = db
     .prepare(
-      `SELECT id, name, is_locked
+      `SELECT id, name, teaser, is_locked
        FROM chat_rooms
        WHERE server_id = ? AND created_by_user_id = ?
        ORDER BY created_at ASC, id ASC`
@@ -5578,6 +5578,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   const roomName = normalizeRoomName(req.body.room_name);
+  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(`/characters/${id}/rooms/new`);
@@ -5587,7 +5588,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     rememberPreferredCharacter(req, character);
   }
 
-  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, "");
+  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomTeaser);
   if (!targetRoom) {
     setFlash(req, "error", "Raum konnte nicht angelegt werden.");
     return res.redirect(`/characters/${id}/rooms/new`);
