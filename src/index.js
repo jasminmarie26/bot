@@ -1933,6 +1933,69 @@ function toRoomNameKey(roomName) {
   return normalizeRoomName(roomName).toLowerCase();
 }
 
+function findOwnedRoomByNameKey(userId, serverId, roomNameKey) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomNameKey = String(roomNameKey || "").trim().toLowerCase();
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedRoomNameKey) {
+    return null;
+  }
+
+  return (
+    db.prepare(
+      `SELECT id, name
+       FROM chat_rooms
+       WHERE server_id = ? AND created_by_user_id = ? AND name_key = ?`
+    ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey) || null
+  );
+}
+
+function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "") {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(character?.id);
+  const normalizedServerId = normalizeServer(character?.server_id);
+  const normalizedRoomName = normalizeRoomName(roomName);
+  const normalizedRoomTeaser = normalizeRoomTeaser(roomTeaser);
+
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    normalizedRoomName.length < 2
+  ) {
+    return null;
+  }
+
+  const roomNameKey = toRoomNameKey(normalizedRoomName);
+  const existingRoom = findOwnedRoomByNameKey(parsedUserId, normalizedServerId, roomNameKey);
+  if (existingRoom) {
+    return {
+      id: Number(existingRoom.id),
+      name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
+      created: false
+    };
+  }
+
+  const info = db.prepare(
+    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, teaser, server_id)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(
+    parsedCharacterId,
+    parsedUserId,
+    normalizedRoomName,
+    roomNameKey,
+    normalizedRoomTeaser,
+    normalizedServerId
+  );
+
+  return {
+    id: Number(info.lastInsertRowid),
+    name: normalizedRoomName,
+    created: true
+  };
+}
+
 const STANDARD_ROOM_DEFINITIONS = Object.freeze({
   "free-rp": [
     {
@@ -5220,32 +5283,13 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     rememberPreferredCharacter(req, character);
   }
 
-  const roomNameKey = toRoomNameKey(roomName);
-  const existingRoom = db
-    .prepare(
-      `SELECT id, name
-       FROM chat_rooms
-       WHERE server_id = ? AND created_by_user_id = ? AND name_key = ?`
-    )
-    .get(normalizeServer(character.server_id), req.session.user.id, roomNameKey);
-
-  if (existingRoom) {
-    return res.redirect(`/chat?room_id=${existingRoom.id}&character_id=${character.id}`);
+  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomTeaser);
+  if (!targetRoom) {
+    setFlash(req, "error", "Raum konnte nicht angelegt werden.");
+    return res.redirect(`/characters/${id}#roomlist`);
   }
 
-  const info = db.prepare(
-    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, teaser, server_id)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
-    character.id,
-    req.session.user.id,
-    roomName,
-    roomNameKey,
-    roomTeaser,
-    normalizeServer(character.server_id)
-  );
-
-  return res.redirect(`/chat?room_id=${info.lastInsertRowid}&character_id=${character.id}`);
+  return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
 });
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
@@ -6860,17 +6904,6 @@ function getRoleColor(roleStyle = "") {
   return "1f2a37";
 }
 
-const ROOM_PRESENCE_SUFFIXES = [
-  " schiebt den Vorhang beiseite und tritt ein.",
-  " taucht zwischen den Gesprächen auf.",
-  " findet den Weg herein und lässt sich nieder.",
-  " erscheint im Raum, als wäre es nie anders gewesen.",
-  " zieht sich leise wieder zurück.",
-  " nickt in die Runde und verschwindet zur Tür hinaus.",
-  " lässt nur ein leises Echo zurück und geht.",
-  " löst sich aus dem Gespräch und verlässt den Raum."
-];
-
 function buildSystemLogRuns(content) {
   const text = String(content || "").trim();
   if (!text) return [];
@@ -7428,6 +7461,10 @@ const ROOM_EXIT_SUFFIXES = buildPresenceSuffixPool(
   ]
 );
 
+const ROOM_PRESENCE_SUFFIXES = Array.from(
+  new Set([...ROOM_ENTRY_SUFFIXES, ...ROOM_EXIT_SUFFIXES].map((suffix) => ` ${suffix}`))
+);
+
 function buildRoomPresenceMessage(kind, displayName) {
   const safeName = String(displayName || "").trim() || "Jemand";
   const suffixes = kind === "leave" ? ROOM_EXIT_SUFFIXES : ROOM_ENTRY_SUFFIXES;
@@ -7457,7 +7494,9 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     system_kind: String(options?.system_kind || "").trim(),
     presence_kind: String(options?.presence_kind || "").trim(),
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
+    presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
     presence_suffix: String(options?.presence_suffix || "").trim(),
+    room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
     created_at: createdAt
   });
 
@@ -7468,7 +7507,9 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     system_kind: String(options?.system_kind || "").trim(),
     presence_kind: String(options?.presence_kind || "").trim(),
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
+    presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
     presence_suffix: String(options?.presence_suffix || "").trim(),
+    room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
     created_at: createdAt
   });
 }
@@ -7817,6 +7858,7 @@ io.on("connection", (socket) => {
             system_kind: "presence",
             presence_kind: previousPresenceMessage.kind,
             presence_actor_name: previousPresenceMessage.actorName,
+            presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
             presence_suffix: previousPresenceMessage.suffix
           }
         );
@@ -7852,6 +7894,7 @@ io.on("connection", (socket) => {
           system_kind: "presence",
           presence_kind: nextPresenceMessage.kind,
           presence_actor_name: nextPresenceMessage.actorName,
+          presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
           presence_suffix: nextPresenceMessage.suffix
         }
       );
@@ -8095,6 +8138,81 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const roomSwitchMatch = content.match(/^\/rw(?:\s+(.+))?$/i);
+    if (roomSwitchMatch) {
+      const requestedRoomName = normalizeRoomName(roomSwitchMatch[1] || "");
+      if (requestedRoomName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Bitte gib hinter /rw einen gültigen Raumnamen ein.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const preferredCharacter = getPreferredCharacterForUser(
+        socket.data.user.id,
+        serverId,
+        getSocketPreferredCharacterId(socket, serverId)
+      );
+
+      if (!preferredCharacter?.id) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du brauchst einen eigenen Charakter, um mit /rw den Raum zu wechseln.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const targetRoom = ensureOwnedRoomForCharacter(
+        socket.data.user.id,
+        preferredCharacter,
+        requestedRoomName
+      );
+
+      if (!targetRoom?.id) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Der Zielraum konnte nicht geöffnet werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (roomId && Number(targetRoom.id) === Number(roomId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Du bist bereits im Raum ${targetRoom.name}.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const switchDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const switchDisplayName =
+        switchDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        `${switchDisplayName} hat in den Raum ${targetRoom.name} gewechselt.`,
+        {
+          chat_text_color: "#000000",
+          system_kind: "room-switch",
+          presence_actor_name: switchDisplayName,
+          presence_actor_chat_text_color: switchDisplayProfile?.chat_text_color || "",
+          room_switch_target_name: targetRoom.name
+        }
+      );
+
+      socket.data.skipDisconnectPresence = true;
+      socket.emit("chat:redirect", {
+        url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`
+      });
+      return;
+    }
+
     const displayProfile = getSocketDisplayProfile(socket, serverId);
     const createdAt = formatChatTimestamp();
     appendMessageToActiveRoomLog(roomId, serverId, {
@@ -8207,21 +8325,24 @@ io.on("connection", (socket) => {
         socket.data.isTyping = false;
         emitChatTypingState(socket, previousRoomId, previousServerId);
       }
-      const displayProfile = getSocketDisplayProfile(socket, previousServerId);
-      const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
-      const disconnectPresenceMessage = buildRoomPresenceMessage("leave", displayName);
-      emitSystemChatMessage(
-        previousRoomId,
-        previousServerId,
-        disconnectPresenceMessage.text,
-        {
-          chat_text_color: "#000000",
-          system_kind: "presence",
-          presence_kind: disconnectPresenceMessage.kind,
-          presence_actor_name: disconnectPresenceMessage.actorName,
-          presence_suffix: disconnectPresenceMessage.suffix
-        }
-      );
+      if (!socket.data.skipDisconnectPresence) {
+        const displayProfile = getSocketDisplayProfile(socket, previousServerId);
+        const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
+        const disconnectPresenceMessage = buildRoomPresenceMessage("leave", displayName);
+        emitSystemChatMessage(
+          previousRoomId,
+          previousServerId,
+          disconnectPresenceMessage.text,
+          {
+            chat_text_color: "#000000",
+            system_kind: "presence",
+            presence_kind: disconnectPresenceMessage.kind,
+            presence_actor_name: disconnectPresenceMessage.actorName,
+            presence_actor_chat_text_color: displayProfile?.chat_text_color || "",
+            presence_suffix: disconnectPresenceMessage.suffix
+          }
+        );
+      }
       emitOnlineCharacters(previousRoomId, previousServerId);
       void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
       scheduleRoomDeletion(previousRoomId);

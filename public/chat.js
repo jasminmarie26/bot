@@ -324,13 +324,15 @@
       const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
       const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
+      const presenceActorChatTextColor = normalizeChatTextColor(msg?.presence_actor_chat_text_color);
       const presenceSuffix = String(msg?.presence_suffix || "").trim();
+      const roomSwitchTargetName = String(msg?.room_switch_target_name || "").trim();
       if (systemKind === "presence" && presenceActorName && presenceSuffix) {
         const strong = document.createElement("strong");
         strong.textContent = presenceActorName;
         body.textContent = ` ${presenceSuffix}`;
-        applyChatTextColor(strong, chatTextColor);
-        applyChatTextColor(body, chatTextColor);
+        applyChatTextColor(strong, presenceActorChatTextColor);
+        body.style.color = "#000000";
         line.appendChild(strong);
         if (
           presenceKind === "enter" &&
@@ -338,6 +340,13 @@
         ) {
           playEntryTone();
         }
+      } else if (systemKind === "room-switch" && presenceActorName && roomSwitchTargetName) {
+        const strong = document.createElement("strong");
+        strong.textContent = presenceActorName;
+        applyChatTextColor(strong, presenceActorChatTextColor);
+        body.textContent = ` hat in den Raum ${roomSwitchTargetName} gewechselt.`;
+        body.style.color = "#000000";
+        line.appendChild(strong);
       } else {
         body.textContent = content;
       }
@@ -965,6 +974,11 @@
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", handleWhisperMessage);
   socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:redirect", (payload) => {
+    const nextUrl = String(payload?.url || "").trim();
+    if (!nextUrl.startsWith("/")) return;
+    window.location.assign(nextUrl);
+  });
   socket.on("user:display-profile", updateHeaderIdentity);
   socket.on("chat:typing", (payload) => {
     const userId = Number(payload?.user_id);
