@@ -122,7 +122,11 @@
             </a>
           <% } %>
           <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
-            <a href="/characters/<%= character.id %>#roomlist">Festplays</a>
+            <a
+              href="/characters/<%= character.id %>/rooms/new"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Festplays</a>
           <% } %>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
         </nav>
