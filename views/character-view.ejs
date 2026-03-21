@@ -27,24 +27,11 @@
       : roomlistIdentityName; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
-    <nav class="rp-menu" aria-label="Charakter Navigation">
-      <% if (isOwner) { %>
-        <div class="rp-dropdown">
-          <a class="rp-dropdown-toggle" href="#roomlist">Raumliste</a>
-          <div class="rp-dropdown-menu" role="menu" aria-label="Raumliste Aktionen">
-            <a
-              href="/characters/<%= character.id %>/rooms/new"
-              target="_blank"
-              rel="noopener noreferrer"
-            >+ Raum erstellen</a>
-          </div>
-        </div>
-      <% } else { %>
+      <nav class="rp-menu" aria-label="Charakter Navigation">
         <a href="#roomlist">Raumliste</a>
-      <% } %>
-      <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
-      <a
-        class="live-updates-nav-link"
+        <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+        <a
+          class="live-updates-nav-link"
         href="/live-updates"
         target="site-live-updates"
         data-live-updates-link-root
@@ -129,7 +116,7 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              Raum editieren
+              Eigenen Raum erstellen/editieren
             </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
