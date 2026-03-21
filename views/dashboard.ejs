@@ -39,7 +39,7 @@
                 <p class="muted dashboard-section-copy"><%= section.dashboard_caption %></p>
               </div>
               <div class="dashboard-server-actions">
-                <a class="btn dashboard-add-character-btn" href="/characters/new?server=<%= section.id %>" aria-label="Charakter hinzufügen" title="Charakter hinzufügen">+</a>
+                <a class="btn dashboard-add-character-btn" href="/characters/new?server=<%= section.id %>" aria-label="Charakter hinzufuegen" title="Charakter hinzufuegen">+</a>
               </div>
             </div>
 
@@ -49,44 +49,88 @@
               <div class="character-mini-grid">
                 <% section.characters.forEach((char) => { %>
                   <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
-                  <% const moveArrow = char.server_id === "free-rp" ? "→" : "←"; %>
+                  <% const moveArrow = char.server_id === "free-rp" ? "&rarr;" : "&larr;"; %>
                   <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
+                  <% const assignableFestplays = Array.isArray(char.assignable_festplays) ? char.assignable_festplays : []; %>
+                  <% const canSwitchFestplay = assignableFestplays.length > 1; %>
                   <article class="character-mini-card">
-                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                      <span class="character-mini-name"><%= char.name %></span>
-                    </a>
-                    <div class="character-mini-actions">
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/move"
-                        class="character-mini-move-form"
-                        onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-move-btn"
-                          aria-label="Charakter verschieben"
-                          title="<%= moveTitle %>"
+                    <div class="character-mini-header">
+                      <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                        <span class="character-mini-name"><%= char.name %></span>
+                        <span class="character-mini-festplay-copy">
+                          <span class="character-mini-festplay-label">Festspiel</span>
+                          <strong class="character-mini-festplay-name"><%= char.festplay_name || "Noch nicht zugeordnet" %></strong>
+                        </span>
+                      </a>
+
+                      <div class="character-mini-actions">
+                        <form
+                          method="POST"
+                          action="/characters/<%= char.id %>/move"
+                          class="character-mini-move-form"
+                          onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
                         >
-                          <%= moveArrow %>
-                        </button>
-                      </form>
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/delete"
-                        class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-delete-btn"
-                          aria-label="Charakter l&ouml;schen"
-                          title="Charakter l&ouml;schen"
+                          <button
+                            type="submit"
+                            class="character-mini-move-btn"
+                            aria-label="Charakter verschieben"
+                            title="<%= moveTitle %>"
+                          >
+                            <%- moveArrow %>
+                          </button>
+                        </form>
+                        <form
+                          method="POST"
+                          action="/characters/<%= char.id %>/delete"
+                          class="character-mini-delete-form"
+                          onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
                         >
-                          X
-                        </button>
-                      </form>
+                          <button
+                            type="submit"
+                            class="character-mini-delete-btn"
+                            aria-label="Charakter l&ouml;schen"
+                            title="Charakter l&ouml;schen"
+                          >
+                            X
+                          </button>
+                        </form>
+                      </div>
                     </div>
+
+                    <% if (canSwitchFestplay) { %>
+                      <form
+                        method="POST"
+                        action="/characters/<%= char.id %>/festplay"
+                        class="character-mini-switch-form"
+                      >
+                        <label class="character-mini-switch-label" for="character-festplay-<%= char.id %>">
+                          Festspiel wechseln
+                        </label>
+                        <div class="character-mini-switch-row">
+                          <select
+                            id="character-festplay-<%= char.id %>"
+                            name="festplay_id"
+                            class="character-mini-switch-select"
+                          >
+                            <% assignableFestplays.forEach((festplay) => { %>
+                              <option
+                                value="<%= festplay.id %>"
+                                <%= Number(char.festplay_id) === Number(festplay.id) ? "selected" : "" %>
+                              >
+                                <%= festplay.name %>
+                              </option>
+                            <% }) %>
+                          </select>
+                          <button type="submit" class="btn btn-secondary character-mini-switch-button">
+                            Wechseln
+                          </button>
+                        </div>
+                      </form>
+                    <% } else { %>
+                      <p class="character-mini-switch-hint">
+                        Weitere Festspiele tauchen hier auf, sobald du in diesem Bereich freigeschaltet bist.
+                      </p>
+                    <% } %>
                   </article>
                 <% }) %>
               </div>
