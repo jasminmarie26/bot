@@ -4,6 +4,7 @@
   const roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
   const roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
   const roomLinkTargets = Array.from(document.querySelectorAll("[data-room-link-target]"));
+  const ownedRoomLists = Array.from(document.querySelectorAll(".rp-room-list-owned"));
   if ((!presenceSource && roomWatchTargets.length === 0) || typeof io !== "function") return;
 
   const serverId = String(presenceSource?.dataset?.serverPresence || "")
@@ -61,6 +62,43 @@
     return text;
   }
 
+  let ownedRoomSeparatorFrame = 0;
+
+  function refreshOwnedRoomRowSeparators() {
+    ownedRoomSeparatorFrame = 0;
+    if (!ownedRoomLists.length) return;
+
+    ownedRoomLists.forEach((list) => {
+      list.querySelectorAll(".rp-room-row-separator").forEach((separator) => separator.remove());
+
+      const cards = Array.from(list.children).filter(
+        (child) => child instanceof HTMLElement && child.classList.contains("rp-room-standard-card")
+      );
+      if (cards.length < 2) return;
+
+      let currentRowTop = null;
+      cards.forEach((card) => {
+        const rowTop = Math.round(card.offsetTop);
+        if (currentRowTop === null) {
+          currentRowTop = rowTop;
+          return;
+        }
+        if (rowTop > currentRowTop + 4) {
+          const separator = document.createElement("div");
+          separator.className = "rp-room-row-separator";
+          separator.setAttribute("aria-hidden", "true");
+          list.insertBefore(separator, card);
+          currentRowTop = rowTop;
+        }
+      });
+    });
+  }
+
+  function scheduleOwnedRoomRowSeparators() {
+    if (!ownedRoomLists.length || ownedRoomSeparatorFrame) return;
+    ownedRoomSeparatorFrame = window.requestAnimationFrame(refreshOwnedRoomRowSeparators);
+  }
+
   function renderRoomWatchTarget(target, entries) {
     target.replaceChildren();
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -68,6 +106,7 @@
       emptyState.className = "muted";
       emptyState.textContent = "Gerade niemand dort.";
       target.appendChild(emptyState);
+      scheduleOwnedRoomRowSeparators();
       return;
     }
 
@@ -80,6 +119,7 @@
         target.appendChild(separator);
       }
     });
+    scheduleOwnedRoomRowSeparators();
   }
 
   function applyRoomStateToTarget(payload) {
@@ -139,6 +179,8 @@
           .toLowerCase()
       });
     });
+
+    scheduleOwnedRoomRowSeparators();
   });
 
   socket.on("user:display-profile", updateHeaderIdentity);
@@ -164,4 +206,7 @@
   });
 
   socket.on("room:state:update", applyRoomStateToTarget);
+
+  window.addEventListener("resize", scheduleOwnedRoomRowSeparators);
+  scheduleOwnedRoomRowSeparators();
 })();

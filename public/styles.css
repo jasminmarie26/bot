@@ -3747,6 +3747,13 @@ body.page-home-screen .home-hero-actions {
   justify-content: start;
 }
 
+.rp-room-row-separator {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: 0.02rem 0 0.16rem;
+  background: color-mix(in srgb, var(--panel-edge) 68%, transparent);
+}
+
 .rp-room-list-stacked {
   grid-template-columns: 1fr;
   gap: 0;
