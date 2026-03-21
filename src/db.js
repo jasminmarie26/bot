@@ -134,6 +134,7 @@ db.exec(`
       email_log_enabled INTEGER NOT NULL DEFAULT 0,
       is_locked INTEGER NOT NULL DEFAULT 0,
       is_public_room INTEGER NOT NULL DEFAULT 0,
+      is_saved_room INTEGER NOT NULL DEFAULT 0,
       server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
@@ -371,6 +372,11 @@ if (!chatRoomColumns.includes("is_locked")) {
 
 if (!chatRoomColumns.includes("is_public_room")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN is_public_room INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!chatRoomColumns.includes("is_saved_room")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN is_saved_room INTEGER NOT NULL DEFAULT 0");
+  db.exec("UPDATE chat_rooms SET is_saved_room = 1 WHERE COALESCE(is_public_room, 0) = 0");
 }
 
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_server_user_name_key");
