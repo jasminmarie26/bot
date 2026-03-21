@@ -175,6 +175,34 @@
     <% } %>
 
     <div class="rp-room-list-wrap">
+      <% if (isOwner) { %>
+        <section class="rp-room-section rp-room-section-standard">
+          <h2 class="rp-room-form-title">Raum erstellen</h2>
+          <form
+            method="POST"
+            action="/characters/<%= character.id %>/enter-room"
+            class="rp-room-form rp-room-form-inline"
+          >
+            <input type="hidden" name="return_to" value="roomlist" />
+            <div class="rp-room-input">
+              <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+              <input
+                name="room_name"
+                maxlength="80"
+                placeholder="Raumname"
+                required
+              />
+            </div>
+            <input
+              name="room_description"
+              maxlength="160"
+              placeholder="Raumbeschreibung"
+            />
+            <button type="submit" class="rp-enter-btn">Raum erstellen</button>
+          </form>
+        </section>
+      <% } %>
+
       <% if (standardRooms && standardRooms.length) { %>
         <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
           <summary class="rp-room-section-summary">

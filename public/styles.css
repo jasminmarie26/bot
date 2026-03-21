@@ -3158,6 +3158,17 @@ body.page-home-screen .home-hero-actions {
   margin-bottom: 0.95rem;
 }
 
+.rp-room-form-inline {
+  margin-top: 0.18rem;
+  margin-bottom: 0;
+}
+
+.rp-room-form-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
 .rp-room-create-list {
   display: grid;
   gap: 0.6rem;

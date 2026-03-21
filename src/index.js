@@ -5633,6 +5633,11 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
+  const returnTarget = String(req.body.return_to || "").trim().toLowerCase();
+  if (returnTarget === "roomlist") {
+    return res.redirect(`/characters/${id}#roomlist`);
+  }
+
   return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}&room_tab=overview`);
 });
 
