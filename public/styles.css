@@ -6200,8 +6200,8 @@ select:focus {
 }
 
 .chat-room-scene {
-  margin: 0 0 0.9rem;
-  padding: 0.2rem 0 0.85rem;
+  margin: 0 0 0.34rem;
+  padding: 0 0 0.34rem;
   border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 52%, transparent);
   color: color-mix(in srgb, #17191d 88%, var(--accent) 12%);
   font-size: var(--chat-copy-size);
@@ -6221,8 +6221,17 @@ select:focus {
   line-height: inherit;
 }
 
-.chat-room-scene .guestbook-entry-body:first-child {
+.chat-room-scene .guestbook-entry-body:first-child,
+.chat-room-scene .guestbook-entry-body > :first-child {
   margin-top: 0;
+}
+
+.chat-room-scene .guestbook-entry-body > :last-child {
+  margin-bottom: 0;
+}
+
+.page-chat .chat-box {
+  padding-top: 0.42rem;
 }
 
 .page-chat #chat-input,
