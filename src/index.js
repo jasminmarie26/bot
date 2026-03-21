@@ -1949,8 +1949,31 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey) {
     db.prepare(
       `SELECT id, name
        FROM chat_rooms
-       WHERE server_id = ? AND created_by_user_id = ? AND name_key = ?`
+       WHERE server_id = ?
+         AND created_by_user_id = ?
+         AND name_key = ?
+         AND COALESCE(is_public_room, 0) = 0`
     ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey) || null
+  );
+}
+
+function findPublicRoomByNameKey(serverId, roomNameKey) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomNameKey = String(roomNameKey || "").trim().toLowerCase();
+  if (!normalizedRoomNameKey) {
+    return null;
+  }
+
+  return (
+    db.prepare(
+      `SELECT id, name, description
+       FROM chat_rooms
+       WHERE server_id = ?
+         AND name_key = ?
+         AND COALESCE(is_public_room, 0) = 1
+       ORDER BY id ASC
+       LIMIT 1`
+    ).get(normalizedServerId, normalizedRoomNameKey) || null
   );
 }
 
@@ -1999,6 +2022,60 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
       normalizedRoomDescription,
       normalizedServerId
     );
+
+  return {
+    id: Number(info.lastInsertRowid),
+    name: normalizedRoomName,
+    created: true
+  };
+}
+
+function ensurePublicRoomForServer(userId, character, roomName, roomDescription = "") {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(character?.id);
+  const normalizedServerId = normalizeServer(character?.server_id);
+  const normalizedRoomName = normalizeRoomName(roomName);
+  const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
+
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    normalizedRoomName.length < 2
+  ) {
+    return null;
+  }
+
+  const roomNameKey = toRoomNameKey(normalizedRoomName);
+  const existingRoom = findPublicRoomByNameKey(normalizedServerId, roomNameKey);
+  if (existingRoom) {
+    if (normalizedRoomDescription && !String(existingRoom.description || "").trim()) {
+      db.prepare(
+        `UPDATE chat_rooms
+         SET description = ?
+         WHERE id = ?`
+      ).run(normalizedRoomDescription, existingRoom.id);
+    }
+    return {
+      id: Number(existingRoom.id),
+      name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
+      created: false
+    };
+  }
+
+  const info = db.prepare(
+    `INSERT INTO chat_rooms
+       (character_id, created_by_user_id, name, name_key, description, server_id, is_public_room)
+     VALUES (?, ?, ?, ?, ?, ?, 1)`
+  ).run(
+    parsedCharacterId,
+    parsedUserId,
+    normalizedRoomName,
+    roomNameKey,
+    normalizedRoomDescription,
+    normalizedServerId
+  );
 
   return {
     id: Number(info.lastInsertRowid),
@@ -3250,7 +3327,7 @@ function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
     .prepare(
-        `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.server_id,
+        `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.is_public_room, r.server_id,
                 c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
                  u.username AS room_owner_name
          FROM chat_rooms r
@@ -3421,6 +3498,9 @@ function isRoomLockedForUser(user, room = null) {
 
 function canAccessRoom(user, room = null) {
   if (!user || !room) return false;
+  if (Number(room.is_public_room) === 1) {
+    return true;
+  }
   return (
     canAccessCharacter(user.id, room.character_owner_id, room.character_is_public, user.is_admin) ||
     hasRoomInviteAccess(user, room)
@@ -5206,7 +5286,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   const rooms = db
     .prepare(
-        `SELECT r.id, r.name, r.description, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
+        `SELECT r.id, r.name, r.description, r.teaser, r.is_locked, r.is_public_room, r.server_id, r.created_at, r.created_by_user_id,
                 u.username AS creator_name,
                  CASE
                  WHEN r.created_by_user_id = ? THEN 1
@@ -5226,18 +5306,26 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     .map((room) => ({
       ...room,
       is_locked: Number(room.is_locked) === 1,
+      is_public_room: Number(room.is_public_room) === 1,
       can_manage_room: Number(room.can_manage_room) === 1,
       can_enter:
         Number(room.is_locked) !== 1 ||
         Number(room.can_manage_room) === 1 ||
         hasRoomInviteAccess(req.session.user, room)
     }));
+  const publicRooms = rooms.filter((room) => room.is_public_room);
   const ownedRooms = isOwner
-    ? rooms.filter((room) => Number(room.created_by_user_id) === Number(req.session.user.id))
+    ? rooms.filter(
+        (room) =>
+          !room.is_public_room && Number(room.created_by_user_id) === Number(req.session.user.id)
+      )
     : [];
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
     standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
+  );
+  const publicRoomUsers = Object.fromEntries(
+    publicRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
   const roomUsers = Object.fromEntries(
     ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
@@ -5273,6 +5361,8 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     isOwner,
     standardRooms,
     standardRoomUsers,
+    publicRooms,
+    publicRoomUsers,
     roomUsers,
     ownedRooms,
     activeGuestbookPage
@@ -5302,7 +5392,9 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
     .prepare(
         `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked
          FROM chat_rooms
-         WHERE server_id = ? AND created_by_user_id = ?
+         WHERE server_id = ?
+           AND created_by_user_id = ?
+           AND COALESCE(is_public_room, 0) = 0
          ORDER BY created_at ASC, id ASC`
     )
     .all(normalizeServer(character.server_id), req.session.user.id)
@@ -5618,22 +5710,24 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
 
   const roomName = normalizeRoomName(req.body.room_name);
   const roomDescription = normalizeRoomDescription(req.body.room_description || req.body.room_teaser);
+  const returnTarget = String(req.body.return_to || "").trim().toLowerCase();
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
-    return res.redirect(`/characters/${id}/rooms/new`);
+    return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
   }
 
   if (character.user_id === req.session.user.id) {
     rememberPreferredCharacter(req, character);
   }
 
-  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomDescription);
+  const targetRoom = returnTarget === "roomlist"
+    ? ensurePublicRoomForServer(req.session.user.id, character, roomName, roomDescription)
+    : ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomDescription);
   if (!targetRoom) {
     setFlash(req, "error", "Raum konnte nicht angelegt werden.");
-    return res.redirect(`/characters/${id}/rooms/new`);
+    return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
   }
 
-  const returnTarget = String(req.body.return_to || "").trim().toLowerCase();
   if (returnTarget === "roomlist") {
     return res.redirect(`/characters/${id}#roomlist`);
   }
@@ -5665,7 +5759,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
 
   const room = db
     .prepare(
-      `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked
+      `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room
        FROM chat_rooms
        WHERE id = ?`
     )
@@ -5673,6 +5767,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   if (
     !room ||
     Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+    Number(room.is_public_room) === 1 ||
     normalizeServer(room.server_id) !== normalizeServer(character.server_id)
   ) {
     setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
@@ -5775,7 +5870,7 @@ app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) =
 
   const room = db
     .prepare(
-      `SELECT id, name, server_id, created_by_user_id
+      `SELECT id, name, server_id, created_by_user_id, is_public_room
        FROM chat_rooms
        WHERE id = ?`
     )
@@ -5783,6 +5878,7 @@ app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) =
   if (
     !room ||
     Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+    Number(room.is_public_room) === 1 ||
     normalizeServer(room.server_id) !== normalizeServer(character.server_id)
   ) {
     setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
@@ -8294,9 +8390,18 @@ function clearPendingRoomDeletion(roomId) {
   pendingRoomDeletionTimers.delete(roomId);
 }
 
+function shouldAutoDeleteRoom(roomId) {
+  if (!Number.isInteger(roomId) || roomId < 1) return false;
+  const room = db
+    .prepare("SELECT is_public_room FROM chat_rooms WHERE id = ?")
+    .get(roomId);
+  if (!room) return false;
+  return AUTO_DELETE_EMPTY_ROOMS || Number(room.is_public_room) === 1;
+}
+
 function scheduleRoomDeletion(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return;
-  if (!AUTO_DELETE_EMPTY_ROOMS) {
+  if (!shouldAutoDeleteRoom(roomId)) {
     clearPendingRoomDeletion(roomId);
     return;
   }
@@ -8326,13 +8431,13 @@ function deleteRoomData(roomId) {
 
 function maybeRemoveEmptyRoom(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return false;
-  if (!AUTO_DELETE_EMPTY_ROOMS) {
+  if (!shouldAutoDeleteRoom(roomId)) {
     clearPendingRoomDeletion(roomId);
     return false;
   }
 
   const roomExists = db
-    .prepare("SELECT id FROM chat_rooms WHERE id = ?")
+    .prepare("SELECT id, is_public_room FROM chat_rooms WHERE id = ?")
     .get(roomId);
   if (!roomExists) return false;
 
@@ -8349,7 +8454,6 @@ function maybeRemoveEmptyRoom(roomId) {
 }
 
 function pruneEmptyRooms() {
-  if (!AUTO_DELETE_EMPTY_ROOMS) return;
   const rooms = db.prepare("SELECT id FROM chat_rooms").all();
   rooms.forEach((room) => {
     scheduleRoomDeletion(Number(room.id));
