@@ -152,10 +152,12 @@
           <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
-            <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Eigenen Raum erstellen/editieren</a>
           <% } %>
           <% if (activeCharacter) { %>
             <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+            <% if (activeCharacter.is_owner) { %>
+              <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Raum erstellen/editieren</a>
+            <% } %>
             <% if (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp") { %>
               <a href="/characters/<%= activeCharacter.id %>#roomlist">Festplays</a>
             <% } %>
