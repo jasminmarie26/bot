@@ -113,49 +113,12 @@
 
   <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
     <div class="rp-room-create-header">
-      <h1>Festspiele erstellen</h1>
       <button
         class="rp-room-create-save"
         type="submit"
         form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
       >Speichern</button>
     </div>
-
-    <section class="rp-room-create-list" aria-label="Eigene Festspiele">
-      <% if (!ownedFestplays || !ownedFestplays.length) { %>
-        <p class="muted">Noch keine eigenen Festspiele vorhanden.</p>
-      <% } else { %>
-        <div class="rp-room-manage-list">
-          <% ownedFestplays.forEach((festplay) => { %>
-            <% const isSelectedFestplay = selectedFestplay && Number(selectedFestplay.id) === Number(festplay.id); %>
-            <div class="rp-room-manage-row">
-              <div class="rp-room-manage-main">
-                <a
-                  class="rp-room-inline-item rp-room-manage-link<%= isSelectedFestplay ? ' is-active' : '' %>"
-                  href="<%= isSelectedFestplay ? `/characters/${character.id}/festplays#festplay-create` : `/characters/${character.id}/festplays?selected_festplay=${festplay.id}#festplay-selected-editor` %>"
-                  title="<%= isSelectedFestplay ? 'Festspiel schlie&szlig;en' : 'Festspiel ausw&auml;hlen' %>"
-                  aria-current="<%= isSelectedFestplay ? 'page' : 'false' %>"
-                >
-                  <span class="rp-room-inline-name"><%= festplay.name %></span>
-                </a>
-                <form
-                  method="POST"
-                  action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/delete"
-                  class="inline-form rp-room-delete-form"
-                >
-                  <button
-                    class="rp-room-delete-btn"
-                    type="submit"
-                    aria-label="Festspiel <%= festplay.name %> l&ouml;schen"
-                    title="Festspiel l&ouml;schen"
-                  >X</button>
-                </form>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      <% } %>
-    </section>
 
     <% if (selectedFestplay) { %>
       <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspieldetails">
