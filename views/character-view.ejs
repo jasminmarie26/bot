@@ -265,8 +265,8 @@
                     <path d="M12 13.15v2.8"/>
                   </svg></span>
                   <span class="rp-room-inline-name"><%= room.name %></span>
-                  <% if (room.teaser) { %>
-                    <span class="rp-room-inline-teaser"> - [<%= room.teaser %>]</span>
+                  <% if (room.description) { %>
+                    <span class="rp-room-inline-teaser"> - [<%= room.description %>]</span>
                   <% } %>
                 </a>
               <% }) %>

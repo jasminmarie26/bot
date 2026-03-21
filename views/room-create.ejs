@@ -148,6 +148,9 @@
                     <path d="M12 13.15v2.8"/>
                   </svg></span>
                   <span class="rp-room-inline-name"><%= room.name %></span>
+                  <% if (room.description) { %>
+                    <span class="rp-room-inline-teaser"> - [<%= room.description %>]</span>
+                  <% } %>
                 </a>
                 <form
                   method="POST"
@@ -173,6 +176,9 @@
         <div class="rp-room-editor-bar">
           <div class="rp-room-editor-title-wrap">
             <strong class="rp-room-editor-title"><%= selectedRoom.name %></strong>
+            <% if (selectedRoom.description) { %>
+              <span class="rp-room-inline-teaser"> - [<%= selectedRoom.description %>]</span>
+            <% } %>
           </div>
           <a
             class="rp-room-editor-enter"
@@ -271,6 +277,17 @@
             </label>
 
             <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Raumbeschreibung</span>
+              <input
+                type="text"
+                name="room_description"
+                maxlength="160"
+                placeholder="Kurzer Text f&uuml;r die Raumliste"
+                value="<%= selectedRoom.description || '' %>"
+              />
+            </label>
+
+            <label class="rp-room-editor-field">
               <span class="rp-room-editor-field-label">
                 Beschreibung im Raum
                 <a
@@ -320,7 +337,7 @@
           />
         </div>
         <input
-          name="room_teaser"
+          name="room_description"
           maxlength="160"
           placeholder="Raumbeschreibung"
         />

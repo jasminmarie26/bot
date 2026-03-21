@@ -123,16 +123,17 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS chat_rooms (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    character_id INTEGER NOT NULL,
-    created_by_user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    name_key TEXT NOT NULL,
-    teaser TEXT NOT NULL DEFAULT '',
-    image_url TEXT NOT NULL DEFAULT '',
-    email_log_enabled INTEGER NOT NULL DEFAULT 0,
-    is_locked INTEGER NOT NULL DEFAULT 0,
-    server_id TEXT NOT NULL DEFAULT 'free-rp',
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      character_id INTEGER NOT NULL,
+      created_by_user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      name_key TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      teaser TEXT NOT NULL DEFAULT '',
+      image_url TEXT NOT NULL DEFAULT '',
+      email_log_enabled INTEGER NOT NULL DEFAULT 0,
+      is_locked INTEGER NOT NULL DEFAULT 0,
+      server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -351,6 +352,10 @@ if (!chatRoomColumns.includes("teaser")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN teaser TEXT NOT NULL DEFAULT ''");
 }
 
+if (!chatRoomColumns.includes("description")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+}
+
 if (!chatRoomColumns.includes("image_url")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN image_url TEXT NOT NULL DEFAULT ''");
 }
@@ -462,6 +467,8 @@ db.prepare(
 db.prepare(
   "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
 ).run();
+db.prepare("UPDATE chat_rooms SET description = '' WHERE description IS NULL").run();
+db.prepare("UPDATE chat_rooms SET description = teaser WHERE description = '' AND teaser != ''").run();
 db.prepare("UPDATE chat_rooms SET teaser = '' WHERE teaser IS NULL").run();
 db.prepare("UPDATE chat_rooms SET image_url = '' WHERE image_url IS NULL").run();
 db.prepare("UPDATE chat_rooms SET email_log_enabled = 0 WHERE email_log_enabled IS NULL").run();

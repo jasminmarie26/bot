@@ -1954,12 +1954,12 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey) {
   );
 }
 
-function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "") {
+function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescription = "") {
   const parsedUserId = Number(userId);
   const parsedCharacterId = Number(character?.id);
   const normalizedServerId = normalizeServer(character?.server_id);
   const normalizedRoomName = normalizeRoomName(roomName);
-  const normalizedRoomTeaser = normalizeRoomTeaser(roomTeaser);
+  const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
 
   if (
     !Number.isInteger(parsedUserId) ||
@@ -1974,12 +1974,12 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "
   const roomNameKey = toRoomNameKey(normalizedRoomName);
   const existingRoom = findOwnedRoomByNameKey(parsedUserId, normalizedServerId, roomNameKey);
   if (existingRoom) {
-    if (normalizedRoomTeaser) {
+    if (normalizedRoomDescription) {
       db.prepare(
         `UPDATE chat_rooms
-         SET teaser = ?
+         SET description = ?
          WHERE id = ?`
-      ).run(normalizedRoomTeaser, existingRoom.id);
+      ).run(normalizedRoomDescription, existingRoom.id);
     }
     return {
       id: Number(existingRoom.id),
@@ -1988,17 +1988,17 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomTeaser = "
     };
   }
 
-  const info = db.prepare(
-    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, teaser, server_id)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(
-    parsedCharacterId,
-    parsedUserId,
-    normalizedRoomName,
-    roomNameKey,
-    normalizedRoomTeaser,
-    normalizedServerId
-  );
+    const info = db.prepare(
+    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, description, server_id)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(
+      parsedCharacterId,
+      parsedUserId,
+      normalizedRoomName,
+      roomNameKey,
+      normalizedRoomDescription,
+      normalizedServerId
+    );
 
   return {
     id: Number(info.lastInsertRowid),
@@ -2012,7 +2012,7 @@ function parseRoomSwitchCommandArguments(rawArgs) {
   if (!value) {
     return {
       roomName: "",
-      roomTeaser: ""
+      roomDescription: ""
     };
   }
 
@@ -2020,13 +2020,13 @@ function parseRoomSwitchCommandArguments(rawArgs) {
   if (quotedTeaserMatch) {
     return {
       roomName: normalizeRoomName(quotedTeaserMatch[1]),
-      roomTeaser: normalizeRoomTeaser(quotedTeaserMatch[2])
+      roomDescription: normalizeRoomDescription(quotedTeaserMatch[2])
     };
   }
 
   return {
     roomName: normalizeRoomName(value),
-    roomTeaser: ""
+    roomDescription: ""
   };
 }
 
@@ -2087,6 +2087,10 @@ function getStandardRoomForServer(serverId, roomId) {
     getStandardRoomsForServer(serverId).find((room) => room.id === normalizedRoomId) ||
     null
   );
+}
+
+function normalizeRoomDescription(rawValue) {
+  return String(rawValue || "").trim().slice(0, 160);
 }
 
 function normalizeRoomTeaser(rawValue) {
@@ -3246,10 +3250,10 @@ function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
     .prepare(
-      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.image_url, r.email_log_enabled, r.is_locked, r.server_id,
-              c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
-               u.username AS room_owner_name
-       FROM chat_rooms r
+        `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.server_id,
+                c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
+                 u.username AS room_owner_name
+         FROM chat_rooms r
        JOIN characters c ON c.id = r.character_id
        JOIN users u ON u.id = r.created_by_user_id
        WHERE r.id = ?`
@@ -5194,9 +5198,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   const rooms = db
     .prepare(
-      `SELECT r.id, r.name, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
-              u.username AS creator_name,
-               CASE
+        `SELECT r.id, r.name, r.description, r.teaser, r.is_locked, r.server_id, r.created_at, r.created_by_user_id,
+                u.username AS creator_name,
+                 CASE
                  WHEN r.created_by_user_id = ? THEN 1
                  WHEN EXISTS (
                    SELECT 1
@@ -5288,10 +5292,10 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   rememberPreferredCharacter(req, character);
   const ownedRooms = db
     .prepare(
-      `SELECT id, name, teaser, image_url, email_log_enabled, is_locked
-       FROM chat_rooms
-       WHERE server_id = ? AND created_by_user_id = ?
-       ORDER BY created_at ASC, id ASC`
+        `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked
+         FROM chat_rooms
+         WHERE server_id = ? AND created_by_user_id = ?
+         ORDER BY created_at ASC, id ASC`
     )
     .all(normalizeServer(character.server_id), req.session.user.id)
     .map((room) => ({
@@ -5605,7 +5609,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   const roomName = normalizeRoomName(req.body.room_name);
-  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
+  const roomDescription = normalizeRoomDescription(req.body.room_description || req.body.room_teaser);
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(`/characters/${id}/rooms/new`);
@@ -5615,7 +5619,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     rememberPreferredCharacter(req, character);
   }
 
-  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomTeaser);
+  const targetRoom = ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomDescription);
   if (!targetRoom) {
     setFlash(req, "error", "Raum konnte nicht angelegt werden.");
     return res.redirect(`/characters/${id}/rooms/new`);
@@ -5648,7 +5652,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
 
   const room = db
     .prepare(
-      `SELECT id, server_id, created_by_user_id, name, teaser, image_url, email_log_enabled, is_locked
+      `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked
        FROM chat_rooms
        WHERE id = ?`
     )
@@ -5666,6 +5670,10 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     roomTab === "overview"
       ? normalizeRoomName(req.body.room_name)
       : String(room.name || "");
+  const roomDescription =
+    roomTab === "overview"
+      ? normalizeRoomDescription(req.body.room_description)
+      : String(room.description || "");
   const roomTeaser =
     roomTab === "overview"
       ? normalizeRoomTeaser(req.body.room_teaser)
@@ -5701,20 +5709,22 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   }
 
   db.prepare(
-    `UPDATE chat_rooms
-     SET name = ?,
-         name_key = ?,
-         teaser = ?,
-         image_url = ?,
-         email_log_enabled = ?,
-         is_locked = ?
-     WHERE id = ?`
-  ).run(
-    roomName,
-    toRoomNameKey(roomName),
-    roomTeaser,
-    roomImageUrl,
-    emailLogEnabled,
+      `UPDATE chat_rooms
+       SET name = ?,
+           name_key = ?,
+           description = ?,
+           teaser = ?,
+           image_url = ?,
+           email_log_enabled = ?,
+           is_locked = ?
+       WHERE id = ?`
+    ).run(
+      roomName,
+      toRoomNameKey(roomName),
+      roomDescription,
+      roomTeaser,
+      roomImageUrl,
+      emailLogEnabled,
     isLocked,
     roomId
   );
@@ -9006,7 +9016,7 @@ io.on("connection", (socket) => {
         targetUserId: inviteTarget.userId,
         targetName: inviteTarget.name,
         roomName: room.name,
-        roomTeaser: room.teaser || ""
+        roomTeaser: room.description || ""
       });
 
       emitDirectSystemMessageToSocket(
@@ -9023,7 +9033,7 @@ io.on("connection", (socket) => {
           inviterName: inviteSenderName,
           inviterChatTextColor: inviteSenderProfile?.chat_text_color || "",
           roomName: room.name,
-          roomTeaser: room.teaser || "",
+          roomTeaser: room.description || "",
           expiresAt: invite.expiresAt
         });
       });
@@ -9150,7 +9160,7 @@ io.on("connection", (socket) => {
     if (roomSwitchMatch) {
       const roomSwitchArgs = parseRoomSwitchCommandArguments(roomSwitchMatch[1] || "");
       const requestedRoomName = roomSwitchArgs.roomName;
-      const requestedRoomTeaser = roomSwitchArgs.roomTeaser;
+        const requestedRoomDescription = roomSwitchArgs.roomDescription;
       if (requestedRoomName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
@@ -9179,8 +9189,8 @@ io.on("connection", (socket) => {
         socket.data.user.id,
         preferredCharacter,
         requestedRoomName,
-        requestedRoomTeaser
-      );
+          requestedRoomDescription
+        );
 
       if (!targetRoom?.id) {
         socket.emit("chat:message", {
