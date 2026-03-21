@@ -2018,20 +2018,13 @@ function getDashboardFestplaysForUser(userId, serverId) {
               COALESCE(owner.username, '') AS owner_name,
               c.id AS character_id,
               c.name AS character_name
-         FROM festplays f
+         FROM festplay_permissions fp
+         JOIN festplays f ON f.id = fp.festplay_id
          LEFT JOIN users owner ON owner.id = f.created_by_user_id
-         JOIN characters c
-           ON c.user_id = ?
-          AND c.server_id = ?
-         LEFT JOIN festplay_permissions fp
-           ON fp.festplay_id = f.id
-          AND fp.user_id = c.user_id
-          AND fp.character_id = c.id
-         WHERE COALESCE(f.created_by_user_id, 0) != ?
-           AND (
-             c.festplay_id = f.id
-             OR fp.id IS NOT NULL
-           )
+         JOIN characters c ON c.id = fp.character_id
+         WHERE fp.user_id = ?
+           AND c.server_id = ?
+           AND COALESCE(f.created_by_user_id, 0) != ?
          ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
     )
     .all(parsedUserId, normalizedServerId, parsedUserId);
