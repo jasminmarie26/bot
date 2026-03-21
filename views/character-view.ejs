@@ -397,9 +397,15 @@
             <% } else { %>
               <div class="rp-room-inline-list">
                 <% ownedFestplays.forEach((festplay) => { %>
-                  <span class="rp-room-inline-item">
+                  <a
+                    class="rp-room-inline-item"
+                    href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Festspiel im neuen Tab öffnen"
+                  >
                     <span class="rp-room-inline-name"><%= festplay.name %></span>
-                  </span>
+                  </a>
                 <% }) %>
               </div>
             <% } %>
