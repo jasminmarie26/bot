@@ -124,6 +124,13 @@
             >
               Charakter editieren
             </a>
+            <a
+              href="/characters/<%= character.id %>/rooms/new"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Raum editieren
+            </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
           <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>

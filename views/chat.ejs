@@ -134,6 +134,7 @@
           <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+            <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Raum editieren</a>
           <% } %>
           <% if (activeCharacter) { %>
             <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
