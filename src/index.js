@@ -1937,7 +1937,10 @@ function decorateFestplayRecord(festplay) {
   if (!festplay) return null;
   return {
     ...festplay,
-    is_public: Number(festplay.is_public) === 1
+    is_public: Number(festplay.is_public) === 1,
+    long_description_html: festplay.long_description
+      ? renderGuestbookBbcode(festplay.long_description)
+      : ""
   };
 }
 
@@ -6074,8 +6077,8 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
   const isPublic = req.body.is_public === "1";
-  const shortDescription = normalizeFestplayText(req.body.short_description, 280);
-  const longDescription = normalizeFestplayText(req.body.long_description, 8000);
+  const shortDescription = "";
+  const longDescription = normalizeBbcodeInput(req.body.long_description, 8000);
   if (!festplayName) {
     setFlash(req, "error", "Bitte einen gültigen Festspielnamen eingeben.");
     return res.redirect(`/characters/${id}/festplays`);

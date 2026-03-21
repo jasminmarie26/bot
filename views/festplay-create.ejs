@@ -318,22 +318,15 @@
             </div>
 
             <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
-              <textarea
-                name="short_description"
-                rows="5"
-                maxlength="280"
-                placeholder="Kurzer Beschreibungstext f&uuml;r das Festspiel"
-              ><%= selectedFestplay.short_description || '' %></textarea>
-            </label>
-
-            <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+              <span class="rp-room-editor-field-label">
+                Festplay Beschreibung
+                <a class="rp-room-editor-help-link" href="/help/gaestebuch-design-bbcode" target="_blank" rel="noopener noreferrer">BBCode-Hilfe</a>
+              </span>
               <textarea
                 name="long_description"
                 rows="10"
                 maxlength="8000"
-                placeholder="L&auml;ngere Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
+                placeholder="Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
               ><%= selectedFestplay.long_description || '' %></textarea>
             </label>
 
@@ -372,16 +365,13 @@
           </div>
 
           <div class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
-            <div class="rp-room-editor-static">
-              <%= selectedFestplay.short_description || "Keine Kurzbeschreibung hinterlegt." %>
-            </div>
-          </div>
-
-          <div class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+            <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
             <div class="rp-room-editor-static rp-room-editor-static-long">
-              <%= selectedFestplay.long_description || "Keine ausf&uuml;hrliche Beschreibung hinterlegt." %>
+              <% if (selectedFestplay.long_description_html) { %>
+                <div class="guestbook-entry-body"><%- selectedFestplay.long_description_html %></div>
+              <% } else { %>
+                Keine Festplay Beschreibung hinterlegt.
+              <% } %>
             </div>
           </div>
         </div>

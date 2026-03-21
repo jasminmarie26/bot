@@ -137,16 +137,13 @@
         </div>
 
         <div class="rp-room-editor-field">
-          <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
-          <div class="rp-room-editor-static">
-            <%= festplay.short_description || "Keine Kurzbeschreibung hinterlegt." %>
-          </div>
-        </div>
-
-        <div class="rp-room-editor-field">
-          <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+          <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
           <div class="rp-room-editor-static rp-room-editor-static-long">
-            <%= festplay.long_description || "Keine ausf&uuml;hrliche Beschreibung hinterlegt." %>
+            <% if (festplay.long_description_html) { %>
+              <div class="guestbook-entry-body"><%- festplay.long_description_html %></div>
+            <% } else { %>
+              Keine Festplay Beschreibung hinterlegt.
+            <% } %>
           </div>
         </div>
 
