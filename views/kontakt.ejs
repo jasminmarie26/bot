@@ -75,6 +75,27 @@
           ><%= contactValues && contactValues.message ? contactValues.message : '' %></textarea>
         </label>
 
+        <label class="checkbox">
+          <input
+            name="privacy_consent"
+            type="checkbox"
+            value="1"
+            required
+            <%= contactValues && contactValues.privacy_consent ? "checked" : "" %>
+          />
+          <span>
+            Ich habe die
+            <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutzerkl&auml;rung</a>
+            gelesen
+          </span>
+        </label>
+
+        <p class="muted">
+          Mit dem Absenden deiner Anfrage erkl&auml;rst du dich damit einverstanden, dass deine
+          Angaben zur Bearbeitung deiner Anfrage verarbeitet werden. Weitere Informationen findest
+          du in der <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutzerkl&auml;rung</a>.
+        </p>
+
         <div class="update-form-actions">
           <button type="submit" class="btn">Nachricht senden</button>
         </div>

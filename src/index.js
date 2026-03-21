@@ -936,7 +936,8 @@ function renderKontaktPage(req, res, options = {}) {
       name: "",
       email: "",
       subject: "",
-      message: ""
+      message: "",
+      privacy_consent: false
     }
   });
 }
@@ -3825,8 +3826,11 @@ app.post("/kontakt", async (req, res) => {
   const email = normalizeEmail(req.body.email || "");
   const subject = String(req.body.subject || "").trim().slice(0, 140);
   const message = String(req.body.message || "").trim().slice(0, 5000);
+  const privacyConsent =
+    String(req.body.privacy_consent || "").trim() === "1" ||
+    String(req.body.privacy_consent || "").trim().toLowerCase() === "on";
   const honeypotValue = String(req.body.website || "").trim();
-  const values = { name, email, subject, message };
+  const values = { name, email, subject, message, privacy_consent: privacyConsent };
 
   if (honeypotValue) {
     return renderKontaktPage(req, res, {
@@ -3840,6 +3844,14 @@ app.post("/kontakt", async (req, res) => {
     return renderKontaktPage(req, res, {
       status: 400,
       error: "Bitte fülle Name, E-Mail, Betreff und Nachricht vollständig aus.",
+      values
+    });
+  }
+
+  if (!privacyConsent) {
+    return renderKontaktPage(req, res, {
+      status: 400,
+      error: "Bitte bestätige, dass du die Datenschutzerklärung gelesen hast.",
       values
     });
   }
