@@ -16,17 +16,22 @@
   const onlineActionsMenu = document.getElementById("online-actions-menu");
   const onlineActionGuestbook = document.getElementById("online-action-guestbook");
   const onlineActionWhisper = document.getElementById("online-action-whisper");
+  const whisperToggle = document.getElementById("chat-whisper-toggle");
+  const whisperToggleBadge = document.getElementById("chat-whisper-toggle-badge");
   const soundToggle = document.getElementById("chat-sound-toggle");
   const soundToggleIcon = document.getElementById("chat-sound-toggle-icon");
-  const whisperModal = document.getElementById("whisper-modal");
-  const whisperModalTitle = document.getElementById("whisper-modal-title");
+  const whisperPanel = document.getElementById("chat-whisper-panel");
+  const whisperPanelCloseBtn = document.getElementById("chat-whisper-close-btn");
+  const whisperList = document.getElementById("chat-whisper-list");
+  const whisperListEmpty = document.getElementById("chat-whisper-list-empty");
+  const whisperPlaceholder = document.getElementById("chat-whisper-placeholder");
+  const whisperThreadShell = document.getElementById("chat-whisper-thread-shell");
+  const whisperThreadTitle = document.getElementById("chat-whisper-thread-title");
   const whisperThread = document.getElementById("whisper-thread");
   const whisperThreadEmpty = document.getElementById("whisper-thread-empty");
   const whisperForm = document.getElementById("whisper-form");
   const whisperInput = document.getElementById("whisper-input");
   const whisperTargetUserIdInput = document.getElementById("whisper-target-user-id");
-  const whisperCloseBtn = document.getElementById("whisper-close-btn");
-  const whisperCancelBtn = document.getElementById("whisper-cancel-btn");
   const roomInviteModal = document.getElementById("room-invite-modal");
   const roomInviteMessage = document.getElementById("room-invite-message");
   const roomInviteDescription = document.getElementById("room-invite-description");
@@ -48,8 +53,11 @@
   const typingStateByUserId = new Map();
   const onlineEntriesByUserId = new Map();
   const whisperThreadsByUserId = new Map();
+  const whisperUnreadUserIds = new Set();
   const pendingRoomInvites = [];
   let activeRoomInvite = null;
+  let activeWhisperThreadUserId = null;
+  let whisperSequence = 0;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
@@ -491,10 +499,43 @@
     const created = {
       userId: parsedUserId,
       name: String(name || "").trim() || "Unbekannt",
-      messages: []
+      messages: [],
+      lastSequence: 0
     };
     whisperThreadsByUserId.set(parsedUserId, created);
     return created;
+  }
+
+  function isWhisperPanelOpen() {
+    return Boolean(whisperPanel && !whisperPanel.hidden);
+  }
+
+  function updateWhisperToggleState() {
+    if (!whisperToggle) return;
+    const isOpen = isWhisperPanelOpen();
+    whisperToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    whisperToggle.title = isOpen ? "Flüsterverlauf schließen" : "Flüsterverlauf";
+    whisperToggle.setAttribute("aria-label", isOpen ? "Flüsterverlauf schließen" : "Flüsterverlauf öffnen");
+  }
+
+  function updateWhisperToggleBadge() {
+    if (!whisperToggleBadge) return;
+    const unreadCount = whisperUnreadUserIds.size;
+    whisperToggleBadge.hidden = unreadCount < 1;
+    whisperToggleBadge.textContent = String(unreadCount);
+  }
+
+  function sortWhisperThreads() {
+    return Array.from(whisperThreadsByUserId.values()).sort((left, right) => {
+      const rightSequence = Number(right?.lastSequence || 0);
+      const leftSequence = Number(left?.lastSequence || 0);
+      if (rightSequence !== leftSequence) {
+        return rightSequence - leftSequence;
+      }
+      return String(left?.name || "").localeCompare(String(right?.name || ""), "de", {
+        sensitivity: "base"
+      });
+    });
   }
 
   function scrollWhisperThreadToBottom() {
@@ -502,13 +543,91 @@
     whisperThread.scrollTop = whisperThread.scrollHeight;
   }
 
-  function renderWhisperThread(userId) {
-    if (!whisperThread || !whisperThreadEmpty) return;
+  function renderWhisperThreadList() {
+    if (!whisperList || !whisperListEmpty) return;
 
-    const thread = whisperThreadsByUserId.get(Number(userId));
+    const threads = sortWhisperThreads();
+    whisperList.innerHTML = "";
+
+    if (!threads.length) {
+      whisperList.hidden = true;
+      whisperListEmpty.hidden = false;
+      return;
+    }
+
+    whisperList.hidden = false;
+    whisperListEmpty.hidden = true;
+
+    threads.forEach((thread) => {
+      const button = document.createElement("button");
+      const name = document.createElement("strong");
+      const preview = document.createElement("span");
+      const meta = document.createElement("small");
+      const unreadDot = document.createElement("span");
+      const lastEntry = thread.messages[thread.messages.length - 1] || null;
+
+      button.type = "button";
+      button.className = `chat-whisper-list-item${thread.userId === activeWhisperThreadUserId ? " is-active" : ""}`;
+      name.className = "chat-whisper-list-name";
+      name.textContent = thread.name;
+
+      preview.className = "chat-whisper-list-preview";
+      preview.textContent = lastEntry
+        ? String(lastEntry.content || "").trim().slice(0, 90) || "Neue Nachricht"
+        : "Noch keine Nachrichten";
+
+      meta.className = "chat-whisper-list-meta";
+      meta.textContent = lastEntry?.created_at ? String(lastEntry.created_at) : "";
+
+      if (whisperUnreadUserIds.has(thread.userId)) {
+        unreadDot.className = "chat-whisper-list-unread";
+        unreadDot.setAttribute("aria-hidden", "true");
+        button.appendChild(unreadDot);
+      }
+
+      button.appendChild(name);
+      button.appendChild(preview);
+      button.appendChild(meta);
+      button.addEventListener("click", () => {
+        activeWhisperThreadUserId = thread.userId;
+        whisperUnreadUserIds.delete(thread.userId);
+        renderWhisperThreadList();
+        renderWhisperThread();
+        updateWhisperToggleBadge();
+        if (whisperInput) {
+          whisperInput.focus();
+        }
+      });
+      whisperList.appendChild(button);
+    });
+  }
+
+  function renderWhisperThread() {
+    if (!whisperThread || !whisperThreadEmpty || !whisperThreadShell || !whisperPlaceholder || !whisperForm || !whisperThreadTitle) {
+      return;
+    }
+
+    const thread = whisperThreadsByUserId.get(Number(activeWhisperThreadUserId));
     whisperThread.innerHTML = "";
 
-    if (!thread || !thread.messages.length) {
+    if (!thread) {
+      whisperThreadShell.hidden = true;
+      whisperPlaceholder.hidden = false;
+      whisperForm.hidden = true;
+      if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
+      if (whisperInput) whisperInput.value = "";
+      return;
+    }
+
+    whisperThreadShell.hidden = false;
+    whisperPlaceholder.hidden = true;
+    whisperForm.hidden = false;
+    whisperThreadTitle.textContent = `Flüstern mit ${thread.name}`;
+    if (whisperTargetUserIdInput) {
+      whisperTargetUserIdInput.value = String(thread.userId);
+    }
+
+    if (!thread.messages.length) {
       whisperThread.hidden = true;
       whisperThreadEmpty.hidden = false;
       return;
@@ -570,6 +689,7 @@
       from_name: String(msg?.from_name || "").trim(),
       to_name: String(msg?.to_name || "").trim()
     });
+    thread.lastSequence = ++whisperSequence;
 
     while (thread.messages.length > 80) {
       thread.messages.shift();
@@ -608,12 +728,47 @@
     selectedOnlineEntry = null;
   }
 
-  function closeWhisperModal() {
-    if (!whisperModal) return;
-    whisperModal.hidden = true;
-    whisperModal.classList.remove("is-open");
-    if (whisperInput) whisperInput.value = "";
-    if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
+  function openWhisperPanel({ focusInput = false } = {}) {
+    if (!whisperPanel) return;
+    whisperPanel.hidden = false;
+    updateWhisperToggleState();
+    renderWhisperThreadList();
+    renderWhisperThread();
+    if (focusInput && !whisperForm?.hidden && whisperInput) {
+      whisperInput.focus();
+    }
+  }
+
+  function closeWhisperPanel() {
+    if (!whisperPanel) return;
+    whisperPanel.hidden = true;
+    updateWhisperToggleState();
+  }
+
+  function toggleWhisperPanel() {
+    if (!whisperPanel) return;
+    if (isWhisperPanelOpen()) {
+      closeWhisperPanel();
+    } else {
+      openWhisperPanel();
+    }
+  }
+
+  function activateWhisperThread(entry, { focusInput = false, openPanel = true } = {}) {
+    const userId = Number(entry?.userId);
+    if (!Number.isInteger(userId) || userId < 1) return;
+
+    const name = String(entry?.name || onlineEntriesByUserId.get(userId)?.name || whisperThreadsByUserId.get(userId)?.name || "Unbekannt").trim() || "Unbekannt";
+    ensureWhisperThread(userId, name);
+    activeWhisperThreadUserId = userId;
+    whisperUnreadUserIds.delete(userId);
+    renderWhisperThreadList();
+    renderWhisperThread();
+    updateWhisperToggleBadge();
+
+    if (openPanel) {
+      openWhisperPanel({ focusInput });
+    }
   }
 
   function syncRoomInviteModal() {
@@ -676,25 +831,6 @@
 
     activeRoomInvite = null;
     syncRoomInviteModal();
-  }
-
-  function openWhisperModal(entry, options = {}) {
-    if (!whisperModal || !whisperModalTitle || !whisperTargetUserIdInput || !whisperInput) return;
-    const userId = Number(entry?.userId);
-    if (!Number.isInteger(userId) || userId < 1) return;
-
-    const focusInput = options.focusInput !== false;
-    const name = String(entry?.name || onlineEntriesByUserId.get(userId)?.name || "Unbekannt").trim() || "Unbekannt";
-    ensureWhisperThread(userId, name);
-
-    whisperTargetUserIdInput.value = String(userId);
-    whisperModalTitle.textContent = `Flüstern mit ${name}`;
-    renderWhisperThread(userId);
-    whisperModal.hidden = false;
-    whisperModal.classList.add("is-open");
-    if (focusInput) {
-      whisperInput.focus();
-    }
   }
 
   function applyOnlineMenuState() {
@@ -980,25 +1116,22 @@
   if (onlineActionWhisper) {
     onlineActionWhisper.addEventListener("click", () => {
       if (!selectedOnlineEntry) return;
-      openWhisperModal(selectedOnlineEntry);
+      activateWhisperThread(selectedOnlineEntry, {
+        focusInput: true,
+        openPanel: true
+      });
       closeOnlineMenu();
     });
   }
 
-  if (whisperCloseBtn) {
-    whisperCloseBtn.addEventListener("click", closeWhisperModal);
-  }
-
-  if (whisperCancelBtn) {
-    whisperCancelBtn.addEventListener("click", closeWhisperModal);
-  }
-
-  if (whisperModal) {
-    whisperModal.addEventListener("click", (event) => {
-      if (event.target === whisperModal) {
-        closeWhisperModal();
-      }
+  if (whisperToggle) {
+    whisperToggle.addEventListener("click", () => {
+      toggleWhisperPanel();
     });
+  }
+
+  if (whisperPanelCloseBtn) {
+    whisperPanelCloseBtn.addEventListener("click", closeWhisperPanel);
   }
 
   if (whisperForm) {
@@ -1016,9 +1149,12 @@
       });
 
       whisperInput.value = "";
-      openWhisperModal({
+      activateWhisperThread({
         userId: targetUserId,
         name: onlineEntriesByUserId.get(targetUserId)?.name || whisperThreadsByUserId.get(targetUserId)?.name || "Unbekannt"
+      }, {
+        focusInput: true,
+        openPanel: true
       });
     });
   }
@@ -1049,7 +1185,7 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeOnlineMenu();
-      closeWhisperModal();
+      closeWhisperPanel();
     }
   });
 
@@ -1068,16 +1204,24 @@
       playEntryTone();
     }
 
-    openWhisperModal(
-      {
-        userId: thread.userId,
-        name: thread.name
-      },
-      {
-        focusInput: false
-      }
-    );
+    if (!payload?.outgoing && (!isWhisperPanelOpen() || Number(activeWhisperThreadUserId) !== Number(thread.userId))) {
+      whisperUnreadUserIds.add(thread.userId);
+    } else {
+      whisperUnreadUserIds.delete(thread.userId);
+    }
+
+    if (!activeWhisperThreadUserId && payload?.outgoing) {
+      activeWhisperThreadUserId = thread.userId;
+    }
+
+    renderWhisperThreadList();
+    if (Number(activeWhisperThreadUserId) === Number(thread.userId)) {
+      renderWhisperThread();
+    }
+    updateWhisperToggleBadge();
   }
 
+  updateWhisperToggleState();
+  updateWhisperToggleBadge();
   chatBox.scrollTop = chatBox.scrollHeight;
 })();

@@ -85,6 +85,25 @@
     </form>
     <%- include("partials/guestbook-notification-link") %>
     <button
+      id="chat-whisper-toggle"
+      class="chat-whisper-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="chat-whisper-panel"
+      aria-label="Fl&uuml;sterverlauf &ouml;ffnen"
+      title="Fl&uuml;sterverlauf"
+    >
+      <span class="chat-whisper-toggle-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path class="chat-whisper-fill" d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
+          <path d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
+          <path d="M8 10.2h8"/>
+          <path d="M8 13.4h5.2"/>
+        </svg>
+      </span>
+      <span id="chat-whisper-toggle-badge" class="chat-whisper-toggle-badge" hidden>0</span>
+    </button>
+    <button
       id="chat-sound-toggle"
       class="chat-sound-toggle"
       type="button"
@@ -265,29 +284,46 @@
   </button>
 </div>
 
-<div id="whisper-modal" class="whisper-modal" hidden>
-  <div class="whisper-modal-card">
-    <header class="whisper-modal-head">
-      <h3 id="whisper-modal-title">Fl&uuml;stern</h3>
-      <button id="whisper-close-btn" type="button" class="whisper-close-btn" aria-label="Schlie&szlig;en">
+<div id="chat-whisper-panel" class="chat-whisper-panel" hidden>
+  <div class="chat-whisper-panel-card">
+    <header class="chat-whisper-panel-head">
+      <div class="chat-whisper-panel-copy">
+        <h3>Fl&uuml;stern</h3>
+        <p>Verl&auml;ufe in diesem Raum, bis du ihn verl&auml;sst.</p>
+      </div>
+      <button id="chat-whisper-close-btn" type="button" class="chat-whisper-close-btn" aria-label="Schlie&szlig;en">
         &times;
       </button>
     </header>
-    <div class="whisper-thread-shell">
-      <p id="whisper-thread-empty" class="muted whisper-thread-empty">Noch keine Fl&uuml;sternachrichten.</p>
-      <div id="whisper-thread" class="whisper-thread" aria-live="polite"></div>
+    <div class="chat-whisper-layout">
+      <aside class="chat-whisper-list-wrap">
+        <p id="chat-whisper-list-empty" class="muted chat-whisper-list-empty">Noch keine Fl&uuml;stergespr&auml;che in diesem Raum.</p>
+        <div id="chat-whisper-list" class="chat-whisper-list" hidden></div>
+      </aside>
+
+      <section class="chat-whisper-thread-wrap">
+        <p id="chat-whisper-placeholder" class="muted chat-whisper-placeholder">W&auml;hle links ein Gespr&auml;ch aus oder starte eines &uuml;ber einen Namen im Chat.</p>
+
+        <div id="chat-whisper-thread-shell" class="whisper-thread-shell" hidden>
+          <div class="chat-whisper-thread-head">
+            <h4 id="chat-whisper-thread-title">Fl&uuml;stern</h4>
+          </div>
+          <p id="whisper-thread-empty" class="muted whisper-thread-empty">Noch keine Fl&uuml;sternachrichten.</p>
+          <div id="whisper-thread" class="whisper-thread" aria-live="polite"></div>
+        </div>
+
+        <form id="whisper-form" class="chat-whisper-form" hidden>
+          <input id="whisper-target-user-id" type="hidden" />
+          <label>
+            Nachricht
+            <textarea id="whisper-input" rows="4" maxlength="500" required></textarea>
+          </label>
+          <div class="whisper-actions">
+            <button class="btn" type="submit">Senden</button>
+          </div>
+        </form>
+      </section>
     </div>
-    <form id="whisper-form" class="form">
-      <input id="whisper-target-user-id" type="hidden" />
-      <label>
-        Nachricht
-        <textarea id="whisper-input" rows="4" maxlength="500" required></textarea>
-      </label>
-      <div class="whisper-actions">
-        <button class="btn" type="submit">Senden</button>
-        <button id="whisper-cancel-btn" class="btn btn-secondary" type="button">Abbrechen</button>
-      </div>
-    </form>
   </div>
 </div>
 

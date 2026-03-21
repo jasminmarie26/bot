@@ -1126,7 +1126,8 @@ a:hover {
   border-color: color-mix(in srgb, var(--link) 72%, transparent);
 }
 
-.chat-sound-toggle {
+.chat-sound-toggle,
+.chat-whisper-toggle {
   width: 2.35rem;
   height: 2.35rem;
   display: inline-flex;
@@ -1139,10 +1140,13 @@ a:hover {
   cursor: pointer;
   transition: filter 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease;
   flex: 0 0 auto;
+  position: relative;
 }
 
 .chat-sound-toggle:hover,
-.chat-sound-toggle:focus-visible {
+.chat-sound-toggle:focus-visible,
+.chat-whisper-toggle:hover,
+.chat-whisper-toggle:focus-visible {
   filter: brightness(1.04);
   background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
   border-color: color-mix(in srgb, var(--link) 34%, var(--field-edge) 66%);
@@ -1153,6 +1157,12 @@ a:hover {
   color: color-mix(in srgb, var(--muted) 94%, white 6%);
   border-color: color-mix(in srgb, var(--field-edge) 90%, transparent);
   background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
+}
+
+.chat-whisper-toggle.is-open {
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
+  color: color-mix(in srgb, var(--link) 88%, white 12%);
 }
 
 .guestbook-notification-link {
@@ -1269,14 +1279,16 @@ a:hover {
   justify-content: center;
 }
 
-.chat-sound-toggle-icon svg {
+.chat-sound-toggle-icon svg,
+.chat-whisper-toggle-icon svg {
   width: 1rem;
   height: 1rem;
   display: block;
   overflow: visible;
 }
 
-.chat-sound-toggle-icon svg path {
+.chat-sound-toggle-icon svg path,
+.chat-whisper-toggle-icon svg path {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.75;
@@ -1292,6 +1304,41 @@ a:hover {
 
 .chat-sound-toggle:not(.is-off) .chat-sound-toggle-icon .chat-bell-fill {
   opacity: 0.2;
+}
+
+.chat-whisper-toggle-icon {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-whisper-toggle-icon .chat-whisper-fill {
+  fill: currentColor;
+  opacity: 0.14;
+  stroke: none;
+}
+
+.chat-whisper-toggle-badge {
+  position: absolute;
+  top: -0.18rem;
+  right: -0.12rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-text);
+  font-size: 0.64rem;
+  font-weight: 700;
+  box-shadow: 0 10px 18px -14px var(--panel-shadow);
+}
+
+.chat-whisper-toggle-badge[hidden] {
+  display: none !important;
 }
 
 .topbar-user-menu-toggle-icon,
@@ -6005,34 +6052,150 @@ select:focus {
   opacity: 0.58;
 }
 
-.whisper-modal {
+.chat-whisper-panel {
   position: fixed;
-  inset: 0;
+  top: calc(4.8rem + 0.4rem);
+  right: 1rem;
   z-index: 90;
-  background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  padding: 1rem;
+  width: min(760px, calc(100vw - 2rem));
 }
 
-.whisper-modal[hidden] {
+.chat-whisper-panel[hidden] {
   display: none !important;
 }
 
-.whisper-modal.is-open {
-  display: grid;
-  place-items: center;
-}
-
-.whisper-modal-card {
-  width: min(520px, 96vw);
+.chat-whisper-panel-card {
   border: 1px solid var(--panel-edge);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
+  background: color-mix(in srgb, var(--panel-bg) 94%, white 6%);
   box-shadow: 0 22px 42px -28px var(--panel-shadow);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   padding: 0.8rem;
+}
+
+.chat-whisper-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.7rem;
+}
+
+.chat-whisper-panel-copy h3 {
+  margin: 0;
+}
+
+.chat-whisper-panel-copy p {
+  margin: 0.22rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.chat-whisper-close-btn {
+  border: 1px solid var(--field-edge);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.chat-whisper-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.chat-whisper-list-wrap,
+.chat-whisper-thread-wrap {
+  min-width: 0;
+}
+
+.chat-whisper-list {
+  display: grid;
+  gap: 0.4rem;
+  max-height: min(56vh, 460px);
+  overflow-y: auto;
+  padding-right: 0.12rem;
+}
+
+.chat-whisper-list-empty,
+.chat-whisper-placeholder {
+  margin: 0;
+  padding: 0.4rem 0.1rem;
+}
+
+.chat-whisper-list-item {
+  position: relative;
+  display: grid;
+  gap: 0.18rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 84%, black 16%);
+  color: var(--text);
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.chat-whisper-list-item:hover,
+.chat-whisper-list-item:focus-visible,
+.chat-whisper-list-item.is-active {
+  border-color: color-mix(in srgb, var(--link) 40%, var(--field-edge) 60%);
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+}
+
+.chat-whisper-list-name {
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.22;
+}
+
+.chat-whisper-list-preview {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  padding-right: 0.7rem;
+  word-break: break-word;
+}
+
+.chat-whisper-list-meta {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.chat-whisper-list-unread {
+  position: absolute;
+  top: 0.78rem;
+  right: 0.72rem;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 14px -10px var(--panel-shadow);
+}
+
+.chat-whisper-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.55rem;
+}
+
+.chat-whisper-thread-head h4 {
+  margin: 0;
 }
 
 .whisper-thread-shell {
@@ -6040,11 +6203,12 @@ select:focus {
   border-radius: 12px;
   background: color-mix(in srgb, var(--field-bg) 86%, black 14%);
   padding: 0.55rem;
-  margin-bottom: 0.75rem;
+  display: grid;
+  gap: 0.55rem;
 }
 
 .whisper-thread {
-  max-height: min(34vh, 280px);
+  max-height: min(42vh, 340px);
   overflow-y: auto;
   display: grid;
   gap: 0.55rem;
@@ -6085,34 +6249,35 @@ select:focus {
   word-break: break-word;
 }
 
-.whisper-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.7rem;
-  margin-bottom: 0.7rem;
-}
-
-.whisper-modal-head h3 {
-  margin: 0;
-}
-
-.whisper-close-btn {
-  border: 1px solid var(--field-edge);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
-  color: var(--text);
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  font: inherit;
-  line-height: 1;
+.chat-whisper-form {
+  display: grid;
+  gap: 0.55rem;
 }
 
 .whisper-actions {
   display: flex;
   gap: 0.55rem;
   justify-content: flex-end;
+}
+
+@media (max-width: 860px) {
+  .chat-whisper-panel {
+    right: 0.55rem;
+    left: 0.55rem;
+    width: auto;
+  }
+
+  .chat-whisper-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-whisper-list {
+    max-height: min(28vh, 220px);
+  }
+
+  .whisper-thread {
+    max-height: min(34vh, 280px);
+  }
 }
 
 .room-invite-modal {
