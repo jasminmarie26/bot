@@ -133,7 +133,7 @@
               <div class="rp-room-manage-main">
                 <a
                   class="rp-room-inline-item rp-room-manage-link<%= isSelectedRoom ? ' is-active' : '' %>"
-                  href="/characters/<%= character.id %>/rooms/new?selected_room=<%= room.id %>&room_tab=overview#room-selected-editor"
+                  href="/characters/<%= character.id %>/rooms/new?selected_room=<%= room.id %>#room-selected-editor"
                   title="Raum ausw&auml;hlen"
                   aria-current="<%= isSelectedRoom ? 'page' : 'false' %>"
                 >
@@ -188,128 +188,83 @@
 
         <nav class="rp-room-editor-tabs" aria-label="Raum bearbeiten">
           <a
-            class="rp-room-editor-tab<%= selectedRoomTab === 'overview' ? ' is-active' : '' %>"
-            href="/characters/<%= character.id %>/rooms/new?selected_room=<%= selectedRoom.id %>&room_tab=overview#room-selected-editor"
+            class="rp-room-editor-tab is-active"
+            href="/characters/<%= character.id %>/rooms/new?selected_room=<%= selectedRoom.id %>#room-selected-editor"
           >&Uuml;bersicht</a>
-          <a
-            class="rp-room-editor-tab<%= selectedRoomTab === 'image' ? ' is-active' : '' %>"
-            href="/characters/<%= character.id %>/rooms/new?selected_room=<%= selectedRoom.id %>&room_tab=image#room-selected-editor"
-          >Bild</a>
         </nav>
 
-        <% if (selectedRoomTab === "image") { %>
-          <form
-            id="room-editor-form-<%= selectedRoom.id %>"
-            method="POST"
-            action="/characters/<%= character.id %>/rooms/<%= selectedRoom.id %>/update"
-            class="rp-room-editor-body"
-          >
-            <input type="hidden" name="room_tab" value="image" />
-
-            <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Bild-URL</span>
+        <form
+          id="room-editor-form-<%= selectedRoom.id %>"
+          method="POST"
+          action="/characters/<%= character.id %>/rooms/<%= selectedRoom.id %>/update"
+          class="rp-room-editor-body"
+        >
+          <div class="rp-room-editor-checks">
+            <label class="rp-room-editor-check">
               <input
-                type="url"
-                name="room_image_url"
-                maxlength="500"
-                placeholder="https://beispiel.de/bild.jpg"
-                value="<%= selectedRoom.image_url || '' %>"
+                type="checkbox"
+                name="is_locked"
+                value="1"
+                <%= selectedRoom.is_locked ? "checked" : "" %>
               />
+              Raum abschlie&szlig;en
             </label>
-
-            <% if (selectedRoom.image_url) { %>
-              <div class="rp-room-editor-preview-wrap">
-                <span class="rp-room-editor-field-label">Vorschau</span>
-                <img
-                  class="rp-room-image-preview"
-                  src="<%= selectedRoom.image_url %>"
-                  alt="Raumbild von <%= selectedRoom.name %>"
-                />
-              </div>
-            <% } else { %>
-              <p class="rp-room-editor-note">Noch kein Bild gesetzt.</p>
-            <% } %>
-
-            <div class="rp-room-editor-actions">
-              <button type="submit">Speichern</button>
-            </div>
-          </form>
-        <% } else { %>
-          <form
-            id="room-editor-form-<%= selectedRoom.id %>"
-            method="POST"
-            action="/characters/<%= character.id %>/rooms/<%= selectedRoom.id %>/update"
-            class="rp-room-editor-body"
-          >
-            <input type="hidden" name="room_tab" value="overview" />
-
-            <div class="rp-room-editor-checks">
-              <label class="rp-room-editor-check">
-                <input
-                  type="checkbox"
-                  name="is_locked"
-                  value="1"
-                  <%= selectedRoom.is_locked ? "checked" : "" %>
-                />
-                Raum abschlie&szlig;en
-              </label>
-              <label class="rp-room-editor-check">
-                <input
-                  type="checkbox"
-                  name="email_log_enabled"
-                  value="1"
-                  <%= selectedRoom.email_log_enabled ? "checked" : "" %>
-                />
-                E-Mail-Log
-              </label>
-            </div>
-
-            <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Raumname</span>
+            <label class="rp-room-editor-check">
               <input
-                type="text"
-                name="room_name"
-                maxlength="80"
-                placeholder="Raumname"
-                value="<%= selectedRoom.name || '' %>"
-                required
+                type="checkbox"
+                name="email_log_enabled"
+                value="1"
+                <%= selectedRoom.email_log_enabled ? "checked" : "" %>
               />
+              E-Mail-Log
             </label>
+          </div>
 
-            <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Raumbeschreibung</span>
-              <input
-                type="text"
-                name="room_description"
-                maxlength="160"
-                placeholder="Kurzer Text f&uuml;r die Raumliste"
-                value="<%= selectedRoom.description || '' %>"
-              />
-            </label>
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Raumname</span>
+            <input
+              type="text"
+              name="room_name"
+              maxlength="80"
+              placeholder="Raumname"
+              value="<%= selectedRoom.name || '' %>"
+              required
+            />
+          </label>
 
-            <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">
-                Beschreibung im Raum
-                <a
-                  class="rp-room-editor-help-link"
-                  href="/help/gaestebuch-design-bbcode"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >BBCode-Hilfe</a>
-              </span>
-              <textarea
-                name="room_teaser"
-                rows="9"
-                maxlength="160"
-                placeholder="Dieser Text erscheint direkt im Raum"
-              ><%= selectedRoom.teaser || '' %></textarea>
-            </label>
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Raumbeschreibung</span>
+            <input
+              type="text"
+              name="room_description"
+              maxlength="160"
+              placeholder="Kurzer Text f&uuml;r die Raumliste"
+              value="<%= selectedRoom.description || '' %>"
+            />
+          </label>
 
-            <div class="rp-room-editor-actions">
-              <button type="submit">Speichern</button>
-            </div>
-          </form>
-        <% } %>
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">
+              Beschreibung im Raum
+              <a
+                class="rp-room-editor-help-link"
+                href="/help/gaestebuch-design-bbcode"
+                target="_blank"
+                rel="noopener noreferrer"
+              >BBCode-Hilfe</a>
+            </span>
+            <textarea
+              name="room_teaser"
+              rows="9"
+              maxlength="160"
+              placeholder="Dieser Text erscheint direkt im Raum"
+            ><%= selectedRoom.teaser || '' %></textarea>
+          </label>
+
+          <div class="rp-room-editor-actions">
+            <button type="submit">Speichern</button>
+          </div>
+        </form>
       </section>
     <% } else if (ownedRooms && ownedRooms.length) { %>
       <section class="rp-room-editor rp-room-editor-placeholder" id="room-selected-editor" aria-label="Raumdetails">

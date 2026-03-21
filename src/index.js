@@ -5398,16 +5398,11 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   const selectedRoomId = Number(req.query.selected_room);
   const selectedRoom =
     ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
-  const selectedRoomTab = String(req.query.room_tab || "overview").trim().toLowerCase() === "image"
-    ? "image"
-    : "overview";
-
   return res.render("room-create", {
     title: `Raum erstellen: ${character.name}`,
     character,
     ownedRooms,
-    selectedRoom,
-    selectedRoomTab
+    selectedRoom
   });
 });
 
@@ -5724,15 +5719,12 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
   }
 
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}&room_tab=overview`);
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}`);
 });
 
 app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const roomId = Number(req.params.roomId);
-  const roomTab = String(req.body.room_tab || "overview").trim().toLowerCase() === "image"
-    ? "image"
-    : "overview";
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
@@ -5766,46 +5758,26 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
-  const roomName =
-    roomTab === "overview"
-      ? normalizeRoomName(req.body.room_name)
-      : String(room.name || "");
-  const roomDescription =
-    roomTab === "overview"
-      ? normalizeRoomDescription(req.body.room_description)
-      : String(room.description || "");
-  const roomTeaser =
-    roomTab === "overview"
-      ? normalizeRoomTeaser(req.body.room_teaser)
-      : String(room.teaser || "");
-  const roomImageUrl =
-    roomTab === "image"
-      ? normalizeRoomImageUrl(req.body.room_image_url)
-      : String(room.image_url || "");
-  const emailLogEnabled =
-    roomTab === "overview"
-      ? (req.body.email_log_enabled ? 1 : 0)
-      : (Number(room.email_log_enabled) === 1 ? 1 : 0);
-  const isLocked =
-    roomTab === "overview"
-      ? (req.body.is_locked ? 1 : 0)
-      : (Number(room.is_locked) === 1 ? 1 : 0);
+  const roomName = normalizeRoomName(req.body.room_name);
+  const roomDescription = normalizeRoomDescription(req.body.room_description);
+  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
+  const roomImageUrl = String(room.image_url || "");
+  const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
+  const isLocked = req.body.is_locked ? 1 : 0;
 
-  if (roomTab === "overview" && roomName.length < 2) {
+  if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
-    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
+    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
   }
 
-  if (roomTab === "overview") {
-    const conflictingRoom = findOwnedRoomByNameKey(
-      req.session.user.id,
-      character.server_id,
-      toRoomNameKey(roomName)
-    );
-    if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
-      setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
-      return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
-    }
+  const conflictingRoom = findOwnedRoomByNameKey(
+    req.session.user.id,
+    character.server_id,
+    toRoomNameKey(roomName)
+  );
+  if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
+    setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
+    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
   }
 
   db.prepare(
@@ -5838,7 +5810,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   }
 
   emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
 });
 
 app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {
