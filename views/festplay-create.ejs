@@ -1,0 +1,228 @@
+<%- include("partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+
+<section class="rp-shell">
+  <% const festplayDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
+  <% const festplayAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
+  <% const festplayIdentityRoleStyle = currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(character.id)
+    ? "admin"
+    : currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(character.id)
+      ? "moderator"
+      : (currentUserDisplayRoleStyle || ""); %>
+  <% const festplayIdentityName = character.name || festplayDisplayName; %>
+  <% const festplayIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const festplayLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
+  <% const festplayLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const festplayHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const festplayHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
+      : festplayIdentityName; %>
+
+  <header class="rp-topline">
+    <a class="rp-logo" href="/">Heldenhafte Reisen</a>
+    <nav class="rp-menu" aria-label="Festspiel Navigation">
+      <a href="/characters/<%= character.id %>#roomlist">Raumliste</a>
+      <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a
+        class="live-updates-nav-link"
+        href="/live-updates"
+        target="site-live-updates"
+        data-live-updates-link-root
+        data-live-updates-target="site-live-updates"
+        data-live-updates-initial-revision="<%= festplayLiveUpdatesInitialRevision %>"
+        data-live-updates-initial-revisions="<%= festplayLiveUpdatesInitialRevisions.join('|') %>"
+      >
+        <span>Live Updates</span>
+        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+      </a>
+    </nav>
+    <% if (festplayHeaderIdentityHref) { %>
+      <a
+        class="rp-header-identity rp-header-identity-link"
+        data-header-identity
+        href="<%= festplayHeaderIdentityHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="<%- festplayHeaderIdentityTitle %>"
+        style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+      ><%= festplayIdentityName %></a>
+    <% } else { %>
+      <span
+        class="rp-header-identity"
+        data-header-identity
+        title="<%= festplayIdentityName %>"
+        style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+      ><%= festplayIdentityName %></span>
+    <% } %>
+    <form method="POST" action="/settings/theme" class="inline-form theme-form">
+      <label for="rp-theme-select-festplay-create">Design</label>
+      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+      <select
+        id="rp-theme-select-festplay-create"
+        name="theme"
+        class="theme-select"
+      >
+        <% availableThemes.forEach((theme) => { %>
+          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <%= theme.label %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
+    <%- include("partials/guestbook-notification-link") %>
+    <details class="rp-user-menu">
+      <summary
+        class="rp-user-menu-toggle"
+        aria-label="Benutzermen&uuml; &ouml;ffnen"
+        title="Benutzermen&uuml;"
+      >
+        <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+      </summary>
+      <div class="rp-user-menu-panel">
+        <div class="rp-user-menu-meta">
+          <strong
+            class="<%= festplayIdentityRoleStyle ? `role-name-${festplayIdentityRoleStyle}` : '' %>"
+            style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+          ><%= festplayIdentityName %></strong>
+          <% if (festplayAccountDisplayName && festplayAccountDisplayName !== festplayIdentityName) { %>
+            <span>Konto: <%= festplayAccountDisplayName %></span>
+          <% } %>
+          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+        </div>
+
+        <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+          <a href="/account">Account</a>
+          <a href="/dashboard">Dashboard</a>
+          <a href="/characters/<%= character.id %>">Charakter</a>
+          <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+          <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+        </nav>
+
+        <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
+          <button type="submit" class="rp-user-menu-logout">Logout</button>
+        </form>
+      </div>
+    </details>
+  </header>
+
+  <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
+    <div class="rp-room-create-header">
+      <h1>Festspiele erstellen</h1>
+      <button
+        class="rp-room-create-save"
+        type="submit"
+        form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
+      >Speichern</button>
+    </div>
+
+    <section class="rp-room-create-list" aria-label="Eigene Festspiele">
+      <% if (!ownedFestplays || !ownedFestplays.length) { %>
+        <p class="muted">Noch keine eigenen Festspiele vorhanden.</p>
+      <% } else { %>
+        <div class="rp-room-manage-list">
+          <% ownedFestplays.forEach((festplay) => { %>
+            <% const isSelectedFestplay = selectedFestplay && Number(selectedFestplay.id) === Number(festplay.id); %>
+            <div class="rp-room-manage-row">
+              <div class="rp-room-manage-main">
+                <a
+                  class="rp-room-inline-item rp-room-manage-link<%= isSelectedFestplay ? ' is-active' : '' %>"
+                  href="<%= isSelectedFestplay ? `/characters/${character.id}/festplays#festplay-create` : `/characters/${character.id}/festplays?selected_festplay=${festplay.id}#festplay-selected-editor` %>"
+                  title="<%= isSelectedFestplay ? 'Festspiel schlie&szlig;en' : 'Festspiel ausw&auml;hlen' %>"
+                  aria-current="<%= isSelectedFestplay ? 'page' : 'false' %>"
+                >
+                  <span class="rp-room-inline-name"><%= festplay.name %></span>
+                </a>
+                <form
+                  method="POST"
+                  action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/delete"
+                  class="inline-form rp-room-delete-form"
+                >
+                  <button
+                    class="rp-room-delete-btn"
+                    type="submit"
+                    aria-label="Festspiel <%= festplay.name %> l&ouml;schen"
+                    title="Festspiel l&ouml;schen"
+                  >X</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <% if (selectedFestplay) { %>
+      <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspieldetails">
+        <div class="rp-room-editor-bar">
+          <div class="rp-room-editor-title-wrap">
+            <strong class="rp-room-editor-title"><%= selectedFestplay.name %></strong>
+          </div>
+        </div>
+
+        <nav class="rp-room-editor-tabs" aria-label="Festspiel bearbeiten">
+          <a
+            class="rp-room-editor-tab is-active"
+            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>#festplay-selected-editor"
+          >&Uuml;bersicht</a>
+        </nav>
+
+        <form
+          id="festplay-editor-form-<%= selectedFestplay.id %>"
+          method="POST"
+          action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/update"
+          class="rp-room-editor-body"
+        >
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Festspielname</span>
+            <input
+              type="text"
+              name="festplay_name"
+              maxlength="80"
+              placeholder="Festspielname"
+              value="<%= selectedFestplay.name || '' %>"
+              required
+            />
+          </label>
+
+          <div class="rp-room-editor-actions">
+            <button type="submit">Speichern</button>
+          </div>
+        </form>
+      </section>
+    <% } else if (ownedFestplays && ownedFestplays.length) { %>
+      <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-selected-editor" aria-label="Festspieldetails">
+        <div class="rp-room-editor-body">
+          <p class="rp-room-editor-note">Klicke oben auf ein Festspiel, dann wird es hervorgehoben und hier ge&ouml;ffnet.</p>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (!selectedFestplay) { %>
+      <form
+        id="festplay-create-form"
+        method="POST"
+        action="/characters/<%= character.id %>/festplays"
+        class="rp-room-form"
+      >
+        <div class="rp-room-input">
+          <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+          <input
+            id="festplay_name"
+            name="festplay_name"
+            maxlength="80"
+            placeholder="Festspielname (neu anlegen)"
+            required
+          />
+        </div>
+      </form>
+    <% } %>
+  </section>
+</section>
+
+<%- include("partials/end") %>

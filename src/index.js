@@ -1921,12 +1921,79 @@ function getFestplays() {
     .all();
 }
 
+function normalizeFestplayName(input) {
+  return String(input || "").trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
 function festplayExists(festplayId) {
   if (!Number.isInteger(festplayId) || festplayId < 1) return false;
   const row = db
     .prepare("SELECT id FROM festplays WHERE id = ?")
     .get(festplayId);
   return Boolean(row);
+}
+
+function getOwnedFestplaysForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  return db
+    .prepare(
+      `SELECT id, name
+       FROM festplays
+       WHERE created_by_user_id = ?
+       ORDER BY created_at ASC, id ASC`
+    )
+    .all(parsedUserId);
+}
+
+function getOwnedFestplayById(userId, festplayId) {
+  const parsedUserId = Number(userId);
+  const parsedFestplayId = Number(festplayId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1
+  ) {
+    return null;
+  }
+  return (
+    db
+      .prepare(
+        `SELECT id, name
+         FROM festplays
+         WHERE id = ?
+           AND created_by_user_id = ?`
+      )
+      .get(parsedFestplayId, parsedUserId) || null
+  );
+}
+
+function findFestplayByName(name, excludeId = null) {
+  const normalizedName = normalizeFestplayName(name);
+  if (!normalizedName) return null;
+  const parsedExcludeId = Number(excludeId);
+  if (Number.isInteger(parsedExcludeId) && parsedExcludeId > 0) {
+    return (
+      db
+        .prepare(
+          `SELECT id, name
+           FROM festplays
+           WHERE lower(name) = lower(?)
+             AND id != ?`
+        )
+        .get(normalizedName, parsedExcludeId) || null
+    );
+  }
+  return (
+    db
+      .prepare(
+        `SELECT id, name
+         FROM festplays
+         WHERE lower(name) = lower(?)`
+      )
+      .get(normalizedName) || null
+  );
 }
 
 function normalizeRoomName(input) {
@@ -5450,6 +5517,145 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
     ownedRooms,
     selectedRoom
   });
+});
+
+app.get("/characters/:id/festplays", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  rememberPreferredCharacter(req, character);
+  const ownedFestplays = getOwnedFestplaysForUser(req.session.user.id);
+  const selectedFestplayId = Number(req.query.selected_festplay);
+  const selectedFestplay =
+    ownedFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
+
+  return res.render("festplay-create", {
+    title: `Festspiele erstellen: ${character.name}`,
+    character,
+    ownedFestplays,
+    selectedFestplay
+  });
+});
+
+app.post("/characters/:id/festplays", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplayName = normalizeFestplayName(req.body.festplay_name);
+  if (!festplayName) {
+    setFlash(req, "error", "Bitte einen gültigen Festspielnamen eingeben.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  if (findFestplayByName(festplayName)) {
+    setFlash(req, "error", "Dieses Festspiel existiert bereits.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  db.prepare(
+    `INSERT INTO festplays (name, created_by_user_id)
+     VALUES (?, ?)`
+  ).run(festplayName, req.session.user.id);
+
+  return res.redirect(`/characters/${id}/festplays`);
+});
+
+app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  const festplayName = normalizeFestplayName(req.body.festplay_name);
+  if (!festplayName) {
+    setFlash(req, "error", "Bitte einen gültigen Festspielnamen eingeben.");
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
+  }
+
+  if (findFestplayByName(festplayName, festplayId)) {
+    setFlash(req, "error", "Dieses Festspiel existiert bereits.");
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
+  }
+
+  db.prepare(
+    `UPDATE festplays
+     SET name = ?
+     WHERE id = ?`
+  ).run(festplayName, festplayId);
+
+  return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
+});
+
+app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  const usageCount = db
+    .prepare("SELECT COUNT(*) AS count FROM characters WHERE festplay_id = ?")
+    .get(festplayId).count;
+  if (Number(usageCount) > 0) {
+    setFlash(req, "error", "Dieses Festspiel wird noch von Charakteren verwendet.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  db.prepare("DELETE FROM festplays WHERE id = ?").run(festplayId);
+  return res.redirect(`/characters/${id}/festplays`);
 });
 
 app.get("/characters/:id/edit", requireAuth, (req, res) => {
