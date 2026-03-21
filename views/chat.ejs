@@ -169,7 +169,9 @@
               : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
           </h1>
           <% const chatRoomDescription = activeRoom?.teaser || ""; %>
-          <% const chatSidebarDescription = activeRoom ? "" : (standardRoom?.teaser || ""); %>
+          <% const chatSidebarDescription = activeRoom
+            ? (activeRoom.description || "")
+            : (standardRoom?.teaser || ""); %>
           <% if (chatSidebarDescription) { %>
             <p class="chat-room-description"><%= chatSidebarDescription %></p>
           <% } %>

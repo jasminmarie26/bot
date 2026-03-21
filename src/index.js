@@ -6466,6 +6466,7 @@ app.get("/chat", requireAuth, (req, res) => {
     activeRoom = {
       id: room.id,
       name: room.name,
+      description: room.description,
       teaser: room.teaser,
       is_locked: Number(room.is_locked) === 1,
       category: "Offplay",
