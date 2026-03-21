@@ -1937,23 +1937,25 @@ function toRoomNameKey(roomName) {
   return normalizeRoomName(roomName).toLowerCase();
 }
 
-function findOwnedRoomByNameKey(userId, serverId, roomNameKey) {
+function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription = "") {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomNameKey = String(roomNameKey || "").trim().toLowerCase();
+  const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedRoomNameKey) {
     return null;
   }
 
   return (
     db.prepare(
-      `SELECT id, name
+      `SELECT id, name, description
        FROM chat_rooms
        WHERE server_id = ?
          AND created_by_user_id = ?
          AND name_key = ?
+         AND COALESCE(description, '') = ?
          AND COALESCE(is_saved_room, 0) = 1`
-    ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey) || null
+    ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey, normalizedRoomDescription) || null
   );
 }
 
@@ -1995,7 +1997,12 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
   }
 
   const roomNameKey = toRoomNameKey(normalizedRoomName);
-  const existingRoom = findOwnedRoomByNameKey(parsedUserId, normalizedServerId, roomNameKey);
+  const existingRoom = findOwnedRoomByNameKey(
+    parsedUserId,
+    normalizedServerId,
+    roomNameKey,
+    normalizedRoomDescription
+  );
   if (existingRoom) {
     return {
       id: Number(existingRoom.id),
@@ -5812,7 +5819,8 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   const conflictingRoom = findOwnedRoomByNameKey(
     req.session.user.id,
     character.server_id,
-    toRoomNameKey(roomName)
+    toRoomNameKey(roomName),
+    roomDescription
   );
   if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
     setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
