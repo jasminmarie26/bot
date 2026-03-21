@@ -6244,6 +6244,9 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
   }
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
+  const isPublic = req.body.is_public === "1";
+  const shortDescription = normalizeFestplayText(req.body.short_description, 280);
+  const longDescription = normalizeFestplayText(req.body.long_description, 8000);
   if (!festplayName) {
     setFlash(req, "error", "Bitte einen gültigen Festspielnamen eingeben.");
     return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
