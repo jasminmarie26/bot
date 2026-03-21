@@ -5434,6 +5434,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const roomUsers = Object.fromEntries(
     ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
+  const ownedFestplays = isOwner ? getOwnedFestplaysForUser(req.session.user.id) : [];
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =
@@ -5469,6 +5470,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     publicRoomUsers,
     roomUsers,
     ownedRooms,
+    ownedFestplays,
     activeGuestbookPage
   });
 });

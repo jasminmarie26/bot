@@ -391,6 +391,18 @@
             <summary class="rp-room-section-summary">
               <span>Meine Festspiele</span>
             </summary>
+            <div class="rp-room-section-divider" aria-hidden="true"></div>
+            <% if (!ownedFestplays || !ownedFestplays.length) { %>
+              <p class="muted">Noch keine eigenen Festspiele vorhanden.</p>
+            <% } else { %>
+              <div class="rp-room-inline-list">
+                <% ownedFestplays.forEach((festplay) => { %>
+                  <span class="rp-room-inline-item">
+                    <span class="rp-room-inline-name"><%= festplay.name %></span>
+                  </span>
+                <% }) %>
+              </div>
+            <% } %>
           </details>
         <% } %>
       <% } %>
