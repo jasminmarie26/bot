@@ -5612,7 +5612,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}&room_tab=overview`);
 });
 
-app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
+app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const roomId = Number(req.params.roomId);
   const roomTab = String(req.body.room_tab || "overview").trim().toLowerCase() === "image"
@@ -5636,7 +5636,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
 
   const room = db
     .prepare(
-      `SELECT id, server_id, created_by_user_id, teaser, image_url, is_locked
+      `SELECT id, server_id, created_by_user_id, teaser, image_url, email_log_enabled, is_locked
        FROM chat_rooms
        WHERE id = ?`
     )
@@ -5658,6 +5658,10 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
     roomTab === "image"
       ? normalizeRoomImageUrl(req.body.room_image_url)
       : String(room.image_url || "");
+  const emailLogEnabled =
+    roomTab === "overview"
+      ? (req.body.email_log_enabled ? 1 : 0)
+      : (Number(room.email_log_enabled) === 1 ? 1 : 0);
   const isLocked =
     roomTab === "overview"
       ? (req.body.is_locked ? 1 : 0)
@@ -5667,73 +5671,21 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
     `UPDATE chat_rooms
      SET teaser = ?,
          image_url = ?,
+         email_log_enabled = ?,
          is_locked = ?
      WHERE id = ?`
-  ).run(roomTeaser, roomImageUrl, isLocked, roomId);
-
-  emitRoomStateUpdate(roomId, room.server_id, getRoomWithCharacter(roomId));
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}`);
-});
-
-app.post("/characters/:id/rooms/:roomId/email-log", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  const roomId = Number(req.params.roomId);
-  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  const character = getCharacterById(id);
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf eigene Räume bearbeiten."
-    });
-  }
-
-  const room = db
-    .prepare(
-      `SELECT id, server_id, created_by_user_id, email_log_enabled
-       FROM chat_rooms
-       WHERE id = ?`
-    )
-    .get(roomId);
-  if (
-    !room ||
-    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
-    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
-  ) {
-    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
-    return res.redirect(`/characters/${id}/rooms/new`);
-  }
-
-  const selectedRoomId = Number(req.body.selected_room);
-  const selectedRoom =
-    Number.isInteger(selectedRoomId) && selectedRoomId > 0 ? selectedRoomId : roomId;
-  const roomTab = String(req.body.room_tab || "overview").trim().toLowerCase() === "image"
-    ? "image"
-    : "overview";
-  const nextEnabled = Number(room.email_log_enabled) === 1 ? 0 : 1;
-
-  db.prepare(
-    `UPDATE chat_rooms
-     SET email_log_enabled = ?
-     WHERE id = ?`
-  ).run(nextEnabled, roomId);
+  ).run(roomTeaser, roomImageUrl, emailLogEnabled, isLocked, roomId);
 
   const refreshedRoom = getRoomWithCharacter(roomId);
-  if (nextEnabled === 1) {
+  if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
     maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
-  } else if (getActiveRoomLog(roomId, room.server_id)) {
-    emitSystemChatMessage(roomId, room.server_id, "E-Mail-Log wurde beendet.");
+  } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
+    emitSystemChatMessage(roomId, room.server_id, "E-Mail-Log wurde deaktiviert.");
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   }
 
   emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${selectedRoom}&room_tab=${roomTab}#room-selected-editor`);
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
 });
 
 app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {
@@ -7810,7 +7762,7 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
   }
 
   startRoomLog(normalizedRoomId, normalizedServerId, resolvedRoom, starterSocket);
-  emitSystemChatMessage(normalizedRoomId, normalizedServerId, "E-Mail-Log wurde automatisch gestartet.");
+  emitSystemChatMessage(normalizedRoomId, normalizedServerId, "E-Mail-Log ist aktiviert.");
   return true;
 }
 
