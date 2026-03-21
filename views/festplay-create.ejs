@@ -169,7 +169,7 @@
           <a
             class="rp-room-editor-tab is-active"
             href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>#festplay-selected-editor"
-          >&Uuml;bersicht</a>
+          >Allgemein</a>
         </nav>
 
         <form
@@ -188,6 +188,38 @@
               value="<%= selectedFestplay.name || '' %>"
               required
             />
+          </label>
+
+          <div class="rp-room-editor-checks">
+            <label class="rp-room-editor-check">
+              <input
+                type="checkbox"
+                name="is_public"
+                value="1"
+                <%= selectedFestplay.is_public ? "checked" : "" %>
+              />
+              &Ouml;ffentlich
+            </label>
+          </div>
+
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
+            <textarea
+              name="short_description"
+              rows="5"
+              maxlength="280"
+              placeholder="Kurzer Beschreibungstext f&uuml;r das Festspiel"
+            ><%= selectedFestplay.short_description || '' %></textarea>
+          </label>
+
+          <label class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+            <textarea
+              name="long_description"
+              rows="10"
+              maxlength="8000"
+              placeholder="L&auml;ngere Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
+            ><%= selectedFestplay.long_description || '' %></textarea>
           </label>
 
           <div class="rp-room-editor-actions">

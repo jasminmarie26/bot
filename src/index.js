@@ -1925,6 +1925,14 @@ function normalizeFestplayName(input) {
   return String(input || "").trim().replace(/\s+/g, " ").slice(0, 80);
 }
 
+function normalizeFestplayText(input, maxLength) {
+  const normalized = String(input || "").replace(/\r\n/g, "\n").trim();
+  if (!Number.isInteger(maxLength) || maxLength < 1) {
+    return normalized;
+  }
+  return normalized.slice(0, maxLength);
+}
+
 function festplayExists(festplayId) {
   if (!Number.isInteger(festplayId) || festplayId < 1) return false;
   const row = db
@@ -1938,12 +1946,16 @@ function getOwnedFestplaysForUser(userId) {
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
   return db
     .prepare(
-      `SELECT id, name
-       FROM festplays
-       WHERE created_by_user_id = ?
-       ORDER BY created_at ASC, id ASC`
+      `SELECT id, name, is_public, short_description, long_description
+         FROM festplays
+         WHERE created_by_user_id = ?
+         ORDER BY created_at ASC, id ASC`
     )
-    .all(parsedUserId);
+    .all(parsedUserId)
+    .map((festplay) => ({
+      ...festplay,
+      is_public: Number(festplay.is_public) === 1
+    }));
 }
 
 function getOwnedFestplayById(userId, festplayId) {
@@ -1958,14 +1970,21 @@ function getOwnedFestplayById(userId, festplayId) {
     return null;
   }
   return (
-    db
+    (() => {
+      const festplay = db
       .prepare(
-        `SELECT id, name
-         FROM festplays
-         WHERE id = ?
-           AND created_by_user_id = ?`
+        `SELECT id, name, is_public, short_description, long_description
+           FROM festplays
+           WHERE id = ?
+             AND created_by_user_id = ?`
       )
-      .get(parsedFestplayId, parsedUserId) || null
+      .get(parsedFestplayId, parsedUserId);
+      if (!festplay) return null;
+      return {
+        ...festplay,
+        is_public: Number(festplay.is_public) === 1
+      };
+    })()
   );
 }
 
@@ -5185,6 +5204,7 @@ app.get("/members", requireAuth, (req, res) => {
 
 const HELP_TOPICS = [
   { slug: "charakter-anlegen", title: "Charakter anlegen" },
+  { slug: "festspiele-anlegen", title: "Festspiele anlegen" },
   { slug: "eigene-raeume", title: "Eigene Räume" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },
   { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },
@@ -5566,6 +5586,9 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
   }
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
+  const isPublic = req.body.is_public === "1";
+  const shortDescription = normalizeFestplayText(req.body.short_description, 280);
+  const longDescription = normalizeFestplayText(req.body.long_description, 8000);
   if (!festplayName) {
     setFlash(req, "error", "Bitte einen gültigen Festspielnamen eingeben.");
     return res.redirect(`/characters/${id}/festplays`);
@@ -5619,9 +5642,12 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
 
   db.prepare(
     `UPDATE festplays
-     SET name = ?
+     SET name = ?,
+         is_public = ?,
+         short_description = ?,
+         long_description = ?
      WHERE id = ?`
-  ).run(festplayName, festplayId);
+  ).run(festplayName, isPublic ? 1 : 0, shortDescription, longDescription, festplayId);
 
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
 });

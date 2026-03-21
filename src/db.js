@@ -62,6 +62,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS festplays (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    is_public INTEGER NOT NULL DEFAULT 0,
+    short_description TEXT NOT NULL DEFAULT '',
+    long_description TEXT NOT NULL DEFAULT '',
     created_by_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -244,8 +247,25 @@ const siteUpdateColumns = db
   .all()
   .map((column) => column.name);
 
+const festplayColumns = db
+  .prepare("PRAGMA table_info(festplays)")
+  .all()
+  .map((column) => column.name);
+
 if (!userColumns.includes("is_admin")) {
   db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!festplayColumns.includes("is_public")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!festplayColumns.includes("short_description")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN short_description TEXT NOT NULL DEFAULT ''");
+}
+
+if (!festplayColumns.includes("long_description")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN long_description TEXT NOT NULL DEFAULT ''");
 }
 
 if (!userColumns.includes("is_moderator")) {
