@@ -3224,7 +3224,7 @@ body.page-home-screen .home-hero-actions {
 .rp-room-manage-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.22rem 0.55rem;
+  gap: 0.08rem 0.28rem;
   align-items: flex-start;
 }
 
@@ -3238,13 +3238,13 @@ body.page-home-screen .home-hero-actions {
 .rp-room-manage-main {
   display: inline-flex;
   align-items: center;
-  gap: 0.12rem;
+  gap: 0.06rem;
   max-width: 100%;
 }
 
 .rp-room-manage-link {
   min-width: 0;
-  padding: 0.22rem 0.52rem;
+  padding: 0.16rem 0.32rem;
   border: 1px solid transparent;
   border-radius: 10px;
   transition:
