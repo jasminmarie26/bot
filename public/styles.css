@@ -3226,6 +3226,43 @@ body.page-home-screen .home-hero-actions {
   flex: 0 0 auto;
 }
 
+.rp-room-email-log-form {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.rp-room-email-log-btn {
+  min-width: auto;
+  padding: 0.36rem 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--field-edge));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 94%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.rp-room-email-log-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 10%, var(--field-bg));
+}
+
+.rp-room-email-log-btn.is-active {
+  border-color: color-mix(in srgb, #2d8a57 64%, var(--field-edge));
+  background: color-mix(in srgb, #2d8a57 18%, var(--field-bg));
+  color: var(--text);
+}
+
 .rp-room-delete-btn {
   width: 1.8rem;
   height: 1.8rem;

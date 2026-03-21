@@ -130,6 +130,7 @@ db.exec(`
     name_key TEXT NOT NULL,
     teaser TEXT NOT NULL DEFAULT '',
     image_url TEXT NOT NULL DEFAULT '',
+    email_log_enabled INTEGER NOT NULL DEFAULT 0,
     is_locked INTEGER NOT NULL DEFAULT 0,
     server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -354,6 +355,10 @@ if (!chatRoomColumns.includes("image_url")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN image_url TEXT NOT NULL DEFAULT ''");
 }
 
+if (!chatRoomColumns.includes("email_log_enabled")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN email_log_enabled INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!chatRoomColumns.includes("is_locked")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN is_locked INTEGER NOT NULL DEFAULT 0");
 }
@@ -459,6 +464,7 @@ db.prepare(
 ).run();
 db.prepare("UPDATE chat_rooms SET teaser = '' WHERE teaser IS NULL").run();
 db.prepare("UPDATE chat_rooms SET image_url = '' WHERE image_url IS NULL").run();
+db.prepare("UPDATE chat_rooms SET email_log_enabled = 0 WHERE email_log_enabled IS NULL").run();
 db.prepare("UPDATE chat_rooms SET is_locked = 0 WHERE is_locked IS NULL").run();
 db.prepare(
   `UPDATE chat_messages

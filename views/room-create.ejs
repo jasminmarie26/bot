@@ -150,6 +150,19 @@
                 </a>
                 <form
                   method="POST"
+                  action="/characters/<%= character.id %>/rooms/<%= room.id %>/email-log"
+                  class="inline-form rp-room-email-log-form"
+                >
+                  <input type="hidden" name="selected_room" value="<%= isSelectedRoom ? room.id : (selectedRoom ? selectedRoom.id : room.id) %>" />
+                  <input type="hidden" name="room_tab" value="<%= selectedRoomTab || 'overview' %>" />
+                  <button
+                    class="rp-room-email-log-btn<%= room.email_log_enabled ? ' is-active' : '' %>"
+                    type="submit"
+                    title="<%= room.email_log_enabled ? 'E-Mail-Log ausschalten' : 'E-Mail-Log einschalten' %>"
+                  >E-Mail-Log</button>
+                </form>
+                <form
+                  method="POST"
                   action="/characters/<%= character.id %>/rooms/<%= room.id %>/delete"
                   class="inline-form rp-room-delete-form"
                 >

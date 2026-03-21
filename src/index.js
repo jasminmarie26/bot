@@ -3245,7 +3245,7 @@ function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
   return db
     .prepare(
-      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.is_locked, r.server_id,
+      `SELECT r.id, r.name, r.character_id, r.created_by_user_id, r.created_at, r.teaser, r.image_url, r.email_log_enabled, r.is_locked, r.server_id,
               c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
                u.username AS room_owner_name
        FROM chat_rooms r
@@ -5276,7 +5276,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   rememberPreferredCharacter(req, character);
   const ownedRooms = db
     .prepare(
-      `SELECT id, name, teaser, image_url, is_locked
+      `SELECT id, name, teaser, image_url, email_log_enabled, is_locked
        FROM chat_rooms
        WHERE server_id = ? AND created_by_user_id = ?
        ORDER BY created_at ASC, id ASC`
@@ -5284,6 +5284,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
     .all(normalizeServer(character.server_id), req.session.user.id)
     .map((room) => ({
       ...room,
+      email_log_enabled: Number(room.email_log_enabled) === 1,
       is_locked: Number(room.is_locked) === 1
     }));
   const selectedRoomId = Number(req.query.selected_room);
@@ -5672,6 +5673,67 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, (req, res) => {
 
   emitRoomStateUpdate(roomId, room.server_id, getRoomWithCharacter(roomId));
   return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}`);
+});
+
+app.post("/characters/:id/rooms/:roomId/email-log", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const roomId = Number(req.params.roomId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf eigene Räume bearbeiten."
+    });
+  }
+
+  const room = db
+    .prepare(
+      `SELECT id, server_id, created_by_user_id, email_log_enabled
+       FROM chat_rooms
+       WHERE id = ?`
+    )
+    .get(roomId);
+  if (
+    !room ||
+    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
+  ) {
+    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/rooms/new`);
+  }
+
+  const selectedRoomId = Number(req.body.selected_room);
+  const selectedRoom =
+    Number.isInteger(selectedRoomId) && selectedRoomId > 0 ? selectedRoomId : roomId;
+  const roomTab = String(req.body.room_tab || "overview").trim().toLowerCase() === "image"
+    ? "image"
+    : "overview";
+  const nextEnabled = Number(room.email_log_enabled) === 1 ? 0 : 1;
+
+  db.prepare(
+    `UPDATE chat_rooms
+     SET email_log_enabled = ?
+     WHERE id = ?`
+  ).run(nextEnabled, roomId);
+
+  const refreshedRoom = getRoomWithCharacter(roomId);
+  if (nextEnabled === 1) {
+    maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
+  } else if (getActiveRoomLog(roomId, room.server_id)) {
+    emitSystemChatMessage(roomId, room.server_id, "E-Mail-Log wurde beendet.");
+    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+  }
+
+  emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
+  return res.redirect(`/characters/${id}/rooms/new?selected_room=${selectedRoom}&room_tab=${roomTab}#room-selected-editor`);
 });
 
 app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {
@@ -7721,6 +7783,37 @@ function startRoomLog(roomId, serverId, room, startedBySocket) {
   return roomLog;
 }
 
+function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSocket = null) {
+  const normalizedRoomId = Number(roomId);
+  if (!Number.isInteger(normalizedRoomId) || normalizedRoomId < 1) {
+    return false;
+  }
+
+  const normalizedServerId = normalizeServer(serverId || room?.server_id);
+  const resolvedRoom = room || getRoomWithCharacter(normalizedRoomId);
+  if (!resolvedRoom || Number(resolvedRoom.email_log_enabled) !== 1) {
+    return false;
+  }
+
+  if (!getVerificationMailer() || getActiveRoomLog(normalizedRoomId, normalizedServerId)) {
+    return false;
+  }
+
+  const memberSockets = getSocketsInChannel(normalizedRoomId, normalizedServerId);
+  if (!memberSockets.length) {
+    return false;
+  }
+
+  const starterSocket = memberSockets.includes(preferredSocket) ? preferredSocket : memberSockets[0];
+  if (!starterSocket) {
+    return false;
+  }
+
+  startRoomLog(normalizedRoomId, normalizedServerId, resolvedRoom, starterSocket);
+  emitSystemChatMessage(normalizedRoomId, normalizedServerId, "E-Mail-Log wurde automatisch gestartet.");
+  return true;
+}
+
 async function finalizeRoomLog(roomId, serverId, options = {}) {
   const key = getRoomLogKey(roomId, serverId);
   const roomLog = activeRoomLogs.get(key);
@@ -8342,14 +8435,15 @@ io.on("connection", (socket) => {
     const nextRoomId =
       Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
     let nextServerId = normalizeServer(rawServerId);
+    let nextRoom = null;
 
     if (nextRoomId) {
-      const room = getRoomWithCharacter(nextRoomId);
-      if (!room) return;
-      if (!canAccessRoom(socket.data.user, room)) {
+      nextRoom = getRoomWithCharacter(nextRoomId);
+      if (!nextRoom) return;
+      if (!canAccessRoom(socket.data.user, nextRoom)) {
         return;
       }
-      if (isRoomLockedForUser(socket.data.user, room)) {
+      if (isRoomLockedForUser(socket.data.user, nextRoom)) {
         socket.emit("chat:message", {
           type: "system",
           content: "Dieser Raum ist abgeschlossen.",
@@ -8357,7 +8451,7 @@ io.on("connection", (socket) => {
         });
         return;
       }
-      nextServerId = normalizeServer(room.server_id || room.character_server_id);
+      nextServerId = normalizeServer(nextRoom.server_id || nextRoom.character_server_id);
     }
 
     const previousRoomId =
@@ -8448,6 +8542,9 @@ io.on("connection", (socket) => {
       );
     }
     clearPendingRoomDeletion(nextRoomId);
+    if (nextRoom) {
+      maybeStartAutomaticRoomLog(nextRoomId, nextServerId, nextRoom, socket);
+    }
 
     const previousRoomWasRemoved = previousServerId
       ? maybeRemoveEmptyRoom(previousRoomId)
