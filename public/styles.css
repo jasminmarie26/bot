@@ -3224,7 +3224,7 @@ body.page-home-screen .home-hero-actions {
 .rp-room-manage-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.9rem 1.1rem;
+  gap: 0.45rem 0.7rem;
   align-items: flex-start;
 }
 
@@ -3238,7 +3238,7 @@ body.page-home-screen .home-hero-actions {
 .rp-room-manage-main {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.18rem;
   max-width: 100%;
 }
 
@@ -3284,25 +3284,25 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-room-delete-btn {
-  width: 1.8rem;
-  height: 1.8rem;
-  min-width: 1.8rem;
+  width: auto;
+  height: auto;
+  min-width: 0;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--danger) 65%, var(--field-edge));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--field-bg) 88%, black 12%);
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: color-mix(in srgb, var(--danger) 78%, white 22%);
   font: inherit;
-  font-weight: 800;
+  font-size: 0.9rem;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
   box-shadow: none;
-  transition: transform 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: transform 120ms ease, color 120ms ease;
 }
 
 .rp-room-delete-btn:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--danger) 82%, white 18%);
   color: color-mix(in srgb, var(--danger) 92%, white 8%);
 }
 
