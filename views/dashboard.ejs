@@ -32,66 +32,128 @@
     <div class="dashboard-accordion-body">
       <div class="dashboard-server-list">
         <% serverSections.forEach((section) => { %>
-          <section class="panel dashboard-server-panel dashboard-subpanel">
-            <div class="header-line">
-              <div>
-                <h3><%= section.dashboard_label || section.label %></h3>
-                <p class="muted dashboard-section-copy"><%= section.dashboard_caption %></p>
+          <div class="dashboard-server-column">
+            <section class="panel dashboard-server-panel dashboard-subpanel">
+              <div class="header-line">
+                <div>
+                  <h3><%= section.dashboard_label || section.label %></h3>
+                  <p class="muted dashboard-section-copy"><%= section.dashboard_caption %></p>
+                </div>
+                <div class="dashboard-server-actions">
+                  <a class="btn dashboard-add-character-btn" href="/characters/new?server=<%= section.id %>" aria-label="Charakter hinzufuegen" title="Charakter hinzufuegen">+</a>
+                </div>
               </div>
-              <div class="dashboard-server-actions">
-                <a class="btn dashboard-add-character-btn" href="/characters/new?server=<%= section.id %>" aria-label="Charakter hinzufügen" title="Charakter hinzufügen">+</a>
-              </div>
-            </div>
 
-            <% if (!section.characters.length) { %>
-              <p class="muted">Noch keine Charaktere im Bereich <%= section.dashboard_label || section.label %>.</p>
-            <% } else { %>
-              <div class="character-mini-grid">
-                <% section.characters.forEach((char) => { %>
-                  <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
-                  <% const moveArrow = char.server_id === "free-rp" ? "→" : "←"; %>
-                  <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
-                  <article class="character-mini-card">
-                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                      <span class="character-mini-name"><%= char.name %></span>
-                    </a>
-                    <div class="character-mini-actions">
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/move"
-                        class="character-mini-move-form"
-                        onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-move-btn"
-                          aria-label="Charakter verschieben"
-                          title="<%= moveTitle %>"
+              <% if (!section.characters.length) { %>
+                <p class="muted">Noch keine Charaktere im Bereich <%= section.dashboard_label || section.label %>.</p>
+              <% } else { %>
+                <div class="character-mini-grid">
+                  <% section.characters.forEach((char) => { %>
+                    <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
+                    <% const moveArrow = char.server_id === "free-rp" ? "&rarr;" : "&larr;"; %>
+                    <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
+                    <article class="character-mini-card">
+                      <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                        <span class="character-mini-name"><%= char.name %></span>
+                      </a>
+                      <div class="character-mini-actions">
+                        <form
+                          method="POST"
+                          action="/characters/<%= char.id %>/move"
+                          class="character-mini-move-form"
+                          onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
                         >
-                          <%= moveArrow %>
-                        </button>
-                      </form>
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/delete"
-                        class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-delete-btn"
-                          aria-label="Charakter l&ouml;schen"
-                          title="Charakter l&ouml;schen"
+                          <button
+                            type="submit"
+                            class="character-mini-move-btn"
+                            aria-label="Charakter verschieben"
+                            title="<%= moveTitle %>"
+                          >
+                            <%- moveArrow %>
+                          </button>
+                        </form>
+                        <form
+                          method="POST"
+                          action="/characters/<%= char.id %>/delete"
+                          class="character-mini-delete-form"
+                          onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
                         >
-                          X
-                        </button>
-                      </form>
+                          <button
+                            type="submit"
+                            class="character-mini-delete-btn"
+                            aria-label="Charakter l&ouml;schen"
+                            title="Charakter l&ouml;schen"
+                          >
+                            X
+                          </button>
+                        </form>
+                      </div>
+                    </article>
+                  <% }) %>
+                </div>
+              <% } %>
+            </section>
+
+            <% if (section.festplays && section.festplays.length) { %>
+              <% section.festplays.forEach((festplay) => { %>
+                <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
+                  <div class="header-line">
+                    <div>
+                      <h3><%= festplay.name %></h3>
+                      <p class="muted dashboard-section-copy">
+                        <%= festplay.owner_name ? `Festspiel von ${festplay.owner_name}.` : "Freigeschaltetes Festspiel auf diesem Bereich." %>
+                      </p>
                     </div>
-                  </article>
-                <% }) %>
-              </div>
+                  </div>
+
+                  <div class="character-mini-grid">
+                    <% festplay.characters.forEach((char) => { %>
+                      <% const moveTargetLabel = section.id === "free-rp" ? "ERP" : "FREE-RP"; %>
+                      <% const moveArrow = section.id === "free-rp" ? "&rarr;" : "&larr;"; %>
+                      <% const moveTitle = section.id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
+                      <article class="character-mini-card">
+                        <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                          <span class="character-mini-name"><%= char.name %></span>
+                        </a>
+                        <div class="character-mini-actions">
+                          <form
+                            method="POST"
+                            action="/characters/<%= char.id %>/move"
+                            class="character-mini-move-form"
+                            onsubmit="return confirm('Charakter auf <%= moveTargetLabel %> verschieben?')"
+                          >
+                            <button
+                              type="submit"
+                              class="character-mini-move-btn"
+                              aria-label="Charakter verschieben"
+                              title="<%= moveTitle %>"
+                            >
+                              <%- moveArrow %>
+                            </button>
+                          </form>
+                          <form
+                            method="POST"
+                            action="/characters/<%= char.id %>/delete"
+                            class="character-mini-delete-form"
+                            onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                          >
+                            <button
+                              type="submit"
+                              class="character-mini-delete-btn"
+                              aria-label="Charakter l&ouml;schen"
+                              title="Charakter l&ouml;schen"
+                            >
+                              X
+                            </button>
+                          </form>
+                        </div>
+                      </article>
+                    <% }) %>
+                  </div>
+                </section>
+              <% }) %>
             <% } %>
-          </section>
+          </div>
         <% }) %>
       </div>
     </div>

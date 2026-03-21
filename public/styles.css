@@ -2577,6 +2577,13 @@ body.page-home-screen .home-hero-actions {
   padding-top: 0.32rem;
 }
 
+.dashboard-server-column {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  min-width: 0;
+}
+
 .dashboard-accordion {
   border: 1px solid var(--panel-edge);
   border-radius: 24px;
@@ -2652,6 +2659,10 @@ body.page-home-screen .home-hero-actions {
 .dashboard-server-panel h3 {
   margin: 0;
   font-size: clamp(1.55rem, 2vw, 1.95rem);
+}
+
+.dashboard-festplay-panel {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--panel-edge) 82%);
 }
 
 .dashboard-section-copy {

@@ -2005,6 +2005,70 @@ function getOtherFestplaysForUser(userId, serverId) {
     .map(decorateFestplayRecord);
 }
 
+function getDashboardFestplaysForUser(userId, serverId) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT
+              f.id,
+              f.name,
+              COALESCE(owner.username, '') AS owner_name,
+              c.id AS character_id,
+              c.name AS character_name
+         FROM festplays f
+         LEFT JOIN users owner ON owner.id = f.created_by_user_id
+         JOIN characters c
+           ON c.user_id = ?
+          AND c.server_id = ?
+         LEFT JOIN festplay_permissions fp
+           ON fp.festplay_id = f.id
+          AND fp.user_id = c.user_id
+          AND fp.character_id = c.id
+         WHERE COALESCE(f.created_by_user_id, 0) != ?
+           AND (
+             c.festplay_id = f.id
+             OR fp.id IS NOT NULL
+           )
+         ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedUserId, normalizedServerId, parsedUserId);
+
+  const festplayMap = new Map();
+  rows.forEach((row) => {
+    const festplayId = Number(row.id);
+    if (!Number.isInteger(festplayId) || festplayId < 1) {
+      return;
+    }
+
+    if (!festplayMap.has(festplayId)) {
+      festplayMap.set(festplayId, {
+        id: festplayId,
+        name: row.name,
+        owner_name: row.owner_name,
+        characters: []
+      });
+    }
+
+    const festplay = festplayMap.get(festplayId);
+    const characterId = Number(row.character_id);
+    if (
+      Number.isInteger(characterId) &&
+      characterId > 0 &&
+      !festplay.characters.some((character) => Number(character.id) === characterId)
+    ) {
+      festplay.characters.push({
+        id: characterId,
+        name: row.character_name
+      });
+    }
+  });
+
+  return Array.from(festplayMap.values());
+}
+
 function getOwnedFestplayById(userId, festplayId) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
@@ -5431,6 +5495,7 @@ app.get("/dashboard", requireAuth, (req, res) => {
       server.id === "free-rp"
         ? "Für offene Geschichten, entspannte Begegnungen und neue Charakterideen."
         : "Für intensivere Szenen, klare Dynamik und laufende Verbindungen.",
+    festplays: getDashboardFestplaysForUser(req.session.user.id, server.id),
     characters: ownCharacters.filter(
       (character) => normalizeServer(character.server_id) === server.id
     )
