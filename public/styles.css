@@ -3742,6 +3742,11 @@ body.page-home-screen .home-hero-actions {
   padding-right: 0;
 }
 
+.rp-room-list-owned {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 280px));
+  justify-content: start;
+}
+
 .rp-room-list-stacked {
   grid-template-columns: 1fr;
   gap: 0;
