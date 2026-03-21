@@ -193,8 +193,6 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_server_user_name_key
-    ON chat_rooms(server_id, created_by_user_id, name_key);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user
     ON chat_room_permissions(room_id, user_id);
