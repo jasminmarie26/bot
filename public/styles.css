@@ -3806,7 +3806,7 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-link small {
   color: var(--muted);
-  font-size: 1.02rem;
+  font-size: 0.78rem;
 }
 
 .rp-room-link-note {
@@ -3939,7 +3939,7 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-custom-description {
   color: var(--muted);
-  font-size: 1.02rem;
+  font-size: 0.78rem;
   font-style: italic;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -3947,7 +3947,7 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-custom-owner {
   color: var(--text);
-  font-size: 1.02rem;
+  font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -3956,7 +3956,7 @@ body.page-home-screen .home-hero-actions {
 .rp-room-occupants {
   min-height: 1.1rem;
   padding: 0 0.08rem;
-  font-size: 1.02rem;
+  font-size: 0.78rem;
   color: var(--muted);
   line-height: 1.35;
 }
