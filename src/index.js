@@ -2073,55 +2073,6 @@ function getPublicFestplayById(festplayId) {
   );
 }
 
-function getAssignableFestplaysForUser(userId, serverId) {
-  const parsedUserId = Number(userId);
-  const normalizedServerId = normalizeServer(serverId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
-
-  return db
-    .prepare(
-      `SELECT DISTINCT
-              f.id,
-              f.name,
-              COALESCE(owner.username, '') AS owner_name,
-              CASE
-                WHEN COALESCE(f.created_by_user_id, 0) = ? THEN 1
-                ELSE 0
-              END AS is_owned
-         FROM festplays f
-         LEFT JOIN users owner ON owner.id = f.created_by_user_id
-         WHERE COALESCE(f.created_by_user_id, 0) = ?
-            OR EXISTS (
-              SELECT 1
-              FROM characters c
-              WHERE c.user_id = ?
-                AND c.server_id = ?
-                AND c.festplay_id = f.id
-            )
-            OR EXISTS (
-              SELECT 1
-              FROM festplay_permissions fp
-              JOIN characters c ON c.id = fp.character_id
-              WHERE fp.festplay_id = f.id
-                AND fp.user_id = ?
-                AND c.server_id = ?
-            )
-         ORDER BY lower(f.name) ASC, f.id ASC`
-    )
-    .all(
-      parsedUserId,
-      parsedUserId,
-      parsedUserId,
-      normalizedServerId,
-      parsedUserId,
-      normalizedServerId
-    )
-    .map((festplay) => ({
-      ...festplay,
-      is_owned: Number(festplay.is_owned) === 1
-    }));
-}
-
 function characterHasFestplayAccess(festplayId, characterId) {
   const parsedFestplayId = Number(festplayId);
   const parsedCharacterId = Number(characterId);
@@ -5463,35 +5414,15 @@ app.post("/settings/theme", (req, res) => {
 });
 
 app.get("/dashboard", requireAuth, (req, res) => {
-  const assignableFestplaysByServer = Object.fromEntries(
-    SERVER_OPTIONS.map((server) => [
-      server.id,
-      getAssignableFestplaysForUser(req.session.user.id, server.id)
-    ])
-  );
   const ownCharacters = db
     .prepare(
-      `SELECT c.id,
-              c.name,
-              c.server_id,
-              c.festplay_id,
-              c.is_public,
-              c.updated_at,
-              f.name AS festplay_name
+      `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
        FROM characters c
        LEFT JOIN festplays f ON f.id = c.festplay_id
        WHERE c.user_id = ?
        ORDER BY c.updated_at DESC`
-     )
-    .all(req.session.user.id)
-    .map((character) => {
-      const normalizedServerId = normalizeServer(character.server_id);
-      return {
-        ...character,
-        server_id: normalizedServerId,
-        assignable_festplays: assignableFestplaysByServer[normalizedServerId] || []
-      };
-    });
+    )
+    .all(req.session.user.id);
 
   const serverSections = SERVER_OPTIONS.map((server) => ({
     ...server,
@@ -6290,11 +6221,6 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
        AND festplay_id = ?`
   ).run(req.session.user.id, applicationId, festplayId);
 
-  setFlash(
-    req,
-    "success",
-    "Bewerbung freigeschaltet. Auf dem Dashboard kann der Spieler jetzt passende Charaktere in dieses Festspiel verschieben."
-  );
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
 
@@ -6606,64 +6532,6 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
     req,
     "success",
     `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`
-  );
-  return res.redirect("/dashboard");
-});
-
-app.post("/characters/:id/festplay", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  const targetFestplayId = Number(req.body.festplay_id);
-  const character = getCharacterById(id);
-
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf das Festspiel dieses Charakters wechseln."
-    });
-  }
-
-  if (!Number.isInteger(targetFestplayId) || targetFestplayId < 1 || !festplayExists(targetFestplayId)) {
-    setFlash(req, "error", "Bitte ein gueltiges Festspiel auswaehlen.");
-    return res.redirect("/dashboard");
-  }
-
-  const assignableFestplays = getAssignableFestplaysForUser(
-    req.session.user.id,
-    character.server_id
-  );
-  const targetFestplay = assignableFestplays.find(
-    (festplay) => Number(festplay.id) === targetFestplayId
-  );
-
-  if (!targetFestplay) {
-    setFlash(
-      req,
-      "error",
-      "Dieses Festspiel ist fuer diesen Bereich noch nicht freigeschaltet."
-    );
-    return res.redirect("/dashboard");
-  }
-
-  if (Number(character.festplay_id) === targetFestplayId) {
-    setFlash(req, "success", "Dieser Charakter ist bereits diesem Festspiel zugeordnet.");
-    return res.redirect("/dashboard");
-  }
-
-  db.prepare(
-    `UPDATE characters
-     SET festplay_id = ?,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`
-  ).run(targetFestplayId, id);
-
-  setFlash(
-    req,
-    "success",
-    `Charakter wurde in das Festspiel ${targetFestplay.name} verschoben.`
   );
   return res.redirect("/dashboard");
 });
