@@ -168,9 +168,10 @@
               ? activeRoom.name
               : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
           </h1>
-          <% const chatRoomDescription = activeRoom?.teaser || standardRoom?.teaser || ""; %>
-          <% if (chatRoomDescription) { %>
-            <p class="chat-room-description"><%= chatRoomDescription %></p>
+          <% const chatRoomDescription = activeRoom?.teaser || ""; %>
+          <% const chatSidebarDescription = activeRoom ? "" : (standardRoom?.teaser || ""); %>
+          <% if (chatSidebarDescription) { %>
+            <p class="chat-room-description"><%= chatSidebarDescription %></p>
           <% } %>
           <div class="chat-room-divider" aria-hidden="true"></div>
         </div>
@@ -215,6 +216,11 @@
           data-current-user-id="<%= currentUser ? currentUser.id : '' %>"
           data-active-character-id="<%= activeCharacter ? activeCharacter.id : '' %>"
         >
+          <% if (chatRoomDescription) { %>
+            <section class="chat-room-scene" aria-label="Raumbeschreibung">
+              <p><%= chatRoomDescription %></p>
+            </section>
+          <% } %>
           <% messages.forEach((msg) => { %>
             <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">
               <% if (msg.type === "system") { %>
