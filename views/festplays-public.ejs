@@ -124,22 +124,14 @@
     <% if (!publicFestplays || !publicFestplays.length) { %>
       <p class="muted">Zurzeit sind keine &ouml;ffentlichen Festspiele sichtbar.</p>
     <% } else { %>
-      <div class="festplays-public-list">
-        <% publicFestplays.forEach((festplay) => { %>
-          <article class="festplay-public-card">
-            <a
-              class="members-card-name"
-              href="/characters/<%= character.id %>/festplays/public/<%= festplay.id %>"
-              target="_blank"
-              rel="noopener noreferrer"
-            ><%= festplay.name %></a>
-            <% if (festplay.owner_name) { %>
-              <div class="festplay-public-owner">von <%= festplay.owner_name %></div>
-            <% } %>
-            <div class="festplay-public-text">
-              <%= festplay.short_description || "Noch keine Kurzbeschreibung hinterlegt." %>
-            </div>
-          </article>
+      <div class="festplays-public-list" aria-label="&Ouml;ffentliche Festspiele">
+        <% publicFestplays.forEach((festplay, index) => { %>
+          <a
+            class="festplays-public-link"
+            href="/characters/<%= character.id %>/festplays/public/<%= festplay.id %>"
+            target="_blank"
+            rel="noopener noreferrer"
+          ><%= festplay.name %></a><% if (index < publicFestplays.length - 1) { %><span class="festplays-public-separator" aria-hidden="true">,</span><% } %>
         <% }) %>
       </div>
     <% } %>
