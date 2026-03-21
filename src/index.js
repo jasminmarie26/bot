@@ -1958,6 +1958,34 @@ function getOwnedFestplaysForUser(userId) {
     }));
 }
 
+function getOtherFestplaysForUser(userId, serverId) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  return db
+    .prepare(
+      `SELECT DISTINCT
+              f.id,
+              f.name,
+              f.is_public,
+              f.short_description,
+              f.long_description,
+              COALESCE(owner.username, '') AS owner_name
+         FROM festplays f
+         JOIN characters c ON c.festplay_id = f.id
+         LEFT JOIN users owner ON owner.id = f.created_by_user_id
+         WHERE c.user_id = ?
+           AND c.server_id = ?
+           AND COALESCE(f.created_by_user_id, 0) != ?
+         ORDER BY lower(f.name) ASC, f.id ASC`
+    )
+    .all(parsedUserId, normalizedServerId, parsedUserId)
+    .map((festplay) => ({
+      ...festplay,
+      is_public: Number(festplay.is_public) === 1
+    }));
+}
+
 function getOwnedFestplayById(userId, festplayId) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
@@ -5701,14 +5729,34 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
 
   rememberPreferredCharacter(req, character);
   const ownedFestplays = getOwnedFestplaysForUser(req.session.user.id);
+  const otherFestplays = getOtherFestplaysForUser(req.session.user.id, character.server_id);
   const selectedFestplayId = Number(req.query.selected_festplay);
+  const requestedFestplayOverviewTab =
+    String(req.query.overview || "").trim().toLowerCase() === "andere"
+      ? "andere"
+      : "eigene";
   const activeFestplayTab =
     String(req.query.tab || "").trim().toLowerCase() === "bewerbungen"
       ? "bewerbungen"
       : "allgemein";
-  const selectedFestplay =
+  const selectedOwnedFestplay =
     ownedFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
-  const festplayPermissionEntries = selectedFestplay
+  const selectedOtherFestplay =
+    selectedOwnedFestplay
+      ? null
+      : otherFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
+  const selectedFestplay = selectedOwnedFestplay || selectedOtherFestplay || null;
+  const selectedFestplayMode = selectedOwnedFestplay
+    ? "owned"
+    : selectedOtherFestplay
+      ? "other"
+      : null;
+  const activeFestplayOverviewTab = selectedFestplayMode === "other"
+    ? "andere"
+    : selectedFestplayMode === "owned"
+      ? "eigene"
+      : requestedFestplayOverviewTab;
+  const festplayPermissionEntries = selectedFestplayMode === "owned"
     ? getFestplayPermissionEntries(selectedFestplay.id, character.server_id)
     : [];
   const festplayPlayerOverview = selectedFestplay
@@ -5719,7 +5767,10 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     title: `Festspiele erstellen: ${character.name}`,
     character,
     ownedFestplays,
+    otherFestplays,
     selectedFestplay,
+    selectedFestplayMode,
+    activeFestplayOverviewTab,
     activeFestplayTab,
     festplayPermissionEntries,
     festplayPlayerOverview

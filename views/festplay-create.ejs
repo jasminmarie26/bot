@@ -113,7 +113,7 @@
 
   <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
     <div class="rp-room-create-header">
-      <% if (!selectedFestplay || activeFestplayTab === "allgemein") { %>
+      <% if ((!selectedFestplay && activeFestplayOverviewTab !== "andere") || (selectedFestplayMode === "owned" && activeFestplayTab === "allgemein")) { %>
         <button
           class="rp-room-create-save"
           type="submit"
@@ -122,7 +122,46 @@
       <% } %>
     </div>
 
-    <% if (selectedFestplay) { %>
+    <nav class="rp-room-editor-tabs rp-festplay-overview-tabs" aria-label="Festspiel&uuml;bersicht">
+      <a
+        class="rp-room-editor-tab<%= activeFestplayOverviewTab === 'eigene' ? ' is-active' : '' %>"
+        href="/characters/<%= character.id %>/festplays"
+      >Eigene Festplays</a>
+      <a
+        class="rp-room-editor-tab<%= activeFestplayOverviewTab === 'andere' ? ' is-active' : '' %>"
+        href="/characters/<%= character.id %>/festplays?overview=andere"
+      >Andere Festplays</a>
+    </nav>
+
+    <section class="rp-room-editor rp-room-editor-placeholder rp-festplay-overview-panel" aria-label="Festspiel&uuml;bersicht">
+      <div class="rp-room-editor-body">
+        <% const visibleFestplays = activeFestplayOverviewTab === "andere" ? (otherFestplays || []) : (ownedFestplays || []); %>
+        <% if (visibleFestplays.length) { %>
+          <div class="rp-room-inline-list rp-festplay-overview-list">
+            <% visibleFestplays.forEach((festplay) => { %>
+              <a
+                class="rp-room-inline-item rp-room-manage-link<%= selectedFestplay && Number(selectedFestplay.id) === Number(festplay.id) ? ' is-active' : '' %>"
+                href="/characters/<%= character.id %>/festplays?overview=<%= activeFestplayOverviewTab %>&selected_festplay=<%= festplay.id %>#festplay-selected-editor"
+                title="Festspiel &ouml;ffnen"
+              >
+                <span class="rp-room-inline-name"><%= festplay.name %></span>
+                <% if (activeFestplayOverviewTab === "andere" && festplay.owner_name) { %>
+                  <span class="rp-room-inline-teaser">von <%= festplay.owner_name %></span>
+                <% } %>
+              </a>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="rp-room-editor-note">
+            <%= activeFestplayOverviewTab === "andere"
+              ? "Du bist auf diesem Server noch in keinen Festspielen anderer Spieler eingetragen."
+              : "Du hast noch keine eigenen Festspiele erstellt." %>
+          </p>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (selectedFestplayMode === "owned") { %>
       <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspieldetails">
         <div class="rp-room-editor-bar">
           <div class="rp-room-editor-title-wrap">
@@ -277,7 +316,50 @@
           </form>
         <% } %>
       </section>
-    <% } else if (ownedFestplays && ownedFestplays.length) { %>
+    <% } else if (selectedFestplayMode === "other") { %>
+      <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspiel&uuml;bersicht">
+        <div class="rp-room-editor-bar">
+          <div class="rp-room-editor-title-wrap">
+            <strong class="rp-room-editor-title"><%= selectedFestplay.name %></strong>
+          </div>
+        </div>
+
+        <nav class="rp-room-editor-tabs" aria-label="Festspiel anzeigen">
+          <span class="rp-room-editor-tab is-active">Allgemein</span>
+        </nav>
+
+        <div class="rp-room-editor-body">
+          <% if (selectedFestplay.owner_name) { %>
+            <p class="rp-room-editor-note">Erstellt von <strong><%= selectedFestplay.owner_name %></strong>.</p>
+          <% } %>
+
+          <div class="rp-room-editor-checks">
+            <span class="rp-room-editor-check rp-room-editor-check-static">
+              <input
+                type="checkbox"
+                disabled
+                <%= selectedFestplay.is_public ? "checked" : "" %>
+              />
+              &Ouml;ffentlich
+            </span>
+          </div>
+
+          <div class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
+            <div class="rp-room-editor-static">
+              <%= selectedFestplay.short_description || "Keine Kurzbeschreibung hinterlegt." %>
+            </div>
+          </div>
+
+          <div class="rp-room-editor-field">
+            <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+            <div class="rp-room-editor-static rp-room-editor-static-long">
+              <%= selectedFestplay.long_description || "Keine ausf&uuml;hrliche Beschreibung hinterlegt." %>
+            </div>
+          </div>
+        </div>
+      </section>
+    <% } else if (activeFestplayOverviewTab === "eigene" && ownedFestplays && ownedFestplays.length) { %>
       <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-selected-editor" aria-label="Festspieldetails">
         <div class="rp-room-editor-body">
           <p class="rp-room-editor-note">Klicke oben auf ein Festspiel, dann wird es hervorgehoben und hier ge&ouml;ffnet.</p>
@@ -285,7 +367,7 @@
       </section>
     <% } %>
 
-    <% if (!selectedFestplay) { %>
+    <% if (!selectedFestplay && activeFestplayOverviewTab === "eigene") { %>
       <form
         id="festplay-create-form"
         method="POST"

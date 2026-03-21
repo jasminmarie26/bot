@@ -3432,6 +3432,19 @@ body.page-home-screen .home-hero-actions {
   font-weight: 700;
 }
 
+.rp-festplay-overview-tabs {
+  margin-bottom: 0;
+}
+
+.rp-festplay-overview-panel .rp-room-editor-body {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.rp-festplay-overview-list {
+  margin-top: 0;
+}
+
 .rp-room-editor-body {
   display: grid;
   gap: 1rem;
@@ -3469,6 +3482,30 @@ body.page-home-screen .home-hero-actions {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
+}
+
+.rp-room-editor-check-static {
+  cursor: default;
+}
+
+.rp-room-editor-check-static input {
+  pointer-events: none;
+}
+
+.rp-room-editor-static {
+  min-height: 2.95rem;
+  padding: 0.78rem 0.88rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 12px;
+  background: var(--field-bg);
+  color: var(--text);
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.rp-room-editor-static-long {
+  min-height: 10rem;
+  align-content: start;
 }
 
 .rp-room-editor-actions {
