@@ -7216,6 +7216,23 @@ function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
   );
 }
 
+function getUserSocketsOnServer(userId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return getAllSocketsForUser(parsedUserId).filter((memberSocket) => {
+    const socketServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+        ? normalizeServer(memberSocket.data.presenceServerId)
+        : null;
+    return socketServerId === normalizedServerId;
+  });
+}
+
 function getCurrentChannelDisplayProfile(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
   const preferredCharacter = getPreferredCharacterForUser(user?.id, serverId, preferredCharacterId);
   return getUserDisplayProfile(user, preferredCharacter);
@@ -7291,7 +7308,7 @@ function findInviteTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_I
   return matches;
 }
 
-function findWhisperTargetsByDisplayName(displayName, roomId, serverId = DEFAULT_SERVER_ID, excludeUserId = null) {
+function findWhisperTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_ID, excludeUserId = null) {
   const normalizedLookupKey = normalizeInviteTargetLookupKey(displayName);
   const normalizedServerId = normalizeServer(serverId);
   const parsedExcludeUserId = Number(excludeUserId);
@@ -7302,7 +7319,7 @@ function findWhisperTargetsByDisplayName(displayName, roomId, serverId = DEFAULT
   const matches = [];
   const seenUserIds = new Set();
 
-  for (const memberSocket of getSocketsInChannel(roomId, normalizedServerId)) {
+  for (const memberSocket of io.sockets.sockets.values()) {
     const userId = Number(memberSocket?.data?.user?.id);
     if (
       !Number.isInteger(userId) ||
@@ -7310,6 +7327,15 @@ function findWhisperTargetsByDisplayName(displayName, roomId, serverId = DEFAULT
       (Number.isInteger(parsedExcludeUserId) && userId === parsedExcludeUserId) ||
       seenUserIds.has(userId)
     ) {
+      continue;
+    }
+
+    const socketServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+        ? normalizeServer(memberSocket.data.presenceServerId)
+        : null;
+    if (socketServerId !== normalizedServerId) {
       continue;
     }
 
@@ -7335,7 +7361,7 @@ function findWhisperTargetsByDisplayName(displayName, roomId, serverId = DEFAULT
   return matches;
 }
 
-function emitWhisperBetweenUsers(senderSocket, targetUserId, content, roomId, serverId = DEFAULT_SERVER_ID) {
+function emitWhisperBetweenUsers(senderSocket, targetUserId, content, serverId = DEFAULT_SERVER_ID) {
   const normalizedContent = String(content || "").trim().slice(0, 500);
   const parsedTargetUserId = Number(targetUserId);
   if (
@@ -7352,12 +7378,12 @@ function emitWhisperBetweenUsers(senderSocket, targetUserId, content, roomId, se
   }
 
   const normalizedServerId = normalizeServer(serverId);
-  const recipientSockets = getUserSocketsInChannel(roomId, normalizedServerId, parsedTargetUserId);
+  const recipientSockets = getUserSocketsOnServer(parsedTargetUserId, normalizedServerId);
   if (!recipientSockets.length) {
     return { ok: false, reason: "missing_target" };
   }
 
-  const senderSockets = getUserSocketsInChannel(roomId, normalizedServerId, senderSocket.data.user.id);
+  const senderSockets = getUserSocketsOnServer(senderSocket.data.user.id, normalizedServerId);
   const senderProfile = getSocketDisplayProfile(senderSocket, normalizedServerId);
   const recipientProfile = recipientSockets[0]
     ? getSocketDisplayProfile(recipientSockets[0], normalizedServerId)
@@ -8900,14 +8926,13 @@ io.on("connection", (socket) => {
 
       const whisperTargets = findWhisperTargetsByDisplayName(
         whisperArgs.targetName,
-        roomId,
         serverId,
         socket.data.user.id
       );
       if (!whisperTargets.length) {
         socket.emit("chat:message", {
           type: "system",
-          content: `${whisperArgs.targetName} ist gerade nicht in diesem Chat.`,
+          content: `${whisperArgs.targetName} ist gerade nicht auf diesem Server online.`,
           created_at: formatChatTimestamp()
         });
         return;
@@ -8926,7 +8951,6 @@ io.on("connection", (socket) => {
         socket,
         whisperTargets[0].userId,
         whisperArgs.message,
-        roomId,
         serverId
       );
       if (!whisperResult.ok) {
@@ -8934,7 +8958,7 @@ io.on("connection", (socket) => {
           type: "system",
           content: whisperResult.reason === "self"
             ? "Du kannst dir nicht selbst flüstern."
-            : `${whisperArgs.targetName} ist gerade nicht in diesem Chat.`,
+            : `${whisperArgs.targetName} ist gerade nicht auf diesem Server online.`,
           created_at: formatChatTimestamp()
         });
       }
@@ -9595,7 +9619,7 @@ io.on("connection", (socket) => {
       serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
-    emitWhisperBetweenUsers(socket, targetUserId, content, roomId, serverId);
+    emitWhisperBetweenUsers(socket, targetUserId, content, serverId);
   });
 
   socket.on("chat:room-invite-response", (payload) => {
