@@ -6076,6 +6076,10 @@ select:focus {
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   padding: 0.8rem;
+  max-height: calc(100vh - 6.1rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-whisper-panel-head {
@@ -6115,17 +6119,21 @@ select:focus {
   grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
   gap: 0.8rem;
   align-items: start;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-whisper-list-wrap,
 .chat-whisper-thread-wrap {
   min-width: 0;
+  min-height: 0;
 }
 
 .chat-whisper-thread-wrap {
   display: grid;
   gap: 0.65rem;
   align-content: start;
+  overflow: hidden;
 }
 
 .chat-whisper-list {
@@ -6215,6 +6223,8 @@ select:focus {
   padding: 0.55rem;
   display: grid;
   gap: 0.55rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .whisper-thread {
@@ -6271,7 +6281,7 @@ select:focus {
 
 .chat-whisper-form textarea {
   width: 100%;
-  min-height: 7.5rem;
+  min-height: 5.4rem;
   resize: vertical;
 }
 

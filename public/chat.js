@@ -730,10 +730,18 @@
 
   function openWhisperPanel({ focusInput = false } = {}) {
     if (!whisperPanel) return;
+    if (!activeWhisperThreadUserId) {
+      const firstThread = sortWhisperThreads()[0];
+      if (firstThread) {
+        activeWhisperThreadUserId = firstThread.userId;
+      }
+    }
+    whisperUnreadUserIds.clear();
     whisperPanel.hidden = false;
     updateWhisperToggleState();
     renderWhisperThreadList();
     renderWhisperThread();
+    updateWhisperToggleBadge();
     if (focusInput && !whisperForm?.hidden && whisperInput) {
       whisperInput.focus();
     }
@@ -754,7 +762,7 @@
     }
   }
 
-  function activateWhisperThread(entry, { focusInput = false, openPanel = true } = {}) {
+  function activateWhisperThread(entry, { focusInput = false, openPanel = false } = {}) {
     const userId = Number(entry?.userId);
     if (!Number.isInteger(userId) || userId < 1) return;
 
@@ -768,6 +776,8 @@
 
     if (openPanel) {
       openWhisperPanel({ focusInput });
+    } else if (focusInput && isWhisperPanelOpen() && !whisperForm?.hidden && whisperInput) {
+      whisperInput.focus();
     }
   }
 
@@ -1116,9 +1126,10 @@
   if (onlineActionWhisper) {
     onlineActionWhisper.addEventListener("click", () => {
       if (!selectedOnlineEntry) return;
+      const panelIsOpen = isWhisperPanelOpen();
       activateWhisperThread(selectedOnlineEntry, {
-        focusInput: true,
-        openPanel: true
+        focusInput: panelIsOpen,
+        openPanel: false
       });
       closeOnlineMenu();
     });
@@ -1154,7 +1165,7 @@
         name: onlineEntriesByUserId.get(targetUserId)?.name || whisperThreadsByUserId.get(targetUserId)?.name || "Unbekannt"
       }, {
         focusInput: true,
-        openPanel: true
+        openPanel: false
       });
     });
   }
