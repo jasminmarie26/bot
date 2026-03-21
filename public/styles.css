@@ -3744,18 +3744,18 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-list-owned {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: start;
   align-items: flex-start;
   gap: 0.55rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.12rem;
+  overflow: visible;
+  padding-bottom: 0;
 }
 
 .rp-room-list-owned .rp-room-standard-card {
-  flex: 0 0 240px;
-  min-width: 240px;
+  flex: 0 1 240px;
+  min-width: 0;
+  max-width: 280px;
 }
 
 .rp-room-row-separator {
@@ -3763,6 +3763,11 @@ body.page-home-screen .home-hero-actions {
   height: 1px;
   margin: 0.02rem 0 0.16rem;
   background: color-mix(in srgb, var(--panel-edge) 68%, transparent);
+}
+
+.rp-room-list-owned .rp-room-row-separator {
+  flex: 0 0 100%;
+  width: 100%;
 }
 
 .rp-room-list-stacked {
