@@ -3743,8 +3743,19 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-room-list-owned {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 280px));
+  display: flex;
+  flex-wrap: nowrap;
   justify-content: start;
+  align-items: flex-start;
+  gap: 0.55rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.12rem;
+}
+
+.rp-room-list-owned .rp-room-standard-card {
+  flex: 0 0 240px;
+  min-width: 240px;
 }
 
 .rp-room-row-separator {
