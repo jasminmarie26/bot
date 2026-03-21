@@ -1997,13 +1997,6 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
   const roomNameKey = toRoomNameKey(normalizedRoomName);
   const existingRoom = findOwnedRoomByNameKey(parsedUserId, normalizedServerId, roomNameKey);
   if (existingRoom) {
-    if (normalizedRoomDescription) {
-      db.prepare(
-        `UPDATE chat_rooms
-         SET description = ?
-         WHERE id = ?`
-      ).run(normalizedRoomDescription, existingRoom.id);
-    }
     return {
       id: Number(existingRoom.id),
       name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
@@ -2050,13 +2043,6 @@ function ensurePublicRoomForServer(userId, character, roomName, roomDescription 
   const roomNameKey = toRoomNameKey(normalizedRoomName);
   const existingRoom = findPublicRoomByNameKey(normalizedServerId, roomNameKey);
   if (existingRoom) {
-    if (normalizedRoomDescription && !String(existingRoom.description || "").trim()) {
-      db.prepare(
-        `UPDATE chat_rooms
-         SET description = ?
-         WHERE id = ?`
-      ).run(normalizedRoomDescription, existingRoom.id);
-    }
     return {
       id: Number(existingRoom.id),
       name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
@@ -5729,7 +5715,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
   }
 
   if (returnTarget === "roomlist") {
-    return res.redirect(`/characters/${id}#roomlist`);
+    return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
   }
 
   return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}&room_tab=overview`);
