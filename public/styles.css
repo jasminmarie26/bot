@@ -6064,6 +6064,10 @@ select:focus {
   display: none !important;
 }
 
+.chat-whisper-panel [hidden] {
+  display: none !important;
+}
+
 .chat-whisper-panel-card {
   border: 1px solid var(--panel-edge);
   border-radius: 16px;
@@ -6116,6 +6120,12 @@ select:focus {
 .chat-whisper-list-wrap,
 .chat-whisper-thread-wrap {
   min-width: 0;
+}
+
+.chat-whisper-thread-wrap {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
 }
 
 .chat-whisper-list {
@@ -6252,6 +6262,17 @@ select:focus {
 .chat-whisper-form {
   display: grid;
   gap: 0.55rem;
+}
+
+.chat-whisper-form label {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.chat-whisper-form textarea {
+  width: 100%;
+  min-height: 7.5rem;
+  resize: vertical;
 }
 
 .whisper-actions {
