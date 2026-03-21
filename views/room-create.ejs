@@ -133,8 +133,8 @@
               <div class="rp-room-manage-main">
                 <a
                   class="rp-room-inline-item rp-room-manage-link<%= isSelectedRoom ? ' is-active' : '' %>"
-                  href="/characters/<%= character.id %>/rooms/new?selected_room=<%= room.id %>#room-selected-editor"
-                  title="Raum ausw&auml;hlen"
+                  href="<%= isSelectedRoom ? `/characters/${character.id}/rooms/new#room-create` : `/characters/${character.id}/rooms/new?selected_room=${room.id}#room-selected-editor` %>"
+                  title="<%= isSelectedRoom ? 'Raum schlie&szlig;en' : 'Raum ausw&auml;hlen' %>"
                   aria-current="<%= isSelectedRoom ? 'page' : 'false' %>"
                 >
                   <span

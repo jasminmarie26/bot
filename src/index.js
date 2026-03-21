@@ -5758,7 +5758,7 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
   }
 
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${targetRoom.id}`);
+  return res.redirect(`/characters/${id}/rooms/new`);
 });
 
 app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) => {
