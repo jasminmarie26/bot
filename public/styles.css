@@ -6055,10 +6055,11 @@ select:focus {
 .chat-whisper-panel {
   position: fixed;
   top: calc(4.8rem + 0.4rem);
-  bottom: 1rem;
   right: 1rem;
   z-index: 90;
   width: min(760px, calc(100vw - 2rem));
+  height: min(640px, calc(100dvh - 6.2rem));
+  max-height: calc(100dvh - 6.2rem);
 }
 
 .chat-whisper-panel[hidden] {
@@ -6288,7 +6289,10 @@ select:focus {
 .chat-whisper-form textarea {
   width: 100%;
   min-height: 5.4rem;
-  resize: vertical;
+  height: 5.4rem;
+  max-height: 5.4rem;
+  resize: none;
+  overflow-y: auto;
 }
 
 .whisper-actions {
@@ -6301,8 +6305,9 @@ select:focus {
   .chat-whisper-panel {
     right: 0.55rem;
     left: 0.55rem;
-    bottom: 0.55rem;
     width: auto;
+    height: min(640px, calc(100dvh - 5.9rem));
+    max-height: calc(100dvh - 5.9rem);
   }
 
   .chat-whisper-layout {
