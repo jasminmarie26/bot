@@ -2456,6 +2456,15 @@ body.page-home-screen .home-hero-actions {
   font-size: 1.08rem;
 }
 
+.festplays-public-panel {
+  align-content: start;
+  gap: 0.5rem;
+}
+
+.festplays-public-panel .header-line {
+  margin-bottom: 0.2rem;
+}
+
 .festplays-public-link {
   color: var(--text);
   font-weight: 700;
