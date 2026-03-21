@@ -115,7 +115,11 @@
   <section class="rp-room-panel rp-room-panel-create" id="room-create">
     <div class="rp-room-create-header">
       <h1>Eigenen Raum erstellen</h1>
-      <button class="rp-room-create-save" type="submit" form="room-create-form">Speichern</button>
+      <button
+        class="rp-room-create-save"
+        type="submit"
+        form="<%= selectedRoom ? `room-editor-form-${selectedRoom.id}` : 'room-create-form' %>"
+      >Speichern</button>
     </div>
 
     <section class="rp-room-create-list" aria-label="Eigene R&auml;ume">
@@ -144,9 +148,6 @@
                     <path d="M12 13.15v2.8"/>
                   </svg></span>
                   <span class="rp-room-inline-name"><%= room.name %></span>
-                  <% if (room.teaser) { %>
-                    <span class="rp-room-inline-teaser"> - [<%= room.teaser %>]</span>
-                  <% } %>
                 </a>
                 <form
                   method="POST"
@@ -172,9 +173,6 @@
         <div class="rp-room-editor-bar">
           <div class="rp-room-editor-title-wrap">
             <strong class="rp-room-editor-title"><%= selectedRoom.name %></strong>
-            <% if (selectedRoom.teaser) { %>
-              <span class="rp-room-editor-subtitle">[<%= selectedRoom.teaser %>]</span>
-            <% } %>
           </div>
           <a
             class="rp-room-editor-enter"
@@ -261,7 +259,27 @@
             </div>
 
             <label class="rp-room-editor-field">
-              <span class="rp-room-editor-field-label">Beschreibung im Raum</span>
+              <span class="rp-room-editor-field-label">Raumname</span>
+              <input
+                type="text"
+                name="room_name"
+                maxlength="80"
+                placeholder="Raumname"
+                value="<%= selectedRoom.name || '' %>"
+                required
+              />
+            </label>
+
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">
+                Beschreibung im Raum
+                <a
+                  class="rp-room-editor-help-link"
+                  href="/help/gaestebuch-design-bbcode"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >BBCode-Hilfe</a>
+              </span>
               <textarea
                 name="room_teaser"
                 rows="9"
@@ -284,28 +302,30 @@
       </section>
     <% } %>
 
-    <form
-      id="room-create-form"
-      method="POST"
-      action="/characters/<%= character.id %>/enter-room"
-      class="rp-room-form"
-    >
-      <div class="rp-room-input">
-        <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+    <% if (!selectedRoom) { %>
+      <form
+        id="room-create-form"
+        method="POST"
+        action="/characters/<%= character.id %>/enter-room"
+        class="rp-room-form"
+      >
+        <div class="rp-room-input">
+          <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+          <input
+            id="room_name"
+            name="room_name"
+            maxlength="80"
+            placeholder="Raumname (neu anlegen)"
+            required
+          />
+        </div>
         <input
-          id="room_name"
-          name="room_name"
-          maxlength="80"
-          placeholder="Raumname (neu anlegen)"
-          required
+          name="room_teaser"
+          maxlength="160"
+          placeholder="Raumbeschreibung"
         />
-      </div>
-      <input
-        name="room_teaser"
-        maxlength="160"
-        placeholder="Raumbeschreibung"
-      />
-    </form>
+      </form>
+    <% } %>
   </section>
 </section>
 

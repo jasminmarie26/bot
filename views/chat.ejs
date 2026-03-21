@@ -218,7 +218,7 @@
         >
           <% if (chatRoomDescription) { %>
             <section class="chat-room-scene" aria-label="Raumbeschreibung">
-              <p><%= chatRoomDescription %></p>
+              <div class="guestbook-entry-body"><%- activeRoomDescriptionHtml %></div>
             </section>
           <% } %>
           <% messages.forEach((msg) => { %>

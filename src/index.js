@@ -5636,7 +5636,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
 
   const room = db
     .prepare(
-      `SELECT id, server_id, created_by_user_id, teaser, image_url, email_log_enabled, is_locked
+      `SELECT id, server_id, created_by_user_id, name, teaser, image_url, email_log_enabled, is_locked
        FROM chat_rooms
        WHERE id = ?`
     )
@@ -5650,6 +5650,10 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
+  const roomName =
+    roomTab === "overview"
+      ? normalizeRoomName(req.body.room_name)
+      : String(room.name || "");
   const roomTeaser =
     roomTab === "overview"
       ? normalizeRoomTeaser(req.body.room_teaser)
@@ -5667,14 +5671,41 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
       ? (req.body.is_locked ? 1 : 0)
       : (Number(room.is_locked) === 1 ? 1 : 0);
 
+  if (roomTab === "overview" && roomName.length < 2) {
+    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
+    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
+  }
+
+  if (roomTab === "overview") {
+    const conflictingRoom = findOwnedRoomByNameKey(
+      req.session.user.id,
+      character.server_id,
+      toRoomNameKey(roomName)
+    );
+    if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
+      setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
+      return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}&room_tab=${roomTab}#room-selected-editor`);
+    }
+  }
+
   db.prepare(
     `UPDATE chat_rooms
-     SET teaser = ?,
+     SET name = ?,
+         name_key = ?,
+         teaser = ?,
          image_url = ?,
          email_log_enabled = ?,
          is_locked = ?
      WHERE id = ?`
-  ).run(roomTeaser, roomImageUrl, emailLogEnabled, isLocked, roomId);
+  ).run(
+    roomName,
+    toRoomNameKey(roomName),
+    roomTeaser,
+    roomImageUrl,
+    emailLogEnabled,
+    isLocked,
+    roomId
+  );
 
   const refreshedRoom = getRoomWithCharacter(roomId);
   if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
@@ -6370,6 +6401,7 @@ app.get("/chat", requireAuth, (req, res) => {
         : `${getServerLabel(activeServerId)} Chat`,
     messages,
     activeRoom,
+    activeRoomDescriptionHtml: activeRoom?.teaser ? renderGuestbookBbcode(activeRoom.teaser) : "",
     activeCharacter,
     activeServerId,
     standardRoom,
