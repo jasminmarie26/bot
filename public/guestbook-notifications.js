@@ -4,6 +4,7 @@
 
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
+  const hasEmail = notificationLink.dataset.hasEmail === "true";
 
   function buildNotificationTitle(characterName) {
     const trimmedCharacterName = String(characterName || "").trim();
@@ -49,6 +50,12 @@
     }
   };
   applyNotificationPayload(initialPayload);
+
+  if (!hasEmail) {
+    notificationLink.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+  }
 
   const socket = io({
     transports: ["websocket"]

@@ -13,6 +13,7 @@
     data-guestbook-notification-root
     data-notification-count="<%= guestbookNotificationCount || 0 %>"
     data-notification-character-name="<%= latestGuestbookNotification?.character_name || "" %>"
+    data-has-email="<%= currentUser?.email ? "true" : "false" %>"
     <%= guestbookNotificationCount > 0 && latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
