@@ -381,10 +381,12 @@ if (!chatRoomColumns.includes("is_saved_room")) {
 
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_server_user_name_key");
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_server_user_visibility_name_key");
-db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_public_server_name_key
+db.exec("DROP INDEX IF EXISTS idx_chat_rooms_public_server_name_key");
+db.exec("DROP INDEX IF EXISTS idx_chat_rooms_saved_user_name_description_key");
+db.exec(`CREATE INDEX IF NOT EXISTS idx_chat_rooms_public_server_name_key
   ON chat_rooms(server_id, name_key)
   WHERE COALESCE(is_public_room, 0) = 1`);
-db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_saved_user_name_description_key
+db.exec(`CREATE INDEX IF NOT EXISTS idx_chat_rooms_saved_user_name_description_key
   ON chat_rooms(server_id, created_by_user_id, name_key, COALESCE(description, ''))
   WHERE COALESCE(is_saved_room, 0) = 1`);
 
