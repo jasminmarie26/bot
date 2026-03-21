@@ -1933,6 +1933,14 @@ function normalizeFestplayText(input, maxLength) {
   return normalized.slice(0, maxLength);
 }
 
+function decorateFestplayRecord(festplay) {
+  if (!festplay) return null;
+  return {
+    ...festplay,
+    is_public: Number(festplay.is_public) === 1
+  };
+}
+
 function festplayExists(festplayId) {
   if (!Number.isInteger(festplayId) || festplayId < 1) return false;
   const row = db
@@ -1952,10 +1960,7 @@ function getOwnedFestplaysForUser(userId) {
          ORDER BY created_at ASC, id ASC`
     )
     .all(parsedUserId)
-    .map((festplay) => ({
-      ...festplay,
-      is_public: Number(festplay.is_public) === 1
-    }));
+    .map(decorateFestplayRecord);
 }
 
 function getOtherFestplaysForUser(userId, serverId) {
@@ -1972,18 +1977,29 @@ function getOtherFestplaysForUser(userId, serverId) {
               f.long_description,
               COALESCE(owner.username, '') AS owner_name
          FROM festplays f
-         JOIN characters c ON c.festplay_id = f.id
          LEFT JOIN users owner ON owner.id = f.created_by_user_id
-         WHERE c.user_id = ?
-           AND c.server_id = ?
-           AND COALESCE(f.created_by_user_id, 0) != ?
+         WHERE COALESCE(f.created_by_user_id, 0) != ?
+           AND (
+             EXISTS (
+               SELECT 1
+               FROM characters c
+               WHERE c.festplay_id = f.id
+                 AND c.user_id = ?
+                 AND c.server_id = ?
+             )
+             OR EXISTS (
+               SELECT 1
+               FROM festplay_permissions fp
+               JOIN characters c ON c.id = fp.character_id
+               WHERE fp.festplay_id = f.id
+                 AND fp.user_id = ?
+                 AND c.server_id = ?
+             )
+           )
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all(parsedUserId, normalizedServerId, parsedUserId)
-    .map((festplay) => ({
-      ...festplay,
-      is_public: Number(festplay.is_public) === 1
-    }));
+    .all(parsedUserId, parsedUserId, normalizedServerId, parsedUserId, normalizedServerId)
+    .map(decorateFestplayRecord);
 }
 
 function getOwnedFestplayById(userId, festplayId) {
@@ -2007,13 +2023,175 @@ function getOwnedFestplayById(userId, festplayId) {
              AND created_by_user_id = ?`
       )
       .get(parsedFestplayId, parsedUserId);
-      if (!festplay) return null;
-      return {
-        ...festplay,
-        is_public: Number(festplay.is_public) === 1
-      };
+      return decorateFestplayRecord(festplay);
     })()
   );
+}
+
+function getPublicFestplays() {
+  return db
+    .prepare(
+      `SELECT f.id,
+              f.name,
+              f.is_public,
+              f.short_description,
+              f.long_description,
+              COALESCE(owner.username, '') AS owner_name
+         FROM festplays f
+         LEFT JOIN users owner ON owner.id = f.created_by_user_id
+         WHERE f.is_public = 1
+           AND COALESCE(f.created_by_user_id, 0) > 0
+         ORDER BY lower(f.name) ASC, f.id ASC`
+    )
+    .all()
+    .map(decorateFestplayRecord);
+}
+
+function getPublicFestplayById(festplayId) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) return null;
+  return decorateFestplayRecord(
+    db
+      .prepare(
+        `SELECT f.id,
+                f.name,
+                f.is_public,
+                f.short_description,
+                f.long_description,
+                COALESCE(owner.username, '') AS owner_name,
+                f.created_by_user_id
+           FROM festplays f
+           LEFT JOIN users owner ON owner.id = f.created_by_user_id
+           WHERE f.id = ?
+             AND f.is_public = 1
+             AND COALESCE(f.created_by_user_id, 0) > 0`
+      )
+      .get(parsedFestplayId)
+  );
+}
+
+function characterHasFestplayAccess(festplayId, characterId) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedCharacterId = Number(characterId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
+    return false;
+  }
+
+  const directCharacter = db
+    .prepare(
+      `SELECT id
+       FROM characters
+       WHERE id = ?
+         AND festplay_id = ?`
+    )
+    .get(parsedCharacterId, parsedFestplayId);
+  if (directCharacter) return true;
+
+  const permission = db
+    .prepare(
+      `SELECT id
+       FROM festplay_permissions
+       WHERE festplay_id = ?
+         AND character_id = ?`
+    )
+    .get(parsedFestplayId, parsedCharacterId);
+  return Boolean(permission);
+}
+
+function getFestplayApplicationForCharacter(festplayId, characterId) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedCharacterId = Number(characterId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
+    return null;
+  }
+
+  return (
+    db
+      .prepare(
+        `SELECT id,
+                festplay_id,
+                applicant_user_id,
+                applicant_character_id,
+                status,
+                approved_by_user_id,
+                created_at,
+                updated_at
+           FROM festplay_applications
+           WHERE festplay_id = ?
+             AND applicant_character_id = ?`
+      )
+      .get(parsedFestplayId, parsedCharacterId) || null
+  );
+}
+
+function submitFestplayApplication(festplayId, applicantCharacterId, applicantUserId) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedCharacterId = Number(applicantCharacterId);
+  const parsedUserId = Number(applicantUserId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return false;
+  }
+
+  db.prepare(
+    `INSERT INTO festplay_applications (
+       festplay_id,
+       applicant_user_id,
+       applicant_character_id,
+       status,
+       approved_by_user_id,
+       updated_at
+     )
+     VALUES (?, ?, ?, 'pending', NULL, CURRENT_TIMESTAMP)
+     ON CONFLICT(festplay_id, applicant_character_id) DO UPDATE SET
+       applicant_user_id = excluded.applicant_user_id,
+       status = 'pending',
+       approved_by_user_id = NULL,
+       updated_at = CURRENT_TIMESTAMP`
+  ).run(parsedFestplayId, parsedUserId, parsedCharacterId);
+
+  return true;
+}
+
+function getPendingFestplayApplications(festplayId, serverId) {
+  const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) return [];
+
+  return db
+    .prepare(
+      `SELECT fa.id,
+              fa.applicant_user_id,
+              fa.applicant_character_id,
+              fa.status,
+              fa.created_at,
+              c.name AS character_name,
+              u.username AS owner_name
+         FROM festplay_applications fa
+         JOIN characters c ON c.id = fa.applicant_character_id
+         JOIN users u ON u.id = fa.applicant_user_id
+         WHERE fa.festplay_id = ?
+           AND fa.status = 'pending'
+           AND c.server_id = ?
+         ORDER BY fa.created_at ASC, fa.id ASC`
+    )
+    .all(parsedFestplayId, normalizedServerId);
 }
 
 function findFestplayByName(name, excludeId = null) {
@@ -2136,14 +2314,20 @@ function getFestplayPlayerOverview(festplayId, serverId) {
 
   const characters = db
     .prepare(
-      `SELECT c.id, c.user_id, c.name, u.username AS owner_name
+      `SELECT DISTINCT c.id, c.user_id, c.name, u.username AS owner_name
        FROM characters c
        JOIN users u ON u.id = c.user_id
-       WHERE c.festplay_id = ?
-         AND c.server_id = ?
+       LEFT JOIN festplay_permissions fp
+         ON fp.character_id = c.id
+        AND fp.festplay_id = ?
+       WHERE c.server_id = ?
+         AND (
+           c.festplay_id = ?
+           OR fp.id IS NOT NULL
+         )
        ORDER BY lower(c.name) ASC, c.id ASC`
     )
-    .all(parsedFestplayId, normalizedServerId);
+    .all(parsedFestplayId, normalizedServerId, parsedFestplayId);
 
   const uniquePlayerIds = new Set();
   const activeUserIds = new Set(getConnectedSocketUserIds());
@@ -5712,6 +5896,98 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   });
 });
 
+app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  rememberPreferredCharacter(req, character);
+
+  return res.render("festplays-public", {
+    title: `Festspiele: ${character.name}`,
+    character,
+    publicFestplays: getPublicFestplays()
+  });
+});
+
+app.get("/characters/:id/festplays/public/:festplayId", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getPublicFestplayById(festplayId);
+  if (!festplay) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  rememberPreferredCharacter(req, character);
+  const hasAccess = characterHasFestplayAccess(festplay.id, character.id);
+  const application = getFestplayApplicationForCharacter(festplay.id, character.id);
+  const applicationState = hasAccess ? "approved" : application?.status || "none";
+
+  return res.render("festplay-public-detail", {
+    title: `Festspiel: ${festplay.name}`,
+    character,
+    festplay,
+    applicationState,
+    isOwnerFestplay: Number(festplay.created_by_user_id) === Number(req.session.user.id)
+  });
+});
+
+app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getPublicFestplayById(festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel ist nicht öffentlich sichtbar.");
+    return res.redirect(`/characters/${id}/festplays/public`);
+  }
+
+  if (Number(festplay.created_by_user_id) === Number(req.session.user.id)) {
+    return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+  }
+
+  if (!characterHasFestplayAccess(festplayId, character.id)) {
+    submitFestplayApplication(festplayId, character.id, req.session.user.id);
+  }
+
+  return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+});
+
 app.get("/characters/:id/festplays", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
@@ -5759,6 +6035,9 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
   const festplayPermissionEntries = selectedFestplayMode === "owned"
     ? getFestplayPermissionEntries(selectedFestplay.id, character.server_id)
     : [];
+  const festplayApplications = selectedFestplayMode === "owned"
+    ? getPendingFestplayApplications(selectedFestplay.id, character.server_id)
+    : [];
   const festplayPlayerOverview = selectedFestplay
     ? getFestplayPlayerOverview(selectedFestplay.id, character.server_id)
     : null;
@@ -5773,6 +6052,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     activeFestplayOverviewTab,
     activeFestplayTab,
     festplayPermissionEntries,
+    festplayApplications,
     festplayPlayerOverview
   });
 });
@@ -5877,6 +6157,67 @@ app.post("/characters/:id/festplays/:festplayId/permissions/:permissionId/delete
   }
 
   removeFestplayPermission(festplayId, permissionId);
+  return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+});
+
+app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/approve", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  const applicationId = Number(req.params.applicationId);
+  if (
+    !Number.isInteger(id) ||
+    id < 1 ||
+    !Number.isInteger(festplayId) ||
+    festplayId < 1 ||
+    !Number.isInteger(applicationId) ||
+    applicationId < 1
+  ) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  const application = db
+    .prepare(
+      `SELECT fa.id,
+              fa.applicant_character_id,
+              c.server_id
+         FROM festplay_applications fa
+         JOIN characters c ON c.id = fa.applicant_character_id
+         WHERE fa.id = ?
+           AND fa.festplay_id = ?
+           AND fa.status = 'pending'`
+    )
+    .get(applicationId, festplayId);
+
+  if (!application || normalizeServer(application.server_id) !== normalizeServer(character.server_id)) {
+    setFlash(req, "error", "Diese Bewerbung wurde nicht gefunden.");
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+  }
+
+  addFestplayPermission(festplayId, application.applicant_character_id, req.session.user.id);
+  db.prepare(
+    `UPDATE festplay_applications
+     SET status = 'approved',
+         approved_by_user_id = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?
+       AND festplay_id = ?`
+  ).run(req.session.user.id, applicationId, festplayId);
+
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
 

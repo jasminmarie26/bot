@@ -2447,6 +2447,30 @@ body.page-home-screen .home-hero-actions {
   overflow-wrap: anywhere;
 }
 
+.festplays-public-list {
+  display: grid;
+  gap: 1.05rem;
+}
+
+.festplay-public-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--field-bg) 90%, transparent);
+}
+
+.festplay-public-owner {
+  color: var(--muted);
+}
+
+.festplay-public-text {
+  color: var(--text);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
 .help-intro p:last-child {
   margin-bottom: 0;
   max-width: 62rem;
@@ -3598,6 +3622,18 @@ body.page-home-screen .home-hero-actions {
 
 .rp-festplay-player-row span {
   color: var(--muted);
+}
+
+.rp-festplay-application-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.rp-festplay-application-meta {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
 }
 
 .rp-room-editor-note {

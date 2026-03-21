@@ -34,7 +34,10 @@
       <% } else { %>
         <a href="/dashboard">Dashboard</a>
       <% } %>
-      <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
+      <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
+        <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+      <% } %>
       <a
         class="live-updates-nav-link"
         href="/live-updates"

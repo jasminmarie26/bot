@@ -27,7 +27,8 @@
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Festspiel Navigation">
       <a href="/characters/<%= character.id %>#roomlist">Raumliste</a>
-      <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
+      <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
+      <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
       <a
         class="live-updates-nav-link"
         href="/live-updates"
@@ -182,6 +183,32 @@
 
         <% if (activeFestplayTab === "bewerbungen") { %>
           <div class="rp-room-editor-body">
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Bewerbungen</h3>
+
+              <% if (festplayApplications && festplayApplications.length) { %>
+                <div class="rp-festplay-player-list">
+                  <% festplayApplications.forEach((application) => { %>
+                    <div class="rp-festplay-player-row rp-festplay-application-row">
+                      <div class="rp-festplay-application-meta">
+                        <strong><%= application.character_name %></strong>
+                        <span>Konto: <%= application.owner_name %></span>
+                      </div>
+                      <form
+                        method="POST"
+                        action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/applications/<%= application.id %>/approve"
+                        class="inline-form"
+                      >
+                        <button type="submit">Freischalten</button>
+                      </form>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine offenen Bewerbungen vorhanden.</p>
+              <% } %>
+            </section>
+
             <section class="rp-room-editor-section">
               <h3 class="rp-room-editor-subheading">Rechte</h3>
               <form
