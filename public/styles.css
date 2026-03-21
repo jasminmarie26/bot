@@ -3849,7 +3849,7 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-custom-titleline {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.34rem;
   max-width: 100%;
 }
@@ -3896,10 +3896,18 @@ body.page-home-screen .home-hero-actions {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--link);
   text-decoration: underline;
   text-underline-offset: 0.08em;
   white-space: normal;
   overflow-wrap: anywhere;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .rp-room-custom-link:hover {
@@ -3907,6 +3915,7 @@ body.page-home-screen .home-hero-actions {
   transform: none;
   border-color: transparent;
   box-shadow: none;
+  color: color-mix(in srgb, var(--link) 80%, white 20%);
 }
 
 .rp-room-custom-link.is-disabled {
@@ -3925,6 +3934,20 @@ body.page-home-screen .home-hero-actions {
   font-size: 0.74rem;
   font-style: italic;
   font-weight: 400;
+}
+
+.rp-room-custom-description {
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.rp-room-custom-owner {
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .rp-room-occupants {
