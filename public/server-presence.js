@@ -76,20 +76,11 @@
       );
       if (cards.length < 2) return;
 
-      let currentRowTop = null;
+      cards.forEach((card) => card.classList.remove("is-wrapped-row"));
+      const firstRowTop = Math.round(cards[0].offsetTop);
       cards.forEach((card) => {
         const rowTop = Math.round(card.offsetTop);
-        if (currentRowTop === null) {
-          currentRowTop = rowTop;
-          return;
-        }
-        if (rowTop > currentRowTop + 4) {
-          const separator = document.createElement("div");
-          separator.className = "rp-room-row-separator";
-          separator.setAttribute("aria-hidden", "true");
-          list.insertBefore(separator, card);
-          currentRowTop = rowTop;
-        }
+        card.classList.toggle("is-wrapped-row", rowTop > firstRowTop + 4);
       });
     });
   }

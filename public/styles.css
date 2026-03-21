@@ -3758,6 +3758,11 @@ body.page-home-screen .home-hero-actions {
   max-width: 280px;
 }
 
+.rp-room-list-owned .rp-room-standard-card.is-wrapped-row {
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 68%, transparent);
+  padding-top: 0.48rem;
+}
+
 .rp-room-row-separator {
   grid-column: 1 / -1;
   height: 1px;
