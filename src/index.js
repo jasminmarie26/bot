@@ -3420,11 +3420,7 @@ function isRoomLockedForUser(user, room = null) {
 }
 
 function canAccessRoom(user, room = null) {
-  if (!user || !room) return false;
-  return (
-    canAccessCharacter(user.id, room.character_owner_id, room.character_is_public, user.is_admin) ||
-    hasRoomInviteAccess(user, room)
-  );
+  return Boolean(user && room);
 }
 
 function getRoomStatePayloadForUser(user, room = null, serverId = DEFAULT_SERVER_ID) {
@@ -5240,7 +5236,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
   );
   const roomUsers = Object.fromEntries(
-    ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
+    rooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
@@ -5273,6 +5269,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     isOwner,
     standardRooms,
     standardRoomUsers,
+    rooms,
     roomUsers,
     ownedRooms,
     activeGuestbookPage
