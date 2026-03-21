@@ -113,11 +113,13 @@
 
   <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
     <div class="rp-room-create-header">
-      <button
-        class="rp-room-create-save"
-        type="submit"
-        form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
-      >Speichern</button>
+      <% if (!selectedFestplay || activeFestplayTab === "allgemein") { %>
+        <button
+          class="rp-room-create-save"
+          type="submit"
+          form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
+        >Speichern</button>
+      <% } %>
     </div>
 
     <% if (selectedFestplay) { %>
@@ -130,65 +132,150 @@
 
         <nav class="rp-room-editor-tabs" aria-label="Festspiel bearbeiten">
           <a
-            class="rp-room-editor-tab is-active"
+            class="rp-room-editor-tab<%= activeFestplayTab === 'allgemein' ? ' is-active' : '' %>"
             href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>#festplay-selected-editor"
           >Allgemein</a>
+          <a
+            class="rp-room-editor-tab<%= activeFestplayTab === 'bewerbungen' ? ' is-active' : '' %>"
+            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=bewerbungen#festplay-selected-editor"
+          >Bewerbungen &amp; Spieler</a>
         </nav>
 
-        <form
-          id="festplay-editor-form-<%= selectedFestplay.id %>"
-          method="POST"
-          action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/update"
-          class="rp-room-editor-body"
-        >
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Festspielname</span>
-            <input
-              type="text"
-              name="festplay_name"
-              maxlength="80"
-              placeholder="Festspielname"
-              value="<%= selectedFestplay.name || '' %>"
-              required
-            />
-          </label>
+        <% if (activeFestplayTab === "bewerbungen") { %>
+          <div class="rp-room-editor-body">
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Rechte</h3>
+              <form
+                method="POST"
+                action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/permissions"
+                class="rp-room-editor-inline-form"
+              >
+                <input
+                  type="text"
+                  name="character_name"
+                  maxlength="80"
+                  placeholder="Charaktername"
+                  required
+                />
+                <button type="submit">Hinzuf&uuml;gen</button>
+              </form>
 
-          <div class="rp-room-editor-checks">
-            <label class="rp-room-editor-check">
+              <% if (festplayPermissionEntries && festplayPermissionEntries.length) { %>
+                <div class="rp-room-editor-chip-list">
+                  <% festplayPermissionEntries.forEach((entry) => { %>
+                    <div class="rp-room-editor-chip-row">
+                      <span class="rp-room-editor-chip-name"><%= entry.character_name %></span>
+                      <form
+                        method="POST"
+                        action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/permissions/<%= entry.id %>/delete"
+                        class="inline-form rp-room-delete-form"
+                      >
+                        <button
+                          class="rp-room-delete-btn"
+                          type="submit"
+                          aria-label="Recht f&uuml;r <%= entry.character_name %> entfernen"
+                          title="Recht entfernen"
+                        >X</button>
+                      </form>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine zus&auml;tzlichen Rechte vergeben.</p>
+              <% } %>
+            </section>
+
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Spieler</h3>
+              <div class="rp-festplay-stats">
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.activePlayerCount || 0 %></strong>
+                  <span>Spieler gerade aktiv</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.activeCharacterCount || 0 %></strong>
+                  <span>Charaktere gerade aktiv</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.playerCount || 0 %></strong>
+                  <span>Mitspieler gesamt</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.characterCount || 0 %></strong>
+                  <span>Charaktere gesamt</span>
+                </div>
+              </div>
+
+              <% if (festplayPlayerOverview?.characters?.length) { %>
+                <div class="rp-festplay-player-list">
+                  <% festplayPlayerOverview.characters.forEach((entry) => { %>
+                    <div class="rp-festplay-player-row">
+                      <strong><%= entry.name %></strong>
+                      <span><%= entry.owner_name %></span>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine Charaktere diesem Festspiel zugeordnet.</p>
+              <% } %>
+            </section>
+          </div>
+        <% } else { %>
+          <form
+            id="festplay-editor-form-<%= selectedFestplay.id %>"
+            method="POST"
+            action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/update"
+            class="rp-room-editor-body"
+          >
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Festspielname</span>
               <input
-                type="checkbox"
-                name="is_public"
-                value="1"
-                <%= selectedFestplay.is_public ? "checked" : "" %>
+                type="text"
+                name="festplay_name"
+                maxlength="80"
+                placeholder="Festspielname"
+                value="<%= selectedFestplay.name || '' %>"
+                required
               />
-              &Ouml;ffentlich
             </label>
-          </div>
 
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
-            <textarea
-              name="short_description"
-              rows="5"
-              maxlength="280"
-              placeholder="Kurzer Beschreibungstext f&uuml;r das Festspiel"
-            ><%= selectedFestplay.short_description || '' %></textarea>
-          </label>
+            <div class="rp-room-editor-checks">
+              <label class="rp-room-editor-check">
+                <input
+                  type="checkbox"
+                  name="is_public"
+                  value="1"
+                  <%= selectedFestplay.is_public ? "checked" : "" %>
+                />
+                &Ouml;ffentlich
+              </label>
+            </div>
 
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
-            <textarea
-              name="long_description"
-              rows="10"
-              maxlength="8000"
-              placeholder="L&auml;ngere Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
-            ><%= selectedFestplay.long_description || '' %></textarea>
-          </label>
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Kurzbeschreibung</span>
+              <textarea
+                name="short_description"
+                rows="5"
+                maxlength="280"
+                placeholder="Kurzer Beschreibungstext f&uuml;r das Festspiel"
+              ><%= selectedFestplay.short_description || '' %></textarea>
+            </label>
 
-          <div class="rp-room-editor-actions">
-            <button type="submit">Speichern</button>
-          </div>
-        </form>
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Ausf&uuml;hrliche Beschreibung</span>
+              <textarea
+                name="long_description"
+                rows="10"
+                maxlength="8000"
+                placeholder="L&auml;ngere Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
+              ><%= selectedFestplay.long_description || '' %></textarea>
+            </label>
+
+            <div class="rp-room-editor-actions">
+              <button type="submit">Speichern</button>
+            </div>
+          </form>
+        <% } %>
       </section>
     <% } else if (ownedFestplays && ownedFestplays.length) { %>
       <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-selected-editor" aria-label="Festspieldetails">

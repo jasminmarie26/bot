@@ -2015,6 +2015,133 @@ function findFestplayByName(name, excludeId = null) {
   );
 }
 
+function getFestplayPermissionEntries(festplayId, serverId) {
+  const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT fp.id,
+              fp.user_id,
+              fp.character_id,
+              c.name AS character_name
+       FROM festplay_permissions fp
+       JOIN characters c ON c.id = fp.character_id
+       WHERE fp.festplay_id = ?
+         AND c.server_id = ?
+       ORDER BY lower(c.name) ASC, fp.id ASC`
+    )
+    .all(parsedFestplayId, normalizedServerId);
+}
+
+function addFestplayPermission(festplayId, targetCharacterId, grantedByUserId) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedCharacterId = Number(targetCharacterId);
+  const parsedGrantedByUserId = Number(grantedByUserId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedGrantedByUserId) ||
+    parsedGrantedByUserId < 1
+  ) {
+    return false;
+  }
+
+  const targetCharacter = db
+    .prepare("SELECT id, user_id FROM characters WHERE id = ?")
+    .get(parsedCharacterId);
+  if (!targetCharacter) {
+    return false;
+  }
+
+  db.prepare(
+    `INSERT INTO festplay_permissions (festplay_id, user_id, character_id, granted_by_user_id)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(festplay_id, user_id) DO UPDATE SET
+       character_id = excluded.character_id,
+       granted_by_user_id = excluded.granted_by_user_id`
+  ).run(parsedFestplayId, targetCharacter.user_id, parsedCharacterId, parsedGrantedByUserId);
+
+  return true;
+}
+
+function removeFestplayPermission(festplayId, permissionId) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedPermissionId = Number(permissionId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedPermissionId) ||
+    parsedPermissionId < 1
+  ) {
+    return false;
+  }
+
+  const result = db
+    .prepare(
+      `DELETE FROM festplay_permissions
+       WHERE id = ?
+         AND festplay_id = ?`
+    )
+    .run(parsedPermissionId, parsedFestplayId);
+
+  return Number(result.changes) > 0;
+}
+
+function getFestplayPlayerOverview(festplayId, serverId) {
+  const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return {
+      characters: [],
+      playerCount: 0,
+      characterCount: 0,
+      activePlayerCount: 0,
+      activeCharacterCount: 0
+    };
+  }
+
+  const characters = db
+    .prepare(
+      `SELECT c.id, c.user_id, c.name, u.username AS owner_name
+       FROM characters c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.festplay_id = ?
+         AND c.server_id = ?
+       ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedFestplayId, normalizedServerId);
+
+  const uniquePlayerIds = new Set();
+  const activeUserIds = new Set(getConnectedSocketUserIds());
+  const activePlayers = new Set();
+  const activeCharacters = [];
+
+  characters.forEach((character) => {
+    const parsedUserId = Number(character.user_id);
+    if (Number.isInteger(parsedUserId) && parsedUserId > 0) {
+      uniquePlayerIds.add(parsedUserId);
+      if (activeUserIds.has(parsedUserId)) {
+        activePlayers.add(parsedUserId);
+        activeCharacters.push(character);
+      }
+    }
+  });
+
+  return {
+    characters,
+    playerCount: uniquePlayerIds.size,
+    characterCount: characters.length,
+    activePlayerCount: activePlayers.size,
+    activeCharacterCount: activeCharacters.length
+  };
+}
+
 function normalizeRoomName(input) {
   return String(input || "").trim().replace(/\s+/g, " ").slice(0, 80);
 }
@@ -2589,6 +2716,22 @@ function getCharacterByExactName(name) {
        LIMIT 1`
     )
     .get(normalizedName);
+}
+
+function getCharacterByExactNameForServer(name, serverId) {
+  const normalizedName = String(name || "").trim();
+  const normalizedServerId = normalizeServer(serverId);
+  if (!normalizedName) return null;
+
+  return db
+    .prepare(
+      `SELECT c.id, c.user_id, c.name, c.server_id
+       FROM characters c
+       WHERE c.name = ? COLLATE NOCASE
+         AND c.server_id = ?
+       LIMIT 1`
+    )
+    .get(normalizedName, normalizedServerId);
 }
 
 function renderGuestbookBbcode(rawContent) {
@@ -5559,14 +5702,27 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
   rememberPreferredCharacter(req, character);
   const ownedFestplays = getOwnedFestplaysForUser(req.session.user.id);
   const selectedFestplayId = Number(req.query.selected_festplay);
+  const activeFestplayTab =
+    String(req.query.tab || "").trim().toLowerCase() === "bewerbungen"
+      ? "bewerbungen"
+      : "allgemein";
   const selectedFestplay =
     ownedFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
+  const festplayPermissionEntries = selectedFestplay
+    ? getFestplayPermissionEntries(selectedFestplay.id, character.server_id)
+    : [];
+  const festplayPlayerOverview = selectedFestplay
+    ? getFestplayPlayerOverview(selectedFestplay.id, character.server_id)
+    : null;
 
   return res.render("festplay-create", {
     title: `Festspiele erstellen: ${character.name}`,
     character,
     ownedFestplays,
-    selectedFestplay
+    selectedFestplay,
+    activeFestplayTab,
+    festplayPermissionEntries,
+    festplayPlayerOverview
   });
 });
 
@@ -5605,6 +5761,72 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
   ).run(festplayName, req.session.user.id);
 
   return res.redirect(`/characters/${id}/festplays`);
+});
+
+app.post("/characters/:id/festplays/:festplayId/permissions", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  const targetCharacter = getCharacterByExactNameForServer(req.body.character_name, character.server_id);
+  if (!targetCharacter) {
+    setFlash(req, "error", "Dieser Charakter wurde auf diesem Server nicht gefunden.");
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+  }
+
+  addFestplayPermission(festplayId, targetCharacter.id, req.session.user.id);
+  return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+});
+
+app.post("/characters/:id/festplays/:festplayId/permissions/:permissionId/delete", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  const permissionId = Number(req.params.permissionId);
+  if (
+    !Number.isInteger(id) ||
+    id < 1 ||
+    !Number.isInteger(festplayId) ||
+    festplayId < 1 ||
+    !Number.isInteger(permissionId) ||
+    permissionId < 1
+  ) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  removeFestplayPermission(festplayId, permissionId);
+  return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
 
 app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res) => {

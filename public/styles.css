@@ -3478,6 +3478,91 @@ body.page-home-screen .home-hero-actions {
   align-items: center;
 }
 
+.rp-room-editor-section {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.rp-room-editor-subheading {
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.rp-room-editor-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.rp-room-editor-inline-form input {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.rp-room-editor-chip-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.rp-room-editor-chip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+}
+
+.rp-room-editor-chip-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.rp-festplay-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.rp-festplay-stat {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+}
+
+.rp-festplay-stat strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.rp-festplay-stat span {
+  color: var(--muted);
+}
+
+.rp-festplay-player-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.rp-festplay-player-row {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+}
+
+.rp-festplay-player-row span {
+  color: var(--muted);
+}
+
 .rp-room-editor-note {
   margin: 0;
   color: var(--muted);

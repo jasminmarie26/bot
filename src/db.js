@@ -70,6 +70,19 @@ db.exec(`
     FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS festplay_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    festplay_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    character_id INTEGER NOT NULL,
+    granted_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (festplay_id) REFERENCES festplays(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS guestbook_pages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     character_id INTEGER NOT NULL,
@@ -201,6 +214,10 @@ db.exec(`
     ON chat_room_permissions(room_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id
     ON chat_room_permissions(user_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_festplay_permissions_festplay_user
+    ON festplay_permissions(festplay_id, user_id);
+  CREATE INDEX IF NOT EXISTS idx_festplay_permissions_character_id
+    ON festplay_permissions(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
   CREATE INDEX IF NOT EXISTS idx_registration_guard_ip_created_at
