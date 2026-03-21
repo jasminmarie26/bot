@@ -3819,6 +3819,14 @@ app.get("/datenschutz", (req, res) => {
   });
 });
 
+app.get("/community-regeln", (req, res) => {
+  return res.render("verhaltensregeln", {
+    title: "Community-Regeln",
+    legalMeta: getLegalMeta(),
+    pageClass: "page-legal"
+  });
+});
+
 app.get("/kontakt", (req, res) => {
   return renderKontaktPage(req, res, {
     success: req.query.sent === "1" ? "Deine Nachricht wurde versendet." : ""
