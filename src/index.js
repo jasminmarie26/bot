@@ -2117,6 +2117,45 @@ function parseInviteCommandArguments(rawArgs) {
   return normalizeInviteTargetName(value);
 }
 
+function parseWhisperCommandArguments(rawArgs) {
+  const value = String(rawArgs || "").trim();
+  if (!value) {
+    return {
+      targetName: "",
+      message: ""
+    };
+  }
+
+  const quotedMatch = value.match(/^"([^"]+)"\s+([\s\S]+)$/);
+  if (quotedMatch) {
+    return {
+      targetName: normalizeInviteTargetName(quotedMatch[1]),
+      message: String(quotedMatch[2] || "").trim().slice(0, 500)
+    };
+  }
+
+  const singleQuotedMatch = value.match(/^'([^']+)'\s+([\s\S]+)$/);
+  if (singleQuotedMatch) {
+    return {
+      targetName: normalizeInviteTargetName(singleQuotedMatch[1]),
+      message: String(singleQuotedMatch[2] || "").trim().slice(0, 500)
+    };
+  }
+
+  const plainMatch = value.match(/^(\S+)\s+([\s\S]+)$/);
+  if (plainMatch) {
+    return {
+      targetName: normalizeInviteTargetName(plainMatch[1]),
+      message: String(plainMatch[2] || "").trim().slice(0, 500)
+    };
+  }
+
+  return {
+    targetName: normalizeInviteTargetName(value),
+    message: ""
+  };
+}
+
 const STANDARD_ROOM_DEFINITIONS = Object.freeze({
   "free-rp": [
     {
@@ -7252,6 +7291,115 @@ function findInviteTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_I
   return matches;
 }
 
+function findWhisperTargetsByDisplayName(displayName, roomId, serverId = DEFAULT_SERVER_ID, excludeUserId = null) {
+  const normalizedLookupKey = normalizeInviteTargetLookupKey(displayName);
+  const normalizedServerId = normalizeServer(serverId);
+  const parsedExcludeUserId = Number(excludeUserId);
+  if (!normalizedLookupKey) {
+    return [];
+  }
+
+  const matches = [];
+  const seenUserIds = new Set();
+
+  for (const memberSocket of getSocketsInChannel(roomId, normalizedServerId)) {
+    const userId = Number(memberSocket?.data?.user?.id);
+    if (
+      !Number.isInteger(userId) ||
+      userId < 1 ||
+      (Number.isInteger(parsedExcludeUserId) && userId === parsedExcludeUserId) ||
+      seenUserIds.has(userId)
+    ) {
+      continue;
+    }
+
+    const profile = getCurrentChannelDisplayProfile(
+      memberSocket?.data?.user,
+      normalizedServerId,
+      getSocketPreferredCharacterId(memberSocket, normalizedServerId)
+    );
+    const displayNameLabel = String(profile?.label || "").trim();
+    if (!displayNameLabel || normalizeInviteTargetLookupKey(displayNameLabel) !== normalizedLookupKey) {
+      continue;
+    }
+
+    matches.push({
+      userId,
+      name: displayNameLabel,
+      roleStyle: profile?.role_style || "",
+      chatTextColor: profile?.chat_text_color || ""
+    });
+    seenUserIds.add(userId);
+  }
+
+  return matches;
+}
+
+function emitWhisperBetweenUsers(senderSocket, targetUserId, content, roomId, serverId = DEFAULT_SERVER_ID) {
+  const normalizedContent = String(content || "").trim().slice(0, 500);
+  const parsedTargetUserId = Number(targetUserId);
+  if (
+    !senderSocket?.data?.user ||
+    !Number.isInteger(parsedTargetUserId) ||
+    parsedTargetUserId < 1 ||
+    !normalizedContent
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  if (parsedTargetUserId === Number(senderSocket.data.user.id)) {
+    return { ok: false, reason: "self" };
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const recipientSockets = getUserSocketsInChannel(roomId, normalizedServerId, parsedTargetUserId);
+  if (!recipientSockets.length) {
+    return { ok: false, reason: "missing_target" };
+  }
+
+  const senderSockets = getUserSocketsInChannel(roomId, normalizedServerId, senderSocket.data.user.id);
+  const senderProfile = getSocketDisplayProfile(senderSocket, normalizedServerId);
+  const recipientProfile = recipientSockets[0]
+    ? getSocketDisplayProfile(recipientSockets[0], normalizedServerId)
+    : null;
+  const senderName = senderProfile.label;
+  const recipientName = recipientProfile
+    ? recipientProfile.label
+    : `User ${parsedTargetUserId}`;
+  const createdAt = formatChatTimestamp();
+
+  const senderPayload = {
+    outgoing: true,
+    from_user_id: Number(senderSocket.data.user.id),
+    to_user_id: parsedTargetUserId,
+    from_name: senderName,
+    to_name: recipientName,
+    content: normalizedContent,
+    created_at: createdAt
+  };
+  const recipientPayload = {
+    outgoing: false,
+    from_user_id: Number(senderSocket.data.user.id),
+    to_user_id: parsedTargetUserId,
+    from_name: senderName,
+    to_name: recipientName,
+    content: normalizedContent,
+    created_at: createdAt
+  };
+
+  senderSockets.forEach((memberSocket) => {
+    memberSocket.emit("chat:whisper", senderPayload);
+  });
+  recipientSockets.forEach((memberSocket) => {
+    memberSocket.emit("chat:whisper", recipientPayload);
+  });
+
+  return {
+    ok: true,
+    recipientName
+  };
+}
+
 function getSocketHeaderDisplayProfile(memberSocket) {
   const normalizedServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
     ? normalizeServer(memberSocket.data.serverId)
@@ -8738,6 +8886,61 @@ io.on("connection", (socket) => {
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
     const canGrantRoomRights = canGrantRoomPermissions(socket.data.user, room);
 
+    const whisperMatch = content.match(/^\/fl(?:\s+([\s\S]+))?$/i);
+    if (whisperMatch) {
+      const whisperArgs = parseWhisperCommandArguments(whisperMatch[1] || "");
+      if (whisperArgs.targetName.length < 2 || whisperArgs.message.length < 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /fl Name Nachricht. Bei Namen mit Leerzeichen geht auch /fl "Charaktername" Nachricht.',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const whisperTargets = findWhisperTargetsByDisplayName(
+        whisperArgs.targetName,
+        roomId,
+        serverId,
+        socket.data.user.id
+      );
+      if (!whisperTargets.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${whisperArgs.targetName} ist gerade nicht in diesem Chat.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (whisperTargets.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Der Name ${whisperArgs.targetName} ist nicht eindeutig. Bitte nutze den genauen Online-Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const whisperResult = emitWhisperBetweenUsers(
+        socket,
+        whisperTargets[0].userId,
+        whisperArgs.message,
+        roomId,
+        serverId
+      );
+      if (!whisperResult.ok) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: whisperResult.reason === "self"
+            ? "Du kannst dir nicht selbst flüstern."
+            : `${whisperArgs.targetName} ist gerade nicht in diesem Chat.`,
+          created_at: formatChatTimestamp()
+        });
+      }
+      return;
+    }
+
     if (normalizedCommand === "/s") {
       if (!roomId || !room) {
         socket.emit("chat:message", {
@@ -9376,9 +9579,6 @@ io.on("connection", (socket) => {
     if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
       return;
     }
-    if (targetUserId === Number(socket.data.user.id)) {
-      return;
-    }
 
     const roomId =
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
@@ -9395,47 +9595,7 @@ io.on("connection", (socket) => {
       serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
-    const recipientSockets = getUserSocketsInChannel(roomId, serverId, targetUserId);
-    if (!recipientSockets.length) {
-      return;
-    }
-
-    const senderSockets = getUserSocketsInChannel(roomId, serverId, socket.data.user.id);
-    const senderProfile = getSocketDisplayProfile(socket, serverId);
-    const recipientProfile = recipientSockets[0]
-      ? getSocketDisplayProfile(recipientSockets[0], serverId)
-      : null;
-    const senderName = senderProfile.label;
-    const recipientName = recipientProfile
-      ? recipientProfile.label
-      : `User ${targetUserId}`;
-    const createdAt = formatChatTimestamp();
-
-    const senderPayload = {
-      outgoing: true,
-      from_user_id: Number(socket.data.user.id),
-      to_user_id: targetUserId,
-      from_name: senderName,
-      to_name: recipientName,
-      content,
-      created_at: createdAt
-    };
-    const recipientPayload = {
-      outgoing: false,
-      from_user_id: Number(socket.data.user.id),
-      to_user_id: targetUserId,
-      from_name: senderName,
-      to_name: recipientName,
-      content,
-      created_at: createdAt
-    };
-
-    senderSockets.forEach((memberSocket) => {
-      memberSocket.emit("chat:whisper", senderPayload);
-    });
-    recipientSockets.forEach((memberSocket) => {
-      memberSocket.emit("chat:whisper", recipientPayload);
-    });
+    emitWhisperBetweenUsers(socket, targetUserId, content, roomId, serverId);
   });
 
   socket.on("chat:room-invite-response", (payload) => {
