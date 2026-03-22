@@ -3,7 +3,7 @@
 <section class="header-line dashboard-page-header">
   <div>
     <h1>W&auml;hle einen Bereich</h1>
-    <p class="muted">Im Rollenspiel-Bereich kannst du direkt zwischen Free RP und Erotik wechseln.</p>
+    <p class="muted">Im Rollenspiel-Bereich &ouml;ffnest du Free RP oder Erotik jeweils in einem neuen Fenster.</p>
   </div>
   <div class="dashboard-server-actions">
     <a class="btn btn-secondary" href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
@@ -24,158 +24,24 @@
     <summary class="dashboard-accordion-summary">
       <div class="dashboard-accordion-copy">
         <h2>Rollenspiel</h2>
-        <p class="muted">W&auml;hle Free RP oder Erotik. Darunter erscheint direkt die passende &Uuml;bersicht mit Charakteren und Festspielen.</p>
+        <p class="muted">W&auml;hle Free RP oder Erotik. Die jeweilige &Uuml;bersicht &ouml;ffnet sich in einem neuen Fenster.</p>
       </div>
       <span class="dashboard-accordion-icon" aria-hidden="true"></span>
     </summary>
 
     <div class="dashboard-accordion-body">
-      <div class="dashboard-role-switch" role="tablist" aria-label="Rollenspiel-Bereiche">
-        <% serverSections.forEach((section, index) => { %>
-          <button
-            type="button"
-            class="dashboard-role-tab<%= index === 0 ? ' is-active' : '' %>"
-            data-dashboard-role-tab="<%= section.id %>"
-            role="tab"
-            aria-selected="<%= index === 0 ? 'true' : 'false' %>"
-            aria-controls="dashboard-role-panel-<%= section.id %>"
-            id="dashboard-role-tab-<%= section.id %>"
+      <div class="dashboard-role-switch" aria-label="Rollenspiel-Bereiche">
+        <% serverSections.forEach((section) => { %>
+          <a
+            class="dashboard-role-link"
+            href="/dashboard/areas/<%= section.id %>"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <span class="dashboard-role-tab-title"><%= section.dashboard_area_title %></span>
-          </button>
+          </a>
         <% }) %>
       </div>
-
-      <% serverSections.forEach((section, index) => { %>
-        <section
-          class="dashboard-role-panel<%= index === 0 ? ' is-active' : '' %>"
-          id="dashboard-role-panel-<%= section.id %>"
-          data-dashboard-role-panel="<%= section.id %>"
-          role="tabpanel"
-          aria-labelledby="dashboard-role-tab-<%= section.id %>"
-          <%= index === 0 ? '' : 'hidden' %>
-        >
-          <section class="panel dashboard-server-panel dashboard-subpanel">
-            <div class="header-line">
-              <div>
-                <h3><%= section.dashboard_label || section.label %></h3>
-              </div>
-              <div class="dashboard-server-actions">
-                <a class="btn dashboard-add-character-btn" href="/characters/new?server=<%= section.id %>" aria-label="Charakter hinzufuegen" title="Charakter hinzufuegen">+</a>
-              </div>
-            </div>
-
-            <% if (!section.characters.length) { %>
-              <p class="muted">
-                <%= section.festplays && section.festplays.length
-                  ? `Keine freien Charaktere direkt im Bereich ${section.dashboard_label || section.label}. Festspiel-Charaktere sind darunter untergliedert.`
-                  : `Noch keine Charaktere im Bereich ${section.dashboard_label || section.label}.` %>
-              </p>
-            <% } else { %>
-              <div class="character-mini-grid">
-                <% section.characters.forEach((char) => { %>
-                  <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
-                  <% const moveArrow = char.server_id === "free-rp" ? "&rarr;" : "&larr;"; %>
-                  <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
-                  <article class="character-mini-card">
-                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                      <span class="character-mini-name"><%= char.name %></span>
-                    </a>
-                    <div class="character-mini-actions">
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/move"
-                        class="character-mini-move-form"
-                        data-dashboard-move-confirm
-                        data-dashboard-move-target="<%= moveTargetLabel %>"
-                        data-dashboard-character-name="<%= char.name %>"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-move-btn"
-                          aria-label="Charakter verschieben"
-                          title="<%= moveTitle %>"
-                        >
-                          <%- moveArrow %>
-                        </button>
-                      </form>
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/delete"
-                        class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                      >
-                        <button
-                          type="submit"
-                          class="character-mini-delete-btn"
-                          aria-label="Charakter l&ouml;schen"
-                          title="Charakter l&ouml;schen"
-                        >
-                          X
-                        </button>
-                      </form>
-                    </div>
-                  </article>
-                <% }) %>
-              </div>
-            <% } %>
-          </section>
-
-          <% if (section.festplays && section.festplays.length) { %>
-            <details class="dashboard-festplay-overview" open>
-              <summary class="dashboard-festplay-overview-header">
-                <div class="dashboard-festplay-overview-title">
-                  <h3>Meine Festspiele</h3>
-                  <span class="dashboard-festplay-count">(<%= section.festplays.length %>)</span>
-                </div>
-                <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
-              </summary>
-
-              <div class="dashboard-festplay-stack">
-                <% section.festplays.forEach((festplay) => { %>
-                  <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
-                    <div class="header-line">
-                      <div>
-                        <h3><%= festplay.name %></h3>
-                        <p class="muted dashboard-section-copy">
-                          <%= festplay.caption || "Festspiel auf diesem Bereich." %>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="character-mini-grid">
-                      <% festplay.characters.forEach((char) => { %>
-                        <article class="character-mini-card">
-                          <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                            <span class="character-mini-name"><%= char.name %></span>
-                          </a>
-                          <div class="character-mini-actions">
-                            <form
-                              method="POST"
-                              action="/characters/<%= char.id %>/delete"
-                              class="character-mini-delete-form"
-                              onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                            >
-                              <button
-                                type="submit"
-                                class="character-mini-delete-btn"
-                                aria-label="Charakter l&ouml;schen"
-                                title="Charakter l&ouml;schen"
-                              >
-                                X
-                              </button>
-                            </form>
-                          </div>
-                        </article>
-                      <% }) %>
-                    </div>
-                  </section>
-                <% }) %>
-              </div>
-            </details>
-          <% } %>
-        </section>
-      <% }) %>
     </div>
   </details>
 
@@ -200,108 +66,5 @@
     </div>
   </details>
 </section>
-
-<div id="dashboard-move-modal" class="dashboard-confirm-modal" hidden>
-  <div class="dashboard-confirm-backdrop" data-dashboard-confirm-close></div>
-  <section
-    class="dashboard-confirm-card panel"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="dashboard-move-title"
-  >
-    <h2 id="dashboard-move-title">Charakter verschieben</h2>
-    <p class="muted" id="dashboard-move-copy">
-      Charakter wirklich verschieben?
-    </p>
-    <p class="muted dashboard-confirm-note">
-      Freischaltungen an Festspielen bleiben dabei erhalten.
-    </p>
-    <div class="dashboard-confirm-actions">
-      <button type="button" class="btn btn-secondary" data-dashboard-confirm-close>
-        Abbrechen
-      </button>
-      <button type="button" class="btn" id="dashboard-move-confirm">
-        Ja, verschieben
-      </button>
-    </div>
-  </section>
-</div>
-
-<script>
-  (() => {
-    document.addEventListener("DOMContentLoaded", () => {
-      const roleTabs = Array.from(document.querySelectorAll("[data-dashboard-role-tab]"));
-      const rolePanels = Array.from(document.querySelectorAll("[data-dashboard-role-panel]"));
-
-      const activateRolePanel = (targetId) => {
-        roleTabs.forEach((tab) => {
-          const isActive = tab.dataset.dashboardRoleTab === targetId;
-          tab.classList.toggle("is-active", isActive);
-          tab.setAttribute("aria-selected", isActive ? "true" : "false");
-        });
-
-        rolePanels.forEach((panel) => {
-          const isActive = panel.dataset.dashboardRolePanel === targetId;
-          panel.classList.toggle("is-active", isActive);
-          panel.hidden = !isActive;
-        });
-      };
-
-      roleTabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          activateRolePanel(String(tab.dataset.dashboardRoleTab || ""));
-        });
-      });
-
-      const modal = document.getElementById("dashboard-move-modal");
-      const copy = document.getElementById("dashboard-move-copy");
-      const confirmButton = document.getElementById("dashboard-move-confirm");
-      const closeElements = modal ? modal.querySelectorAll("[data-dashboard-confirm-close]") : [];
-      const moveForms = document.querySelectorAll("[data-dashboard-move-confirm]");
-      if (!modal || !copy || !confirmButton || !moveForms.length) return;
-
-      let pendingForm = null;
-
-      const closeModal = () => {
-        modal.hidden = true;
-        document.body.classList.remove("modal-open");
-        pendingForm = null;
-      };
-
-      const openModalForForm = (form) => {
-        pendingForm = form;
-        const targetLabel = String(form.dataset.dashboardMoveTarget || "").trim() || "den anderen Bereich";
-        const characterName = String(form.dataset.dashboardCharacterName || "").trim() || "Dieser Charakter";
-        copy.textContent = `${characterName} wirklich nach ${targetLabel} verschieben?`;
-        modal.hidden = false;
-        document.body.classList.add("modal-open");
-      };
-
-      moveForms.forEach((form) => {
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
-          openModalForForm(form);
-        });
-      });
-
-      closeElements.forEach((element) => {
-        element.addEventListener("click", closeModal);
-      });
-
-      confirmButton.addEventListener("click", () => {
-        if (!pendingForm) return;
-        const formToSubmit = pendingForm;
-        closeModal();
-        formToSubmit.submit();
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !modal.hidden) {
-          closeModal();
-        }
-      });
-    });
-  })();
-</script>
 
 <%- include("partials/end") %>

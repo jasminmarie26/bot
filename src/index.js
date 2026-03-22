@@ -5898,7 +5898,15 @@ app.get("/dashboard", requireAuth, (req, res) => {
 });
 
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
-  return res.redirect("/dashboard");
+  const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
+  if (!serverSection) {
+    return res.redirect("/dashboard");
+  }
+
+  return res.render("dashboard-area", {
+    title: serverSection.dashboard_area_title || serverSection.dashboard_label || "Rollenspiel",
+    serverSection
+  });
 });
 
 app.get("/dashboard-legacy", requireAuth, (req, res) => {

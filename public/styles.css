@@ -2377,7 +2377,8 @@ body.page-home-screen .home-hero-actions {
   gap: 0.55rem;
 }
 
-.dashboard-role-tab {
+.dashboard-role-tab,
+.dashboard-role-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2389,11 +2390,14 @@ body.page-home-screen .home-hero-actions {
     linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 90%, white 10%) 0%, color-mix(in srgb, var(--panel-bg) 84%, black 16%) 100%);
   color: color-mix(in srgb, var(--text-muted) 80%, white 20%);
   cursor: pointer;
+  text-decoration: none;
   transition: border-color 140ms ease, transform 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .dashboard-role-tab:hover,
-.dashboard-role-tab:focus-visible {
+.dashboard-role-tab:focus-visible,
+.dashboard-role-link:hover,
+.dashboard-role-link:focus-visible {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent) 44%, var(--panel-edge) 56%);
   color: var(--text);
