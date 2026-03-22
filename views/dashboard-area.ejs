@@ -39,24 +39,26 @@
               <span class="character-mini-name"><%= char.name %></span>
             </a>
             <div class="character-mini-actions">
-              <form
-                method="POST"
-                action="/characters/<%= char.id %>/move"
-                class="character-mini-move-form"
-                data-dashboard-move-confirm
-                data-dashboard-move-target="<%= moveTargetLabel %>"
-                data-dashboard-character-name="<%= char.name %>"
-              >
-                <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
-                <button
-                  type="submit"
-                  class="character-mini-move-btn"
-                  aria-label="Charakter verschieben"
-                  title="<%= moveTitle %>"
+              <% if (char.can_dashboard_move) { %>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/move"
+                  class="character-mini-move-form"
+                  data-dashboard-move-confirm
+                  data-dashboard-move-target="<%= moveTargetLabel %>"
+                  data-dashboard-character-name="<%= char.name %>"
                 >
-                  <%- moveArrow %>
-                </button>
-              </form>
+                  <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+                  <button
+                    type="submit"
+                    class="character-mini-move-btn"
+                    aria-label="Charakter verschieben"
+                    title="<%= moveTitle %>"
+                  >
+                    <%- moveArrow %>
+                  </button>
+                </form>
+              <% } %>
               <form
                 method="POST"
                 action="/characters/<%= char.id %>/delete"

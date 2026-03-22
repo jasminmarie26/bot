@@ -2398,6 +2398,22 @@ function buildFestplayServerLockMessage(festplay, targetServerId = "") {
   return `${festplay.name} liegt auf ${festplay.server_label}.`;
 }
 
+function getCharacterFestplayHomeServer(characterId) {
+  const uniqueServerIds = [
+    ...new Set(
+      getBoundFestplaysForCharacter(characterId)
+        .map((festplay) => normalizeServer(festplay.server_id))
+        .filter(Boolean)
+    )
+  ];
+
+  if (uniqueServerIds.length !== 1) {
+    return "";
+  }
+
+  return uniqueServerIds[0];
+}
+
 function characterHasFestplayAccess(festplayId, characterId) {
   const parsedFestplayId = Number(festplayId);
   const parsedCharacterId = Number(characterId);
@@ -5860,7 +5876,15 @@ function getDashboardOwnCharacters(userId) {
        WHERE c.user_id = ?
        ORDER BY c.updated_at DESC`
     )
-    .all(parsedUserId);
+    .all(parsedUserId)
+    .map((character) => {
+      const festplayHomeServerId = getCharacterFestplayHomeServer(character.id);
+      return {
+        ...character,
+        festplay_home_server_id: festplayHomeServerId,
+        festplay_home_server_label: getServerLabel(festplayHomeServerId)
+      };
+    });
 }
 
 function buildDashboardServerSection(server, ownCharacters, userId) {
@@ -5893,13 +5917,19 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
       ? "Charaktere und Festspiele fuer offene Geschichten und lockere Begegnungen."
       : "Charaktere und Festspiele fuer intensivere Szenen und feste Dynamiken.",
     festplays,
-    characters: ownCharacters.filter((character) => {
-      const characterId = Number(character.id);
-      return (
-        normalizeServer(character.server_id) === server.id &&
-        !festplayCharacterIds.has(characterId)
-      );
-    })
+    characters: ownCharacters
+      .filter((character) => {
+        const characterId = Number(character.id);
+        return (
+          normalizeServer(character.server_id) === server.id &&
+          !festplayCharacterIds.has(characterId)
+        );
+      })
+      .map((character) => ({
+        ...character,
+        can_dashboard_move:
+          !character.festplay_home_server_id || character.festplay_home_server_id === server.id
+      }))
   };
 }
 
@@ -7151,6 +7181,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
 app.post("/characters/:id/move", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
+  const returnTarget = getSafeReturnTarget(req, "/dashboard");
 
   if (!character) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
@@ -7165,6 +7196,19 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
 
   const currentServerId = normalizeServer(character.server_id);
   const nextServerId = currentServerId === "free-rp" ? "erp" : "free-rp";
+  const festplayHomeServerId = getCharacterFestplayHomeServer(id);
+  if (
+    festplayHomeServerId &&
+    currentServerId !== festplayHomeServerId &&
+    returnTarget !== `/dashboard/areas/${festplayHomeServerId}`
+  ) {
+    setFlash(
+      req,
+      "error",
+      `Dieser Festspiel-Charakter kann nur ueber ${getServerLabel(festplayHomeServerId)} wieder zurueck verschoben werden.`
+    );
+    return res.redirect(returnTarget);
+  }
 
   db.prepare(
     `UPDATE characters
@@ -7185,7 +7229,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
     "success",
     `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`
   );
-  return res.redirect(getSafeReturnTarget(req, "/dashboard"));
+  return res.redirect(returnTarget);
 });
 
 app.post("/characters/:id/role-character", requireAuth, (req, res) => {
