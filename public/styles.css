@@ -2833,6 +2833,11 @@ body.page-home-screen .home-hero-actions {
   border-top: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
 }
 
+.dashboard-character-overview-body {
+  padding: 0.58rem 0.62rem 0.62rem;
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
+}
+
 .dashboard-section-copy {
   margin: 0.14rem 0 0;
   max-width: 30rem;
