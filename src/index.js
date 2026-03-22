@@ -5898,18 +5898,11 @@ app.get("/dashboard", requireAuth, (req, res) => {
 });
 
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
-  const area = getDashboardServerSection(req.session.user.id, req.params.serverId);
-  if (!area) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  return res.render("dashboard-area", {
-    title: area.dashboard_area_title,
-    area
-  });
+  return res.redirect("/dashboard");
 });
 
 app.get("/dashboard-legacy", requireAuth, (req, res) => {
+  return res.redirect("/dashboard");
   const ownCharacters = db
     .prepare(
       `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
