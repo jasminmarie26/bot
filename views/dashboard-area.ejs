@@ -31,9 +31,6 @@
     <% } else { %>
       <div class="character-mini-grid">
         <% serverSection.characters.forEach((char) => { %>
-          <% const moveTargetLabel = char.server_id === "free-rp" ? "ERP" : "FREE-RP"; %>
-          <% const moveArrow = char.server_id === "free-rp" ? "&rarr;" : "&larr;"; %>
-          <% const moveTitle = char.server_id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
           <article class="character-mini-card">
             <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
               <span class="character-mini-name"><%= char.name %></span>
@@ -45,17 +42,18 @@
                   action="/characters/<%= char.id %>/move"
                   class="character-mini-move-form"
                   data-dashboard-move-confirm
-                  data-dashboard-move-target="<%= moveTargetLabel %>"
                   data-dashboard-character-name="<%= char.name %>"
+                  data-dashboard-current-server="<%= char.server_id %>"
                 >
                   <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+                  <input type="hidden" name="target_server_id" value="">
                   <button
                     type="submit"
                     class="character-mini-move-btn"
                     aria-label="Charakter verschieben"
-                    title="<%= moveTitle %>"
+                    title="Zielserver ausw&auml;hlen"
                   >
-                    <%- moveArrow %>
+                    &harr;
                   </button>
                 </form>
               <% } %>
@@ -106,9 +104,6 @@
             <div class="character-mini-grid">
               <% festplay.characters.forEach((char) => { %>
                 <% const currentServerId = char.current_server_id || serverSection.id; %>
-                <% const moveTargetLabel = currentServerId === "free-rp" ? "ERP" : "FREE-RP"; %>
-                <% const moveArrow = currentServerId === "free-rp" ? "&rarr;" : "&larr;"; %>
-                <% const moveTitle = currentServerId === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
                 <article class="character-mini-card<%= char.is_on_festplay_server ? '' : ' is-festplay-ghost' %>">
                   <% if (char.is_on_festplay_server) { %>
                     <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
@@ -123,26 +118,25 @@
                     </span>
                   <% } %>
                   <div class="character-mini-actions">
-                    <% if (!char.is_on_festplay_server) { %>
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/move"
-                        class="character-mini-move-form"
-                        data-dashboard-move-confirm
-                        data-dashboard-move-target="<%= moveTargetLabel %>"
-                        data-dashboard-character-name="<%= char.name %>"
+                    <form
+                      method="POST"
+                      action="/characters/<%= char.id %>/move"
+                      class="character-mini-move-form"
+                      data-dashboard-move-confirm
+                      data-dashboard-character-name="<%= char.name %>"
+                      data-dashboard-current-server="<%= currentServerId %>"
+                    >
+                      <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+                      <input type="hidden" name="target_server_id" value="">
+                      <button
+                        type="submit"
+                        class="character-mini-move-btn"
+                        aria-label="Charakter verschieben"
+                        title="Zielserver ausw&auml;hlen"
                       >
-                        <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
-                        <button
-                          type="submit"
-                          class="character-mini-move-btn"
-                          aria-label="Charakter verschieben"
-                          title="<%= moveTitle %>"
-                        >
-                          <%- moveArrow %>
-                        </button>
-                      </form>
-                    <% } %>
+                        &harr;
+                      </button>
+                    </form>
                     <% if (char.is_on_festplay_server) { %>
                       <form
                         method="POST"
@@ -181,7 +175,7 @@
   >
     <h2 id="dashboard-move-title">Charakter verschieben</h2>
     <p class="muted" id="dashboard-move-copy">
-      Charakter wirklich verschieben?
+      Wohin soll dieser Charakter verschoben werden?
     </p>
     <p class="muted dashboard-confirm-note">
       Freischaltungen an Festspielen bleiben dabei erhalten.
@@ -190,8 +184,11 @@
       <button type="button" class="btn btn-secondary" data-dashboard-confirm-close>
         Abbrechen
       </button>
-      <button type="button" class="btn" id="dashboard-move-confirm">
-        Ja, verschieben
+      <button type="button" class="btn btn-secondary" id="dashboard-move-free">
+        Free RP
+      </button>
+      <button type="button" class="btn" id="dashboard-move-erp">
+        ERP
       </button>
     </div>
   </section>
@@ -202,10 +199,13 @@
     document.addEventListener("DOMContentLoaded", () => {
       const modal = document.getElementById("dashboard-move-modal");
       const copy = document.getElementById("dashboard-move-copy");
-      const confirmButton = document.getElementById("dashboard-move-confirm");
+      const note = modal ? modal.querySelector(".dashboard-confirm-note") : null;
+      const freeButton = document.getElementById("dashboard-move-free");
+      const erpButton = document.getElementById("dashboard-move-erp");
       const closeElements = modal ? modal.querySelectorAll("[data-dashboard-confirm-close]") : [];
       const moveForms = document.querySelectorAll("[data-dashboard-move-confirm]");
-      if (!modal || !copy || !confirmButton || !moveForms.length) return;
+      const erpMoveAllowed = <%= erpMoveAllowed ? "true" : "false" %>;
+      if (!modal || !copy || !note || !freeButton || !erpButton || !moveForms.length) return;
 
       let pendingForm = null;
 
@@ -217,9 +217,25 @@
 
       const openModalForForm = (form) => {
         pendingForm = form;
-        const targetLabel = String(form.dataset.dashboardMoveTarget || "").trim() || "den anderen Bereich";
         const characterName = String(form.dataset.dashboardCharacterName || "").trim() || "Dieser Charakter";
-        copy.textContent = `${characterName} wirklich nach ${targetLabel} verschieben?`;
+        const currentServer = String(form.dataset.dashboardCurrentServer || "").trim();
+        const targetInput = form.querySelector('input[name="target_server_id"]');
+        if (targetInput) {
+          targetInput.value = "";
+        }
+
+        copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
+        note.textContent = erpMoveAllowed
+          ? "Freischaltungen an Festspielen bleiben dabei erhalten."
+          : "ERP ist für Accounts unter 18 nicht verfügbar.";
+
+        freeButton.disabled = currentServer === "free-rp";
+        erpButton.disabled = currentServer === "erp" || !erpMoveAllowed;
+        if (freeButton.disabled && erpButton.disabled) {
+          note.textContent = "Dieser Charakter liegt bereits auf Free RP. ERP ist fuer Accounts unter 18 nicht verfuegbar.";
+        } else if (!erpMoveAllowed) {
+          note.textContent = "ERP ist fuer Accounts unter 18 nicht verfuegbar.";
+        }
         modal.hidden = false;
         document.body.classList.add("modal-open");
       };
@@ -235,11 +251,24 @@
         element.addEventListener("click", closeModal);
       });
 
-      confirmButton.addEventListener("click", () => {
+      const submitMoveTo = (targetServerId) => {
         if (!pendingForm) return;
         const formToSubmit = pendingForm;
+        const targetInput = formToSubmit.querySelector('input[name="target_server_id"]');
+        if (!targetInput) return;
+        targetInput.value = targetServerId;
         closeModal();
         formToSubmit.submit();
+      };
+
+      freeButton.addEventListener("click", () => {
+        if (freeButton.disabled) return;
+        submitMoveTo("free-rp");
+      });
+
+      erpButton.addEventListener("click", () => {
+        if (erpButton.disabled) return;
+        submitMoveTo("erp");
       });
 
       document.addEventListener("keydown", (event) => {

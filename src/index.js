@@ -5978,9 +5978,14 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
     return res.redirect("/dashboard");
   }
 
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+
   return res.render("dashboard-area", {
     title: serverSection.dashboard_area_title || serverSection.dashboard_label || "Rollenspiel",
-    serverSection
+    serverSection,
+    erpMoveAllowed
   });
 });
 
@@ -7195,18 +7200,24 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   }
 
   const currentServerId = normalizeServer(character.server_id);
-  const nextServerId = currentServerId === "free-rp" ? "erp" : "free-rp";
-  const festplayHomeServerId = getCharacterFestplayHomeServer(id);
-  if (
-    festplayHomeServerId &&
-    currentServerId !== festplayHomeServerId &&
-    returnTarget !== `/dashboard/areas/${festplayHomeServerId}`
-  ) {
-    setFlash(
-      req,
-      "error",
-      `Dieser Festspiel-Charakter kann nur ueber ${getServerLabel(festplayHomeServerId)} wieder zurueck verschoben werden.`
-    );
+  const requestedServerId = normalizeServer(String(req.body.target_server_id || ""));
+  const nextServerId =
+    requestedServerId || (currentServerId === "free-rp" ? "erp" : "free-rp");
+
+  if (!ALLOWED_SERVER_IDS.has(nextServerId)) {
+    setFlash(req, "error", "Bitte einen gueltigen Zielserver auswaehlen.");
+    return res.redirect(returnTarget);
+  }
+
+  if (nextServerId === currentServerId) {
+    setFlash(req, "error", `Der Charakter liegt bereits auf ${getServerLabel(currentServerId)}.`);
+    return res.redirect(returnTarget);
+  }
+
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  if (nextServerId === "erp" && (viewerAge === null || viewerAge < 18)) {
+    setFlash(req, "error", "ERP ist erst ab 18 Jahren verfuegbar.");
     return res.redirect(returnTarget);
   }
 

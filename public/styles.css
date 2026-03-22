@@ -1824,6 +1824,13 @@ a:hover {
   flex-wrap: wrap;
 }
 
+.dashboard-confirm-actions .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: saturate(0.65);
+  box-shadow: none;
+}
+
 .dashboard-confirm-note {
   margin-top: -0.15rem;
   margin-bottom: 1rem;
