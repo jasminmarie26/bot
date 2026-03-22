@@ -30,7 +30,6 @@
     </summary>
 
     <div class="dashboard-accordion-body">
-      <% const hasDashboardFestplays = serverSections.some((section) => section.festplays && section.festplays.length); %>
       <div class="dashboard-server-list">
         <% serverSections.forEach((section) => { %>
           <div class="dashboard-server-column">
@@ -47,7 +46,7 @@
               <% if (!section.characters.length) { %>
                 <p class="muted">
                   <%= section.festplays && section.festplays.length
-                    ? `Keine freien Charaktere direkt im Bereich ${section.dashboard_label || section.label}. Festspiel-Charaktere stehen darunter.`
+                    ? `Keine freien Charaktere direkt im Bereich ${section.dashboard_label || section.label}. Festspiel-Charaktere liegen im aufklappbaren Bereich darunter.`
                     : `Noch keine Charaktere im Bereich ${section.dashboard_label || section.label}.` %>
                 </p>
               <% } else { %>
@@ -99,20 +98,18 @@
                 </div>
               <% } %>
             </section>
-          </div>
-        <% }) %>
-      </div>
 
-      <% if (hasDashboardFestplays) { %>
-        <section class="dashboard-festplay-overview" aria-label="Meine Festspiele">
-          <div class="dashboard-festplay-overview-header">
-            <h3>Meine Festspiele</h3>
-          </div>
+            <% if (section.festplays && section.festplays.length) { %>
+              <details class="dashboard-festplay-overview">
+                <summary class="dashboard-festplay-overview-header">
+                  <div class="dashboard-festplay-overview-title">
+                    <h3>Meine Festspiele</h3>
+                    <span class="dashboard-festplay-count">(<%= section.festplays.length %>)</span>
+                  </div>
+                  <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+                </summary>
 
-          <div class="dashboard-server-list">
-            <% serverSections.forEach((section) => { %>
-              <div class="dashboard-server-column">
-                <% if (section.festplays && section.festplays.length) { %>
+                <div class="dashboard-festplay-stack">
                   <% section.festplays.forEach((festplay) => { %>
                     <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
                       <div class="header-line">
@@ -152,12 +149,12 @@
                       </div>
                     </section>
                   <% }) %>
-                <% } %>
-              </div>
-            <% }) %>
+                </div>
+              </details>
+            <% } %>
           </div>
-        </section>
-      <% } %>
+        <% }) %>
+      </div>
     </div>
   </details>
 
