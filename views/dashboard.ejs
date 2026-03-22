@@ -101,65 +101,71 @@
             </section>
 
             <% if (section.festplays && section.festplays.length) { %>
-              <% section.festplays.forEach((festplay) => { %>
-                <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
-                  <div class="header-line">
-                    <div>
-                      <h3><%= festplay.name %></h3>
-                      <p class="muted dashboard-section-copy">
-                        <%= festplay.caption || "Festspiel auf diesem Bereich." %>
-                      </p>
-                    </div>
-                  </div>
+              <section class="dashboard-festplay-group" aria-label="Meine Festspiele">
+                <div class="dashboard-festplay-group-header">
+                  <h3>Meine Festspiele</h3>
+                </div>
 
-                  <div class="character-mini-grid">
-                    <% festplay.characters.forEach((char) => { %>
-                      <% const moveTargetLabel = section.id === "free-rp" ? "ERP" : "FREE-RP"; %>
-                      <% const moveArrow = section.id === "free-rp" ? "&rarr;" : "&larr;"; %>
-                      <% const moveTitle = section.id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
-                      <article class="character-mini-card">
-                        <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                          <span class="character-mini-name"><%= char.name %></span>
-                        </a>
-                        <div class="character-mini-actions">
-                          <form
-                            method="POST"
-                            action="/characters/<%= char.id %>/move"
-                            class="character-mini-move-form"
-                            data-dashboard-move-confirm
-                            data-dashboard-move-target="<%= moveTargetLabel %>"
-                            data-dashboard-character-name="<%= char.name %>"
-                          >
-                            <button
-                              type="submit"
-                              class="character-mini-move-btn"
-                              aria-label="Charakter verschieben"
-                              title="<%= moveTitle %>"
+                <% section.festplays.forEach((festplay) => { %>
+                  <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
+                    <div class="header-line">
+                      <div>
+                        <h3><%= festplay.name %></h3>
+                        <p class="muted dashboard-section-copy">
+                          <%= festplay.caption || "Festspiel auf diesem Bereich." %>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="character-mini-grid">
+                      <% festplay.characters.forEach((char) => { %>
+                        <% const moveTargetLabel = section.id === "free-rp" ? "ERP" : "FREE-RP"; %>
+                        <% const moveArrow = section.id === "free-rp" ? "&rarr;" : "&larr;"; %>
+                        <% const moveTitle = section.id === "free-rp" ? "Nach ERP verschieben" : "Nach FREE-RP verschieben"; %>
+                        <article class="character-mini-card">
+                          <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                            <span class="character-mini-name"><%= char.name %></span>
+                          </a>
+                          <div class="character-mini-actions">
+                            <form
+                              method="POST"
+                              action="/characters/<%= char.id %>/move"
+                              class="character-mini-move-form"
+                              data-dashboard-move-confirm
+                              data-dashboard-move-target="<%= moveTargetLabel %>"
+                              data-dashboard-character-name="<%= char.name %>"
                             >
-                              <%- moveArrow %>
-                            </button>
-                          </form>
-                          <form
-                            method="POST"
-                            action="/characters/<%= char.id %>/delete"
-                            class="character-mini-delete-form"
-                            onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                          >
-                            <button
-                              type="submit"
-                              class="character-mini-delete-btn"
-                              aria-label="Charakter l&ouml;schen"
-                              title="Charakter l&ouml;schen"
+                              <button
+                                type="submit"
+                                class="character-mini-move-btn"
+                                aria-label="Charakter verschieben"
+                                title="<%= moveTitle %>"
+                              >
+                                <%- moveArrow %>
+                              </button>
+                            </form>
+                            <form
+                              method="POST"
+                              action="/characters/<%= char.id %>/delete"
+                              class="character-mini-delete-form"
+                              onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
                             >
-                              X
-                            </button>
-                          </form>
-                        </div>
-                      </article>
-                    <% }) %>
-                  </div>
-                </section>
-              <% }) %>
+                              <button
+                                type="submit"
+                                class="character-mini-delete-btn"
+                                aria-label="Charakter l&ouml;schen"
+                                title="Charakter l&ouml;schen"
+                              >
+                                X
+                              </button>
+                            </form>
+                          </div>
+                        </article>
+                      <% }) %>
+                    </div>
+                  </section>
+                <% }) %>
+              </section>
             <% } %>
           </div>
         <% }) %>
