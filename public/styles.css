@@ -5784,6 +5784,28 @@ body.page-guestbook-preview::after {
   filter: brightness(1.06);
 }
 
+.character-mini-placeholder {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--muted) 82%, white 18%);
+  cursor: default;
+  opacity: 0.72;
+}
+
+.character-mini-placeholder .character-mini-name {
+  color: inherit;
+}
+
+.character-mini-card.is-festplay-ghost .character-mini-name {
+  color: color-mix(in srgb, var(--muted) 84%, white 16%);
+}
+
+.character-mini-card.is-festplay-ghost .character-mini-actions::after {
+  background: color-mix(in srgb, var(--panel-edge) 60%, transparent);
+}
+
 .character-mini-name {
   font-size: 0.8rem;
   font-weight: 700;
