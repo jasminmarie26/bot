@@ -5894,17 +5894,6 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
 
   const parsedUserId = Number(userId);
   const festplays = getDashboardFestplaysForUser(parsedUserId, server.id);
-  const festplayCharacterIds = new Set();
-
-  festplays.forEach((festplay) => {
-    (festplay.characters || []).forEach((character) => {
-      const characterId = Number(character.id);
-      if (Number.isInteger(characterId) && characterId > 0) {
-        festplayCharacterIds.add(characterId);
-      }
-    });
-  });
-
   const isFreeRp = server.id === "free-rp";
   return {
     ...server,
@@ -5918,13 +5907,7 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
       : "Charaktere und Festspiele fuer intensivere Szenen und feste Dynamiken.",
     festplays,
     characters: ownCharacters
-      .filter((character) => {
-        const characterId = Number(character.id);
-        return (
-          normalizeServer(character.server_id) === server.id &&
-          !festplayCharacterIds.has(characterId)
-        );
-      })
+      .filter((character) => normalizeServer(character.server_id) === server.id)
       .map((character) => ({
         ...character,
         can_dashboard_move:
