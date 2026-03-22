@@ -5682,18 +5682,36 @@ app.get("/dashboard", requireAuth, (req, res) => {
     )
     .all(req.session.user.id);
 
-  const serverSections = SERVER_OPTIONS.map((server) => ({
-    ...server,
-    dashboard_label: server.id === "free-rp" ? "Free - RP" : server.label,
-    dashboard_caption:
-      server.id === "free-rp"
-        ? "Für offene Geschichten, entspannte Begegnungen und neue Charakterideen."
-        : "Für intensivere Szenen, klare Dynamik und laufende Verbindungen.",
-    festplays: getDashboardFestplaysForUser(req.session.user.id, server.id),
-    characters: ownCharacters.filter(
-      (character) => normalizeServer(character.server_id) === server.id
-    )
-  }));
+  const serverSections = SERVER_OPTIONS.map((server) => {
+    const festplays = getDashboardFestplaysForUser(req.session.user.id, server.id);
+    const festplayCharacterIds = new Set();
+
+    festplays.forEach((festplay) => {
+      (festplay.characters || []).forEach((character) => {
+        const characterId = Number(character.id);
+        if (Number.isInteger(characterId) && characterId > 0) {
+          festplayCharacterIds.add(characterId);
+        }
+      });
+    });
+
+    return {
+      ...server,
+      dashboard_label: server.id === "free-rp" ? "Free - RP" : server.label,
+      dashboard_caption:
+        server.id === "free-rp"
+          ? "Für offene Geschichten, entspannte Begegnungen und neue Charakterideen."
+          : "Für intensivere Szenen, klare Dynamik und laufende Verbindungen.",
+      festplays,
+      characters: ownCharacters.filter((character) => {
+        const characterId = Number(character.id);
+        return (
+          normalizeServer(character.server_id) === server.id &&
+          !festplayCharacterIds.has(characterId)
+        );
+      })
+    };
+  });
 
   const larpSection = {
     title: "Welten & Cons",

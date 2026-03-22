@@ -45,7 +45,11 @@
               </div>
 
               <% if (!section.characters.length) { %>
-                <p class="muted">Noch keine Charaktere im Bereich <%= section.dashboard_label || section.label %>.</p>
+                <p class="muted">
+                  <%= section.festplays && section.festplays.length
+                    ? `Keine freien Charaktere direkt im Bereich ${section.dashboard_label || section.label}. Festspiel-Charaktere stehen darunter.`
+                    : `Noch keine Charaktere im Bereich ${section.dashboard_label || section.label}.` %>
+                </p>
               <% } else { %>
                 <div class="character-mini-grid">
                   <% section.characters.forEach((char) => { %>
