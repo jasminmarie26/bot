@@ -124,7 +124,11 @@
                   : (char.current_server_label || serverSection.dashboard_label || serverSection.label); %>
                 <article class="character-mini-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
                   <% if (isInFestplayArea) { %>
-                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                    <a
+                      class="character-mini-item"
+                      href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/chat"
+                      title="Festspiel-Chat mit <%= char.name %> oeffnen"
+                    >
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
                   <% } else { %>

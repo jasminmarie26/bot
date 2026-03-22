@@ -24,12 +24,15 @@
   : currentUser?.is_moderator
     ? "Moderatorenbereich im neuen Tab öffnen"
     : chatIdentityName; %>
+<% const isFestplayChat = Boolean(activeRoom && activeRoom.is_festplay_chat); %>
 
 <section class="rp-shell">
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
-      <% if (activeCharacter) { %>
+      <% if (isFestplayChat) { %>
+        <a href="/dashboard/areas/<%= activeServerId %>">Bereich</a>
+      <% } else if (activeCharacter) { %>
         <a href="/characters/<%= activeCharacter.id %>#roomlist">Raumliste</a>
       <% } else { %>
         <a href="/dashboard">Dashboard</a>
@@ -158,7 +161,7 @@
           <% } %>
           <% if (activeCharacter) { %>
             <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
-            <% if (activeCharacter.is_owner) { %>
+            <% if (activeCharacter.is_owner && !isFestplayChat) { %>
               <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Raum erstellen/editieren</a>
             <% } %>
             <% if (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp") { %>

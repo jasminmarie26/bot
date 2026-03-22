@@ -170,6 +170,8 @@ db.exec(`
       is_locked INTEGER NOT NULL DEFAULT 0,
       is_public_room INTEGER NOT NULL DEFAULT 0,
       is_saved_room INTEGER NOT NULL DEFAULT 0,
+      is_festplay_chat INTEGER NOT NULL DEFAULT 0,
+      festplay_id INTEGER,
       server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
@@ -229,6 +231,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_festplay_id
+    ON chat_rooms(festplay_id)
+    WHERE festplay_id IS NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user
     ON chat_room_permissions(room_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id
@@ -428,6 +433,20 @@ if (!characterColumns.includes("server_id")) {
 if (!characterColumns.includes("festplay_dashboard_mode")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay'");
 }
+
+if (!chatRoomColumns.includes("is_festplay_chat")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN is_festplay_chat INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!chatRoomColumns.includes("festplay_id")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN festplay_id INTEGER");
+}
+
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_festplay_id
+    ON chat_rooms(festplay_id)
+    WHERE festplay_id IS NOT NULL
+`);
 
 db.exec(`
   UPDATE characters
