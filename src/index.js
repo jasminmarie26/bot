@@ -5801,7 +5801,115 @@ app.post("/settings/theme", (req, res) => {
   return res.redirect("/");
 });
 
+function getDashboardOwnCharacters(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
+       FROM characters c
+       LEFT JOIN festplays f ON f.id = c.festplay_id
+       WHERE c.user_id = ?
+       ORDER BY c.updated_at DESC`
+    )
+    .all(parsedUserId);
+}
+
+function buildDashboardServerSection(server, ownCharacters, userId) {
+  if (!server?.id) {
+    return null;
+  }
+
+  const parsedUserId = Number(userId);
+  const festplays = getDashboardFestplaysForUser(parsedUserId, server.id);
+  const festplayCharacterIds = new Set();
+
+  festplays.forEach((festplay) => {
+    (festplay.characters || []).forEach((character) => {
+      const characterId = Number(character.id);
+      if (Number.isInteger(characterId) && characterId > 0) {
+        festplayCharacterIds.add(characterId);
+      }
+    });
+  });
+
+  const isFreeRp = server.id === "free-rp";
+  return {
+    ...server,
+    dashboard_label: isFreeRp ? "Free - RP" : server.label,
+    dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
+    dashboard_area_description: isFreeRp
+      ? "Hier liegen deine Charaktere und Festspiele fuer Free RP."
+      : "Hier liegen deine Charaktere und Festspiele fuer den Erotik-Bereich.",
+    dashboard_card_caption: isFreeRp
+      ? "Charaktere und Festspiele fuer offene Geschichten und lockere Begegnungen."
+      : "Charaktere und Festspiele fuer intensivere Szenen und feste Dynamiken.",
+    festplays,
+    characters: ownCharacters.filter((character) => {
+      const characterId = Number(character.id);
+      return (
+        normalizeServer(character.server_id) === server.id &&
+        !festplayCharacterIds.has(characterId)
+      );
+    })
+  };
+}
+
+function getDashboardServerSections(userId) {
+  const ownCharacters = getDashboardOwnCharacters(userId);
+  const parsedUserId = Number(userId);
+  return SERVER_OPTIONS
+    .map((server) => buildDashboardServerSection(server, ownCharacters, parsedUserId))
+    .filter(Boolean);
+}
+
+function getDashboardServerSection(userId, serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  const server = SERVER_OPTIONS.find((entry) => entry.id === normalizedServerId);
+  if (!server) {
+    return null;
+  }
+
+  const ownCharacters = getDashboardOwnCharacters(userId);
+  return buildDashboardServerSection(server, ownCharacters, userId);
+}
+
+function getDashboardLarpSection() {
+  return {
+    title: "LARP Bereich",
+    description:
+      "Hier entsteht spaeter dein Bereich fuer LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
+    note: "Noch nicht freigeschaltet."
+  };
+}
+
 app.get("/dashboard", requireAuth, (req, res) => {
+  const serverSections = getDashboardServerSections(req.session.user.id);
+  const larpSection = getDashboardLarpSection();
+
+  return res.render("dashboard", {
+    title: "Dashboard",
+    serverSections,
+    larpSection
+  });
+});
+
+app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
+  const area = getDashboardServerSection(req.session.user.id, req.params.serverId);
+  if (!area) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  return res.render("dashboard-area", {
+    title: area.dashboard_area_title,
+    area
+  });
+});
+
+app.get("/dashboard-legacy", requireAuth, (req, res) => {
   const ownCharacters = db
     .prepare(
       `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
