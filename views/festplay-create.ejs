@@ -146,8 +146,8 @@
                 title="Festspiel &ouml;ffnen"
               >
                 <span class="rp-room-inline-name"><%= festplay.name %></span>
-                <% if (activeFestplayOverviewTab === "andere" && festplay.owner_name) { %>
-                  <span class="rp-room-inline-teaser">von <%= festplay.owner_name %></span>
+                <% if (activeFestplayOverviewTab === "andere" && festplay.creator_display_name) { %>
+                  <span class="rp-room-inline-teaser">von <%= festplay.creator_display_name %></span>
                 <% } %>
               </a>
             <% }) %>
@@ -349,8 +349,8 @@
         </nav>
 
         <div class="rp-room-editor-body">
-          <% if (selectedFestplay.owner_name) { %>
-            <p class="rp-room-editor-note">Erstellt von <strong><%= selectedFestplay.owner_name %></strong>.</p>
+          <% if (selectedFestplay.creator_display_name) { %>
+            <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
           <% } %>
 
           <div class="rp-room-editor-checks">
