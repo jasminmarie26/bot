@@ -2836,6 +2836,8 @@ body.page-home-screen .home-hero-actions {
 .dashboard-character-overview-body {
   padding: 0.58rem 0.62rem 0.62rem;
   border-top: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
+  background: none;
+  border-radius: 0;
 }
 
 .dashboard-section-copy {
