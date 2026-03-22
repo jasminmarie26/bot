@@ -67,6 +67,7 @@ db.exec(`
     long_description TEXT NOT NULL DEFAULT '',
     created_by_user_id INTEGER,
     creator_character_id INTEGER,
+    server_id TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (creator_character_id) REFERENCES characters(id) ON DELETE SET NULL
@@ -309,6 +310,35 @@ if (!festplayColumns.includes("long_description")) {
 if (!festplayColumns.includes("creator_character_id")) {
   db.exec("ALTER TABLE festplays ADD COLUMN creator_character_id INTEGER");
 }
+
+if (!festplayColumns.includes("server_id")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN server_id TEXT NOT NULL DEFAULT ''");
+}
+
+db.exec(`
+  UPDATE festplays
+     SET server_id = (
+       SELECT c.server_id
+         FROM characters c
+        WHERE c.id = festplays.creator_character_id
+     )
+   WHERE trim(COALESCE(server_id, '')) = ''
+     AND creator_character_id IS NOT NULL
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET server_id = (
+       SELECT c.server_id
+         FROM festplay_permissions fp
+         JOIN characters c ON c.id = fp.character_id
+        WHERE fp.festplay_id = festplays.id
+        ORDER BY fp.id ASC
+        LIMIT 1
+     )
+   WHERE trim(COALESCE(server_id, '')) = ''
+     AND COALESCE(created_by_user_id, 0) > 0
+`);
 
 if (!userColumns.includes("is_moderator")) {
   db.exec("ALTER TABLE users ADD COLUMN is_moderator INTEGER NOT NULL DEFAULT 0");

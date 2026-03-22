@@ -2680,9 +2680,26 @@ body.page-home-screen .home-hero-actions {
 }
 
 .dashboard-festplay-overview-header {
-  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 84%, white 16%);
+  --dashboard-festplay-divider-color: color-mix(in srgb, var(--panel-edge) 84%, white 16%);
+  position: relative;
   padding: 1rem 0 0;
   margin-bottom: 1rem;
+}
+
+.dashboard-festplay-overview-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--dashboard-festplay-divider-color) 0,
+    var(--dashboard-festplay-divider-color) calc(50% - 0.7rem),
+    transparent calc(50% - 0.7rem),
+    transparent calc(50% + 0.7rem),
+    var(--dashboard-festplay-divider-color) calc(50% + 0.7rem),
+    var(--dashboard-festplay-divider-color) 100%
+  );
 }
 
 .dashboard-festplay-overview-header h3 {
@@ -7133,6 +7150,10 @@ select:focus {
 
   .dashboard-server-list {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-festplay-overview-header::before {
+    background: var(--dashboard-festplay-divider-color);
   }
 
   .members-search-wrap,

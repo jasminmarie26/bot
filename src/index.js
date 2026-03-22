@@ -1933,13 +1933,22 @@ function normalizeFestplayText(input, maxLength) {
   return normalized.slice(0, maxLength);
 }
 
+function normalizeFestplayServerId(serverValue) {
+  const normalizedValue = String(serverValue || "").trim().toLowerCase();
+  return ALLOWED_SERVER_IDS.has(normalizedValue) ? normalizedValue : "";
+}
+
 function decorateFestplayRecord(festplay) {
   if (!festplay) return null;
   const creatorCharacterName = String(festplay.creator_character_name || "").trim();
+  const serverId = normalizeFestplayServerId(festplay.server_id);
   return {
     ...festplay,
     creator_character_name: creatorCharacterName,
     creator_display_name: creatorCharacterName,
+    server_id: serverId,
+    server_label: serverId ? getServerLabel(serverId) : "",
+    is_server_locked: Boolean(serverId),
     is_public: Number(festplay.is_public) === 1,
     long_description_html: festplay.long_description
       ? renderGuestbookBbcode(festplay.long_description)
@@ -1955,8 +1964,9 @@ function festplayExists(festplayId) {
   return Boolean(row);
 }
 
-function getOwnedFestplaysForUser(userId) {
+function getOwnedFestplaysForUser(userId, serverId = "") {
   const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
   return db
     .prepare(
@@ -1965,13 +1975,15 @@ function getOwnedFestplaysForUser(userId) {
               f.is_public,
               f.short_description,
               f.long_description,
+              f.server_id,
               COALESCE(creator.name, '') AS creator_character_name
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE created_by_user_id = ?
+           AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
          ORDER BY f.created_at ASC, f.id ASC`
     )
-    .all(parsedUserId)
+    .all(parsedUserId, normalizedServerId, normalizedServerId)
     .map(decorateFestplayRecord);
 }
 
@@ -1987,10 +1999,12 @@ function getOtherFestplaysForUser(userId, serverId) {
               f.is_public,
               f.short_description,
               f.long_description,
+              f.server_id,
               COALESCE(creator.name, '') AS creator_character_name
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE COALESCE(f.created_by_user_id, 0) != ?
+           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
            AND (
              EXISTS (
                SELECT 1
@@ -2010,7 +2024,14 @@ function getOtherFestplaysForUser(userId, serverId) {
            )
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all(parsedUserId, parsedUserId, normalizedServerId, parsedUserId, normalizedServerId)
+    .all(
+      parsedUserId,
+      normalizedServerId,
+      parsedUserId,
+      normalizedServerId,
+      parsedUserId,
+      normalizedServerId
+    )
     .map(decorateFestplayRecord);
 }
 
@@ -2055,6 +2076,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
       `SELECT DISTINCT
               f.id,
               f.name,
+              f.server_id,
               COALESCE(creator.name, '') AS creator_character_name,
               c.id AS character_id,
               c.name AS character_name
@@ -2064,10 +2086,11 @@ function getDashboardFestplaysForUser(userId, serverId) {
          JOIN characters c ON c.id = fp.character_id
          WHERE fp.user_id = ?
            AND c.server_id = ?
+           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
            AND COALESCE(f.created_by_user_id, 0) != ?
          ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
     )
-    .all(parsedUserId, normalizedServerId, parsedUserId);
+    .all(parsedUserId, normalizedServerId, normalizedServerId, parsedUserId);
 
   approvedRows.forEach((row) => {
     addDashboardFestplayCharacter(
@@ -2088,6 +2111,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
            ON c.user_id = f.created_by_user_id
         WHERE f.created_by_user_id = ?
           AND c.server_id = ?
+          AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
           AND (
             c.festplay_id = f.id
             OR EXISTS (
@@ -2103,7 +2127,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
                  lower(c.name) ASC,
                  c.id ASC`
     )
-    .all(parsedUserId, normalizedServerId);
+    .all(parsedUserId, normalizedServerId, normalizedServerId);
 
   const fallbackOwnedCharacterMap = new Map();
   fallbackOwnedCharacters.forEach((row) => {
@@ -2120,6 +2144,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
       `SELECT f.id,
               f.name,
               f.creator_character_id,
+              f.server_id,
               COALESCE(creator.name, '') AS creator_character_name,
               creator.id AS linked_character_id,
               creator.name AS linked_character_name,
@@ -2128,9 +2153,10 @@ function getDashboardFestplaysForUser(userId, serverId) {
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.created_by_user_id = ?
+           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all(parsedUserId);
+    .all(parsedUserId, normalizedServerId);
 
   ownedRows.forEach((row) => {
     const linkedCharacterId = Number(row.linked_character_id);
@@ -2209,6 +2235,7 @@ function getOwnedFestplayById(userId, festplayId) {
                 f.is_public,
                 f.short_description,
                 f.long_description,
+                f.server_id,
                 COALESCE(creator.name, '') AS creator_character_name
            FROM festplays f
            LEFT JOIN characters creator ON creator.id = f.creator_character_id
@@ -2229,6 +2256,7 @@ function getPublicFestplays() {
               f.is_public,
               f.short_description,
               f.long_description,
+              f.server_id,
               COALESCE(creator.name, '') AS creator_character_name
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
@@ -2251,6 +2279,7 @@ function getPublicFestplayById(festplayId) {
                 f.is_public,
                 f.short_description,
                 f.long_description,
+                f.server_id,
                 COALESCE(creator.name, '') AS creator_character_name,
                 f.created_by_user_id
            FROM festplays f
@@ -2261,6 +2290,89 @@ function getPublicFestplayById(festplayId) {
       )
       .get(parsedFestplayId)
   );
+}
+
+function getFestplayServerBinding(festplayId) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return null;
+  }
+
+  const festplay = db
+    .prepare(
+      `SELECT id, name, server_id
+         FROM festplays
+         WHERE id = ?`
+    )
+    .get(parsedFestplayId);
+  if (!festplay) {
+    return null;
+  }
+
+  const serverId = normalizeFestplayServerId(festplay.server_id);
+  return {
+    ...festplay,
+    server_id: serverId,
+    server_label: serverId ? getServerLabel(serverId) : ""
+  };
+}
+
+function getBoundFestplaysForCharacter(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return [];
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT id, name, server_id
+         FROM festplays
+        WHERE creator_character_id = ?
+        UNION
+       SELECT f.id, f.name, f.server_id
+         FROM festplays f
+         JOIN characters c ON c.festplay_id = f.id
+        WHERE c.id = ?
+        UNION
+       SELECT f.id, f.name, f.server_id
+         FROM festplays f
+         JOIN festplay_permissions fp ON fp.festplay_id = f.id
+        WHERE fp.character_id = ?`
+    )
+    .all(parsedCharacterId, parsedCharacterId, parsedCharacterId);
+
+  return rows
+    .map((row) => ({
+      ...row,
+      server_id: normalizeFestplayServerId(row.server_id)
+    }))
+    .filter((row) => row.server_id)
+    .map((row) => ({
+      ...row,
+      server_label: getServerLabel(row.server_id)
+    }));
+}
+
+function getCharacterFestplayServerBlock(characterId, targetServerId) {
+  const normalizedTargetServerId = normalizeServer(targetServerId);
+  return (
+    getBoundFestplaysForCharacter(characterId).find(
+      (festplay) => festplay.server_id !== normalizedTargetServerId
+    ) || null
+  );
+}
+
+function buildFestplayServerLockMessage(festplay, targetServerId = "") {
+  if (!festplay?.server_id) {
+    return "";
+  }
+
+  const targetLabel = targetServerId ? getServerLabel(targetServerId) : "";
+  if (targetLabel && targetLabel !== festplay.server_label) {
+    return `${festplay.name} liegt auf ${festplay.server_label}. Charaktere dieses Festspiels können nicht nach ${targetLabel} verschoben werden.`;
+  }
+
+  return `${festplay.name} liegt auf ${festplay.server_label}.`;
 }
 
 function characterHasFestplayAccess(festplayId, characterId) {
@@ -2486,7 +2598,7 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
 
   const festplay = db
     .prepare(
-      `SELECT id, created_by_user_id, creator_character_id
+      `SELECT id, created_by_user_id, creator_character_id, server_id
          FROM festplays
          WHERE id = ?`
     )
@@ -2497,7 +2609,7 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
 
   const character = db
     .prepare(
-      `SELECT id, user_id
+      `SELECT id, user_id, server_id
          FROM characters
          WHERE id = ?`
     )
@@ -2506,17 +2618,35 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
     return false;
   }
 
+  const characterServerId = normalizeServer(character.server_id);
+  const lockedFestplayServerId = normalizeFestplayServerId(festplay.server_id);
+  if (lockedFestplayServerId && lockedFestplayServerId !== characterServerId) {
+    return false;
+  }
+  const effectiveServerId = lockedFestplayServerId || characterServerId;
+  if (!lockedFestplayServerId) {
+    db.prepare(
+      `UPDATE festplays
+       SET server_id = ?
+       WHERE id = ?`
+    ).run(effectiveServerId, parsedFestplayId);
+  }
+
   let permissionCharacterId = parsedCharacterId;
   const existingCreatorCharacterId = Number(festplay.creator_character_id);
   if (existingCreatorCharacterId > 0) {
     const existingCreatorCharacter = db
       .prepare(
-        `SELECT id, user_id
+        `SELECT id, user_id, server_id
            FROM characters
            WHERE id = ?`
       )
       .get(existingCreatorCharacterId);
-    if (existingCreatorCharacter && Number(existingCreatorCharacter.user_id) === parsedOwnerUserId) {
+    if (
+      existingCreatorCharacter &&
+      Number(existingCreatorCharacter.user_id) === parsedOwnerUserId &&
+      normalizeServer(existingCreatorCharacter.server_id) === effectiveServerId
+    ) {
       permissionCharacterId = existingCreatorCharacterId;
     } else {
       db.prepare(
@@ -5980,6 +6110,22 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
+  const selectedFestplayServer = getFestplayServerBinding(payload.festplay_id);
+  if (
+    selectedFestplayServer?.server_id &&
+    selectedFestplayServer.server_id !== normalizeServer(payload.server_id)
+  ) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      character: payload
+    });
+  }
+
   if (findCharacterWithSameName(payload.name)) {
     return res.status(400).render("character-form", {
       title: "Neuer Charakter",
@@ -6089,7 +6235,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const roomUsers = Object.fromEntries(
     ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
   );
-  const ownedFestplays = isOwner ? getOwnedFestplaysForUser(req.session.user.id) : [];
+  const ownedFestplays = isOwner
+    ? getOwnedFestplaysForUser(req.session.user.id, character.server_id)
+    : [];
   const guestbookPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =
@@ -6257,6 +6405,11 @@ app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req
     return res.redirect(`/characters/${id}/festplays/public`);
   }
 
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
+    return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+  }
+
   if (Number(festplay.created_by_user_id) === Number(req.session.user.id)) {
     return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
   }
@@ -6285,10 +6438,15 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
 
   rememberPreferredCharacter(req, character);
   const selectedFestplayId = Number(req.query.selected_festplay);
-  if (Number.isInteger(selectedFestplayId) && selectedFestplayId > 0) {
+  let ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
+  if (
+    Number.isInteger(selectedFestplayId) &&
+    selectedFestplayId > 0 &&
+    ownedFestplays.some((festplay) => Number(festplay.id) === selectedFestplayId)
+  ) {
     syncFestplayCreatorCharacter(selectedFestplayId, req.session.user.id, character.id);
+    ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
   }
-  const ownedFestplays = getOwnedFestplaysForUser(req.session.user.id);
   const otherFestplays = getOtherFestplaysForUser(req.session.user.id, character.server_id);
   const requestedFestplayOverviewTab =
     String(req.query.overview || "").trim().toLowerCase() === "andere"
@@ -6370,9 +6528,9 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
   }
 
   const createdFestplay = db.prepare(
-    `INSERT INTO festplays (name, created_by_user_id, creator_character_id)
-     VALUES (?, ?, ?)`
-  ).run(festplayName, req.session.user.id, id);
+    `INSERT INTO festplays (name, created_by_user_id, creator_character_id, server_id)
+     VALUES (?, ?, ?, ?)`
+  ).run(festplayName, req.session.user.id, id, normalizeServer(character.server_id));
   const createdFestplayId = Number(createdFestplay.lastInsertRowid);
   if (Number.isInteger(createdFestplayId) && createdFestplayId > 0) {
     syncFestplayCreatorCharacter(createdFestplayId, req.session.user.id, id);
@@ -6403,7 +6561,15 @@ app.post("/characters/:id/festplays/:festplayId/permissions", requireAuth, (req,
     return res.redirect(`/characters/${id}/festplays`);
   }
 
-  const targetCharacter = getCharacterByExactNameForServer(req.body.character_name, character.server_id);
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+  }
+
+  const targetCharacter = getCharacterByExactNameForServer(
+    req.body.character_name,
+    festplay.server_id || character.server_id
+  );
   if (!targetCharacter) {
     setFlash(req, "error", "Dieser Charakter wurde auf diesem Server nicht gefunden.");
     return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
@@ -6443,6 +6609,11 @@ app.post("/characters/:id/festplays/:festplayId/permissions/:permissionId/delete
     return res.redirect(`/characters/${id}/festplays`);
   }
 
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+  }
+
   removeFestplayPermission(festplayId, permissionId);
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
@@ -6477,6 +6648,11 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     return res.redirect(`/characters/${id}/festplays`);
   }
 
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
   const application = db
     .prepare(
       `SELECT fa.id,
@@ -6490,7 +6666,10 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     )
     .get(applicationId, festplayId);
 
-  if (!application || normalizeServer(application.server_id) !== normalizeServer(character.server_id)) {
+  if (
+    !application ||
+    normalizeServer(application.server_id) !== normalizeServer(festplay.server_id || character.server_id)
+  ) {
     setFlash(req, "error", "Diese Bewerbung wurde nicht gefunden.");
     return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
   }
@@ -6528,6 +6707,11 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
   if (!festplay) {
     setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
     return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
   }
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
@@ -6576,6 +6760,11 @@ app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res)
   const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
   if (!festplay) {
     setFlash(req, "error", "Dieses Festspiel konnte nicht gefunden werden.");
+    return res.redirect(`/characters/${id}/festplays`);
+  }
+
+  if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
+    setFlash(req, "error", buildFestplayServerLockMessage(festplay));
     return res.redirect(`/characters/${id}/festplays`);
   }
 
@@ -6679,6 +6868,37 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       title: `Bearbeiten: ${character.name}`,
       mode: "edit",
       error: "Bitte ein gültiges Festplay auswählen.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
+      renameAvailability,
+      character: characterFormValues
+    });
+  }
+
+  const selectedFestplayServer = getFestplayServerBinding(payload.festplay_id);
+  if (
+    selectedFestplayServer?.server_id &&
+    selectedFestplayServer.server_id !== normalizeServer(payload.server_id)
+  ) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
+      renameAvailability,
+      character: characterFormValues
+    });
+  }
+
+  const existingFestplayMoveBlock = getCharacterFestplayServerBlock(id, payload.server_id);
+  if (existingFestplayMoveBlock) {
+    return res.status(400).render("character-form", {
+      title: `Bearbeiten: ${character.name}`,
+      mode: "edit",
+      error: buildFestplayServerLockMessage(existingFestplayMoveBlock, payload.server_id),
       festplays,
       serverOptions: SERVER_OPTIONS,
       guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
@@ -6799,6 +7019,11 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
 
   const currentServerId = normalizeServer(character.server_id);
   const nextServerId = currentServerId === "free-rp" ? "erp" : "free-rp";
+  const moveBlockFestplay = getCharacterFestplayServerBlock(id, nextServerId);
+  if (moveBlockFestplay) {
+    setFlash(req, "error", buildFestplayServerLockMessage(moveBlockFestplay, nextServerId));
+    return res.redirect("/dashboard");
+  }
 
   db.prepare(
     `UPDATE characters
