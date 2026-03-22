@@ -231,59 +231,6 @@
       <% } %>
     </details>
 
-    <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
-      <summary class="rp-room-section-summary">
-        <span>Meine R&auml;ume</span>
-      </summary>
-      <div class="rp-room-section-divider" aria-hidden="true"></div>
-      <% if (!ownedFestplayRooms || !ownedFestplayRooms.length) { %>
-        <p class="muted">Noch keine eigenen Festspiel-R&auml;ume vorhanden.</p>
-      <% } else { %>
-        <div class="rp-room-manage-list">
-          <% ownedFestplayRooms.forEach((room) => { %>
-            <% const isSelectedRoom = selectedRoom && Number(selectedRoom.id) === Number(room.id); %>
-            <div class="rp-room-manage-row">
-              <div class="rp-room-manage-main">
-                <a
-                  class="rp-room-inline-item rp-room-manage-link<%= isSelectedRoom ? ' is-active' : '' %>"
-                  href="<%= isSelectedRoom ? `/characters/${character.id}/festplays/${festplay.id}/rooms#festplay-room-editor` : `/characters/${character.id}/festplays/${festplay.id}/rooms?selected_room=${room.id}#festplay-room-editor` %>"
-                  title="<%= isSelectedRoom ? 'Raum schlie&szlig;en' : 'Raum ausw&auml;hlen' %>"
-                  aria-current="<%= isSelectedRoom ? 'page' : 'false' %>"
-                >
-                  <span
-                    class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
-                    aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
-                    title="Raum ist abgeschlossen"
-                  ><svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>
-                    <path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>
-                    <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
-                    <path d="M12 13.15v2.8"/>
-                  </svg></span>
-                  <span class="rp-room-inline-name"><%= room.name %></span>
-                  <% if (room.description) { %>
-                    <span class="rp-room-inline-teaser"> - [<%= room.description %>]</span>
-                  <% } %>
-                </a>
-                <form
-                  method="POST"
-                  action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms/<%= room.id %>/delete"
-                  class="inline-form rp-room-delete-form"
-                >
-                  <button
-                    class="rp-room-delete-btn"
-                    type="submit"
-                    aria-label="Raum <%= room.name %> l&ouml;schen"
-                    title="Raum l&ouml;schen"
-                  >X</button>
-                </form>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      <% } %>
-    </details>
-
     <% if (selectedRoom) { %>
       <section class="rp-room-editor" id="festplay-room-editor" aria-label="Festspiel-Raumdetails">
         <div class="rp-room-editor-bar">
@@ -382,7 +329,7 @@
     <% } else if (ownedFestplayRooms && ownedFestplayRooms.length) { %>
       <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-room-editor" aria-label="Festspiel-Raumdetails">
         <div class="rp-room-editor-body">
-          <p class="rp-room-editor-note">Klicke oben auf einen deiner R&auml;ume, dann wird er hier zum Bearbeiten ge&ouml;ffnet.</p>
+          <p class="rp-room-editor-note">Klicke oben bei den Festspiel-R&auml;umen auf <code>Bearbeiten</code>, dann wird der Raum hier ge&ouml;ffnet.</p>
         </div>
       </section>
     <% } %>
