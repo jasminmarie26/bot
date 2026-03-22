@@ -1784,6 +1784,7 @@ a:hover {
   overflow: auto;
 }
 
+.dashboard-confirm-modal,
 .account-delete-modal {
   position: fixed;
   inset: 0;
@@ -1793,10 +1794,12 @@ a:hover {
   padding: 1rem;
 }
 
+.dashboard-confirm-modal[hidden],
 .account-delete-modal[hidden] {
   display: none !important;
 }
 
+.dashboard-confirm-backdrop,
 .account-delete-backdrop {
   position: absolute;
   inset: 0;
@@ -1805,6 +1808,7 @@ a:hover {
   -webkit-backdrop-filter: blur(4px);
 }
 
+.dashboard-confirm-card,
 .account-delete-card {
   position: relative;
   z-index: 1;
@@ -1812,11 +1816,17 @@ a:hover {
   border-radius: 16px;
 }
 
+.dashboard-confirm-actions,
 .account-delete-actions {
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.dashboard-confirm-note {
+  margin-top: -0.15rem;
+  margin-bottom: 1rem;
 }
 
 .hero {
