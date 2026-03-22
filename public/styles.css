@@ -2675,17 +2675,17 @@ body.page-home-screen .home-hero-actions {
   border-color: color-mix(in srgb, var(--accent) 18%, var(--panel-edge) 82%);
 }
 
-.dashboard-festplay-group {
-  display: grid;
-  gap: 1rem;
+.dashboard-festplay-overview {
+  margin-top: 1rem;
 }
 
-.dashboard-festplay-group-header {
+.dashboard-festplay-overview-header {
   border-top: 1px solid color-mix(in srgb, var(--panel-edge) 84%, white 16%);
-  padding-top: 1rem;
+  padding: 1rem 0 0;
+  margin-bottom: 1rem;
 }
 
-.dashboard-festplay-group-header h3 {
+.dashboard-festplay-overview-header h3 {
   margin: 0;
   color: #fff;
   font-size: clamp(1.55rem, 2vw, 1.95rem);
