@@ -31,7 +31,7 @@
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
       <% if (isFestplayChat) { %>
-        <a href="/dashboard/areas/<%= activeServerId %>">Bereich</a>
+        <a href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms">Festspiel-R&auml;ume</a>
       <% } else if (activeCharacter) { %>
         <a href="/characters/<%= activeCharacter.id %>#roomlist">Raumliste</a>
       <% } else { %>
@@ -161,7 +161,9 @@
           <% } %>
           <% if (activeCharacter) { %>
             <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
-            <% if (activeCharacter.is_owner && !isFestplayChat) { %>
+            <% if (activeCharacter.is_owner && isFestplayChat) { %>
+              <a href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms">Festspiel-R&auml;ume</a>
+            <% } else if (activeCharacter.is_owner) { %>
               <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Raum erstellen/editieren</a>
             <% } %>
             <% if (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp") { %>

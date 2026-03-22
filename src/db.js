@@ -439,10 +439,10 @@ if (!chatRoomColumns.includes("festplay_id")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN festplay_id INTEGER");
 }
 
+db.exec("DROP INDEX IF EXISTS idx_chat_rooms_festplay_id");
 db.exec(`
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_rooms_festplay_id
+  CREATE INDEX IF NOT EXISTS idx_chat_rooms_festplay_id
     ON chat_rooms(festplay_id)
-    WHERE festplay_id IS NOT NULL
 `);
 
 db.exec(`
