@@ -2889,11 +2889,9 @@ function getPendingFestplayApplications(festplayId, serverId) {
               fa.applicant_character_id,
               fa.status,
               fa.created_at,
-              c.name AS character_name,
-              u.username AS owner_name
+              c.name AS character_name
          FROM festplay_applications fa
          JOIN characters c ON c.id = fa.applicant_character_id
-         JOIN users u ON u.id = fa.applicant_user_id
          WHERE fa.festplay_id = ?
            AND fa.status = 'pending'
            AND c.server_id = ?
@@ -2973,13 +2971,22 @@ function addFestplayPermission(festplayId, targetCharacterId, grantedByUserId) {
     return false;
   }
 
-  db.prepare(
-    `INSERT INTO festplay_permissions (festplay_id, user_id, character_id, granted_by_user_id)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(festplay_id, user_id) DO UPDATE SET
-       character_id = excluded.character_id,
-       granted_by_user_id = excluded.granted_by_user_id`
-  ).run(parsedFestplayId, targetCharacter.user_id, parsedCharacterId, parsedGrantedByUserId);
+  const upsertPermission = db.transaction(() => {
+    db.prepare(
+      `INSERT OR IGNORE INTO festplay_permissions (festplay_id, user_id, character_id, granted_by_user_id)
+       VALUES (?, ?, ?, ?)`
+    ).run(parsedFestplayId, targetCharacter.user_id, parsedCharacterId, parsedGrantedByUserId);
+
+    db.prepare(
+      `UPDATE festplay_permissions
+          SET character_id = ?,
+              granted_by_user_id = ?
+        WHERE festplay_id = ?
+          AND user_id = ?`
+    ).run(parsedCharacterId, parsedGrantedByUserId, parsedFestplayId, targetCharacter.user_id);
+  });
+
+  upsertPermission();
 
   return true;
 }
@@ -7612,15 +7619,36 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
   }
 
-  addFestplayPermission(festplayId, application.applicant_character_id, req.session.user.id);
-  db.prepare(
-    `UPDATE festplay_applications
-     SET status = 'approved',
-         approved_by_user_id = ?,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?
-       AND festplay_id = ?`
-  ).run(req.session.user.id, applicationId, festplayId);
+  try {
+    const approved = addFestplayPermission(
+      festplayId,
+      application.applicant_character_id,
+      req.session.user.id
+    );
+    if (!approved) {
+      setFlash(req, "error", "Die Bewerbung konnte nicht freigeschaltet werden.");
+      return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+    }
+
+    db.prepare(
+      `UPDATE festplay_applications
+       SET status = 'approved',
+           approved_by_user_id = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?
+         AND festplay_id = ?`
+    ).run(req.session.user.id, applicationId, festplayId);
+  } catch (error) {
+    console.error("festplay application approval failed", {
+      festplayId,
+      applicationId,
+      applicantCharacterId: application.applicant_character_id,
+      approverUserId: req.session.user.id,
+      error
+    });
+    setFlash(req, "error", "Beim Freischalten der Bewerbung ist ein Fehler aufgetreten.");
+    return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
+  }
 
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });

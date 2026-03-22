@@ -192,7 +192,7 @@
                     <div class="rp-festplay-player-row rp-festplay-application-row">
                       <div class="rp-festplay-application-meta">
                         <strong><%= application.character_name %></strong>
-                        <span>Konto: <%= application.owner_name %></span>
+                        <span>Beworben mit diesem Charakter.</span>
                       </div>
                       <form
                         method="POST"
@@ -277,7 +277,6 @@
                   <% festplayPlayerOverview.characters.forEach((entry) => { %>
                     <div class="rp-festplay-player-row">
                       <strong><%= entry.name %></strong>
-                      <span><%= entry.owner_name %></span>
                     </div>
                   <% }) %>
                 </div>
