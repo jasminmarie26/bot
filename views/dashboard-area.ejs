@@ -44,14 +44,17 @@
                   data-dashboard-move-confirm
                   data-dashboard-character-name="<%= char.name %>"
                   data-dashboard-current-server="<%= char.server_id %>"
+                  data-dashboard-home-server="<%= char.festplay_home_server_id || "" %>"
+                  data-dashboard-position="<%= char.dashboard_position || "main" %>"
                 >
                   <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
                   <input type="hidden" name="target_server_id" value="">
+                  <input type="hidden" name="target_dashboard_mode" value="">
                   <button
                     type="submit"
                     class="character-mini-move-btn"
                     aria-label="Charakter verschieben"
-                    title="Zielserver ausw&auml;hlen"
+                    title="Zielserver auswaehlen"
                   >
                     &harr;
                   </button>
@@ -61,13 +64,13 @@
                 method="POST"
                 action="/characters/<%= char.id %>/delete"
                 class="character-mini-delete-form"
-                onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                onsubmit="return confirm('Charakter wirklich loeschen?')"
               >
                 <button
                   type="submit"
                   class="character-mini-delete-btn"
-                  aria-label="Charakter l&ouml;schen"
-                  title="Charakter l&ouml;schen"
+                  aria-label="Charakter loeschen"
+                  title="Charakter loeschen"
                 >
                   X
                 </button>
@@ -104,15 +107,22 @@
             <div class="character-mini-grid">
               <% festplay.characters.forEach((char) => { %>
                 <% const currentServerId = char.current_server_id || serverSection.id; %>
-                <article class="character-mini-card<%= char.is_on_festplay_server ? '' : ' is-festplay-ghost' %>">
-                  <% if (char.is_on_festplay_server) { %>
+                <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
+                <% const isOnCurrentServer = currentServerId === serverSection.id; %>
+                <% const currentLocationLabel = isOnCurrentServer
+                  ? (serverSection.dashboard_label || serverSection.label)
+                  : (char.current_server_label || serverSection.dashboard_label || serverSection.label); %>
+                <article class="character-mini-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
+                  <% if (isInFestplayArea) { %>
                     <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
                   <% } else { %>
                     <span
                       class="character-mini-placeholder"
-                      title="<%= `${char.name} ist aktuell auf ${char.current_server_label || moveTargetLabel}.` %>"
+                      title="<%= isOnCurrentServer
+                        ? `${char.name} liegt aktuell oben in ${currentLocationLabel}.`
+                        : `${char.name} ist aktuell auf ${currentLocationLabel}.` %>"
                     >
                       <span class="character-mini-name"><%= char.name %></span>
                     </span>
@@ -125,30 +135,33 @@
                       data-dashboard-move-confirm
                       data-dashboard-character-name="<%= char.name %>"
                       data-dashboard-current-server="<%= currentServerId %>"
+                      data-dashboard-home-server="<%= serverSection.id %>"
+                      data-dashboard-position="<%= char.dashboard_position || "main" %>"
                     >
                       <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
                       <input type="hidden" name="target_server_id" value="">
+                      <input type="hidden" name="target_dashboard_mode" value="">
                       <button
                         type="submit"
                         class="character-mini-move-btn"
                         aria-label="Charakter verschieben"
-                        title="Zielserver ausw&auml;hlen"
+                        title="Zielserver auswaehlen"
                       >
                         &harr;
                       </button>
                     </form>
-                    <% if (char.is_on_festplay_server) { %>
+                    <% if (isInFestplayArea) { %>
                       <form
                         method="POST"
                         action="/characters/<%= char.id %>/delete"
                         class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                        onsubmit="return confirm('Charakter wirklich loeschen?')"
                       >
                         <button
                           type="submit"
                           class="character-mini-delete-btn"
-                          aria-label="Charakter l&ouml;schen"
-                          title="Charakter l&ouml;schen"
+                          aria-label="Charakter loeschen"
+                          title="Charakter loeschen"
                         >
                           X
                         </button>
@@ -215,27 +228,123 @@
         pendingForm = null;
       };
 
+      const getServerButtonLabel = (serverId) => (serverId === "erp" ? "ERP" : "Free RP");
+      const getOtherServerId = (serverId) => (serverId === "erp" ? "free-rp" : "erp");
+
+      const configureActionButton = (button, option) => {
+        if (!button) return;
+
+        if (!option) {
+          button.hidden = true;
+          button.disabled = true;
+          button.textContent = "";
+          button.dataset.targetServer = "";
+          button.dataset.targetMode = "";
+          return;
+        }
+
+        button.hidden = false;
+        button.textContent = option.label;
+        button.dataset.targetServer = option.serverId;
+        button.dataset.targetMode = option.mode;
+        button.disabled = Boolean(option.disabled);
+      };
+
+      const getMoveOptions = (form) => {
+        const currentServer = String(form.dataset.dashboardCurrentServer || "").trim();
+        const homeServer = String(form.dataset.dashboardHomeServer || "").trim();
+        const position = String(form.dataset.dashboardPosition || "main").trim();
+        const hasFestplayHome = homeServer === "free-rp" || homeServer === "erp";
+
+        if (!hasFestplayHome) {
+          const otherServerId = getOtherServerId(currentServer || "free-rp");
+          return [
+            {
+              label: getServerButtonLabel(otherServerId),
+              serverId: otherServerId,
+              mode: "main"
+            }
+          ];
+        }
+
+        const otherServerId = getOtherServerId(homeServer);
+        if (currentServer === homeServer && position === "festplay") {
+          return [
+            {
+              label: getServerButtonLabel(homeServer),
+              serverId: homeServer,
+              mode: "main"
+            },
+            {
+              label: getServerButtonLabel(otherServerId),
+              serverId: otherServerId,
+              mode: "main"
+            }
+          ];
+        }
+
+        if (position === "main") {
+          return [
+            {
+              label: currentServer === homeServer
+                ? getServerButtonLabel(otherServerId)
+                : getServerButtonLabel(homeServer),
+              serverId: currentServer === homeServer ? otherServerId : homeServer,
+              mode: "main"
+            },
+            {
+              label: "Zurueck zum Festspiel",
+              serverId: homeServer,
+              mode: "festplay"
+            }
+          ];
+        }
+
+        return [
+          {
+            label: getServerButtonLabel(otherServerId),
+            serverId: otherServerId,
+            mode: "main"
+          }
+        ];
+      };
+
       const openModalForForm = (form) => {
         pendingForm = form;
         const characterName = String(form.dataset.dashboardCharacterName || "").trim() || "Dieser Charakter";
         const currentServer = String(form.dataset.dashboardCurrentServer || "").trim();
+        const homeServer = String(form.dataset.dashboardHomeServer || "").trim();
+        const position = String(form.dataset.dashboardPosition || "main").trim();
         const targetInput = form.querySelector('input[name="target_server_id"]');
+        const targetModeInput = form.querySelector('input[name="target_dashboard_mode"]');
         if (targetInput) {
           targetInput.value = "";
         }
+        if (targetModeInput) {
+          targetModeInput.value = "";
+        }
 
         copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
-        note.textContent = erpMoveAllowed
-          ? "Freischaltungen an Festspielen bleiben dabei erhalten."
-          : "ERP ist für Accounts unter 18 nicht verfügbar.";
+        note.textContent = "Freischaltungen an Festspielen bleiben dabei erhalten.";
 
-        freeButton.disabled = currentServer === "free-rp";
-        erpButton.disabled = currentServer === "erp" || !erpMoveAllowed;
-        if (freeButton.disabled && erpButton.disabled) {
-          note.textContent = "Dieser Charakter liegt bereits auf Free RP. ERP ist fuer Accounts unter 18 nicht verfuegbar.";
-        } else if (!erpMoveAllowed) {
-          note.textContent = "ERP ist fuer Accounts unter 18 nicht verfuegbar.";
+        const options = getMoveOptions(form).map((option) => ({
+          ...option,
+          disabled: option.serverId === "erp" && !erpMoveAllowed
+        }));
+
+        configureActionButton(freeButton, options[0] || null);
+        configureActionButton(erpButton, options[1] || null);
+
+        if (homeServer === currentServer && position === "festplay") {
+          note.textContent = `Du kannst ${characterName} oben in ${getServerButtonLabel(homeServer)} ablegen oder auf ${getServerButtonLabel(getOtherServerId(homeServer))} verschieben.`;
+        } else if (homeServer && position === "main") {
+          note.textContent = `Du kannst ${characterName} auf den anderen RP-Server legen oder zurueck ins Festspiel schieben.`;
         }
+
+        if (!erpMoveAllowed && options.some((option) => option.serverId === "erp")) {
+          note.textContent = `${note.textContent} ERP ist fuer Accounts unter 18 nicht verfuegbar.`;
+        }
+
         modal.hidden = false;
         document.body.classList.add("modal-open");
       };
@@ -251,24 +360,23 @@
         element.addEventListener("click", closeModal);
       });
 
-      const submitMoveTo = (targetServerId) => {
+      const submitMoveTo = (targetServerId, targetDashboardMode) => {
         if (!pendingForm) return;
         const formToSubmit = pendingForm;
         const targetInput = formToSubmit.querySelector('input[name="target_server_id"]');
-        if (!targetInput) return;
+        const targetModeInput = formToSubmit.querySelector('input[name="target_dashboard_mode"]');
+        if (!targetInput || !targetModeInput) return;
         targetInput.value = targetServerId;
+        targetModeInput.value = targetDashboardMode || "main";
         closeModal();
         formToSubmit.submit();
       };
 
-      freeButton.addEventListener("click", () => {
-        if (freeButton.disabled) return;
-        submitMoveTo("free-rp");
-      });
-
-      erpButton.addEventListener("click", () => {
-        if (erpButton.disabled) return;
-        submitMoveTo("erp");
+      [freeButton, erpButton].forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.disabled || button.hidden) return;
+          submitMoveTo(button.dataset.targetServer, button.dataset.targetMode);
+        });
       });
 
       document.addEventListener("keydown", (event) => {

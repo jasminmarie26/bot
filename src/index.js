@@ -298,6 +298,15 @@ function normalizeServer(serverValue) {
   return ALLOWED_SERVER_IDS.has(input) ? input : DEFAULT_SERVER_ID;
 }
 
+function normalizeFestplayDashboardMode(value) {
+  return String(value || "").trim().toLowerCase() === "main" ? "main" : "festplay";
+}
+
+function parseRequestedFestplayDashboardMode(value) {
+  const input = String(value || "").trim().toLowerCase();
+  return input === "main" || input === "festplay" ? input : "";
+}
+
 function getServerLabel(serverId) {
   const normalized = normalizeServer(serverId);
   const found = SERVER_OPTIONS.find((server) => server.id === normalized);
@@ -2054,6 +2063,12 @@ function getDashboardFestplaysForUser(userId, serverId) {
 
     const characterServerId =
       normalizeServer(row.character_server_id || row.linked_character_server_id) || normalizedServerId;
+    const dashboardPosition = getCharacterDashboardPlacement(
+      characterServerId,
+      normalizedServerId,
+      row.character_festplay_dashboard_mode || row.linked_character_festplay_dashboard_mode
+    );
+    const isInFestplayArea = dashboardPosition === "festplay";
 
     if (!festplayMap.has(festplayId)) {
       festplayMap.set(festplayId, {
@@ -2073,7 +2088,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
         name: row.character_name,
         current_server_id: characterServerId,
         current_server_label: getServerLabel(characterServerId),
-        is_on_festplay_server: characterServerId === normalizedServerId
+        is_on_festplay_server: characterServerId === normalizedServerId,
+        is_in_festplay_area: isInFestplayArea,
+        dashboard_position: dashboardPosition
       });
     }
   };
@@ -2087,7 +2104,8 @@ function getDashboardFestplaysForUser(userId, serverId) {
               COALESCE(creator.name, '') AS creator_character_name,
               c.id AS character_id,
               c.name AS character_name,
-              c.server_id AS character_server_id
+              c.server_id AS character_server_id,
+              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplay_permissions fp
          JOIN festplays f ON f.id = fp.festplay_id
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
@@ -2113,7 +2131,8 @@ function getDashboardFestplaysForUser(userId, serverId) {
       `SELECT f.id AS festplay_id,
               c.id AS character_id,
               c.name AS character_name,
-              c.server_id AS character_server_id
+              c.server_id AS character_server_id,
+              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplays f
          JOIN characters c
            ON c.user_id = f.created_by_user_id
@@ -2156,7 +2175,8 @@ function getDashboardFestplaysForUser(userId, serverId) {
               creator.id AS linked_character_id,
               creator.name AS linked_character_name,
               creator.user_id AS linked_character_user_id,
-              creator.server_id AS linked_character_server_id
+              creator.server_id AS linked_character_server_id,
+              creator.festplay_dashboard_mode AS linked_character_festplay_dashboard_mode
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.created_by_user_id = ?
@@ -2178,7 +2198,8 @@ function getDashboardFestplaysForUser(userId, serverId) {
           ...row,
           character_id: linkedCharacterId,
           character_name: row.linked_character_name,
-          character_server_id: row.linked_character_server_id
+          character_server_id: row.linked_character_server_id,
+          character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
         },
         row.creator_character_name
           ? `Erstellt mit ${row.creator_character_name}.`
@@ -2197,12 +2218,13 @@ function getDashboardFestplaysForUser(userId, serverId) {
     }
 
     addDashboardFestplayCharacter(
-      {
-        ...row,
-        character_id: fallbackCharacter.character_id,
-        character_name: fallbackCharacter.character_name,
-        character_server_id: fallbackCharacter.character_server_id
-      },
+        {
+          ...row,
+          character_id: fallbackCharacter.character_id,
+          character_name: fallbackCharacter.character_name,
+          character_server_id: fallbackCharacter.character_server_id,
+          character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
+        },
       row.creator_character_name
         ? `Erstellt mit ${row.creator_character_name}.`
         : "Dein eigenes Festspiel."
@@ -2213,6 +2235,10 @@ function getDashboardFestplaysForUser(userId, serverId) {
     .map((festplay) => ({
       ...festplay,
       characters: [...festplay.characters].sort((left, right) => {
+        if (Boolean(left.is_in_festplay_area) !== Boolean(right.is_in_festplay_area)) {
+          return left.is_in_festplay_area ? -1 : 1;
+        }
+
         if (Boolean(left.is_on_festplay_server) !== Boolean(right.is_on_festplay_server)) {
           return left.is_on_festplay_server ? -1 : 1;
         }
@@ -2412,6 +2438,15 @@ function getCharacterFestplayHomeServer(characterId) {
   }
 
   return uniqueServerIds[0];
+}
+
+function getCharacterDashboardPlacement(currentServerId, festplayHomeServerId, dashboardMode) {
+  const normalizedCurrentServerId = normalizeServer(currentServerId);
+  const normalizedFestplayHomeServerId = normalizeFestplayServerId(festplayHomeServerId);
+  if (!normalizedFestplayHomeServerId || normalizedCurrentServerId !== normalizedFestplayHomeServerId) {
+    return "main";
+  }
+  return normalizeFestplayDashboardMode(dashboardMode);
 }
 
 function characterHasFestplayAccess(festplayId, characterId) {
@@ -5870,7 +5905,13 @@ function getDashboardOwnCharacters(userId) {
 
   return db
     .prepare(
-      `SELECT c.id, c.name, c.server_id, c.is_public, c.updated_at, f.name AS festplay_name
+      `SELECT c.id,
+              c.name,
+              c.server_id,
+              c.is_public,
+              c.updated_at,
+              c.festplay_dashboard_mode,
+              f.name AS festplay_name
        FROM characters c
        LEFT JOIN festplays f ON f.id = c.festplay_id
        WHERE c.user_id = ?
@@ -5907,11 +5948,27 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
       : "Charaktere und Festspiele fuer intensivere Szenen und feste Dynamiken.",
     festplays,
     characters: ownCharacters
-      .filter((character) => normalizeServer(character.server_id) === server.id)
+      .filter((character) => {
+        if (normalizeServer(character.server_id) !== server.id) {
+          return false;
+        }
+
+        const dashboardPosition = getCharacterDashboardPlacement(
+          character.server_id,
+          character.festplay_home_server_id,
+          character.festplay_dashboard_mode
+        );
+
+        return dashboardPosition === "main";
+      })
       .map((character) => ({
         ...character,
-        can_dashboard_move:
-          !character.festplay_home_server_id || character.festplay_home_server_id === server.id
+        dashboard_position: getCharacterDashboardPlacement(
+          character.server_id,
+          character.festplay_home_server_id,
+          character.festplay_dashboard_mode
+        ),
+        can_dashboard_move: true
       }))
   };
 }
@@ -7183,17 +7240,47 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   }
 
   const currentServerId = normalizeServer(character.server_id);
-  const requestedServerId = normalizeServer(String(req.body.target_server_id || ""));
+  const requestedServerId = normalizeFestplayServerId(req.body.target_server_id);
+  const festplayHomeServerId = getCharacterFestplayHomeServer(id);
+  const requestedDashboardMode = parseRequestedFestplayDashboardMode(
+    req.body.target_dashboard_mode
+  );
+  const currentDashboardPlacement = getCharacterDashboardPlacement(
+    character.server_id,
+    festplayHomeServerId,
+    character.festplay_dashboard_mode
+  );
   const nextServerId =
     requestedServerId || (currentServerId === "free-rp" ? "erp" : "free-rp");
+  const nextDashboardMode =
+    festplayHomeServerId && nextServerId === festplayHomeServerId
+      ? normalizeFestplayDashboardMode(
+          requestedDashboardMode ||
+            (currentServerId === festplayHomeServerId
+              ? character.festplay_dashboard_mode
+              : "main")
+        )
+      : "main";
+  const nextDashboardPlacement = getCharacterDashboardPlacement(
+    nextServerId,
+    festplayHomeServerId,
+    nextDashboardMode
+  );
 
   if (!ALLOWED_SERVER_IDS.has(nextServerId)) {
     setFlash(req, "error", "Bitte einen gueltigen Zielserver auswaehlen.");
     return res.redirect(returnTarget);
   }
 
-  if (nextServerId === currentServerId) {
-    setFlash(req, "error", `Der Charakter liegt bereits auf ${getServerLabel(currentServerId)}.`);
+  if (
+    nextServerId === currentServerId &&
+    nextDashboardPlacement === currentDashboardPlacement
+  ) {
+    if (currentDashboardPlacement === "festplay") {
+      setFlash(req, "error", "Der Charakter liegt bereits in diesem Festspiel.");
+    } else {
+      setFlash(req, "error", `Der Charakter liegt bereits auf ${getServerLabel(currentServerId)}.`);
+    }
     return res.redirect(returnTarget);
   }
 
@@ -7206,9 +7293,9 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, updated_at = CURRENT_TIMESTAMP
+     SET server_id = ?, festplay_dashboard_mode = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
-  ).run(nextServerId, id);
+  ).run(nextServerId, nextDashboardMode, id);
 
   const preferredMap = normalizePreferredCharacterMap(req.session.preferred_character_ids);
   if (Number(preferredMap[currentServerId]) === id) {
@@ -7218,11 +7305,23 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   req.session.preferred_character_ids = preferredMap;
 
   emitHomeStatsUpdate();
-  setFlash(
-    req,
-    "success",
-    `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`
-  );
+  let successMessage = `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`;
+  if (
+    festplayHomeServerId &&
+    nextServerId === festplayHomeServerId &&
+    nextDashboardPlacement === "festplay"
+  ) {
+    successMessage = "Charakter wurde zurueck ins Festspiel gelegt.";
+  } else if (
+    festplayHomeServerId &&
+    nextServerId === festplayHomeServerId &&
+    currentDashboardPlacement === "festplay" &&
+    nextDashboardPlacement === "main"
+  ) {
+    successMessage = `Charakter wurde in ${getServerLabel(nextServerId)} zu den normalen Charakteren gelegt.`;
+  }
+
+  setFlash(req, "success", successMessage);
   return res.redirect(returnTarget);
 });
 

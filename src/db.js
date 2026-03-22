@@ -48,6 +48,7 @@ db.exec(`
     name_changed_at TEXT DEFAULT '',
     server_id TEXT NOT NULL DEFAULT 'free-rp',
     festplay_id INTEGER,
+    festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay',
     species TEXT DEFAULT '',
     age TEXT DEFAULT '',
     faceclaim TEXT DEFAULT '',
@@ -423,6 +424,16 @@ if (!characterColumns.includes("name_changed_at")) {
 if (!characterColumns.includes("server_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
+
+if (!characterColumns.includes("festplay_dashboard_mode")) {
+  db.exec("ALTER TABLE characters ADD COLUMN festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay'");
+}
+
+db.exec(`
+  UPDATE characters
+     SET festplay_dashboard_mode = 'festplay'
+   WHERE trim(COALESCE(festplay_dashboard_mode, '')) = ''
+`);
 
 if (!guestbookSettingsColumns.includes("frame_color")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN frame_color TEXT NOT NULL DEFAULT ''");
