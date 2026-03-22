@@ -7,6 +7,14 @@
     <p class="muted"><%= serverSection.dashboard_area_description %></p>
   </div>
   <div class="dashboard-server-actions">
+    <a
+      class="btn dashboard-add-character-btn"
+      href="/characters/new?server=<%= serverSection.id %>"
+      aria-label="Charakter hinzufuegen"
+      title="Charakter hinzufuegen"
+    >
+      +
+    </a>
     <a class="btn btn-secondary" href="/dashboard">Zum Dashboard</a>
     <a class="btn btn-secondary" href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
   </div>
@@ -14,19 +22,6 @@
 
 <section class="dashboard-block">
   <section class="panel dashboard-server-panel dashboard-subpanel">
-    <div class="header-line">
-      <div class="dashboard-server-actions">
-        <a
-          class="btn dashboard-add-character-btn"
-          href="/characters/new?server=<%= serverSection.id %>"
-          aria-label="Charakter hinzufuegen"
-          title="Charakter hinzufuegen"
-        >
-          +
-        </a>
-      </div>
-    </div>
-
     <% if (!serverSection.characters.length) { %>
       <p class="muted">
         <%= serverSection.festplays && serverSection.festplays.length
