@@ -66,8 +66,10 @@ db.exec(`
     short_description TEXT NOT NULL DEFAULT '',
     long_description TEXT NOT NULL DEFAULT '',
     created_by_user_id INTEGER,
+    creator_character_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (creator_character_id) REFERENCES characters(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS festplay_permissions (
@@ -302,6 +304,10 @@ if (!festplayColumns.includes("short_description")) {
 
 if (!festplayColumns.includes("long_description")) {
   db.exec("ALTER TABLE festplays ADD COLUMN long_description TEXT NOT NULL DEFAULT ''");
+}
+
+if (!festplayColumns.includes("creator_character_id")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN creator_character_id INTEGER");
 }
 
 if (!userColumns.includes("is_moderator")) {

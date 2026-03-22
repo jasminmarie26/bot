@@ -103,7 +103,7 @@
                     <div>
                       <h3><%= festplay.name %></h3>
                       <p class="muted dashboard-section-copy">
-                        <%= festplay.owner_name ? `Festspiel von ${festplay.owner_name}.` : "Freigeschaltetes Festspiel auf diesem Bereich." %>
+                        <%= festplay.caption || "Festspiel auf diesem Bereich." %>
                       </p>
                     </div>
                   </div>
