@@ -2746,7 +2746,12 @@ body.page-home-screen .home-hero-actions {
 }
 
 .dashboard-festplay-panel {
-  border-color: color-mix(in srgb, var(--accent) 18%, var(--panel-edge) 82%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .dashboard-festplay-overview {
