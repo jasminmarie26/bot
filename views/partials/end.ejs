@@ -29,6 +29,9 @@
     <script src="/updates.js?v=<%= staticAssetVersion %>"></script>
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
+    <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+      <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
+    <% } %>
     <% if (currentUser && !currentUser.is_admin && !currentUser.is_moderator) { %>
       <script src="/idle-logout.js?v=<%= staticAssetVersion %>"></script>
     <% } %>

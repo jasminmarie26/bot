@@ -440,6 +440,7 @@ function getAcmeChallengeRoots() {
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 31;
+const STAFF_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -1040,6 +1041,14 @@ function renderLoginPage(req, res, options = {}) {
     ...options,
     mode: "login"
   });
+}
+
+function getSessionMaxAgeForUser(user) {
+  if (user?.is_admin || user?.is_moderator) {
+    return STAFF_SESSION_MAX_AGE_MS;
+  }
+
+  return SESSION_MAX_AGE_MS;
 }
 
 function renderForgotUsernamePage(req, res, options = {}) {
@@ -5630,6 +5639,7 @@ app.post("/login", (req, res) => {
 
   touchUserLoginMetadata(user.id, req);
   req.session.user = toSessionUser(user);
+  req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   setFlash(req, "success", "Erfolgreich eingeloggt.");
   return res.redirect("/dashboard");
 });
@@ -5815,6 +5825,7 @@ app.get("/auth/google/callback", (req, res, next) => {
 
       try {
         req.session.user = findOrCreateOAuthUser("google", profile);
+        req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
         touchUserLoginMetadata(req.session.user.id, req);
         const accountUser = getAccountUserById(req.session.user.id);
         if (!normalizeBirthDate(accountUser?.birth_date)) {
@@ -5877,6 +5888,7 @@ app.get("/auth/facebook/callback", (req, res, next) => {
 
       try {
         req.session.user = findOrCreateOAuthUser("facebook", profile);
+        req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
         touchUserLoginMetadata(req.session.user.id, req);
         const accountUser = getAccountUserById(req.session.user.id);
         if (!normalizeBirthDate(accountUser?.birth_date)) {
@@ -5958,6 +5970,7 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/session/touch", requireAuth, (req, res) => {
+  req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   req.session.last_activity_at = Date.now();
   return res.status(204).end();
 });
