@@ -439,7 +439,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
-const SESSION_IDLE_TIMEOUT_MS = 1000 * 60 * 60;
+const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -448,11 +448,11 @@ const sessionMiddleware = session({
   }),
   secret: process.env.SESSION_SECRET || "change-me-in-production",
   resave: false,
-  rolling: true,
+  rolling: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    maxAge: SESSION_IDLE_TIMEOUT_MS,
+    maxAge: SESSION_MAX_AGE_MS,
     sameSite: "lax"
   }
 });
@@ -545,7 +545,7 @@ function getLoggedInUsersCount(activeUserIds = null) {
   if (Array.isArray(activeUserIds)) {
     return activeUserIds.length;
   }
-  return getConnectedSocketUserIds().length;
+  return getActiveSessionUserIds().length;
 }
 
 function getSocketChatServerId(socket) {
@@ -714,7 +714,7 @@ function getOnlineUserCountForServers(serverIds) {
 }
 
 function getLoginStats() {
-  const activeUserIds = getConnectedSocketUserIds();
+  const activeUserIds = getActiveSessionUserIds();
   const accountCount =
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
   const characterCount =
