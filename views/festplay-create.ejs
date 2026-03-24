@@ -175,6 +175,10 @@
             href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>#festplay-selected-editor"
           >Allgemein</a>
           <a
+            class="rp-room-editor-tab<%= activeFestplayTab === 'raeume' ? ' is-active' : '' %>"
+            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume#festplay-selected-editor"
+          >R&auml;ume</a>
+          <a
             class="rp-room-editor-tab<%= activeFestplayTab === 'bewerbungen' ? ' is-active' : '' %>"
             href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=bewerbungen#festplay-selected-editor"
           >Bewerbungen &amp; Spieler</a>
@@ -281,6 +285,108 @@
                 </div>
               <% } else { %>
                 <p class="rp-room-editor-note">Noch keine Charaktere diesem Festspiel zugeordnet.</p>
+              <% } %>
+            </section>
+          </div>
+        <% } else if (activeFestplayTab === "raeume") { %>
+          <% const festplayRoomsBaseTarget = `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}&tab=raeume#festplay-selected-editor`; %>
+          <% const selectedFestplayRoomTarget = selectedFestplayRoom
+            ? `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}&tab=raeume&selected_room=${selectedFestplayRoom.id}#festplay-selected-editor`
+            : festplayRoomsBaseTarget; %>
+          <% const festplayRoomFormId = selectedFestplayRoom
+            ? `festplay-room-editor-form-${selectedFestplayRoom.id}`
+            : `festplay-room-create-form-${selectedFestplay.id}`; %>
+
+          <div class="rp-room-editor-body">
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Festspiel-R&auml;ume</h3>
+
+              <% if (festplayRooms && festplayRooms.length) { %>
+                <div class="rp-room-inline-list">
+                  <% festplayRooms.forEach((room) => { %>
+                    <a
+                      class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
+                      href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
+                      title="Raum &ouml;ffnen"
+                    >
+                      <span class="rp-room-inline-name"><%= room.name %></span>
+                    </a>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine Festspiel-R&auml;ume vorhanden.</p>
+              <% } %>
+            </section>
+
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading"><%= selectedFestplayRoom ? 'Raum bearbeiten' : 'Raum anlegen' %></h3>
+
+              <form
+                id="<%= festplayRoomFormId %>"
+                method="POST"
+                action="<%= selectedFestplayRoom
+                  ? `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/${selectedFestplayRoom.id}/update`
+                  : `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms` %>"
+                class="rp-room-editor-section"
+              >
+                <input type="hidden" name="return_to" value="<%= selectedFestplayRoomTarget %>" />
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Raumname</span>
+                  <input
+                    type="text"
+                    name="room_name"
+                    maxlength="80"
+                    placeholder="Raumname"
+                    value="<%= selectedFestplayRoom?.name || '' %>"
+                    required
+                  />
+                </label>
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">
+                    Raum
+                    <a class="rp-room-editor-help-link" href="/help/gaestebuch-design-bbcode" target="_blank" rel="noopener noreferrer">BBCode-Hilfe</a>
+                  </span>
+                  <textarea
+                    name="room_teaser"
+                    rows="10"
+                    maxlength="4000"
+                    placeholder="Text, der direkt im Raum angezeigt wird"
+                  ><%= selectedFestplayRoom?.teaser || '' %></textarea>
+                </label>
+              </form>
+
+              <div class="rp-room-editor-actions">
+                <button type="submit" form="<%= festplayRoomFormId %>"><%= selectedFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
+                <% if (selectedFestplayRoom) { %>
+                  <a
+                    class="rp-room-editor-enter"
+                    href="/chat?room_id=<%= selectedFestplayRoom.id %>&character_id=<%= character.id %>"
+                  >Raum betreten</a>
+                  <form
+                    method="POST"
+                    action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/<%= selectedFestplayRoom.id %>/delete"
+                    class="inline-form rp-room-delete-form"
+                  >
+                    <input type="hidden" name="return_to" value="<%= festplayRoomsBaseTarget %>" />
+                    <button
+                      class="rp-room-delete-btn"
+                      type="submit"
+                      aria-label="Raum <%= selectedFestplayRoom.name %> l&ouml;schen"
+                      title="Raum l&ouml;schen"
+                    >X</button>
+                  </form>
+                <% } %>
+              </div>
+
+              <% if (selectedFestplayRoomPreviewHtml) { %>
+                <div class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Vorschau</span>
+                  <div class="rp-room-editor-static rp-room-editor-static-long">
+                    <div class="guestbook-entry-body"><%- selectedFestplayRoomPreviewHtml %></div>
+                  </div>
+                </div>
               <% } %>
             </section>
           </div>

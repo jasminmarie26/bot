@@ -29,7 +29,7 @@
     <nav class="rp-menu" aria-label="Festspiel-Raumliste Navigation">
       <a href="/dashboard/areas/<%= character.server_id %>">Bereich</a>
       <% if (festplayRoomIsOwner) { %>
-        <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
+        <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
       <% } %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
@@ -120,34 +120,15 @@
     <div class="rp-room-create-header">
       <div>
         <h1><%= festplay.name %></h1>
-        <p class="muted">Eigene R&auml;ume nur f&uuml;r dieses Festspiel, ohne vorgefertigte Treffpunkte.</p>
+        <p class="muted">Feste R&auml;ume f&uuml;r dieses Festspiel. Freigeschaltete Mitglieder k&ouml;nnen sie direkt betreten.</p>
       </div>
+      <% if (festplayRoomIsOwner) { %>
+        <a
+          class="rp-room-editor-enter"
+          href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor"
+        >R&auml;ume bearbeiten</a>
+      <% } %>
     </div>
-
-    <section class="rp-room-section rp-room-section-standard">
-      <h2 class="rp-room-form-title">Raum erstellen</h2>
-      <form
-        method="POST"
-        action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms"
-        class="rp-room-form rp-room-form-inline"
-      >
-        <div class="rp-room-input">
-          <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
-          <input
-            name="room_name"
-            maxlength="80"
-            placeholder="Raumname"
-            required
-          />
-        </div>
-        <input
-          name="room_description"
-          maxlength="160"
-          placeholder="Raumbeschreibung"
-        />
-        <button type="submit" class="rp-enter-btn">Raum erstellen</button>
-      </form>
-    </section>
 
     <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
       <summary class="rp-room-section-summary">
@@ -186,11 +167,6 @@
                   aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
                 ><%= room.name %></a>
               </div>
-              <% if (room.description) { %>
-                <div class="rp-room-custom-description">
-                  <%= room.description %>
-                </div>
-              <% } %>
               <div
                 class="rp-room-occupants"
                 data-room-watch-target
@@ -219,122 +195,11 @@
                   <span class="muted">Gerade niemand dort.</span>
                 <% } %>
               </div>
-              <div class="rp-room-custom-owner">
-                <%= room.is_owned_room
-                  ? "Dein Festspiel-Raum."
-                  : `Von ${room.creator_character_name || "Festspiel-Mitglied"}.` %>
-                <% if (room.is_owned_room) { %>
-                  <a href="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms?selected_room=<%= room.id %>#festplay-room-editor">Bearbeiten</a>
-                <% } %>
-              </div>
             </div>
           <% }) %>
         </div>
       <% } %>
     </details>
-
-    <% if (selectedRoom) { %>
-      <section class="rp-room-editor" id="festplay-room-editor" aria-label="Festspiel-Raumdetails">
-        <div class="rp-room-editor-bar">
-          <div class="rp-room-editor-title-wrap">
-            <strong class="rp-room-editor-title"><%= selectedRoom.name %></strong>
-            <% if (selectedRoom.description) { %>
-              <span class="rp-room-inline-teaser"> - [<%= selectedRoom.description %>]</span>
-            <% } %>
-          </div>
-          <a
-            class="rp-room-editor-enter"
-            href="/chat?room_id=<%= selectedRoom.id %>&character_id=<%= character.id %>"
-          >Raum betreten</a>
-        </div>
-
-        <nav class="rp-room-editor-tabs" aria-label="Festspiel-Raum bearbeiten">
-          <a
-            class="rp-room-editor-tab is-active"
-            href="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms?selected_room=<%= selectedRoom.id %>#festplay-room-editor"
-          >&Uuml;bersicht</a>
-        </nav>
-
-        <form
-          id="room-editor-form-<%= selectedRoom.id %>"
-          method="POST"
-          action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms/<%= selectedRoom.id %>/update"
-          class="rp-room-editor-body"
-        >
-          <div class="rp-room-editor-checks">
-            <label class="rp-room-editor-check">
-              <input
-                type="checkbox"
-                name="is_locked"
-                value="1"
-                <%= selectedRoom.is_locked ? "checked" : "" %>
-              />
-              Raum abschlie&szlig;en
-            </label>
-            <label class="rp-room-editor-check">
-              <input
-                type="checkbox"
-                name="email_log_enabled"
-                value="1"
-                <%= selectedRoom.email_log_enabled ? "checked" : "" %>
-              />
-              E-Mail-Log
-            </label>
-          </div>
-
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Raumname</span>
-            <input
-              type="text"
-              name="room_name"
-              maxlength="80"
-              placeholder="Raumname"
-              value="<%= selectedRoom.name || '' %>"
-              required
-            />
-          </label>
-
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Raumbeschreibung</span>
-            <input
-              type="text"
-              name="room_description"
-              maxlength="160"
-              placeholder="Kurzer Text f&uuml;r die Raumliste"
-              value="<%= selectedRoom.description || '' %>"
-            />
-          </label>
-
-          <label class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">
-              Beschreibung im Raum
-              <a
-                class="rp-room-editor-help-link"
-                href="/help/gaestebuch-design-bbcode"
-                target="_blank"
-                rel="noopener noreferrer"
-              >BBCode-Hilfe</a>
-            </span>
-            <textarea
-              name="room_teaser"
-              rows="9"
-              maxlength="160"
-              placeholder="Dieser Text erscheint direkt im Raum"
-            ><%= selectedRoom.teaser || '' %></textarea>
-          </label>
-
-          <div class="rp-room-editor-actions">
-            <button type="submit">Speichern</button>
-          </div>
-        </form>
-      </section>
-    <% } else if (ownedFestplayRooms && ownedFestplayRooms.length) { %>
-      <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-room-editor" aria-label="Festspiel-Raumdetails">
-        <div class="rp-room-editor-body">
-          <p class="rp-room-editor-note">Klicke oben bei den Festspiel-R&auml;umen auf <code>Bearbeiten</code>, dann wird der Raum hier ge&ouml;ffnet.</p>
-        </div>
-      </section>
-    <% } %>
   </section>
 </section>
 
