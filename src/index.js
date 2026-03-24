@@ -548,11 +548,83 @@ function getLoggedInUsersCount(activeUserIds = null) {
   return getConnectedSocketUserIds().length;
 }
 
-function getOnlineStaffStats(activeUserIds = null) {
-  const sessionUserIds = Array.isArray(activeUserIds)
-    ? activeUserIds
-    : getConnectedSocketUserIds();
-  if (!sessionUserIds.length) {
+function getSocketChatServerId(socket) {
+  const rawServerId = String(socket?.data?.serverId || "").trim().toLowerCase();
+  if (!ALLOWED_SERVER_IDS.has(rawServerId)) {
+    return null;
+  }
+  return normalizeServer(rawServerId);
+}
+
+function getSocketPresenceServerId(socket) {
+  const rawServerId = String(socket?.data?.presenceServerId || "").trim().toLowerCase();
+  if (!ALLOWED_SERVER_IDS.has(rawServerId)) {
+    return null;
+  }
+  return normalizeServer(rawServerId);
+}
+
+function normalizeStaffOnlineName(name, role) {
+  const trimmedName = String(name || "").trim();
+  if (role === "moderator" && /\s+\(m\)$/i.test(trimmedName)) {
+    return trimmedName.replace(/\s+\(m\)$/i, "").trim();
+  }
+  return trimmedName;
+}
+
+function getSocketStaffOnlineEntry(socket) {
+  const user = socket?.data?.user;
+  const userId = Number(user?.id);
+  const activeCharacterId = Number(socket?.data?.activeCharacterId);
+  const serverId = getSocketChatServerId(socket) || getSocketPresenceServerId(socket);
+
+  if (
+    !Number.isInteger(userId) ||
+    userId < 1 ||
+    !Number.isInteger(activeCharacterId) ||
+    activeCharacterId < 1 ||
+    !serverId
+  ) {
+    return null;
+  }
+
+  const displayProfile = getSocketHeaderDisplayProfile(socket);
+  if (
+    (user?.is_admin === 1 || user?.is_admin === true) &&
+    Number(user?.admin_character_id) === activeCharacterId
+  ) {
+    return {
+      userId,
+      role: "admin",
+      serverId,
+      name:
+        normalizeStaffOnlineName(displayProfile?.label, "admin") ||
+        String(user?.username || "").trim() ||
+        `User ${userId}`
+    };
+  }
+
+  if (
+    (user?.is_moderator === 1 || user?.is_moderator === true) &&
+    Number(user?.moderator_character_id) === activeCharacterId
+  ) {
+    return {
+      userId,
+      role: "moderator",
+      serverId,
+      name:
+        normalizeStaffOnlineName(displayProfile?.label, "moderator") ||
+        String(user?.username || "").trim() ||
+        `User ${userId}`
+    };
+  }
+
+  return null;
+}
+
+function getOnlineStaffStats() {
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
     return {
       adminOnlineCount: 0,
       adminOnlineNames: [],
@@ -561,25 +633,29 @@ function getOnlineStaffStats(activeUserIds = null) {
     };
   }
 
-  const placeholders = sessionUserIds.map(() => "?").join(", ");
-  const staffUsers = db
-    .prepare(
-      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, admin_character_id, moderator_character_id
-       FROM users
-       WHERE id IN (${placeholders})`
-    )
-    .all(...sessionUserIds);
+  const onlineStaffByUserId = new Map();
+  for (const socket of sockets.values()) {
+    const staffEntry = getSocketStaffOnlineEntry(socket);
+    if (!staffEntry) {
+      continue;
+    }
+
+    const existingEntry = onlineStaffByUserId.get(staffEntry.userId);
+    if (!existingEntry || (existingEntry.role !== "admin" && staffEntry.role === "admin")) {
+      onlineStaffByUserId.set(staffEntry.userId, staffEntry);
+    }
+  }
 
   const adminOnlineNames = [];
   const moderatorOnlineNames = [];
 
-  for (const user of staffUsers) {
-    if (user.is_admin === 1) {
-      adminOnlineNames.push(getUserStaffBaseName(user) || user.username);
+  for (const staffEntry of onlineStaffByUserId.values()) {
+    if (staffEntry.role === "admin") {
+      adminOnlineNames.push(staffEntry.name);
       continue;
     }
-    if (user.is_moderator === 1) {
-      moderatorOnlineNames.push(getUserStaffBaseName(user) || user.username);
+    if (staffEntry.role === "moderator") {
+      moderatorOnlineNames.push(staffEntry.name);
     }
   }
 
@@ -594,7 +670,7 @@ function getOnlineStaffStats(activeUserIds = null) {
   };
 }
 
-function getOnlineUserCountForServers(serverIds) {
+function getOnlineUserIdsForServers(serverIds) {
   const requestedServerIds = Array.isArray(serverIds) ? serverIds : [serverIds];
   const normalizedServerIds = new Set(
     requestedServerIds
@@ -603,30 +679,38 @@ function getOnlineUserCountForServers(serverIds) {
   );
 
   if (!normalizedServerIds.size) {
-    return 0;
+    return new Set();
   }
 
   const sockets = io?.of("/")?.sockets;
   if (!sockets || typeof sockets.values !== "function") {
-    return 0;
+    return new Set();
   }
 
   const userIds = new Set();
   for (const socket of sockets.values()) {
     const userId = Number(socket?.data?.user?.id);
-    const rawPresenceServerId = String(socket?.data?.presenceServerId || "").trim().toLowerCase();
-    if (
-      !Number.isInteger(userId) ||
-      userId < 1 ||
-      !ALLOWED_SERVER_IDS.has(rawPresenceServerId) ||
-      !normalizedServerIds.has(rawPresenceServerId)
-    ) {
+    if (!Number.isInteger(userId) || userId < 1) {
       continue;
     }
-    userIds.add(userId);
+
+    const chatServerId = getSocketChatServerId(socket);
+    if (chatServerId && normalizedServerIds.has(chatServerId)) {
+      userIds.add(userId);
+      continue;
+    }
+
+    const staffEntry = getSocketStaffOnlineEntry(socket);
+    if (staffEntry?.serverId && normalizedServerIds.has(staffEntry.serverId)) {
+      userIds.add(userId);
+    }
   }
 
-  return userIds.size;
+  return userIds;
+}
+
+function getOnlineUserCountForServers(serverIds) {
+  return getOnlineUserIdsForServers(serverIds).size;
 }
 
 function getLoginStats() {
@@ -642,7 +726,7 @@ function getLoginStats() {
        GROUP BY server_id`
     )
     .all();
-  const staffStats = getOnlineStaffStats(activeUserIds);
+  const staffStats = getOnlineStaffStats();
   const freeRpCharacterCount =
     serverCharacterRows.find((row) => normalizeServer(row.server_id) === "free-rp")?.count || 0;
   const erpCharacterCount =
