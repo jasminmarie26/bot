@@ -7,13 +7,13 @@
   const ACTIVITY_SYNC_KEY = "site-idle:last-activity-at";
   const FORCE_LOGOUT_SYNC_KEY = "site-idle:force-logout-at";
   const activityEvents = [
-    "click",
     "keydown",
     "input",
     "change",
     "paste",
-    "pointerdown",
-    "touchstart"
+    "scroll",
+    "wheel",
+    "touchmove"
   ];
   const modal = document.getElementById("idle-logout-modal");
   const countdownElement = document.getElementById("idle-logout-countdown");
