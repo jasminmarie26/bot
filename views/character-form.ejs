@@ -16,40 +16,8 @@
     action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
     class="form"
   >
-    <% if (mode === "create") { %>
-      <input type="hidden" name="server_id" value="<%= character.server_id || 'free-rp' %>" />
-    <% } else { %>
-      <div class="character-editor-grid">
-        <label>
-          Server
-          <select name="server_id" required>
-            <% (serverOptions || []).forEach((server) => { %>
-              <option
-                value="<%= server.id %>"
-                <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
-              >
-                <%= server.label %>
-              </option>
-            <% }) %>
-          </select>
-        </label>
-
-        <label>
-          Festplay
-          <select name="festplay_id">
-            <option value="">Kein Festplay</option>
-            <% festplays.forEach((festplay) => { %>
-              <option
-                value="<%= festplay.id %>"
-                <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
-              >
-                <%= festplay.name %>
-              </option>
-            <% }) %>
-          </select>
-        </label>
-      </div>
-    <% } %>
+    <input type="hidden" name="server_id" value="<%= character.server_id || 'free-rp' %>" />
+    <input type="hidden" name="festplay_id" value="<%= character.festplay_id || '' %>" />
 
     <% const isNameLocked = mode === "edit" && typeof renameAvailability !== "undefined" && renameAvailability && !renameAvailability.can_change; %>
 
