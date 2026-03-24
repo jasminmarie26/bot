@@ -5588,7 +5588,15 @@ app.get("/verify-email", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  return renderLoginPage(req, res);
+  const logoutReason = String(req.query.reason || "").trim().toLowerCase();
+  const success =
+    logoutReason === "idle"
+      ? "Du wurdest wegen zu langer Inaktivität automatisch ausgeloggt."
+      : null;
+
+  return renderLoginPage(req, res, {
+    success
+  });
 });
 
 app.post("/login", (req, res) => {
@@ -5956,7 +5964,7 @@ app.post("/session/touch", requireAuth, (req, res) => {
 
 app.get("/logout-idle", (req, res) => {
   req.session.destroy(() => {
-    res.redirect("/login");
+    res.redirect("/login?reason=idle");
   });
 });
 
@@ -6733,6 +6741,7 @@ const HELP_TOPICS = [
   { slug: "eigene-raeume", title: "Eigene Räume" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },
   { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },
+  { slug: "auto-logoff", title: "Auto-Logoff" },
   { slug: "admin-moderatorname", title: "Admin- und Moderatorname" },
   { slug: "chat-fluestern", title: "Chat & Flüstern" },
   { slug: "chat-formatierung", title: "Chat-Formatierung" }

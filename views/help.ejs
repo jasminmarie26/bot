@@ -195,6 +195,38 @@
       </section>
     <% } %>
 
+    <% if (helpTopic.slug === "auto-logoff") { %>
+      <section class="panel help-section">
+        <h2>Auto-Logoff</h2>
+        <p>Normale Nutzer werden bei Inaktivit&auml;t automatisch ausgeloggt.</p>
+
+        <h3>Ablauf</h3>
+        <ul class="help-list">
+          <li>Nach 45 Sekunden ohne Aktivit&auml;t erscheint eine Warnung.</li>
+          <li>Danach laufen 15 Sekunden sichtbar herunter.</li>
+          <li><code>Abbrechen</code> h&auml;lt dich eingeloggt.</li>
+          <li><code>Jetzt ausloggen</code> beendet die Sitzung sofort.</li>
+          <li>Ohne Reaktion folgt der Logout automatisch.</li>
+          <li>Danach erscheint auf der Login-Seite ein Hinweis.</li>
+        </ul>
+
+        <h3>Was z&auml;hlt als Aktivit&auml;t?</h3>
+        <ul class="help-list">
+          <li>Scrollen z&auml;hlt.</li>
+          <li>Tippen z&auml;hlt.</li>
+          <li>Formulareingaben z&auml;hlen.</li>
+          <li>Nur klicken z&auml;hlt nicht.</li>
+          <li>Nur den Tab wechseln z&auml;hlt nicht.</li>
+        </ul>
+
+        <h3>Ausnahme</h3>
+        <ul class="help-list">
+          <li>Admins sind ausgeschlossen.</li>
+          <li>Moderatoren sind ausgeschlossen.</li>
+        </ul>
+      </section>
+    <% } %>
+
     <% if (helpTopic.slug === "admin-moderatorname") { %>
       <section class="panel help-section">
         <h2>Admin- und Moderatorname</h2>
