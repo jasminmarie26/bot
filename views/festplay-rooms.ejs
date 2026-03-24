@@ -22,12 +22,15 @@
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
       : festplayRoomIdentityName; %>
+  <% const festplayRoomIsOwner = Number(currentUser?.id) === Number(festplay?.created_by_user_id); %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Festspiel-Raumliste Navigation">
       <a href="/dashboard/areas/<%= character.server_id %>">Bereich</a>
-      <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
+      <% if (festplayRoomIsOwner) { %>
+        <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
+      <% } %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
         class="live-updates-nav-link"
