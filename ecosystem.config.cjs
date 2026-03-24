@@ -7,8 +7,8 @@ module.exports = {
       interpreter: "/usr/bin/node",
       exec_mode: "cluster",
       instances: 2,
-      kill_timeout: 5000,
-      listen_timeout: 8000,
+      kill_timeout: 10000,
+      listen_timeout: 20000,
       env: {
         NODE_ENV: "production"
       }
