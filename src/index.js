@@ -7403,7 +7403,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
 
   rememberPreferredCharacter(req, character);
   const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
-    manualOnly: false
+    manualOnly: true
   }).filter((room) => {
     if (room.is_saved_room !== true) {
       return false;
@@ -7473,27 +7473,8 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
     return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
   }
 
-  const roomName = normalizeRoomName(req.body.room_name);
-  const roomDescription = normalizeRoomDescription(req.body.room_description);
-  if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gueltigen Raumnamen eingeben.");
-    return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
-  }
-
-  rememberPreferredCharacter(req, character);
-  const targetRoom = ensureOwnedFestplayAreaRoomForCharacter(
-    req.session.user.id,
-    character,
-    festplayId,
-    roomName,
-    roomDescription
-  );
-  if (!targetRoom) {
-    setFlash(req, "error", "Raum konnte nicht angelegt werden.");
-    return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
-  }
-
-  return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
+  setFlash(req, "error", "Auf der Festspiel-Seite werden nur feste Festspiel-Raeume angezeigt.");
+  return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
 });
 
 app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) => {
