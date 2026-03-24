@@ -160,9 +160,6 @@
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
-          <% if (activeCharacter && !activeCharacter.is_owner) { %>
-            <a href="/characters/<%= activeCharacter.id %>">Charakter</a>
-          <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <% } %>

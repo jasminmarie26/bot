@@ -2458,6 +2458,7 @@ function getFestplayRoomsForUser(userId, festplayId) {
               r.is_locked,
               r.is_public_room,
               r.is_saved_room,
+              COALESCE(r.is_manual_festplay_room, 0) AS is_manual_festplay_room,
               r.server_id,
               r.created_at,
               r.created_by_user_id,
@@ -2476,6 +2477,7 @@ function getFestplayRoomsForUser(userId, festplayId) {
          JOIN characters anchor ON anchor.id = r.character_id
         WHERE r.festplay_id = ?
           AND COALESCE(r.is_festplay_chat, 0) = 1
+          AND COALESCE(r.is_manual_festplay_room, 0) = 1
         ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(parsedUserId, parsedUserId, parsedFestplayId)
@@ -2485,6 +2487,7 @@ function getFestplayRoomsForUser(userId, festplayId) {
       is_locked: Number(room.is_locked) === 1,
       is_public_room: Number(room.is_public_room) === 1,
       is_saved_room: Number(room.is_saved_room) === 1,
+      is_manual_festplay_room: Number(room.is_manual_festplay_room) === 1,
       can_manage_room: Number(room.can_manage_room) === 1,
       can_enter:
         Number(room.is_locked) !== 1 ||
@@ -2801,6 +2804,7 @@ function ensureFestplayChatRoom(festplay, preferredCharacterId = null) {
       `SELECT id
          FROM chat_rooms
         WHERE festplay_id = ?
+          AND COALESCE(is_manual_festplay_room, 0) = 0
         LIMIT 1`
     )
     .get(parsedFestplayId);
@@ -2820,6 +2824,7 @@ function ensureFestplayChatRoom(festplay, preferredCharacterId = null) {
               is_public_room = 0,
               is_saved_room = 0,
               is_festplay_chat = 1,
+              is_manual_festplay_room = 0,
               festplay_id = ?,
               server_id = ?
         WHERE id = ?`
@@ -2850,10 +2855,11 @@ function ensureFestplayChatRoom(festplay, preferredCharacterId = null) {
        is_public_room,
        is_saved_room,
        is_festplay_chat,
+       is_manual_festplay_room,
        festplay_id,
        server_id
      )
-     VALUES (?, ?, ?, ?, '', '', '', 0, 0, 0, 0, 1, ?, ?)`
+     VALUES (?, ?, ?, ?, '', '', '', 0, 0, 0, 0, 1, 0, ?, ?)`
   ).run(
     anchorCharacterId,
     parsedOwnerUserId,
@@ -3391,7 +3397,8 @@ function findOwnedFestplayRoomByNameKey(userId, festplayId, roomNameKey, roomDes
           AND name_key = ?
           AND COALESCE(description, '') = ?
           AND COALESCE(is_saved_room, 0) = 1
-          AND COALESCE(is_festplay_chat, 0) = 1`
+          AND COALESCE(is_festplay_chat, 0) = 1
+          AND COALESCE(is_manual_festplay_room, 0) = 1`
     ).get(parsedFestplayId, parsedUserId, normalizedRoomNameKey, normalizedRoomDescription) || null
   );
 }
@@ -4815,6 +4822,7 @@ function getRoomWithCharacter(roomId) {
     .prepare(
         `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id,
                 COALESCE(r.is_festplay_chat, 0) AS is_festplay_chat,
+                COALESCE(r.is_manual_festplay_room, 0) AS is_manual_festplay_room,
                 r.festplay_id,
                 c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
                  u.username AS room_owner_name
@@ -4987,6 +4995,9 @@ function isRoomLockedForUser(user, room = null) {
 function canAccessRoom(user, room = null) {
   if (!user || !room) return false;
   if (Number(room.is_festplay_chat) === 1) {
+    if (Number(room.is_manual_festplay_room) !== 1) {
+      return false;
+    }
     return Boolean(user?.is_admin) || userHasFestplayAccess(user.id, room.festplay_id);
   }
   if (Number(room.is_public_room) === 1) {
@@ -6624,9 +6635,10 @@ function ensureFestplayRoomForCharacter(userId, character, festplayId, roomName,
        server_id,
        is_saved_room,
        is_festplay_chat,
+       is_manual_festplay_room,
        festplay_id
      )
-     VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
   ).run(
     parsedCharacterId,
     parsedUserId,
@@ -7416,7 +7428,8 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
          FROM chat_rooms
         WHERE id = ?
           AND festplay_id = ?
-          AND COALESCE(is_festplay_chat, 0) = 1`
+          AND COALESCE(is_festplay_chat, 0) = 1
+          AND COALESCE(is_manual_festplay_room, 0) = 1`
     )
     .get(roomId, festplayId);
 
@@ -7515,7 +7528,8 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
          FROM chat_rooms
         WHERE id = ?
           AND festplay_id = ?
-          AND COALESCE(is_festplay_chat, 0) = 1`
+          AND COALESCE(is_festplay_chat, 0) = 1
+          AND COALESCE(is_manual_festplay_room, 0) = 1`
     )
     .get(roomId, festplayId);
 
