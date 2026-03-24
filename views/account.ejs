@@ -16,7 +16,6 @@
       >
         Account l&ouml;schen
       </button>
-      <a class="btn btn-secondary" href="/dashboard">Zur&uuml;ck zum Dashboard</a>
     </div>
   </div>
 
@@ -88,12 +87,14 @@
   </form>
 </section>
 
-<section class="panel">
-  <h2>Hinweis</h2>
-  <p class="muted">
-    Die 182-Tage-Sperre gilt nur f&uuml;r normale Nutzer. Admins sind davon ausgenommen.
-    E-Mail und Geburtsdatum kannst du jederzeit anpassen.
-  </p>
-</section>
+<% if (currentUser?.is_admin || currentUser?.is_moderator) { %>
+  <section class="panel">
+    <h2>Hinweis</h2>
+    <p class="muted">
+      Die 182-Tage-Sperre gilt nur f&uuml;r normale Nutzer. Admins sind davon ausgenommen.
+      E-Mail und Geburtsdatum kannst du jederzeit anpassen.
+    </p>
+  </section>
+<% } %>
 
 <%- include("partials/end") %>
