@@ -439,7 +439,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
-const SESSION_MAX_AGE_MS = 1000 * 60 * 2;
+const SESSION_MAX_AGE_MS = 1000 * 60 * 31;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
