@@ -122,6 +122,14 @@
       typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
         ? `brand ${topbarBrandModifier}`
         : "brand"; %>
+    <% const topbarRoleplayAreaHref =
+      menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
+        ? `/dashboard/areas/${menuCharacter.server_id}`
+        : "/dashboard"; %>
+    <% const topbarAreaLabel =
+      menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
+        ? "Bereich"
+        : "Dashboard"; %>
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
     ); %>
@@ -169,7 +177,7 @@
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
-                <a href="/dashboard">Dashboard</a>
+                <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
                 <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a href="/characters/<%= menuCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>

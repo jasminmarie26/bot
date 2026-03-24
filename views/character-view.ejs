@@ -25,10 +25,18 @@
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab öffnen"
       : roomlistIdentityName; %>
+  <% const roomlistAreaHref =
+    character.server_id === "free-rp" || character.server_id === "erp"
+      ? `/dashboard/areas/${character.server_id}`
+      : "#roomlist"; %>
+  <% const roomlistAreaLabel =
+    character.server_id === "free-rp" || character.server_id === "erp"
+      ? "Bereich"
+      : "Raumliste"; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
       <nav class="rp-menu" aria-label="Charakter Navigation">
-        <a href="#roomlist">Raumliste</a>
+        <a href="<%= roomlistAreaHref %>"><%= roomlistAreaLabel %></a>
         <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
@@ -389,15 +397,12 @@
             </div>
           <% } %>
         </details>
-        <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
+        <% if ((character.server_id === "free-rp" || character.server_id === "erp") && ownedFestplays && ownedFestplays.length) { %>
           <details class="rp-room-section rp-room-section-standard rp-room-accordion">
             <summary class="rp-room-section-summary">
               <span>Meine Festspiele</span>
             </summary>
             <div class="rp-room-section-divider" aria-hidden="true"></div>
-            <% if (!ownedFestplays || !ownedFestplays.length) { %>
-              <p class="muted">Noch keine eigenen Festspiele vorhanden.</p>
-            <% } else { %>
               <div class="rp-room-inline-list">
                 <% ownedFestplays.forEach((festplay) => { %>
                   <a
@@ -411,7 +416,6 @@
                   </a>
                 <% }) %>
               </div>
-            <% } %>
           </details>
         <% } %>
       <% } %>

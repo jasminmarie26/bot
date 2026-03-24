@@ -25,17 +25,24 @@
     ? "Moderatorenbereich im neuen Tab öffnen"
     : chatIdentityName; %>
 <% const isFestplayChat = Boolean(activeRoom && activeRoom.is_festplay_chat); %>
+<% const chatAreaHref = activeCharacter
+  ? ((activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
+      ? `/dashboard/areas/${activeCharacter.server_id}`
+      : `/characters/${activeCharacter.id}#roomlist`)
+  : "/dashboard"; %>
+<% const chatAreaLabel = activeCharacter
+  ? ((activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
+      ? "Bereich"
+      : "Raumliste")
+  : "Dashboard"; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
+      <a href="<%= chatAreaHref %>"><%= chatAreaLabel %></a>
       <% if (isFestplayChat) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms">Festspiel-R&auml;ume</a>
-      <% } else if (activeCharacter) { %>
-        <a href="/characters/<%= activeCharacter.id %>#roomlist">Raumliste</a>
-      <% } else { %>
-        <a href="/dashboard">Dashboard</a>
       <% } %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
