@@ -1,5 +1,5 @@
     </main>
-    <% if (currentUser) { %>
+    <% if (currentUser && !currentUser.is_admin && !currentUser.is_moderator) { %>
       <div id="idle-logout-modal" class="idle-logout-modal" hidden>
         <div class="idle-logout-backdrop" aria-hidden="true"></div>
         <section
@@ -29,7 +29,7 @@
     <script src="/updates.js?v=<%= staticAssetVersion %>"></script>
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
-    <% if (currentUser) { %>
+    <% if (currentUser && !currentUser.is_admin && !currentUser.is_moderator) { %>
       <script src="/idle-logout.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
   </body>
