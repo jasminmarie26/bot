@@ -439,7 +439,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
-const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+const SESSION_MAX_AGE_MS = 1000 * 60 * 2;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -5947,6 +5947,11 @@ app.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/");
   });
+});
+
+app.post("/session/touch", requireAuth, (req, res) => {
+  req.session.last_activity_at = Date.now();
+  return res.status(204).end();
 });
 
 app.get("/logout-idle", (req, res) => {
