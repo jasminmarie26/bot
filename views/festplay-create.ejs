@@ -310,6 +310,9 @@
                       title="Raum &ouml;ffnen"
                     >
                       <span class="rp-room-inline-name"><%= room.name %></span>
+                      <% if (room.description) { %>
+                        <span class="rp-room-inline-teaser"><%= room.description %></span>
+                      <% } %>
                     </a>
                   <% }) %>
                 </div>
@@ -340,6 +343,17 @@
                     placeholder="Raumname"
                     value="<%= selectedFestplayRoom?.name || '' %>"
                     required
+                  />
+                </label>
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Raumbeschreibung</span>
+                  <input
+                    type="text"
+                    name="room_description"
+                    maxlength="160"
+                    placeholder="Kurzer Text für die Raumliste"
+                    value="<%= selectedFestplayRoom?.description || '' %>"
                   />
                 </label>
 
@@ -409,18 +423,6 @@
               />
             </label>
 
-            <div class="rp-room-editor-checks">
-              <label class="rp-room-editor-check">
-                <input
-                  type="checkbox"
-                  name="is_public"
-                  value="1"
-                  <%= selectedFestplay.is_public ? "checked" : "" %>
-                />
-                &Ouml;ffentlich
-              </label>
-            </div>
-
             <label class="rp-room-editor-field">
               <span class="rp-room-editor-field-label">
                 Festplay Beschreibung
@@ -456,17 +458,6 @@
           <% if (selectedFestplay.creator_display_name) { %>
             <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
           <% } %>
-
-          <div class="rp-room-editor-checks">
-            <span class="rp-room-editor-check rp-room-editor-check-static">
-              <input
-                type="checkbox"
-                disabled
-                <%= selectedFestplay.is_public ? "checked" : "" %>
-              />
-              &Ouml;ffentlich
-            </span>
-          </div>
 
           <div class="rp-room-editor-field">
             <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
