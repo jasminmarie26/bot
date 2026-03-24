@@ -46,6 +46,20 @@
     modal.classList.toggle("is-open", warningVisible);
   };
 
+  const showWarning = () => {
+    if (warningVisible || logoutStarted) {
+      return;
+    }
+
+    warningVisible = true;
+    logoutAt = lastActivityAt + IDLE_TIMEOUT_MS;
+    syncModalVisibility();
+    updateCountdown();
+    window.clearInterval(countdownTimer);
+    countdownTimer = window.setInterval(updateCountdown, 250);
+    cancelButton.focus();
+  };
+
   const performLogout = ({ broadcast = true } = {}) => {
     if (logoutStarted) return;
     logoutStarted = true;
@@ -82,14 +96,35 @@
     const elapsedMs = Math.max(0, Date.now() - lastActivityAt);
     const remainingMs = Math.max(0, WARNING_DELAY_MS - elapsedMs);
     warningTimer = window.setTimeout(() => {
-      warningVisible = true;
-      logoutAt = Date.now() + WARNING_COUNTDOWN_MS;
-      syncModalVisibility();
-      updateCountdown();
-      window.clearInterval(countdownTimer);
-      countdownTimer = window.setInterval(updateCountdown, 250);
-      cancelButton.focus();
+      showWarning();
     }, remainingMs);
+  };
+
+  const reconcileIdleState = () => {
+    if (logoutStarted) {
+      return;
+    }
+
+    const now = Date.now();
+    const elapsedMs = Math.max(0, now - lastActivityAt);
+
+    if (elapsedMs >= IDLE_TIMEOUT_MS) {
+      performLogout();
+      return;
+    }
+
+    if (elapsedMs >= WARNING_DELAY_MS) {
+      showWarning();
+      updateCountdown();
+      return;
+    }
+
+    if (warningVisible) {
+      closeWarning({ resetActivity: false, syncTabs: false });
+      return;
+    }
+
+    scheduleWarning();
   };
 
   const closeWarning = ({ resetActivity = true, syncTabs = true } = {}) => {
@@ -155,10 +190,10 @@
     window.addEventListener(eventName, () => registerActivity({ force: false }), { passive: true });
   });
 
-  window.addEventListener("focus", () => registerActivity({ force: true }));
+  window.addEventListener("focus", reconcileIdleState);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      registerActivity({ force: true });
+      reconcileIdleState();
     }
   });
 
@@ -204,6 +239,6 @@
   lastActivityAt = Date.now();
   setSharedTimestamp(ACTIVITY_SYNC_KEY, lastActivityAt);
   syncModalVisibility();
-  scheduleWarning();
+  reconcileIdleState();
   void touchSession(true);
 })();
