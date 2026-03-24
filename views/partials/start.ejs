@@ -130,6 +130,7 @@
       menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
         ? "Bereich"
         : "Dashboard"; %>
+    <% const isDashboardPath = Boolean(currentPath && currentPath.startsWith("/dashboard")); %>
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
     ); %>
@@ -249,7 +250,9 @@
 
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="/account">Account</a>
-                    <a href="/dashboard">Dashboard</a>
+                    <% if (!isDashboardPath) { %>
+                      <a href="/dashboard">Dashboard</a>
+                    <% } %>
                     <% if (menuCharacter) { %>
                       <a href="/characters/<%= menuCharacter.id %>">Charakter</a>
                       <% if (canEditMenuCharacter) { %>
