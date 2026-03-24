@@ -2493,6 +2493,32 @@ function getFestplayRoomsForUser(userId, festplayId) {
     }));
 }
 
+function isLegacyAutoFestplayRoom(room, festplay) {
+  const roomName = String(room?.name || "").trim().toLowerCase();
+  const festplayName = String(festplay?.name || "").trim().toLowerCase();
+
+  if (!roomName || !festplayName || roomName !== festplayName) {
+    return false;
+  }
+
+  if (Number(room?.created_by_user_id) !== Number(festplay?.created_by_user_id)) {
+    return false;
+  }
+
+  if (normalizeServer(room?.server_id) !== normalizeServer(festplay?.server_id)) {
+    return false;
+  }
+
+  return (
+    !String(room?.description || "").trim() &&
+    !String(room?.teaser || "").trim() &&
+    !String(room?.image_url || "").trim() &&
+    room?.email_log_enabled !== true &&
+    room?.is_locked !== true &&
+    room?.is_public_room !== true
+  );
+}
+
 function getFestplayById(festplayId) {
   const parsedFestplayId = Number(festplayId);
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
@@ -7199,7 +7225,17 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   }
 
   rememberPreferredCharacter(req, character);
-  const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId);
+  const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId).filter((room) => {
+    if (room.is_saved_room !== true) {
+      return false;
+    }
+
+    if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
+      return false;
+    }
+
+    return !isLegacyAutoFestplayRoom(room, festplay);
+  });
   const ownedFestplayRooms = festplayRooms.filter((room) => room.is_owned_room);
   const festplayRoomUsers = Object.fromEntries(
     festplayRooms.map((room) => [
