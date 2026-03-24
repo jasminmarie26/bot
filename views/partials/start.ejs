@@ -71,7 +71,7 @@
     <% const showAccountDeleteControl = Boolean(
       currentUser &&
       currentPath &&
-      currentPath === "/dashboard"
+      currentPath.startsWith("/account")
     ); %>
     <% const menuCharacter =
       typeof topbarCharacter !== "undefined"
