@@ -5,7 +5,9 @@
     <div>
       <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
       <p class="muted">
-        W&auml;hle hier direkt Name, Bereich und Chat-Farbe deines Charakters.
+        <%= mode === "create"
+          ? "W&auml;hle hier direkt Namen und Chat-Farbe deines Charakters."
+          : "W&auml;hle hier direkt Name, Bereich und Chat-Farbe deines Charakters." %>
       </p>
     </div>
   </div>
@@ -19,41 +21,39 @@
     action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
     class="form"
   >
-    <div class="character-editor-grid">
-      <label>
-        Server
-        <select name="server_id" required>
-          <% (serverOptions || []).forEach((server) => { %>
-            <option
-              value="<%= server.id %>"
-              <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
-            >
-              <%= server.label %>
-            </option>
-          <% }) %>
-        </select>
-      </label>
+    <% if (mode === "create") { %>
+      <input type="hidden" name="server_id" value="<%= character.server_id || 'free-rp' %>" />
+    <% } else { %>
+      <div class="character-editor-grid">
+        <label>
+          Server
+          <select name="server_id" required>
+            <% (serverOptions || []).forEach((server) => { %>
+              <option
+                value="<%= server.id %>"
+                <%= (character.server_id || "free-rp") === server.id ? "selected" : "" %>
+              >
+                <%= server.label %>
+              </option>
+            <% }) %>
+          </select>
+        </label>
 
-      <label>
-        Festplay
-        <select name="festplay_id" required>
-          <option value="">Festplay suchen / ausw&auml;hlen</option>
-          <% festplays.forEach((festplay) => { %>
-            <option
-              value="<%= festplay.id %>"
-              <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
-            >
-              <%= festplay.name %>
-            </option>
-          <% }) %>
-        </select>
-      </label>
-    </div>
-
-    <% if (!festplays.length) { %>
-      <p class="muted">
-        Es gibt noch kein Festplay. Bitte als Admin zuerst unter /admin ein Festplay anlegen.
-      </p>
+        <label>
+          Festplay
+          <select name="festplay_id">
+            <option value="">Kein Festplay</option>
+            <% festplays.forEach((festplay) => { %>
+              <option
+                value="<%= festplay.id %>"
+                <%= Number(character.festplay_id) === Number(festplay.id) ? "selected" : "" %>
+              >
+                <%= festplay.name %>
+              </option>
+            <% }) %>
+          </select>
+        </label>
+      </div>
     <% } %>
 
     <% const isNameLocked = mode === "edit" && typeof renameAvailability !== "undefined" && renameAvailability && !renameAvailability.can_change; %>

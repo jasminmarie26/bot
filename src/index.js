@@ -6958,7 +6958,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
     character: {
       server_id: requestedServer,
-      festplay_id: festplays[0]?.id || null,
+      festplay_id: null,
       name: "",
       species: "",
       age: "",
@@ -6974,6 +6974,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
 app.post("/characters", requireAuth, (req, res) => {
   const payload = normalizeCharacterInput(req.body);
   const festplays = getFestplays();
+  payload.festplay_id = null;
 
   if (!payload.name) {
     return res.status(400).render("character-form", {
@@ -6992,34 +6993,6 @@ app.post("/characters", requireAuth, (req, res) => {
       title: "Neuer Charakter",
       mode: "create",
       error: "Avatar-URL muss mit http:// oder https:// starten.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      character: payload
-    });
-  }
-
-  if (!payload.festplay_id || !festplayExists(payload.festplay_id)) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Bitte ein gültiges Festplay auswählen.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      character: payload
-    });
-  }
-
-  const selectedFestplayServer = getFestplayServerBinding(payload.festplay_id);
-  if (
-    selectedFestplayServer?.server_id &&
-    selectedFestplayServer.server_id !== normalizeServer(payload.server_id)
-  ) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
