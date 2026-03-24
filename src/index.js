@@ -2453,6 +2453,7 @@ function getFestplayRoomsForUser(userId, festplayId) {
               r.description,
               r.teaser,
               r.image_url,
+              r.character_id,
               r.email_log_enabled,
               r.is_locked,
               r.is_public_room,
@@ -2517,6 +2518,67 @@ function isLegacyAutoFestplayRoom(room, festplay) {
     room?.is_locked !== true &&
     room?.is_public_room !== true
   );
+}
+
+function characterHasFestplayRoomRights(festplayId, characterId, userId = null) {
+  const parsedFestplayId = Number(festplayId);
+  const parsedCharacterId = Number(characterId);
+  const parsedUserId = Number(userId);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
+    return false;
+  }
+
+  const creatorMatch = Number.isInteger(parsedUserId) && parsedUserId > 0
+    ? db
+        .prepare(
+          `SELECT 1
+             FROM festplays
+            WHERE id = ?
+              AND creator_character_id = ?
+              AND created_by_user_id = ?
+            LIMIT 1`
+        )
+        .get(parsedFestplayId, parsedCharacterId, parsedUserId)
+    : db
+        .prepare(
+          `SELECT 1
+             FROM festplays
+            WHERE id = ?
+              AND creator_character_id = ?
+            LIMIT 1`
+        )
+        .get(parsedFestplayId, parsedCharacterId);
+  if (creatorMatch) {
+    return true;
+  }
+
+  const permissionMatch = Number.isInteger(parsedUserId) && parsedUserId > 0
+    ? db
+        .prepare(
+          `SELECT 1
+             FROM festplay_permissions
+            WHERE festplay_id = ?
+              AND character_id = ?
+              AND user_id = ?
+            LIMIT 1`
+        )
+        .get(parsedFestplayId, parsedCharacterId, parsedUserId)
+    : db
+        .prepare(
+          `SELECT 1
+             FROM festplay_permissions
+            WHERE festplay_id = ?
+              AND character_id = ?
+            LIMIT 1`
+        )
+        .get(parsedFestplayId, parsedCharacterId);
+
+  return Boolean(permissionMatch);
 }
 
 function getFestplayById(festplayId) {
@@ -5081,6 +5143,27 @@ function getLatestSiteUpdateRevisionToken() {
   return decorateSiteUpdate(latestSiteUpdate)?.revision_token || "";
 }
 
+function getLiveUpdatesStatePayload(options = {}) {
+  const scope = String(options.scope || "recent").trim().toLowerCase();
+  const requestedLimit = Number.parseInt(options.limit, 10);
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 100)
+    : 50;
+  const siteUpdates = scope === "full" ? getAllSiteUpdates() : getRecentSiteUpdates(limit);
+  const recentSiteUpdateRevisions = siteUpdates
+    .slice(0, 50)
+    .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
+    .filter(Boolean);
+
+  return {
+    homeContent: getHomeContent(),
+    siteUpdates,
+    recentSiteUpdateRevisions,
+    latestSiteUpdateRevisionToken:
+      String(siteUpdates[0]?.revision_token || "").trim() || getLatestSiteUpdateRevisionToken()
+  };
+}
+
 function getUsersTableColumnSet() {
   try {
     const rows = db.prepare("PRAGMA table_info(users)").all();
@@ -5311,6 +5394,16 @@ app.get("/live-updates", (req, res) => {
     latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
     pageClass: "page-live-updates"
   });
+});
+
+app.get("/api/live-updates/state", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.json(
+    getLiveUpdatesStatePayload({
+      scope: req.query.scope,
+      limit: req.query.limit
+    })
+  );
 });
 
 app.get("/impressum", (req, res) => {

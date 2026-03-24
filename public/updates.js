@@ -53,11 +53,16 @@
         .filter(Boolean)
     )
   );
+  const hadInitialLiveUpdatesBaseline = Boolean(
+    initialLiveUpdatesRevision || initialLiveUpdatesRevisions.length
+  );
 
   const canEditUpdates = Boolean(updateForm);
   const LIVE_UPDATES_LAST_SEEN_KEY = "site-updates:last-seen-revision";
   const LIVE_UPDATES_LATEST_KEY = "site-updates:latest-revision";
   const LIVE_UPDATES_REVISIONS_LIMIT = Math.max(initialLiveUpdatesRevisions.length, 50);
+  const LIVE_UPDATES_STATE_ENDPOINT = "/api/live-updates/state";
+  const LIVE_UPDATES_SYNC_COOLDOWN_MS = 4000;
   const liveUpdatesPageSize = Math.max(
     1,
     Number.parseInt(liveUpdatesPageRoot?.dataset.liveUpdatesPageSize || "10", 10) || 10
@@ -69,6 +74,8 @@
     : initialLiveUpdatesRevision
       ? [initialLiveUpdatesRevision]
       : [];
+  let lastLiveUpdatesSyncAt = 0;
+  let liveUpdatesSyncPromise = null;
 
   if (
     !list &&
@@ -200,7 +207,7 @@
   function getUnreadLiveUpdatesCount() {
     const lastSeenRevision = readLocalStorage(LIVE_UPDATES_LAST_SEEN_KEY);
     if (!lastSeenRevision) {
-      return 0;
+      return hadInitialLiveUpdatesBaseline ? 0 : currentLiveUpdatesRevisions.length;
     }
 
     if (!currentLiveUpdatesRevisions.length) {
@@ -597,6 +604,45 @@
     return article;
   }
 
+  function renderLiveUpdatesSnapshot(items) {
+    if (!list) return;
+
+    const normalizedItems = Array.isArray(items)
+      ? items
+          .filter((item) => {
+            const updateId = Number.parseInt(item?.id, 10);
+            return Number.isInteger(updateId) && updateId > 0;
+          })
+          .sort((left, right) =>
+            compareRevisionTokens(right?.revision_token || "", left?.revision_token || "")
+          )
+      : [];
+
+    list.replaceChildren();
+    if (!normalizedItems.length) {
+      ensureEmptyState();
+      if (isPaginatedLiveUpdatesPage) {
+        renderLiveUpdatesPagination();
+      }
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    normalizedItems.forEach((item) => {
+      fragment.appendChild(createUpdateElement(item));
+    });
+    list.appendChild(fragment);
+
+    if (isPaginatedLiveUpdatesPage) {
+      renderLiveUpdatesPagination();
+    } else {
+      while (list.querySelectorAll(".update-item").length > 30) {
+        const updates = list.querySelectorAll(".update-item");
+        updates[updates.length - 1].remove();
+      }
+    }
+  }
+
   function renderOrReplaceUpdate(item, { prepend = false } = {}) {
     if (!list || !item) return;
 
@@ -635,6 +681,85 @@
     if (isPaginatedLiveUpdatesPage) {
       renderLiveUpdatesPagination();
     }
+  }
+
+  function buildLiveUpdatesStateUrl() {
+    const requestUrl = new URL(LIVE_UPDATES_STATE_ENDPOINT, window.location.origin);
+    if (isPaginatedLiveUpdatesPage) {
+      requestUrl.searchParams.set("scope", "full");
+    } else if (list) {
+      requestUrl.searchParams.set("limit", "30");
+    } else {
+      requestUrl.searchParams.set("limit", "50");
+    }
+    return requestUrl.toString();
+  }
+
+  async function refreshLiveUpdatesState({ force = false, markSeenIfVisible = false } = {}) {
+    if (typeof window.fetch !== "function") {
+      return null;
+    }
+
+    if (!liveUpdatesLink && !liveUpdatesPageRoot && !list) {
+      return null;
+    }
+
+    if (!force && liveUpdatesSyncPromise) {
+      return liveUpdatesSyncPromise;
+    }
+
+    if (
+      !force &&
+      lastLiveUpdatesSyncAt &&
+      Date.now() - lastLiveUpdatesSyncAt < LIVE_UPDATES_SYNC_COOLDOWN_MS
+    ) {
+      return null;
+    }
+
+    liveUpdatesSyncPromise = window
+      .fetch(buildLiveUpdatesStateUrl(), {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          accept: "application/json"
+        }
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        const payload = await response.json();
+        applyHomeContent(payload?.homeContent);
+
+        const revisions = Array.isArray(payload?.recentSiteUpdateRevisions)
+          ? payload.recentSiteUpdateRevisions
+          : [];
+        const latestRevision = String(payload?.latestSiteUpdateRevisionToken || "").trim();
+        setCurrentLiveUpdatesRevisions(
+          revisions.length ? revisions : latestRevision ? [latestRevision] : []
+        );
+
+        if (list && Array.isArray(payload?.siteUpdates)) {
+          renderLiveUpdatesSnapshot(payload.siteUpdates);
+        }
+
+        if (markSeenIfVisible && liveUpdatesPageRoot && document.visibilityState !== "hidden") {
+          markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+        } else {
+          updateLiveUpdatesBadge();
+        }
+
+        return payload;
+      })
+      .catch(() => null)
+      .finally(() => {
+        lastLiveUpdatesSyncAt = Date.now();
+        liveUpdatesSyncPromise = null;
+      });
+
+    return liveUpdatesSyncPromise;
   }
 
   function setUpdateFormMode(mode, item = null) {
@@ -861,7 +986,7 @@
 
     const markCurrentRevisionAsSeen = () => {
       if (document.visibilityState !== "hidden") {
-        markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
+        refreshLiveUpdatesState({ markSeenIfVisible: true });
       }
     };
 
@@ -902,6 +1027,9 @@
 
     window.addEventListener("pageshow", () => {
       updateLiveUpdatesBadge();
+      refreshLiveUpdatesState({
+        markSeenIfVisible: Boolean(liveUpdatesPageRoot && document.visibilityState !== "hidden")
+      });
     });
 
     window.addEventListener("storage", (event) => {
@@ -913,6 +1041,13 @@
 
   const socket = io({
     transports: ["websocket"]
+  });
+
+  socket.on("connect", () => {
+    refreshLiveUpdatesState({
+      force: true,
+      markSeenIfVisible: Boolean(liveUpdatesPageRoot && document.visibilityState !== "hidden")
+    });
   });
 
   if (list) {
