@@ -297,6 +297,11 @@ const festplayColumns = db
   .all()
   .map((column) => column.name);
 
+const festplayPermissionColumns = db
+  .prepare("PRAGMA table_info(festplay_permissions)")
+  .all()
+  .map((column) => column.name);
+
 if (!userColumns.includes("is_admin")) {
   db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
 }
@@ -432,6 +437,21 @@ if (!characterColumns.includes("server_id")) {
 
 if (!characterColumns.includes("festplay_dashboard_mode")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay'");
+}
+
+if (!festplayPermissionColumns.includes("source")) {
+  db.exec("ALTER TABLE festplay_permissions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+  db.prepare(
+    `UPDATE festplay_permissions
+        SET source = 'application'
+      WHERE EXISTS (
+              SELECT 1
+                FROM festplay_applications fa
+               WHERE fa.festplay_id = festplay_permissions.festplay_id
+                 AND fa.applicant_character_id = festplay_permissions.character_id
+                 AND fa.status = 'approved'
+            )`
+  ).run();
 }
 
 if (!chatRoomColumns.includes("is_festplay_chat")) {
@@ -590,6 +610,7 @@ db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id 
 db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id IS NOT NULL AND moderator_character_id < 1").run();
 db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
 db.prepare("UPDATE users SET birth_date = '' WHERE birth_date IS NULL").run();
+db.prepare("UPDATE festplay_permissions SET source = 'manual' WHERE source IS NULL OR trim(source) = ''").run();
 db.prepare("UPDATE guestbook_settings SET frame_color = '' WHERE frame_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET background_color = '' WHERE background_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET surround_color = '' WHERE surround_color IS NULL").run();

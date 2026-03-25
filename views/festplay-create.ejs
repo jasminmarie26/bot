@@ -250,14 +250,18 @@
               </form>
 
               <% if (festplayPermissionEntries && festplayPermissionEntries.length) { %>
-                <div class="rp-room-editor-chip-list">
-                  <% festplayPermissionEntries.forEach((entry) => { %>
-                    <div class="rp-room-editor-chip-row">
-                      <span class="rp-room-editor-chip-name"><%= entry.character_name %></span>
+                <div class="rp-festplay-player-inline-list rp-festplay-rights-inline-list">
+                  <% festplayPermissionEntries.forEach((entry, index) => { %>
+                    <span class="rp-festplay-right-inline-item">
+                      <a
+                        class="rp-festplay-player-link"
+                        href="/characters/<%= entry.character_id %>/guestbook"
+                        title="G&auml;stebuch von <%= entry.character_name %> &ouml;ffnen"
+                      ><%= entry.character_name %></a>
                       <form
                         method="POST"
                         action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/permissions/<%= entry.id %>/delete"
-                        class="inline-form rp-room-delete-form"
+                        class="inline-form rp-room-delete-form rp-festplay-right-remove-form"
                       >
                         <button
                           class="rp-room-delete-btn"
@@ -266,7 +270,7 @@
                           title="Recht entfernen"
                         >X</button>
                       </form>
-                    </div>
+                    </span><% if (index < festplayPermissionEntries.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
                   <% }) %>
                 </div>
               <% } else { %>

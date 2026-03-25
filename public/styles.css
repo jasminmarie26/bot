@@ -4176,6 +4176,27 @@ body.page-home-screen .home-hero-actions {
   line-height: 1.7;
 }
 
+.rp-festplay-rights-inline-list {
+  line-height: 2;
+}
+
+.rp-festplay-right-inline-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rp-festplay-right-remove-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.rp-festplay-right-remove-form .rp-room-delete-btn {
+  min-width: 1.8rem;
+  min-height: 1.8rem;
+  padding: 0 0.42rem;
+}
+
 .rp-festplay-player-link {
   color: var(--link);
   font-weight: 700;

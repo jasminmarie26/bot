@@ -2598,7 +2598,8 @@ function characterHasFestplayRoomRights(festplayId, characterId, userId = null) 
             WHERE festplay_id = ?
               AND character_id = ?
               AND user_id = ?
-            LIMIT 1`
+              AND COALESCE(source, 'manual') = 'manual'
+             LIMIT 1`
         )
         .get(parsedFestplayId, parsedCharacterId, parsedUserId)
     : db
@@ -2607,7 +2608,8 @@ function characterHasFestplayRoomRights(festplayId, characterId, userId = null) 
              FROM festplay_permissions
             WHERE festplay_id = ?
               AND character_id = ?
-            LIMIT 1`
+              AND COALESCE(source, 'manual') = 'manual'
+             LIMIT 1`
         )
         .get(parsedFestplayId, parsedCharacterId);
 
@@ -3157,19 +3159,24 @@ function getFestplayPermissionEntries(festplayId, serverId) {
               fp.user_id,
               fp.character_id,
               c.name AS character_name
-       FROM festplay_permissions fp
-       JOIN characters c ON c.id = fp.character_id
-       WHERE fp.festplay_id = ?
-         AND c.server_id = ?
-       ORDER BY lower(c.name) ASC, fp.id ASC`
+        FROM festplay_permissions fp
+        JOIN characters c ON c.id = fp.character_id
+        WHERE fp.festplay_id = ?
+          AND COALESCE(fp.source, 'manual') = 'manual'
+          AND c.server_id = ?
+        ORDER BY lower(c.name) ASC, fp.id ASC`
     )
     .all(parsedFestplayId, normalizedServerId);
 }
 
-function addFestplayPermission(festplayId, targetCharacterId, grantedByUserId) {
+function addFestplayPermission(festplayId, targetCharacterId, grantedByUserId, options = {}) {
   const parsedFestplayId = Number(festplayId);
   const parsedCharacterId = Number(targetCharacterId);
   const parsedGrantedByUserId = Number(grantedByUserId);
+  const normalizedSource =
+    String(options?.source || "manual").trim().toLowerCase() === "application"
+      ? "application"
+      : "manual";
   if (
     !Number.isInteger(parsedFestplayId) ||
     parsedFestplayId < 1 ||
@@ -3190,17 +3197,30 @@ function addFestplayPermission(festplayId, targetCharacterId, grantedByUserId) {
 
   const upsertPermission = db.transaction(() => {
     db.prepare(
-      `INSERT OR IGNORE INTO festplay_permissions (festplay_id, user_id, character_id, granted_by_user_id)
-       VALUES (?, ?, ?, ?)`
-    ).run(parsedFestplayId, targetCharacter.user_id, parsedCharacterId, parsedGrantedByUserId);
+      `INSERT OR IGNORE INTO festplay_permissions (festplay_id, user_id, character_id, granted_by_user_id, source)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(
+      parsedFestplayId,
+      targetCharacter.user_id,
+      parsedCharacterId,
+      parsedGrantedByUserId,
+      normalizedSource
+    );
 
     db.prepare(
       `UPDATE festplay_permissions
           SET character_id = ?,
-              granted_by_user_id = ?
+              granted_by_user_id = ?,
+              source = ?
         WHERE festplay_id = ?
           AND user_id = ?`
-    ).run(parsedCharacterId, parsedGrantedByUserId, parsedFestplayId, targetCharacter.user_id);
+    ).run(
+      parsedCharacterId,
+      parsedGrantedByUserId,
+      normalizedSource,
+      parsedFestplayId,
+      targetCharacter.user_id
+    );
   });
 
   upsertPermission();
@@ -8656,7 +8676,8 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     const approved = addFestplayPermission(
       festplayId,
       application.applicant_character_id,
-      req.session.user.id
+      req.session.user.id,
+      { source: "application" }
     );
     if (!approved) {
       setFlash(req, "error", "Die Bewerbung konnte nicht freigeschaltet werden.");
