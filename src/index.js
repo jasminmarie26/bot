@@ -6800,7 +6800,8 @@ function ensureFestplayRoomForCharacter(
   festplayId,
   roomName,
   roomDescription = "",
-  roomTeaser = ""
+  roomTeaser = "",
+  emailLogEnabled = 0
 ) {
   const parsedUserId = Number(userId);
   const parsedCharacterId = Number(character?.id);
@@ -6809,6 +6810,7 @@ function ensureFestplayRoomForCharacter(
   const normalizedRoomName = normalizeRoomName(roomName);
   const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
   const normalizedRoomTeaser = normalizeBbcodeInput(roomTeaser, 4000);
+  const normalizedEmailLogEnabled = Number(emailLogEnabled) === 1 ? 1 : 0;
 
   if (
     !Number.isInteger(parsedUserId) ||
@@ -6849,13 +6851,14 @@ function ensureFestplayRoomForCharacter(
        name_key,
        description,
        teaser,
+       email_log_enabled,
        server_id,
        is_saved_room,
        is_festplay_chat,
        is_manual_festplay_room,
        festplay_id
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
   ).run(
     parsedCharacterId,
     parsedUserId,
@@ -6863,6 +6866,7 @@ function ensureFestplayRoomForCharacter(
     roomNameKey,
     normalizedRoomDescription,
     normalizedRoomTeaser,
+    normalizedEmailLogEnabled,
     normalizedServerId,
     parsedFestplayId
   );
@@ -7737,6 +7741,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
   const roomName = normalizeRoomName(req.body.room_name);
   const roomDescription = normalizeRoomDescription(req.body.room_description);
   const roomTeaser = normalizeBbcodeInput(req.body.room_teaser, 4000);
+  const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gueltigen Raumnamen eingeben.");
     return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
@@ -7749,11 +7754,17 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
     festplayId,
     roomName,
     roomDescription,
-    roomTeaser
+    roomTeaser,
+    emailLogEnabled
   );
   if (!targetRoom) {
     setFlash(req, "error", "Festspiel-Raum konnte nicht angelegt werden.");
     return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
+  }
+
+  const refreshedRoom = getRoomWithCharacter(targetRoom.id);
+  if (emailLogEnabled === 1 && refreshedRoom) {
+    maybeStartAutomaticRoomLog(targetRoom.id, refreshedRoom.server_id, refreshedRoom);
   }
 
   return res.redirect(
@@ -7822,7 +7833,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   const roomDescription = normalizeRoomDescription(req.body.room_description);
   const roomTeaser = normalizeBbcodeInput(req.body.room_teaser, 4000);
   const roomImageUrl = "";
-  const emailLogEnabled = 0;
+  const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
   const isLocked = 0;
 
   if (roomName.length < 2) {
@@ -7863,7 +7874,9 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   );
 
   const refreshedRoom = getRoomWithCharacter(roomId);
-  if (Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
+  if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
+    maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
+  } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
     emitSystemChatMessage(roomId, room.server_id, "E-Mail-Log wurde deaktiviert.");
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   }

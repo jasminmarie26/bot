@@ -338,6 +338,18 @@
               >
                 <input type="hidden" name="return_to" value="<%= selectedFestplayRoomTarget %>" />
 
+                <div class="rp-room-editor-checks">
+                  <label class="rp-room-editor-check">
+                    <input
+                      type="checkbox"
+                      name="email_log_enabled"
+                      value="1"
+                      <%= selectedFestplayRoom?.email_log_enabled ? "checked" : "" %>
+                    />
+                    E-Mail-Log
+                  </label>
+                </div>
+
                 <label class="rp-room-editor-field">
                   <span class="rp-room-editor-field-label">Raumname</span>
                   <input
