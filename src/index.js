@@ -8279,16 +8279,16 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
 
   rememberPreferredCharacter(req, character);
   const selectedFestplayId = Number(req.query.selected_festplay);
-  let ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
-  if (
-    Number.isInteger(selectedFestplayId) &&
-    selectedFestplayId > 0 &&
-    ownedFestplays.some((festplay) => Number(festplay.id) === selectedFestplayId)
-  ) {
-    syncFestplayCreatorCharacter(selectedFestplayId, req.session.user.id, character.id);
-    ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
-  }
-  const otherFestplays = getOtherFestplaysForUser(req.session.user.id, character.server_id);
+  let ownedFestplays = [];
+  let otherFestplays = [];
+  let selectedFestplay = null;
+  let selectedFestplayMode = null;
+  let festplayPermissionEntries = [];
+  let festplayApplications = [];
+  let festplayPlayerOverview = null;
+  let festplayRooms = [];
+  let selectedFestplayRoom = null;
+  let selectedFestplayRoomPreviewHtml = "";
   const requestedFestplayOverviewTab =
     String(req.query.overview || "").trim().toLowerCase() === "andere"
       ? "andere"
@@ -8300,55 +8300,80 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
       : requestedFestplayTab === "raeume"
         ? "raeume"
         : "allgemein";
-  const selectedOwnedFestplay =
-    ownedFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
-  const selectedOtherFestplay =
-    selectedOwnedFestplay
-      ? null
-      : otherFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
-  const selectedFestplay = selectedOwnedFestplay || selectedOtherFestplay || null;
-  const selectedFestplayMode = selectedOwnedFestplay
-    ? "owned"
-    : selectedOtherFestplay
-      ? "other"
-      : null;
-  const activeFestplayOverviewTab = selectedFestplayMode === "other"
-    ? "andere"
-    : selectedFestplayMode === "owned"
-      ? "eigene"
-      : requestedFestplayOverviewTab;
-  const festplayPermissionEntries = selectedFestplayMode === "owned"
-    ? getFestplayPermissionEntries(selectedFestplay.id, character.server_id)
-    : [];
-  const festplayApplications = selectedFestplayMode === "owned"
-    ? getPendingFestplayApplications(selectedFestplay.id, character.server_id)
-    : [];
-  const festplayPlayerOverview = selectedFestplay
-    ? getFestplayPlayerOverview(selectedFestplay.id, character.server_id)
-    : null;
-  const festplayRooms = selectedFestplayMode === "owned"
-    ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id).filter((room) => {
-        if (room.is_saved_room !== true) {
-          return false;
-        }
+  let activeFestplayOverviewTab = requestedFestplayOverviewTab;
 
-        if (
-          normalizeServer(room.server_id) !==
-          normalizeServer(selectedFestplay.server_id || character.server_id)
-        ) {
-          return false;
-        }
+  try {
+    ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
+    if (
+      Number.isInteger(selectedFestplayId) &&
+      selectedFestplayId > 0 &&
+      ownedFestplays.some((festplay) => Number(festplay.id) === selectedFestplayId)
+    ) {
+      syncFestplayCreatorCharacter(selectedFestplayId, req.session.user.id, character.id);
+      ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
+    }
 
-        return !isLegacyAutoFestplayRoom(room, selectedFestplay);
-      })
-    : [];
-  const selectedFestplayRoomId = Number(req.query.selected_room);
-  const selectedFestplayRoom =
-    selectedFestplayMode === "owned" && activeFestplayTab === "raeume"
-      ? festplayRooms.find((room) => Number(room.id) === selectedFestplayRoomId) || null
+    otherFestplays = getOtherFestplaysForUser(req.session.user.id, character.server_id);
+    const selectedOwnedFestplay =
+      ownedFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
+    const selectedOtherFestplay =
+      selectedOwnedFestplay
+        ? null
+        : otherFestplays.find((festplay) => Number(festplay.id) === selectedFestplayId) || null;
+    selectedFestplay = selectedOwnedFestplay || selectedOtherFestplay || null;
+    selectedFestplayMode = selectedOwnedFestplay
+      ? "owned"
+      : selectedOtherFestplay
+        ? "other"
+        : null;
+    activeFestplayOverviewTab = selectedFestplayMode === "other"
+      ? "andere"
+      : selectedFestplayMode === "owned"
+        ? "eigene"
+        : requestedFestplayOverviewTab;
+
+    festplayPermissionEntries = selectedFestplayMode === "owned"
+      ? getFestplayPermissionEntries(selectedFestplay.id, character.server_id)
+      : [];
+    festplayApplications = selectedFestplayMode === "owned"
+      ? getPendingFestplayApplications(selectedFestplay.id, character.server_id)
+      : [];
+    festplayPlayerOverview = selectedFestplay
+      ? getFestplayPlayerOverview(selectedFestplay.id, character.server_id)
       : null;
-  const selectedFestplayRoomPreviewHtml =
-    selectedFestplayRoom?.teaser ? renderGuestbookBbcode(selectedFestplayRoom.teaser) : "";
+    festplayRooms = selectedFestplayMode === "owned"
+      ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id).filter((room) => {
+          if (room.is_saved_room !== true) {
+            return false;
+          }
+
+          if (
+            normalizeServer(room.server_id) !==
+            normalizeServer(selectedFestplay.server_id || character.server_id)
+          ) {
+            return false;
+          }
+
+          return !isLegacyAutoFestplayRoom(room, selectedFestplay);
+        })
+      : [];
+
+    const selectedFestplayRoomId = Number(req.query.selected_room);
+    selectedFestplayRoom =
+      selectedFestplayMode === "owned" && activeFestplayTab === "raeume"
+        ? festplayRooms.find((room) => Number(room.id) === selectedFestplayRoomId) || null
+        : null;
+    selectedFestplayRoomPreviewHtml =
+      selectedFestplayRoom?.teaser ? renderGuestbookBbcode(selectedFestplayRoom.teaser) : "";
+  } catch (error) {
+    console.error("festplay editor load failed", {
+      characterId: character.id,
+      userId: req.session.user.id,
+      selectedFestplayId,
+      error
+    });
+    setFlash(req, "error", "Die Festspiel-Verwaltung konnte nicht vollstaendig geladen werden.");
+  }
 
   return res.render("festplay-create", {
     title: `Festspiele erstellen: ${character.name}`,
@@ -8398,13 +8423,25 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}/festplays`);
   }
 
-  const createdFestplay = db.prepare(
-    `INSERT INTO festplays (name, created_by_user_id, creator_character_id, server_id)
-     VALUES (?, ?, ?, ?)`
-  ).run(festplayName, req.session.user.id, id, normalizeServer(character.server_id));
-  const createdFestplayId = Number(createdFestplay.lastInsertRowid);
-  if (Number.isInteger(createdFestplayId) && createdFestplayId > 0) {
-    syncFestplayCreatorCharacter(createdFestplayId, req.session.user.id, id);
+  try {
+    const createdFestplay = db.prepare(
+      `INSERT INTO festplays (name, created_by_user_id, creator_character_id, server_id)
+       VALUES (?, ?, ?, ?)`
+    ).run(festplayName, req.session.user.id, id, normalizeServer(character.server_id));
+    const createdFestplayId = Number(createdFestplay.lastInsertRowid);
+    if (Number.isInteger(createdFestplayId) && createdFestplayId > 0) {
+      syncFestplayCreatorCharacter(createdFestplayId, req.session.user.id, id);
+      return res.redirect(`/characters/${id}/festplays?selected_festplay=${createdFestplayId}#festplay-selected-editor`);
+    }
+  } catch (error) {
+    console.error("festplay creation failed", {
+      characterId: character.id,
+      userId: req.session.user.id,
+      festplayName,
+      error
+    });
+    setFlash(req, "error", "Beim Anlegen des Festspiels ist ein Fehler aufgetreten.");
+    return res.redirect(`/characters/${id}/festplays`);
   }
 
   return res.redirect(`/characters/${id}/festplays`);
