@@ -1359,9 +1359,10 @@ a:hover {
   position: absolute;
   top: calc(100% + 0.55rem);
   right: 0;
-  width: min(18rem, calc(100vw - 2rem));
-  max-height: none;
-  overflow: visible;
+  left: auto;
+  width: min(18rem, calc(100vw - 1rem));
+  max-height: min(72vh, calc(100dvh - 4.75rem));
+  overflow: hidden;
   padding: 0.6rem;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--link) 22%, var(--panel-edge));
@@ -1370,9 +1371,11 @@ a:hover {
   backdrop-filter: blur(var(--glass-blur)) saturate(135%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(135%);
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0.5rem;
   opacity: 0;
   transform: translateY(-6px);
+  transform-origin: top right;
   pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease;
 }
@@ -1408,6 +1411,10 @@ a:hover {
 .rp-user-menu-links {
   display: grid;
   gap: 0.28rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.1rem;
 }
 
 .topbar-user-menu-links a,
@@ -3431,7 +3438,8 @@ body.page-home-screen .home-hero-actions {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
   border-bottom: 1px solid var(--panel-edge);
 }
 
@@ -3452,8 +3460,14 @@ body.page-home-screen .home-hero-actions {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-right: auto;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin-right: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding-bottom: 0.05rem;
 }
 
 .rp-menu a {
@@ -3464,6 +3478,37 @@ body.page-home-screen .home-hero-actions {
   text-decoration: none;
   font-size: 0.86rem;
   line-height: 1.15;
+}
+
+.rp-menu::-webkit-scrollbar {
+  height: 0.3rem;
+}
+
+.rp-menu::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--field-edge) 82%, transparent);
+  border-radius: 999px;
+}
+
+.rp-topline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  flex: 0 1 auto;
+}
+
+.rp-topline-actions .theme-form {
+  flex: 0 0 auto;
+}
+
+.rp-topline-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
 }
 
 .rp-menu a:hover {
@@ -7256,11 +7301,27 @@ select:focus {
   }
 
   .rp-topline {
-    align-items: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .rp-menu {
+    order: 3;
     width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .rp-topline-actions {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 0.45rem;
+    max-width: 100%;
+  }
+
+  .rp-topline-actions .theme-form,
+  .rp-topline-quick-actions {
+    margin-left: auto;
   }
 
   .rp-userline {

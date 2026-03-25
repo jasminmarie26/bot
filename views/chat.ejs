@@ -61,86 +61,88 @@
         <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
       </a>
     </nav>
-    <% if (showChatHeaderIdentity) { %>
-      <% if (chatHeaderIdentityHref) { %>
-        <a
-          class="rp-header-identity rp-header-identity-link"
-          data-header-identity
-          href="<%= chatHeaderIdentityHref %>"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="<%= chatHeaderIdentityTitle %>"
-          style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
-        ><%= chatIdentityName %></a>
-      <% } else { %>
-        <span
-          class="rp-header-identity"
-          data-header-identity
-          title="<%= chatIdentityName %>"
-          style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
-        ><%= chatIdentityName %></span>
+    <div class="rp-topline-actions">
+      <% if (showChatHeaderIdentity) { %>
+        <% if (chatHeaderIdentityHref) { %>
+          <a
+            class="rp-header-identity rp-header-identity-link"
+            data-header-identity
+            href="<%= chatHeaderIdentityHref %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="<%= chatHeaderIdentityTitle %>"
+            style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
+          ><%= chatIdentityName %></a>
+        <% } else { %>
+          <span
+            class="rp-header-identity"
+            data-header-identity
+            title="<%= chatIdentityName %>"
+            style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : '' %>"
+          ><%= chatIdentityName %></span>
+        <% } %>
       <% } %>
-    <% } %>
-    <form method="POST" action="/settings/theme" class="inline-form theme-form">
-      <label for="rp-theme-select-chat">Design</label>
-      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
-      <select
-        id="rp-theme-select-chat"
-        name="theme"
-        class="theme-select"
-      >
-        <% availableThemes.forEach((theme) => { %>
-          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
-            <%= theme.label %>
-          </option>
-        <% }) %>
-      </select>
-    </form>
-    <%- include("partials/guestbook-notification-link") %>
-    <button
-      id="chat-whisper-toggle"
-      class="chat-whisper-toggle"
-      type="button"
-      aria-expanded="false"
-      aria-controls="chat-whisper-panel"
-      aria-label="Fl&uuml;sterverlauf &ouml;ffnen"
-      title="Fl&uuml;sterverlauf"
-    >
-      <span class="chat-whisper-toggle-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path class="chat-whisper-fill" d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
-          <path d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
-          <path d="M8 10.2h8"/>
-          <path d="M8 13.4h5.2"/>
-        </svg>
-      </span>
-      <span id="chat-whisper-toggle-badge" class="chat-whisper-toggle-badge" hidden>0</span>
-    </button>
-    <button
-      id="chat-sound-toggle"
-      class="chat-sound-toggle"
-      type="button"
-      aria-pressed="true"
-      aria-label="Raumton ausschalten"
-      title="Raumton ausschalten"
-    >
-      <span id="chat-sound-toggle-icon" class="chat-sound-toggle-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
-          <path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
-          <path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>
-        </svg>
-      </span>
-    </button>
-    <details class="rp-user-menu">
-      <summary
-        class="rp-user-menu-toggle"
-        aria-label="Benutzermen&uuml; &ouml;ffnen"
-        title="Benutzermen&uuml;"
-      >
-        <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
-      </summary>
-      <div class="rp-user-menu-panel">
+      <form method="POST" action="/settings/theme" class="inline-form theme-form">
+        <label for="rp-theme-select-chat">Design</label>
+        <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <select
+          id="rp-theme-select-chat"
+          name="theme"
+          class="theme-select"
+        >
+          <% availableThemes.forEach((theme) => { %>
+            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+              <%= theme.label %>
+            </option>
+          <% }) %>
+        </select>
+      </form>
+      <div class="rp-topline-quick-actions">
+        <%- include("partials/guestbook-notification-link") %>
+        <button
+          id="chat-whisper-toggle"
+          class="chat-whisper-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="chat-whisper-panel"
+          aria-label="Fl&uuml;sterverlauf &ouml;ffnen"
+          title="Fl&uuml;sterverlauf"
+        >
+          <span class="chat-whisper-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path class="chat-whisper-fill" d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
+              <path d="M4.8 5.1h14.4a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2h-7.1l-3.8 3.1c-.4.3-.9 0-.9-.5v-2.6H4.8a2.2 2.2 0 0 1-2.2-2.2v-8a2.2 2.2 0 0 1 2.2-2.2Z"/>
+              <path d="M8 10.2h8"/>
+              <path d="M8 13.4h5.2"/>
+            </svg>
+          </span>
+          <span id="chat-whisper-toggle-badge" class="chat-whisper-toggle-badge" hidden>0</span>
+        </button>
+        <button
+          id="chat-sound-toggle"
+          class="chat-sound-toggle"
+          type="button"
+          aria-pressed="true"
+          aria-label="Raumton ausschalten"
+          title="Raumton ausschalten"
+        >
+          <span id="chat-sound-toggle-icon" class="chat-sound-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
+              <path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
+              <path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>
+            </svg>
+          </span>
+        </button>
+        <details class="rp-user-menu">
+          <summary
+            class="rp-user-menu-toggle"
+            aria-label="Benutzermen&uuml; &ouml;ffnen"
+            title="Benutzermen&uuml;"
+          >
+            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+          </summary>
+          <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
           <strong
             class="<%= chatIdentityRoleStyle ? `role-name-${chatIdentityRoleStyle}` : "" %>"
@@ -187,8 +189,10 @@
         <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
           <button type="submit" class="rp-user-menu-logout">Logout</button>
         </form>
+          </div>
+        </details>
       </div>
-    </details>
+    </div>
   </header>
 
   <section class="rp-room-panel <%= activeRoom ? 'is-room-chat' : 'is-server-chat' %>">
