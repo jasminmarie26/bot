@@ -39,6 +39,7 @@ const THEME_OPTIONS = [
   { id: "glass-aurora", label: "Glass Aurora" },
   { id: "glass-noir", label: "Glass Noir" },
   { id: "glass-sunset", label: "Glass Sunset" },
+  { id: "future", label: "Future" },
   { id: "paper-ink", label: "Paper Ink" },
   { id: "windows-xp", label: "Windows XP" },
   { id: "atari", label: "Atari" },
@@ -7723,17 +7724,17 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     });
   }
 
-  rememberPreferredCharacter(req, character);
-  let festplayRooms = [];
-  let festplayRoomUsers = {};
-  let festplayChats = [];
-  let festplayChatUsers = {};
+  const isFestplayOwner = Number(festplay.created_by_user_id) === Number(req.session.user.id);
+  const fallbackReturnTarget = isFestplayOwner
+    ? `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume#festplay-selected-editor`
+    : `/characters/${id}/festplays?overview=andere&selected_festplay=${festplayId}#festplay-selected-editor`;
 
   try {
-    festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
+    rememberPreferredCharacter(req, character);
+    const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
       manualOnly: true
     }).filter((room) => {
-      if (room.is_saved_room !== true) {
+      if (!room || typeof room !== "object" || room.is_saved_room !== true) {
         return false;
       }
 
@@ -7743,21 +7744,32 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
 
       return !isLegacyAutoFestplayRoom(room, festplay);
     });
-    festplayRoomUsers = Object.fromEntries(
+    const festplayRoomUsers = Object.fromEntries(
       festplayRooms.map((room) => [
         room.id,
-        getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
+        sanitizeOnlineCharacterEntries(
+          getOnlineCharactersForChannel(
+            room.id,
+            normalizeServer(festplay.server_id || character.server_id)
+          )
+        )
       ])
     );
     const festplayChatEntries = getFestplaySideChatsForUser(req.session.user.id, festplayId)
       .filter((room) => {
+        if (!room || typeof room !== "object") {
+          return false;
+        }
+
         if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
           return false;
         }
         return true;
       })
       .map((room) => {
-        const activeUsers = getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id));
+        const activeUsers = sanitizeOnlineCharacterEntries(
+          getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id))
+        );
         if (!activeUsers.length) {
           maybeRemoveEmptyRoom(room.id);
           return null;
@@ -7769,29 +7781,30 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
         };
       })
       .filter(Boolean);
-    festplayChats = festplayChatEntries.map((entry) => entry.room);
-    festplayChatUsers = Object.fromEntries(
+    const festplayChats = festplayChatEntries.map((entry) => entry.room);
+    const festplayChatUsers = Object.fromEntries(
       festplayChatEntries.map((entry) => [entry.room.id, entry.activeUsers])
     );
+
+    return res.render("festplay-rooms", {
+      title: `Festspiel-Raume: ${festplay.name}`,
+      character,
+      festplay,
+      festplayRooms,
+      festplayRoomUsers,
+      festplayChats,
+      festplayChatUsers
+    });
   } catch (error) {
-    console.error("festplay room list failed", {
+    console.error("festplay rooms page failed", {
       festplayId,
       characterId: character.id,
       userId: req.session.user.id,
       error
     });
-    setFlash(req, "error", "Die Festspiel-Raumliste konnte nicht vollstaendig geladen werden.");
+    setFlash(req, "error", "Die Festspiel-Raumseite konnte nicht geladen werden.");
+    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
   }
-
-  return res.render("festplay-rooms", {
-    title: `Festspiel-Raume: ${festplay.name}`,
-    character,
-    festplay,
-    festplayRooms,
-    festplayRoomUsers,
-    festplayChats,
-    festplayChatUsers
-  });
 });
 
 app.get("/characters/:id/festplays/:festplayId/chat", requireAuth, (req, res) => {
@@ -8277,7 +8290,6 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     return res.redirect(`/characters/${id}`);
   }
 
-  rememberPreferredCharacter(req, character);
   const selectedFestplayId = Number(req.query.selected_festplay);
   let ownedFestplays = [];
   let otherFestplays = [];
@@ -8303,6 +8315,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
   let activeFestplayOverviewTab = requestedFestplayOverviewTab;
 
   try {
+    rememberPreferredCharacter(req, character);
     ownedFestplays = getOwnedFestplaysForUser(req.session.user.id, character.server_id);
     if (
       Number.isInteger(selectedFestplayId) &&
@@ -8343,7 +8356,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
       : null;
     festplayRooms = selectedFestplayMode === "owned"
       ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id).filter((room) => {
-          if (room.is_saved_room !== true) {
+          if (!room || typeof room !== "object" || room.is_saved_room !== true) {
             return false;
           }
 
@@ -8365,33 +8378,33 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
         : null;
     selectedFestplayRoomPreviewHtml =
       selectedFestplayRoom?.teaser ? renderGuestbookBbcode(selectedFestplayRoom.teaser) : "";
+    return res.render("festplay-create", {
+      title: `Festspiele erstellen: ${character.name}`,
+      character,
+      ownedFestplays,
+      otherFestplays,
+      selectedFestplay,
+      selectedFestplayMode,
+      activeFestplayOverviewTab,
+      activeFestplayTab,
+      festplayRooms,
+      festplayRoomSortingEnabled: hasChatRoomColumn("sort_order"),
+      selectedFestplayRoom,
+      selectedFestplayRoomPreviewHtml,
+      festplayPermissionEntries,
+      festplayApplications,
+      festplayPlayerOverview
+    });
   } catch (error) {
-    console.error("festplay editor load failed", {
+    console.error("festplay editor page failed", {
       characterId: character.id,
       userId: req.session.user.id,
       selectedFestplayId,
       error
     });
-    setFlash(req, "error", "Die Festspiel-Verwaltung konnte nicht vollstaendig geladen werden.");
+    setFlash(req, "error", "Die Festspiel-Verwaltung konnte nicht geladen werden.");
+    return res.redirect(`/characters/${id}`);
   }
-
-  return res.render("festplay-create", {
-    title: `Festspiele erstellen: ${character.name}`,
-    character,
-    ownedFestplays,
-    otherFestplays,
-    selectedFestplay,
-    selectedFestplayMode,
-    activeFestplayOverviewTab,
-    activeFestplayTab,
-    festplayRooms,
-    festplayRoomSortingEnabled: hasChatRoomColumn("sort_order"),
-    selectedFestplayRoom,
-    selectedFestplayRoomPreviewHtml,
-    festplayPermissionEntries,
-    festplayApplications,
-    festplayPlayerOverview
-  });
 });
 
 app.post("/characters/:id/festplays", requireAuth, (req, res) => {
@@ -11790,6 +11803,26 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   return onlineCharacters.sort((a, b) =>
     a.name.localeCompare(b.name, "de", { sensitivity: "base" })
   );
+}
+
+function sanitizeOnlineCharacterEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry) => ({
+      user_id: Number(entry.user_id) || 0,
+      name: String(entry.name || "").trim() || "Unbekannt",
+      character_id: Number.isInteger(Number(entry.character_id)) && Number(entry.character_id) > 0
+        ? Number(entry.character_id)
+        : null,
+      role_style: String(entry.role_style || "").trim(),
+      chat_text_color: String(entry.chat_text_color || "").trim(),
+      has_room_rights: entry.has_room_rights === true
+    }))
+    .filter((entry) => entry.user_id > 0 || entry.name);
 }
 
 function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
