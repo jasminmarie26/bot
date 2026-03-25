@@ -4171,6 +4171,25 @@ body.page-home-screen .home-hero-actions {
   color: var(--muted);
 }
 
+.rp-festplay-player-inline-list {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.rp-festplay-player-link {
+  color: var(--link);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.rp-festplay-player-link:hover {
+  text-decoration: underline;
+}
+
+.rp-festplay-player-separator {
+  color: var(--muted);
+}
+
 .rp-festplay-application-row {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;

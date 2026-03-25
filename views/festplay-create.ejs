@@ -296,13 +296,15 @@
               </div>
 
               <% if (festplayPlayerOverview?.characters?.length) { %>
-                <div class="rp-festplay-player-list">
-                  <% festplayPlayerOverview.characters.forEach((entry) => { %>
-                    <div class="rp-festplay-player-row">
-                      <strong><%= entry.name %></strong>
-                    </div>
+                <p class="rp-festplay-player-inline-list">
+                  <% festplayPlayerOverview.characters.forEach((entry, index) => { %>
+                    <a
+                      class="rp-festplay-player-link"
+                      href="/characters/<%= entry.id %>/guestbook"
+                      title="G&auml;stebuch von <%= entry.name %> &ouml;ffnen"
+                    ><%= entry.name %></a><% if (index < festplayPlayerOverview.characters.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
                   <% }) %>
-                </div>
+                </p>
               <% } else { %>
                 <p class="rp-room-editor-note">Noch keine Charaktere diesem Festspiel zugeordnet.</p>
               <% } %>
