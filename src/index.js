@@ -2106,6 +2106,11 @@ function getOtherFestplaysForUser(userId, serverId) {
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE COALESCE(f.created_by_user_id, 0) != ?
+           AND NOT (
+             lower(trim(COALESCE(f.name, ''))) = 'freeplay'
+             AND COALESCE(f.created_by_user_id, 0) = 0
+             AND COALESCE(f.creator_character_id, 0) = 0
+           )
            AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
            AND (
              EXISTS (
