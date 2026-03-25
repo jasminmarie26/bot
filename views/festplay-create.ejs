@@ -135,7 +135,7 @@
               class="inline-form"
               onsubmit="return confirm('Festspiel wirklich loeschen? Zugeordnete Charaktere werden wieder in den normalen Bereich gesetzt.');"
             >
-              <button type="submit" class="btn btn-danger">L&ouml;schen</button>
+              <button type="submit" class="btn btn-danger">Festplay l&ouml;schen</button>
             </form>
           <% } %>
         </div>
@@ -487,14 +487,6 @@
 
             <div class="rp-room-editor-actions">
               <button type="submit" class="btn">Speichern</button>
-              <form
-                method="POST"
-                action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/delete"
-                class="inline-form"
-                onsubmit="return confirm('Festspiel wirklich loeschen? Zugeordnete Charaktere werden wieder in den normalen Bereich gesetzt.');"
-              >
-                <button type="submit" class="btn btn-danger">Festspiel l&ouml;schen</button>
-              </form>
             </div>
           </form>
         <% } %>
