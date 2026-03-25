@@ -181,7 +181,11 @@
       </div>
     </section>
 
-    <% if (selectedFestplayMode === "owned") { %>
+    <% if (selectedFestplayMode === "owned" || selectedFestplayMode === "other") { %>
+      <% const festplaySelectionBaseHref = selectedFestplayMode === "other"
+        ? `/characters/${character.id}/festplays?overview=andere&selected_festplay=${selectedFestplay.id}`
+        : `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}`; %>
+      <% const canOpenFestplayRoomsTab = selectedFestplayMode === "owned" || selectedFestplayHasRoomRights; %>
       <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspieldetails">
         <div class="rp-room-editor-bar">
           <div class="rp-room-editor-title-wrap">
@@ -189,22 +193,26 @@
           </div>
         </div>
 
-        <nav class="rp-room-editor-tabs" aria-label="Festspiel bearbeiten">
+        <nav class="rp-room-editor-tabs" aria-label="<%= selectedFestplayMode === 'owned' ? 'Festspiel bearbeiten' : 'Festspiel anzeigen' %>">
           <a
             class="rp-room-editor-tab<%= activeFestplayTab === 'allgemein' ? ' is-active' : '' %>"
-            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>#festplay-selected-editor"
+            href="<%= festplaySelectionBaseHref %>#festplay-selected-editor"
           >Allgemein</a>
-          <a
-            class="rp-room-editor-tab<%= activeFestplayTab === 'raeume' ? ' is-active' : '' %>"
-            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume#festplay-selected-editor"
-          >R&auml;ume</a>
-          <a
-            class="rp-room-editor-tab<%= activeFestplayTab === 'bewerbungen' ? ' is-active' : '' %>"
-            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=bewerbungen#festplay-selected-editor"
-          >Bewerbungen &amp; Spieler</a>
+          <% if (canOpenFestplayRoomsTab) { %>
+            <a
+              class="rp-room-editor-tab<%= activeFestplayTab === 'raeume' ? ' is-active' : '' %>"
+              href="<%= festplaySelectionBaseHref %>&tab=raeume#festplay-selected-editor"
+            >R&auml;ume</a>
+          <% } %>
+          <% if (selectedFestplayMode === "owned") { %>
+            <a
+              class="rp-room-editor-tab<%= activeFestplayTab === 'bewerbungen' ? ' is-active' : '' %>"
+              href="<%= festplaySelectionBaseHref %>&tab=bewerbungen#festplay-selected-editor"
+            >Bewerbungen &amp; Spieler</a>
+          <% } %>
         </nav>
 
-        <% if (activeFestplayTab === "bewerbungen") { %>
+        <% if (selectedFestplayMode === "owned" && activeFestplayTab === "bewerbungen") { %>
           <div class="rp-room-editor-body">
             <section class="rp-room-editor-section">
               <h3 class="rp-room-editor-subheading">Bewerbungen</h3>
@@ -314,13 +322,15 @@
               <% } %>
             </section>
           </div>
-        <% } else if (activeFestplayTab === "raeume") { %>
-          <% const festplayRoomsBaseTarget = `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}&tab=raeume#festplay-selected-editor`; %>
-          <% const selectedFestplayRoomTarget = selectedFestplayRoom
-            ? `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}&tab=raeume&selected_room=${selectedFestplayRoom.id}#festplay-selected-editor`
+        <% } else if (canOpenFestplayRoomsTab && activeFestplayTab === "raeume") { %>
+          <% const festplayRoomsBaseTarget = `${festplaySelectionBaseHref}&tab=raeume#festplay-selected-editor`; %>
+          <% const editableFestplayRoom = selectedFestplayRoom && selectedFestplayRoom.is_owned_room ? selectedFestplayRoom : null; %>
+          <% const readOnlyFestplayRoom = selectedFestplayRoom && !selectedFestplayRoom.is_owned_room ? selectedFestplayRoom : null; %>
+          <% const selectedFestplayRoomTarget = editableFestplayRoom
+            ? `${festplaySelectionBaseHref}&tab=raeume&selected_room=${editableFestplayRoom.id}#festplay-selected-editor`
             : festplayRoomsBaseTarget; %>
-          <% const festplayRoomFormId = selectedFestplayRoom
-            ? `festplay-room-editor-form-${selectedFestplayRoom.id}`
+          <% const festplayRoomFormId = editableFestplayRoom
+            ? `festplay-room-editor-form-${editableFestplayRoom.id}`
             : `festplay-room-create-form-${selectedFestplay.id}`; %>
 
           <div class="rp-room-editor-body">
@@ -343,7 +353,7 @@
                       <% } %>
                       <a
                         class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
-                        href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
+                        href="<%= festplaySelectionBaseHref %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
                         title="Raum &ouml;ffnen"
                       >
                         <span class="rp-room-inline-name"><%= room.name %></span>
@@ -365,13 +375,20 @@
             </section>
 
             <section class="rp-room-editor-section">
-              <h3 class="rp-room-editor-subheading"><%= selectedFestplayRoom ? 'Raum bearbeiten' : 'Raum anlegen' %></h3>
+              <h3 class="rp-room-editor-subheading"><%= editableFestplayRoom ? 'Raum bearbeiten' : 'Raum anlegen' %></h3>
+
+              <% if (readOnlyFestplayRoom) { %>
+                <p class="rp-room-editor-note">
+                  Dieser Festspiel-Raum wurde mit <strong><%= readOnlyFestplayRoom.creator_character_name || selectedFestplay.creator_display_name || 'einem anderen Charakter' %></strong> erstellt.
+                  Du kannst hier eigene R&auml;ume anlegen und nur deine eigenen bearbeiten oder l&ouml;schen.
+                </p>
+              <% } %>
 
               <form
                 id="<%= festplayRoomFormId %>"
                 method="POST"
-                action="<%= selectedFestplayRoom
-                  ? `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/${selectedFestplayRoom.id}/update`
+                action="<%= editableFestplayRoom
+                  ? `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/${editableFestplayRoom.id}/update`
                   : `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms` %>"
                 class="rp-room-editor-section"
               >
@@ -383,11 +400,11 @@
                       type="checkbox"
                       name="email_log_enabled"
                       value="1"
-                      <%= selectedFestplayRoom?.email_log_enabled ? "checked" : "" %>
+                      <%= editableFestplayRoom?.email_log_enabled ? "checked" : "" %>
                     />
                     Log
                   </label>
-                  <% if (selectedFestplayRoom) { %>
+                  <% if (editableFestplayRoom) { %>
                     <label class="rp-room-editor-check">
                       <input
                         type="checkbox"
@@ -406,7 +423,7 @@
                     name="room_name"
                     maxlength="80"
                     placeholder="Raumname"
-                    value="<%= selectedFestplayRoom?.name || '' %>"
+                    value="<%= editableFestplayRoom?.name || '' %>"
                     required
                   />
                 </label>
@@ -417,8 +434,8 @@
                     type="text"
                     name="room_description"
                     maxlength="160"
-                    placeholder="Kurzer Text für die Raumliste"
-                    value="<%= selectedFestplayRoom?.description || '' %>"
+                    placeholder="Kurzer Text f&uuml;r die Raumliste"
+                    value="<%= editableFestplayRoom?.description || '' %>"
                   />
                 </label>
 
@@ -432,30 +449,32 @@
                     rows="10"
                     maxlength="4000"
                     placeholder="Text, der direkt im Raum angezeigt wird"
-                  ><%= selectedFestplayRoom?.teaser || '' %></textarea>
+                  ><%= editableFestplayRoom?.teaser || '' %></textarea>
                 </label>
               </form>
 
               <div class="rp-room-editor-actions">
-                <button type="submit" form="<%= festplayRoomFormId %>" class="btn"><%= selectedFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
+                <button type="submit" form="<%= festplayRoomFormId %>" class="btn"><%= editableFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
                 <% if (selectedFestplayRoom) { %>
                   <a
                     class="rp-room-editor-enter"
                     href="/chat?room_id=<%= selectedFestplayRoom.id %>&character_id=<%= character.id %>"
                   >Raum betreten</a>
-                  <form
-                    method="POST"
-                    action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/<%= selectedFestplayRoom.id %>/delete"
-                    class="inline-form rp-room-delete-form"
-                  >
-                    <input type="hidden" name="return_to" value="<%= festplayRoomsBaseTarget %>" />
-                    <button
-                      class="rp-room-delete-btn"
-                      type="submit"
-                      aria-label="Raum <%= selectedFestplayRoom.name %> l&ouml;schen"
-                      title="Raum l&ouml;schen"
-                    >X</button>
-                  </form>
+                  <% if (editableFestplayRoom) { %>
+                    <form
+                      method="POST"
+                      action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/<%= editableFestplayRoom.id %>/delete"
+                      class="inline-form rp-room-delete-form"
+                    >
+                      <input type="hidden" name="return_to" value="<%= festplayRoomsBaseTarget %>" />
+                      <button
+                        class="rp-room-delete-btn"
+                        type="submit"
+                        aria-label="Raum <%= editableFestplayRoom.name %> l&ouml;schen"
+                        title="Raum l&ouml;schen"
+                      >X</button>
+                    </form>
+                  <% } %>
                 <% } %>
               </div>
 
@@ -469,7 +488,7 @@
               <% } %>
             </section>
           </div>
-        <% } else { %>
+        <% } else if (selectedFestplayMode === "owned") { %>
           <form
             id="festplay-editor-form-<%= selectedFestplay.id %>"
             method="POST"
@@ -505,36 +524,24 @@
               <button type="submit" class="btn">Speichern</button>
             </div>
           </form>
-        <% } %>
-      </section>
-    <% } else if (selectedFestplayMode === "other") { %>
-      <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspiel&uuml;bersicht">
-        <div class="rp-room-editor-bar">
-          <div class="rp-room-editor-title-wrap">
-            <strong class="rp-room-editor-title"><%= selectedFestplay.name %></strong>
-          </div>
-        </div>
+        <% } else { %>
+          <div class="rp-room-editor-body">
+            <% if (selectedFestplay.creator_display_name) { %>
+              <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
+            <% } %>
 
-        <nav class="rp-room-editor-tabs" aria-label="Festspiel anzeigen">
-          <span class="rp-room-editor-tab is-active">Allgemein</span>
-        </nav>
-
-        <div class="rp-room-editor-body">
-          <% if (selectedFestplay.creator_display_name) { %>
-            <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
-          <% } %>
-
-          <div class="rp-room-editor-field">
-            <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
-            <div class="rp-room-editor-static rp-room-editor-static-long">
-              <% if (selectedFestplay.long_description_html) { %>
-                <div class="guestbook-entry-body"><%- selectedFestplay.long_description_html %></div>
-              <% } else { %>
-                Keine Festplay Beschreibung hinterlegt.
-              <% } %>
+            <div class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
+              <div class="rp-room-editor-static rp-room-editor-static-long">
+                <% if (selectedFestplay.long_description_html) { %>
+                  <div class="guestbook-entry-body"><%- selectedFestplay.long_description_html %></div>
+                <% } else { %>
+                  Keine Festplay Beschreibung hinterlegt.
+                <% } %>
+              </div>
             </div>
           </div>
-        </div>
+        <% } %>
       </section>
     <% } else if (activeFestplayOverviewTab === "eigene" && ownedFestplays && ownedFestplays.length) { %>
       <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-selected-editor" aria-label="Festspieldetails">
