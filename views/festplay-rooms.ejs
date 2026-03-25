@@ -132,10 +132,10 @@
 
     <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
       <summary class="rp-room-section-summary">
-        <span>Eigene Chats</span>
+        <span>Chats</span>
       </summary>
       <div class="rp-room-section-divider" aria-hidden="true"></div>
-      <p class="muted">Diese Chats sind normale R&auml;ume auf dem Server und gelten nicht als Festspiel-R&auml;ume.</p>
+      <p class="muted">Diese Chats geh&ouml;ren zu diesem Festspiel, gelten aber nicht als feste Festspiel-R&auml;ume.</p>
 
       <form
         method="POST"
@@ -160,12 +160,12 @@
         <button type="submit" class="rp-enter-btn">Chat &ouml;ffnen</button>
       </form>
 
-      <% if (!ownedRooms || !ownedRooms.length) { %>
-        <p class="muted">Noch keine eigenen Chats auf diesem Server vorhanden.</p>
+      <% if (!festplayChats || !festplayChats.length) { %>
+        <p class="muted">Noch keine Chats f&uuml;r dieses Festspiel vorhanden.</p>
       <% } else { %>
         <div class="rp-room-list rp-room-list-owned">
-          <% ownedRooms.forEach((room) => { %>
-            <% const activeUsers = Array.isArray(ownedRoomUsers?.[room.id]) ? ownedRoomUsers[room.id] : []; %>
+          <% festplayChats.forEach((room) => { %>
+            <% const activeUsers = Array.isArray(festplayChatUsers?.[room.id]) ? festplayChatUsers[room.id] : []; %>
             <div class="rp-room-standard-card rp-room-custom-card">
               <div class="rp-room-custom-titleline">
                 <span
@@ -195,6 +195,11 @@
               <% if (room.description) { %>
                 <div class="rp-room-custom-description">
                   <%= room.description %>
+                </div>
+              <% } %>
+              <% if (room.creator_character_name) { %>
+                <div class="rp-room-custom-description">
+                  von <%= room.creator_character_name %>
                 </div>
               <% } %>
               <div

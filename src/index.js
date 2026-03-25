@@ -3369,6 +3369,7 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
          AND created_by_user_id = ?
          AND name_key = ?
          AND COALESCE(description, '') = ?
+         AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_saved_room, 0) = 1
          AND COALESCE(is_festplay_chat, 0) = 0`
     ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey, normalizedRoomDescription) || null
@@ -3388,6 +3389,7 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
        FROM chat_rooms
        WHERE server_id = ?
          AND created_by_user_id = ?
+         AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_saved_room, 0) = 1
          AND COALESCE(is_festplay_chat, 0) = 0
        ORDER BY created_at ASC, id ASC`
@@ -3399,6 +3401,94 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
       is_locked: Number(room.is_locked) === 1,
       is_public_room: Number(room.is_public_room) === 1
     }));
+}
+
+function getFestplaySideChatsForUser(userId, festplayId) {
+  const parsedUserId = Number(userId);
+  const parsedFestplayId = Number(festplayId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1
+  ) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT r.id,
+              r.name,
+              r.description,
+              r.teaser,
+              r.image_url,
+              r.character_id,
+              r.email_log_enabled,
+              r.is_locked,
+              r.is_public_room,
+              r.is_saved_room,
+              r.server_id,
+              r.created_at,
+              r.created_by_user_id,
+              anchor.name AS creator_character_name,
+              CASE
+                WHEN r.created_by_user_id = ? THEN 1
+                WHEN EXISTS (
+                  SELECT 1
+                    FROM chat_room_permissions crp
+                   WHERE crp.room_id = r.id
+                     AND crp.user_id = ?
+                ) THEN 1
+                ELSE 0
+              END AS can_manage_room
+         FROM chat_rooms r
+         JOIN characters anchor ON anchor.id = r.character_id
+        WHERE r.festplay_id = ?
+          AND COALESCE(r.is_festplay_chat, 0) = 0
+        ORDER BY r.created_at ASC, r.id ASC`
+    )
+    .all(parsedUserId, parsedUserId, parsedFestplayId)
+    .map((room) => ({
+      ...room,
+      email_log_enabled: Number(room.email_log_enabled) === 1,
+      is_locked: Number(room.is_locked) === 1,
+      is_public_room: Number(room.is_public_room) === 1,
+      is_saved_room: Number(room.is_saved_room) === 1,
+      teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
+      can_manage_room: Number(room.can_manage_room) === 1,
+      can_enter:
+        Number(room.is_locked) !== 1 ||
+        Number(room.can_manage_room) === 1 ||
+        hasRoomInviteAccess({ id: parsedUserId }, room),
+      is_owned_room: Number(room.created_by_user_id) === parsedUserId
+    }));
+}
+
+function findFestplaySideChatByNameKey(festplayId, serverId, roomNameKey, roomDescription = "") {
+  const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomNameKey = String(roomNameKey || "").trim().toLowerCase();
+  const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
+  if (
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !normalizedServerId ||
+    !normalizedRoomNameKey
+  ) {
+    return null;
+  }
+
+  return (
+    db.prepare(
+      `SELECT id, name, description
+       FROM chat_rooms
+       WHERE festplay_id = ?
+         AND server_id = ?
+         AND name_key = ?
+         AND COALESCE(description, '') = ?
+         AND COALESCE(is_festplay_chat, 0) = 0`
+    ).get(parsedFestplayId, normalizedServerId, normalizedRoomNameKey, normalizedRoomDescription) || null
+  );
 }
 
 function findOwnedFestplayRoomByNameKey(userId, festplayId, roomNameKey, roomDescription = "") {
@@ -3442,12 +3532,85 @@ function findPublicRoomByNameKey(serverId, roomNameKey) {
        FROM chat_rooms
        WHERE server_id = ?
          AND name_key = ?
+         AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_public_room, 0) = 1
          AND COALESCE(is_festplay_chat, 0) = 0
        ORDER BY id ASC
        LIMIT 1`
     ).get(normalizedServerId, normalizedRoomNameKey) || null
   );
+}
+
+function ensureFestplaySideChatRoom(userId, character, festplayId, roomName, roomDescription = "") {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(character?.id);
+  const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(character?.server_id);
+  const normalizedRoomName = normalizeRoomName(roomName);
+  const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
+
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    normalizedRoomName.length < 2 ||
+    !userHasFestplayAccess(parsedUserId, parsedFestplayId)
+  ) {
+    return null;
+  }
+
+  const roomNameKey = toRoomNameKey(normalizedRoomName);
+  const existingRoom = findFestplaySideChatByNameKey(
+    parsedFestplayId,
+    normalizedServerId,
+    roomNameKey,
+    normalizedRoomDescription
+  );
+  if (existingRoom) {
+    return {
+      id: Number(existingRoom.id),
+      name: String(existingRoom.name || normalizedRoomName).trim() || normalizedRoomName,
+      created: false
+    };
+  }
+
+  const info = db.prepare(
+    `INSERT INTO chat_rooms (
+       character_id,
+       created_by_user_id,
+       name,
+       name_key,
+       description,
+       teaser,
+       image_url,
+       email_log_enabled,
+       is_locked,
+       is_public_room,
+       is_saved_room,
+       is_festplay_chat,
+       is_manual_festplay_room,
+       festplay_id,
+       server_id
+     )
+     VALUES (?, ?, ?, ?, ?, '', '', 0, 0, 0, 1, 0, 0, ?, ?)`
+  ).run(
+    parsedCharacterId,
+    parsedUserId,
+    normalizedRoomName,
+    roomNameKey,
+    normalizedRoomDescription,
+    parsedFestplayId,
+    normalizedServerId
+  );
+
+  return {
+    id: Number(info.lastInsertRowid),
+    name: normalizedRoomName,
+    created: true
+  };
 }
 
 function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescription = "") {
@@ -5020,17 +5183,16 @@ function isRoomLockedForUser(user, room = null) {
 
 function canAccessRoom(user, room = null) {
   if (!user || !room) return false;
-  if (Number(room.is_festplay_chat) === 1) {
-    const festplay = Number.isInteger(Number(room.festplay_id))
-      ? getFestplayById(Number(room.festplay_id))
-      : null;
+  const parsedFestplayId = Number(room.festplay_id);
+  if (Number.isInteger(parsedFestplayId) && parsedFestplayId > 0) {
+    const festplay = getFestplayById(parsedFestplayId);
     if (!festplay) {
       return false;
     }
-    if (isLegacyAutoFestplayRoom(room, festplay)) {
+    if (Number(room.is_festplay_chat) === 1 && isLegacyAutoFestplayRoom(room, festplay)) {
       return false;
     }
-    return Boolean(user?.is_admin) || userHasFestplayAccess(user.id, room.festplay_id);
+    return Boolean(user?.is_admin) || userHasFestplayAccess(user.id, parsedFestplayId);
   }
   if (Number(room.is_public_room) === 1) {
     return true;
@@ -7211,6 +7373,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
        FROM chat_rooms r
         JOIN users u ON u.id = r.created_by_user_id
         WHERE r.server_id = ?
+          AND COALESCE(r.festplay_id, 0) = 0
           AND COALESCE(r.is_festplay_chat, 0) = 0
         ORDER BY r.created_at ASC, r.id ASC`
     )
@@ -7431,9 +7594,14 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
       getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
     ])
   );
-  const ownedRooms = getSavedNonFestplayRoomsForUser(req.session.user.id, character.server_id);
-  const ownedRoomUsers = Object.fromEntries(
-    ownedRooms.map((room) => [
+  const festplayChats = getFestplaySideChatsForUser(req.session.user.id, festplayId).filter((room) => {
+    if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
+      return false;
+    }
+    return true;
+  });
+  const festplayChatUsers = Object.fromEntries(
+    festplayChats.map((room) => [
       room.id,
       getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id))
     ])
@@ -7445,8 +7613,8 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     festplay,
     festplayRooms,
     festplayRoomUsers,
-    ownedRooms,
-    ownedRoomUsers
+    festplayChats,
+    festplayChatUsers
   });
 });
 
@@ -7501,9 +7669,10 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
   }
 
   rememberPreferredCharacter(req, character);
-  const targetRoom = ensureOwnedRoomForCharacter(
+  const targetRoom = ensureFestplaySideChatRoom(
     req.session.user.id,
     character,
+    festplayId,
     roomName,
     roomDescription
   );
@@ -8624,7 +8793,8 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     .prepare(
       `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, is_saved_room
        FROM chat_rooms
-       WHERE id = ?`
+       WHERE id = ?
+         AND COALESCE(festplay_id, 0) = 0`
     )
     .get(roomId);
   if (
@@ -8716,7 +8886,8 @@ app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) =
     .prepare(
       `SELECT id, name, server_id, created_by_user_id, is_public_room, is_saved_room
        FROM chat_rooms
-       WHERE id = ?`
+       WHERE id = ?
+         AND COALESCE(festplay_id, 0) = 0`
     )
     .get(roomId);
   if (
@@ -12371,27 +12542,47 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const preferredCharacter = getPreferredCharacterForUser(
-        socket.data.user.id,
-        serverId,
-        getSocketPreferredCharacterId(socket, serverId)
-      );
+      const festplayContextId = Number(room?.festplay_id);
+      const preferredCharacter =
+        Number.isInteger(festplayContextId) && festplayContextId > 0
+          ? getPreferredFestplayChatCharacterForUser(
+              socket.data.user.id,
+              festplayContextId,
+              getSocketPreferredCharacterId(socket, serverId)
+            )
+          : getPreferredCharacterForUser(
+              socket.data.user.id,
+              serverId,
+              getSocketPreferredCharacterId(socket, serverId)
+            );
 
       if (!preferredCharacter?.id) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Du brauchst einen eigenen Charakter, um mit /rw den Raum zu wechseln.",
+          content:
+            Number.isInteger(festplayContextId) && festplayContextId > 0
+              ? "Du brauchst einen freigeschalteten Charakter, um in diesem Festspiel den Raum zu wechseln."
+              : "Du brauchst einen eigenen Charakter, um mit /rw den Raum zu wechseln.",
           created_at: formatChatTimestamp()
         });
         return;
       }
 
-      const targetRoom = ensureOwnedRoomForCharacter(
-        socket.data.user.id,
-        preferredCharacter,
-        requestedRoomName,
-          requestedRoomDescription
-        );
+      const targetRoom =
+        Number.isInteger(festplayContextId) && festplayContextId > 0
+          ? ensureFestplaySideChatRoom(
+              socket.data.user.id,
+              preferredCharacter,
+              festplayContextId,
+              requestedRoomName,
+              requestedRoomDescription
+            )
+          : ensureOwnedRoomForCharacter(
+              socket.data.user.id,
+              preferredCharacter,
+              requestedRoomName,
+              requestedRoomDescription
+            );
 
       if (!targetRoom?.id) {
         socket.emit("chat:message", {
