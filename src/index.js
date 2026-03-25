@@ -3877,6 +3877,74 @@ function parseRoomSwitchCommandArguments(rawArgs) {
   };
 }
 
+function parseRollCommandArguments(rawArgs) {
+  const value = String(rawArgs || "").trim();
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/^(\d{1,2})\s*[wd]\s*(\d{1,4})(?:\s*([+-])\s*(\d{1,4}))?$/i);
+  if (!match) {
+    return null;
+  }
+
+  const diceCount = Number(match[1]);
+  const diceSides = Number(match[2]);
+  const modifierValue = match[4] ? Number(match[4]) : 0;
+  const modifier = match[3] === "-" ? -modifierValue : modifierValue;
+
+  if (
+    !Number.isInteger(diceCount) ||
+    !Number.isInteger(diceSides) ||
+    !Number.isInteger(modifierValue) ||
+    diceCount < 1 ||
+    diceCount > 20 ||
+    diceSides < 2 ||
+    diceSides > 1000 ||
+    modifierValue > 1000
+  ) {
+    return null;
+  }
+
+  return {
+    diceCount,
+    diceSides,
+    modifier,
+    notation:
+      `${diceCount}w${diceSides}` +
+      (modifier > 0 ? `+${modifier}` : modifier < 0 ? `-${Math.abs(modifier)}` : "")
+  };
+}
+
+function rollDiceExpression(rollConfig) {
+  const diceCount = Number(rollConfig?.diceCount);
+  const diceSides = Number(rollConfig?.diceSides);
+  const modifier = Number(rollConfig?.modifier) || 0;
+  if (!Number.isInteger(diceCount) || diceCount < 1 || !Number.isInteger(diceSides) || diceSides < 2) {
+    return null;
+  }
+
+  const rolls = Array.from({ length: diceCount }, () => crypto.randomInt(1, diceSides + 1));
+  const baseTotal = rolls.reduce((sum, value) => sum + value, 0);
+  const total = baseTotal + modifier;
+
+  let resultLabel = String(total);
+  if (rolls.length > 1 || modifier !== 0) {
+    const detailParts = [rolls.join(" + ")];
+    if (modifier > 0) {
+      detailParts.push(`+ ${modifier}`);
+    } else if (modifier < 0) {
+      detailParts.push(`- ${Math.abs(modifier)}`);
+    }
+    resultLabel = `${detailParts.join(" ")} = ${total}`;
+  }
+
+  return {
+    total,
+    resultLabel
+  };
+}
+
 function normalizeInviteTargetName(rawValue) {
   return String(rawValue || "").trim().replace(/\s+/g, " ").slice(0, 80);
 }
@@ -13113,6 +13181,49 @@ io.on("connection", (socket) => {
           delayMs: 650
         });
       });
+      return;
+    }
+
+    const rollMatch = content.match(/^\/roll(?:\s+(.+))?$/i);
+    if (rollMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du kannst nur in einem geoeffneten Raum wuerfeln.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const rollConfig = parseRollCommandArguments(rollMatch[1] || "");
+      if (!rollConfig) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Bitte nutze /roll 1w20, /roll 1w10 oder /roll 2w6+3.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const rollResult = rollDiceExpression(rollConfig);
+      if (!rollResult) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Der Wurf konnte gerade nicht ausgefuehrt werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const rollDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const rollDisplayName =
+        rollDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        `${rollDisplayName} hat mit ${rollConfig.notation} gewuerfelt (${rollResult.resultLabel}).`
+      );
       return;
     }
 
