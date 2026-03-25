@@ -3436,7 +3436,7 @@ body.page-home-screen .home-hero-actions {
   color: var(--text);
   padding: 0.72rem 0.85rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.85rem;
   flex-wrap: nowrap;
   min-width: 0;
@@ -3458,16 +3458,15 @@ body.page-home-screen .home-hero-actions {
 
 .rp-menu {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 0.4rem;
   flex: 1 1 auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
   margin-right: 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  padding-bottom: 0.05rem;
+  overflow: visible;
+  padding-bottom: 0;
 }
 
 .rp-menu a {
@@ -3478,15 +3477,6 @@ body.page-home-screen .home-hero-actions {
   text-decoration: none;
   font-size: 0.86rem;
   line-height: 1.15;
-}
-
-.rp-menu::-webkit-scrollbar {
-  height: 0.3rem;
-}
-
-.rp-menu::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--field-edge) 82%, transparent);
-  border-radius: 999px;
 }
 
 .rp-topline-actions {
@@ -7301,7 +7291,7 @@ select:focus {
   }
 
   .rp-topline {
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
   }
 
@@ -7309,6 +7299,7 @@ select:focus {
     order: 3;
     width: 100%;
     flex: 1 1 100%;
+    align-items: flex-start;
   }
 
   .rp-topline-actions {
