@@ -3447,6 +3447,7 @@ function getFestplaySideChatsForUser(userId, festplayId) {
          JOIN characters anchor ON anchor.id = r.character_id
         WHERE r.festplay_id = ?
           AND COALESCE(r.is_festplay_chat, 0) = 0
+          AND COALESCE(r.is_festplay_side_chat, 0) = 1
         ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(parsedUserId, parsedUserId, parsedFestplayId)
@@ -3488,7 +3489,8 @@ function findFestplaySideChatByNameKey(festplayId, serverId, roomNameKey, roomDe
          AND server_id = ?
          AND name_key = ?
          AND COALESCE(description, '') = ?
-         AND COALESCE(is_festplay_chat, 0) = 0`
+         AND COALESCE(is_festplay_chat, 0) = 0
+         AND COALESCE(is_festplay_side_chat, 0) = 1`
     ).get(parsedFestplayId, normalizedServerId, normalizedRoomNameKey, normalizedRoomDescription) || null
   );
 }
@@ -3594,10 +3596,11 @@ function ensureFestplaySideChatRoom(userId, character, festplayId, roomName, roo
        is_saved_room,
        is_festplay_chat,
        is_manual_festplay_room,
+       is_festplay_side_chat,
        festplay_id,
        server_id
      )
-     VALUES (?, ?, ?, ?, ?, '', '', 0, 0, 0, 1, 0, 0, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, '', '', 0, 0, 0, 1, 0, 0, 1, ?, ?)`
   ).run(
     parsedCharacterId,
     parsedUserId,

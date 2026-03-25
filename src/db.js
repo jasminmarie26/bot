@@ -172,6 +172,7 @@ db.exec(`
       is_saved_room INTEGER NOT NULL DEFAULT 0,
       is_festplay_chat INTEGER NOT NULL DEFAULT 0,
       is_manual_festplay_room INTEGER NOT NULL DEFAULT 0,
+      is_festplay_side_chat INTEGER NOT NULL DEFAULT 0,
       festplay_id INTEGER,
       server_id TEXT NOT NULL DEFAULT 'free-rp',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -499,6 +500,10 @@ if (!chatRoomColumns.includes("is_saved_room")) {
 
 if (!chatRoomColumns.includes("is_manual_festplay_room")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN is_manual_festplay_room INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!chatRoomColumns.includes("is_festplay_side_chat")) {
+  db.exec("ALTER TABLE chat_rooms ADD COLUMN is_festplay_side_chat INTEGER NOT NULL DEFAULT 0");
 }
 
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_server_user_name_key");
