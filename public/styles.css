@@ -4339,6 +4339,81 @@ body.page-home-screen .home-hero-actions {
   margin-top: 0.15rem;
 }
 
+.rp-room-inline-list-sortable {
+  align-items: stretch;
+  gap: 0.8rem;
+}
+
+.rp-room-sort-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-width: 0;
+  padding: 0.18rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 92%, transparent);
+  cursor: grab;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
+.rp-room-sort-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 10%, var(--field-bg));
+}
+
+.rp-room-sort-card.is-active {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 12%, var(--field-bg));
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.rp-room-sort-card.is-dragging {
+  opacity: 0.62;
+  cursor: grabbing;
+}
+
+.rp-room-sort-card.is-drop-target {
+  border-color: color-mix(in srgb, var(--accent) 82%, white 18%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+.rp-room-sort-handle {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.rp-room-sort-card .rp-room-manage-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rp-room-sort-card .rp-room-manage-link:hover,
+.rp-room-sort-card .rp-room-manage-link.is-active {
+  transform: none;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.rp-room-sort-status.is-success {
+  color: color-mix(in srgb, #a7efb8 80%, var(--text) 20%);
+}
+
+.rp-room-sort-status.is-error {
+  color: color-mix(in srgb, #ff9d9d 84%, var(--text) 16%);
+}
+
 .rp-room-inline-item {
   display: inline-flex;
   align-items: baseline;

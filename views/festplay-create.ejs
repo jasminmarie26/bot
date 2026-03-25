@@ -306,20 +306,38 @@
               <h3 class="rp-room-editor-subheading">Festspiel-R&auml;ume</h3>
 
               <% if (festplayRooms && festplayRooms.length) { %>
-                <div class="rp-room-inline-list">
+                <div
+                  class="rp-room-inline-list rp-room-inline-list-sortable"
+                  data-festplay-room-sort-list
+                  data-sort-endpoint="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/reorder"
+                >
                   <% festplayRooms.forEach((room) => { %>
-                    <a
-                      class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
-                      href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
-                      title="Raum &ouml;ffnen"
+                    <div
+                      class="rp-room-sort-card<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
+                      data-room-sort-item
+                      data-room-id="<%= room.id %>"
+                      draggable="true"
+                      title="Mit der Maus verschieben"
                     >
-                      <span class="rp-room-inline-name"><%= room.name %></span>
-                      <% if (room.description) { %>
-                        <span class="rp-room-inline-teaser"><%= room.description %></span>
-                      <% } %>
-                    </a>
+                      <span class="rp-room-sort-handle" aria-hidden="true">&#8646;</span>
+                      <a
+                        class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
+                        href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
+                        title="Raum &ouml;ffnen"
+                      >
+                        <span class="rp-room-inline-name"><%= room.name %></span>
+                        <% if (room.description) { %>
+                          <span class="rp-room-inline-teaser"><%= room.description %></span>
+                        <% } %>
+                      </a>
+                    </div>
                   <% }) %>
                 </div>
+                <p
+                  class="rp-room-editor-note rp-room-sort-status"
+                  data-room-sort-status
+                  <%= festplayRooms.length > 1 ? '' : 'hidden' %>
+                ><%= festplayRooms.length > 1 ? 'Mit der Maus ziehen, um die Reihenfolge zu &auml;ndern.' : '' %></p>
               <% } else { %>
                 <p class="rp-room-editor-note">Noch keine Festspiel-R&auml;ume vorhanden.</p>
               <% } %>
@@ -516,5 +534,121 @@
     <% } %>
   </section>
 </section>
+
+<script>
+  (() => {
+    const sortList = document.querySelector("[data-festplay-room-sort-list]");
+    if (!sortList) {
+      return;
+    }
+
+    const statusNode = document.querySelector("[data-room-sort-status]");
+    let draggedItem = null;
+    let startOrder = "";
+
+    const getItems = () => Array.from(sortList.querySelectorAll("[data-room-sort-item]"));
+    const getOrder = () => getItems().map((item) => item.dataset.roomId || "").filter(Boolean).join(",");
+    const clearDropMarkers = () => {
+      getItems().forEach((item) => item.classList.remove("is-drop-target"));
+    };
+
+    const setStatus = (message, mode = "") => {
+      if (!statusNode) {
+        return;
+      }
+      statusNode.hidden = !message;
+      statusNode.textContent = message;
+      statusNode.classList.remove("is-success", "is-error");
+      if (mode) {
+        statusNode.classList.add(mode);
+      }
+    };
+
+    const saveOrder = async () => {
+      const roomIds = getItems()
+        .map((item) => item.dataset.roomId || "")
+        .filter(Boolean);
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        return;
+      }
+
+      const body = new URLSearchParams();
+      body.set("room_ids", JSON.stringify(roomIds));
+
+      try {
+        setStatus("Reihenfolge wird gespeichert...");
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "fetch"
+          },
+          credentials: "same-origin",
+          body: body.toString()
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        setStatus("Reihenfolge gespeichert.", "is-success");
+        window.setTimeout(() => {
+          setStatus(getItems().length > 1 ? "Mit der Maus ziehen, um die Reihenfolge zu ändern." : "");
+        }, 1600);
+      } catch (error) {
+        console.error("festplay room order save failed", error);
+        setStatus("Reihenfolge konnte nicht gespeichert werden.", "is-error");
+      }
+    };
+
+    sortList.addEventListener("dragover", (event) => {
+      if (!draggedItem) {
+        return;
+      }
+
+      event.preventDefault();
+      const targetItem = event.target.closest("[data-room-sort-item]");
+      if (!targetItem || targetItem === draggedItem) {
+        return;
+      }
+
+      clearDropMarkers();
+      targetItem.classList.add("is-drop-target");
+      const targetRect = targetItem.getBoundingClientRect();
+      const insertBeforeTarget = event.clientX < targetRect.left + targetRect.width / 2;
+      sortList.insertBefore(draggedItem, insertBeforeTarget ? targetItem : targetItem.nextSibling);
+    });
+
+    getItems().forEach((item) => {
+      item.addEventListener("dragstart", (event) => {
+        draggedItem = item;
+        startOrder = getOrder();
+        item.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", item.dataset.roomId || "");
+        }
+      });
+
+      item.addEventListener("drop", (event) => {
+        if (!draggedItem) {
+          return;
+        }
+        event.preventDefault();
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("is-dragging");
+        clearDropMarkers();
+        const endOrder = getOrder();
+        draggedItem = null;
+        if (startOrder && endOrder && startOrder !== endOrder) {
+          void saveOrder();
+        }
+      });
+    });
+  })();
+</script>
 
 <%- include("partials/end") %>
