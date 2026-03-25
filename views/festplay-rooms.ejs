@@ -130,13 +130,8 @@
       <% } %>
     </div>
 
-    <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
-      <summary class="rp-room-section-summary">
-        <span>Chats</span>
-      </summary>
-      <div class="rp-room-section-divider" aria-hidden="true"></div>
-      <p class="muted">Diese Chats geh&ouml;ren zu diesem Festspiel, gelten aber nicht als feste Festspiel-R&auml;ume.</p>
-
+    <section class="rp-room-section rp-room-section-standard">
+      <h2 class="rp-room-form-title">Raum erstellen</h2>
       <form
         method="POST"
         action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/enter-room"
@@ -148,7 +143,7 @@
           <input
             name="room_name"
             maxlength="80"
-            placeholder="Chatname"
+            placeholder="Raumname"
             required
           />
         </div>
@@ -157,9 +152,15 @@
           maxlength="160"
           placeholder="Raumbeschreibung"
         />
-        <button type="submit" class="rp-enter-btn">Chat &ouml;ffnen</button>
+        <button type="submit" class="rp-enter-btn">Raum erstellen</button>
       </form>
+    </section>
 
+    <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
+      <summary class="rp-room-section-summary">
+        <span>Chats</span>
+      </summary>
+      <div class="rp-room-section-divider" aria-hidden="true"></div>
       <% if (!festplayChats || !festplayChats.length) { %>
         <p class="muted">Noch keine Chats f&uuml;r dieses Festspiel vorhanden.</p>
       <% } else { %>
