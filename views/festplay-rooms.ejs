@@ -120,7 +120,6 @@
     <div class="rp-room-create-header">
       <div>
         <h1><%= festplay.name %></h1>
-        <p class="muted">Feste R&auml;ume f&uuml;r dieses Festspiel. Darunter kannst du auch eigene Chats anlegen, die nicht als Festspiel-R&auml;ume gespeichert werden.</p>
       </div>
       <% if (festplayRoomIsOwner) { %>
         <a
@@ -131,7 +130,7 @@
     </div>
 
     <section class="rp-room-section rp-room-section-standard">
-      <h2 class="rp-room-form-title">Raum erstellen</h2>
+      <h2 class="rp-room-form-title">Normalen Raum erstellen</h2>
       <form
         method="POST"
         action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/enter-room"
@@ -158,11 +157,11 @@
 
     <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
       <summary class="rp-room-section-summary">
-        <span>Chats</span>
+        <span>Normale R&auml;ume</span>
       </summary>
       <div class="rp-room-section-divider" aria-hidden="true"></div>
       <% if (!festplayChats || !festplayChats.length) { %>
-        <p class="muted">Noch keine Chats f&uuml;r dieses Festspiel vorhanden.</p>
+        <p class="muted">Noch keine normalen R&auml;ume f&uuml;r dieses Festspiel vorhanden.</p>
       <% } else { %>
         <div class="rp-room-list rp-room-list-owned">
           <% festplayChats.forEach((room) => { %>
@@ -185,7 +184,7 @@
                 <a
                   class="rp-room-custom-link"
                   href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
-                  title="Chat betreten"
+                  title="Raum betreten"
                   data-room-link-target
                   data-room-link-room="<%= room.id %>"
                   data-room-link-server="<%= character.server_id %>"
@@ -196,11 +195,6 @@
               <% if (room.description) { %>
                 <div class="rp-room-custom-description">
                   <%= room.description %>
-                </div>
-              <% } %>
-              <% if (room.creator_character_name) { %>
-                <div class="rp-room-custom-description">
-                  von <%= room.creator_character_name %>
                 </div>
               <% } %>
               <div

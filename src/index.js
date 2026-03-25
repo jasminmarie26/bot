@@ -2390,7 +2390,8 @@ function getOwnedFestplayById(userId, festplayId) {
   );
 }
 
-function getPublicFestplays() {
+function getPublicFestplays(serverId = "") {
+  const normalizedServerId = normalizeFestplayServerId(serverId);
   return db
     .prepare(
       `SELECT f.id,
@@ -2404,14 +2405,16 @@ function getPublicFestplays() {
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.is_public = 1
            AND COALESCE(f.created_by_user_id, 0) > 0
+           AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all()
+    .all(normalizedServerId, normalizedServerId)
     .map(decorateFestplayRecord);
 }
 
-function getPublicFestplayById(festplayId) {
+function getPublicFestplayById(festplayId, serverId = "") {
   const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) return null;
   return decorateFestplayRecord(
     db
@@ -2428,9 +2431,10 @@ function getPublicFestplayById(festplayId) {
            LEFT JOIN characters creator ON creator.id = f.creator_character_id
            WHERE f.id = ?
              AND f.is_public = 1
+             AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
              AND COALESCE(f.created_by_user_id, 0) > 0`
       )
-      .get(parsedFestplayId)
+      .get(parsedFestplayId, normalizedServerId, normalizedServerId)
   );
 }
 
@@ -3600,7 +3604,7 @@ function ensureFestplaySideChatRoom(userId, character, festplayId, roomName, roo
        festplay_id,
        server_id
      )
-     VALUES (?, ?, ?, ?, ?, '', '', 0, 0, 0, 1, 0, 0, 1, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, '', '', 0, 0, 1, 0, 0, 0, 1, ?, ?)`
   ).run(
     parsedCharacterId,
     parsedUserId,
@@ -7509,7 +7513,7 @@ app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
   return res.render("festplays-public", {
     title: `Festspiele: ${character.name}`,
     character,
-    publicFestplays: getPublicFestplays()
+    publicFestplays: getPublicFestplays(character.server_id)
   });
 });
 
@@ -7529,7 +7533,7 @@ app.get("/characters/:id/festplays/public/:festplayId", requireAuth, (req, res) 
     return res.redirect(`/characters/${id}`);
   }
 
-  const festplay = getPublicFestplayById(festplayId);
+  const festplay = getPublicFestplayById(festplayId, character.server_id);
   if (!festplay) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
@@ -7599,17 +7603,29 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
       getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
     ])
   );
-  const festplayChats = getFestplaySideChatsForUser(req.session.user.id, festplayId).filter((room) => {
-    if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
-      return false;
-    }
-    return true;
-  });
+  const festplayChatEntries = getFestplaySideChatsForUser(req.session.user.id, festplayId)
+    .filter((room) => {
+      if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
+        return false;
+      }
+      return true;
+    })
+    .map((room) => {
+      const activeUsers = getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id));
+      if (!activeUsers.length) {
+        maybeRemoveEmptyRoom(room.id);
+        return null;
+      }
+
+      return {
+        room,
+        activeUsers
+      };
+    })
+    .filter(Boolean);
+  const festplayChats = festplayChatEntries.map((entry) => entry.room);
   const festplayChatUsers = Object.fromEntries(
-    festplayChats.map((room) => [
-      room.id,
-      getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id))
-    ])
+    festplayChatEntries.map((entry) => [entry.room.id, entry.activeUsers])
   );
 
   return res.render("festplay-rooms", {
@@ -7937,7 +7953,7 @@ app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req
     return res.redirect(`/characters/${id}`);
   }
 
-  const festplay = getPublicFestplayById(festplayId);
+  const festplay = getPublicFestplayById(festplayId, character.server_id);
   if (!festplay) {
     setFlash(req, "error", "Dieses Festspiel ist nicht öffentlich sichtbar.");
     return res.redirect(`/characters/${id}/festplays/public`);
