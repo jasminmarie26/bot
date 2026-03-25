@@ -7877,7 +7877,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
     maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
   } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
-    emitSystemChatMessage(roomId, room.server_id, "Raum-Log wurde deaktiviert.");
+    emitSystemChatMessage(roomId, room.server_id, "Log wurde deaktiviert.");
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   }
 
@@ -8894,7 +8894,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
     maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
   } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
-    emitSystemChatMessage(roomId, room.server_id, "Raum-Log wurde deaktiviert.");
+    emitSystemChatMessage(roomId, room.server_id, "Log wurde deaktiviert.");
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   }
 
@@ -11133,7 +11133,7 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
   }
 
   startRoomLog(normalizedRoomId, normalizedServerId, resolvedRoom, starterSocket);
-  emitSystemChatMessage(normalizedRoomId, normalizedServerId, "Raum-Log ist aktiviert.");
+  emitSystemChatMessage(normalizedRoomId, normalizedServerId, "Log ist aktiviert.");
   return true;
 }
 
@@ -11203,7 +11203,7 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
     } catch (error) {
       failedCount += 1;
       lastErrorSummary = summarizeMailError(error);
-      console.error("Konnte Raum-Log nicht per E-Mail senden:", error);
+    console.error("Konnte Log nicht per E-Mail senden:", error);
     }
   }
 
