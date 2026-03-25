@@ -7724,49 +7724,64 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   }
 
   rememberPreferredCharacter(req, character);
-  const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
-    manualOnly: true
-  }).filter((room) => {
-    if (room.is_saved_room !== true) {
-      return false;
-    }
+  let festplayRooms = [];
+  let festplayRoomUsers = {};
+  let festplayChats = [];
+  let festplayChatUsers = {};
 
-    if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
-      return false;
-    }
+  try {
+    festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
+      manualOnly: true
+    }).filter((room) => {
+      if (room.is_saved_room !== true) {
+        return false;
+      }
 
-    return !isLegacyAutoFestplayRoom(room, festplay);
-  });
-  const festplayRoomUsers = Object.fromEntries(
-    festplayRooms.map((room) => [
-      room.id,
-      getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
-    ])
-  );
-  const festplayChatEntries = getFestplaySideChatsForUser(req.session.user.id, festplayId)
-    .filter((room) => {
       if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
         return false;
       }
-      return true;
-    })
-    .map((room) => {
-      const activeUsers = getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id));
-      if (!activeUsers.length) {
-        maybeRemoveEmptyRoom(room.id);
-        return null;
-      }
 
-      return {
-        room,
-        activeUsers
-      };
-    })
-    .filter(Boolean);
-  const festplayChats = festplayChatEntries.map((entry) => entry.room);
-  const festplayChatUsers = Object.fromEntries(
-    festplayChatEntries.map((entry) => [entry.room.id, entry.activeUsers])
-  );
+      return !isLegacyAutoFestplayRoom(room, festplay);
+    });
+    festplayRoomUsers = Object.fromEntries(
+      festplayRooms.map((room) => [
+        room.id,
+        getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
+      ])
+    );
+    const festplayChatEntries = getFestplaySideChatsForUser(req.session.user.id, festplayId)
+      .filter((room) => {
+        if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || character.server_id)) {
+          return false;
+        }
+        return true;
+      })
+      .map((room) => {
+        const activeUsers = getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id));
+        if (!activeUsers.length) {
+          maybeRemoveEmptyRoom(room.id);
+          return null;
+        }
+
+        return {
+          room,
+          activeUsers
+        };
+      })
+      .filter(Boolean);
+    festplayChats = festplayChatEntries.map((entry) => entry.room);
+    festplayChatUsers = Object.fromEntries(
+      festplayChatEntries.map((entry) => [entry.room.id, entry.activeUsers])
+    );
+  } catch (error) {
+    console.error("festplay room list failed", {
+      festplayId,
+      characterId: character.id,
+      userId: req.session.user.id,
+      error
+    });
+    setFlash(req, "error", "Die Festspiel-Raumliste konnte nicht vollstaendig geladen werden.");
+  }
 
   return res.render("festplay-rooms", {
     title: `Festspiel-Raume: ${festplay.name}`,
@@ -7829,20 +7844,31 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
     return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
   }
 
-  rememberPreferredCharacter(req, character);
-  const targetRoom = ensureFestplaySideChatRoom(
-    req.session.user.id,
-    character,
-    festplayId,
-    roomName,
-    roomDescription
-  );
-  if (!targetRoom) {
-    setFlash(req, "error", "Chat konnte nicht angelegt werden.");
+  try {
+    rememberPreferredCharacter(req, character);
+    const targetRoom = ensureFestplaySideChatRoom(
+      req.session.user.id,
+      character,
+      festplayId,
+      roomName,
+      roomDescription
+    );
+    if (!targetRoom) {
+      setFlash(req, "error", "Chat konnte nicht angelegt werden.");
+      return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+    }
+
+    return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
+  } catch (error) {
+    console.error("festplay side chat creation failed", {
+      festplayId,
+      characterId: character.id,
+      userId: req.session.user.id,
+      error
+    });
+    setFlash(req, "error", "Beim Anlegen des normalen Raums ist ein Fehler aufgetreten.");
     return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
   }
-
-  return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
 });
 
 app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) => {
