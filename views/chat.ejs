@@ -30,20 +30,20 @@
       ? `/dashboard/areas/${activeCharacter.server_id}`
       : `/characters/${activeCharacter.id}#roomlist`)
   : "/dashboard"; %>
-<% const chatAreaLabel = activeCharacter
-  ? ((activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
-      ? "Bereich"
-      : "Raumliste")
-  : "Dashboard"; %>
+<% const chatRoomListHref = activeCharacter
+  ? (isFestplayContext
+      ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
+      : `/characters/${activeCharacter.id}#roomlist`)
+  : "/dashboard"; %>
+<% const showChatAreaMenuLink = Boolean(
+  activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
+); %>
 
 <section class="rp-shell">
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
-      <a href="<%= chatAreaHref %>"><%= chatAreaLabel %></a>
-      <% if (isFestplayContext) { %>
-        <a href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms">Festspiel-R&auml;ume</a>
-      <% } %>
+      <a href="<%= chatRoomListHref %>">Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
@@ -160,6 +160,9 @@
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
+          <% if (showChatAreaMenuLink) { %>
+            <a href="<%= chatAreaHref %>">Bereich</a>
+          <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <% } %>
