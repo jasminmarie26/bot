@@ -2400,8 +2400,8 @@ function getOwnedFestplayById(userId, festplayId) {
                 COALESCE(creator.name, '') AS creator_character_name
            FROM festplays f
            LEFT JOIN characters creator ON creator.id = f.creator_character_id
-           WHERE id = ?
-             AND created_by_user_id = ?`
+           WHERE f.id = ?
+             AND f.created_by_user_id = ?`
       )
       .get(parsedFestplayId, parsedUserId);
       return decorateFestplayRecord(festplay);
