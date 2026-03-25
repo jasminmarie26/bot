@@ -8120,6 +8120,8 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   }
 
   const festplay = getOwnedFestplayById(req.session.user.id, festplayId);
+  const editorBaseTarget =
+    `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume#festplay-selected-editor`;
   const editorReturnTarget =
     `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume&selected_room=${roomId}#festplay-selected-editor`;
   if (!festplay) {
@@ -8158,6 +8160,20 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   const roomImageUrl = "";
   const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
   const isLocked = 0;
+
+  if (req.body.delete_room) {
+    if (getSocketsInChannel(roomId, room.server_id).length > 0) {
+      setFlash(req, "error", "Der Raum kann erst geloescht werden, wenn niemand mehr darin ist.");
+      return res.redirect(getSafeReturnTarget(req, editorReturnTarget));
+    }
+
+    clearPendingRoomDeletion(roomId);
+    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+    deleteRoomData(roomId);
+    io.emit("chat:room-removed", { room_id: roomId });
+    setFlash(req, "success", "Festspiel-Raum geloescht.");
+    return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
+  }
 
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gueltigen Raumnamen eingeben.");
@@ -9217,6 +9233,20 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   const roomImageUrl = String(room.image_url || "");
   const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
   const isLocked = req.body.is_locked ? 1 : 0;
+
+  if (req.body.delete_room) {
+    if (getSocketsInChannel(roomId, room.server_id).length > 0) {
+      setFlash(req, "error", "Der Raum kann erst geloescht werden, wenn niemand mehr darin ist.");
+      return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
+    }
+
+    clearPendingRoomDeletion(roomId);
+    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+    deleteRoomData(roomId);
+    io.emit("chat:room-removed", { room_id: roomId });
+    setFlash(req, "success", "Raum geloescht.");
+    return res.redirect(`/characters/${id}/rooms/new`);
+  }
 
   if (roomName.length < 2) {
     setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
