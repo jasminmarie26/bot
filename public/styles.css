@@ -3769,6 +3769,15 @@ body.page-home-screen .home-hero-actions {
   flex-wrap: wrap;
 }
 
+.rp-room-create-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-left: auto;
+}
+
 .rp-room-form {
   display: grid;
   gap: 0.75rem;
@@ -3879,20 +3888,7 @@ body.page-home-screen .home-hero-actions {
 .rp-room-create-save {
   width: fit-content;
   min-width: auto;
-  padding: 0.38rem 0.82rem;
-  border: 1px solid var(--accent-2);
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-text);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 120ms ease, filter 120ms ease;
-}
-
-.rp-room-create-save:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .rp-room-editor {
@@ -4083,6 +4079,11 @@ body.page-home-screen .home-hero-actions {
   flex-wrap: wrap;
   gap: 0.7rem;
   align-items: center;
+}
+
+.rp-room-create-header-actions .inline-form,
+.rp-room-editor-actions .inline-form {
+  display: inline-flex;
 }
 
 .rp-room-editor-section {

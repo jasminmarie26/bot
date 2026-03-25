@@ -3294,6 +3294,47 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
   return true;
 }
 
+function deleteFestplayAndResetCharacters(festplayId) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return false;
+  }
+
+  const resetAssignedCharacters = db.prepare(
+    `UPDATE characters
+        SET festplay_id = NULL,
+            festplay_dashboard_mode = 'main',
+            updated_at = CURRENT_TIMESTAMP
+      WHERE festplay_id = ?
+         OR id = (
+              SELECT creator_character_id
+                FROM festplays
+               WHERE id = ?
+            )`
+  );
+  const resetPermissionCharacters = db.prepare(
+    `UPDATE characters
+        SET festplay_dashboard_mode = 'main',
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id IN (
+              SELECT fp.character_id
+                FROM festplay_permissions fp
+               WHERE fp.festplay_id = ?
+            )`
+  );
+  const deleteFestplayRooms = db.prepare("DELETE FROM chat_rooms WHERE festplay_id = ?");
+  const deleteFestplay = db.prepare("DELETE FROM festplays WHERE id = ?");
+
+  db.transaction(() => {
+    resetPermissionCharacters.run(parsedFestplayId);
+    resetAssignedCharacters.run(parsedFestplayId, parsedFestplayId);
+    deleteFestplayRooms.run(parsedFestplayId);
+    deleteFestplay.run(parsedFestplayId);
+  })();
+
+  return true;
+}
+
 function removeFestplayPermission(festplayId, permissionId) {
   const parsedFestplayId = Number(festplayId);
   const parsedPermissionId = Number(permissionId);
@@ -8710,16 +8751,24 @@ app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res)
     return res.redirect(`/characters/${id}/festplays`);
   }
 
-  const usageCount = db
-    .prepare("SELECT COUNT(*) AS count FROM characters WHERE festplay_id = ?")
-    .get(festplayId).count;
-  if (Number(usageCount) > 0) {
-    setFlash(req, "error", "Dieses Festspiel wird noch von Charakteren verwendet.");
+  try {
+    deleteFestplayAndResetCharacters(festplayId);
+  } catch (error) {
+    console.error("festplay deletion failed", {
+      festplayId,
+      userId: req.session.user.id,
+      characterId: character.id,
+      error
+    });
+    setFlash(req, "error", "Das Festspiel konnte nicht geloescht werden.");
     return res.redirect(`/characters/${id}/festplays`);
   }
 
-  db.prepare("DELETE FROM chat_rooms WHERE festplay_id = ?").run(festplayId);
-  db.prepare("DELETE FROM festplays WHERE id = ?").run(festplayId);
+  setFlash(
+    req,
+    "success",
+    `Festspiel ${festplay.name} wurde geloescht. Zugeordnete Charaktere wurden wieder in den normalen Bereich gesetzt.`
+  );
   return res.redirect(`/characters/${id}/festplays`);
 });
 
@@ -10164,15 +10213,7 @@ app.post("/admin/festplays/:id/delete", requireAuth, requireAdmin, (req, res) =>
     return res.redirect("/admin");
   }
 
-  const clearCharacters = db.prepare(
-    "UPDATE characters SET festplay_id = NULL WHERE festplay_id = ?"
-  );
-  const deleteFestplay = db.prepare("DELETE FROM festplays WHERE id = ?");
-  const tx = db.transaction(() => {
-    clearCharacters.run(festplayId);
-    deleteFestplay.run(festplayId);
-  });
-  tx();
+  deleteFestplayAndResetCharacters(festplayId);
 
   setFlash(req, "success", `Festplay ${festplay.name} gelöscht.`);
   return res.redirect("/admin");

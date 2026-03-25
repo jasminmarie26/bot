@@ -116,13 +116,29 @@
   </header>
 
   <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
+    <% const showFestplaySaveAction = ((!selectedFestplay && activeFestplayOverviewTab !== "andere") || (selectedFestplayMode === "owned" && activeFestplayTab === "allgemein")); %>
+    <% const showFestplayDeleteAction = Boolean(selectedFestplayMode === "owned" && activeFestplayTab === "allgemein" && selectedFestplay); %>
     <div class="rp-room-create-header">
-      <% if ((!selectedFestplay && activeFestplayOverviewTab !== "andere") || (selectedFestplayMode === "owned" && activeFestplayTab === "allgemein")) { %>
-        <button
-          class="rp-room-create-save"
-          type="submit"
-          form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
-        >Speichern</button>
+      <% if (showFestplaySaveAction || showFestplayDeleteAction) { %>
+        <div class="rp-room-create-header-actions">
+          <% if (showFestplaySaveAction) { %>
+            <button
+              class="btn rp-room-create-save"
+              type="submit"
+              form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
+            >Speichern</button>
+          <% } %>
+          <% if (showFestplayDeleteAction) { %>
+            <form
+              method="POST"
+              action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/delete"
+              class="inline-form"
+              onsubmit="return confirm('Festspiel wirklich loeschen? Zugeordnete Charaktere werden wieder in den normalen Bereich gesetzt.');"
+            >
+              <button type="submit" class="btn btn-danger">L&ouml;schen</button>
+            </form>
+          <% } %>
+        </div>
       <% } %>
     </div>
 
@@ -206,7 +222,7 @@
                         action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/applications/<%= application.id %>/approve"
                         class="inline-form"
                       >
-                        <button type="submit">Freischalten</button>
+                        <button type="submit" class="btn">Freischalten</button>
                       </form>
                     </div>
                   <% }) %>
@@ -230,7 +246,7 @@
                   placeholder="Charaktername"
                   required
                 />
-                <button type="submit">Hinzuf&uuml;gen</button>
+                <button type="submit" class="btn">Hinzuf&uuml;gen</button>
               </form>
 
               <% if (festplayPermissionEntries && festplayPermissionEntries.length) { %>
@@ -405,7 +421,7 @@
               </form>
 
               <div class="rp-room-editor-actions">
-                <button type="submit" form="<%= festplayRoomFormId %>"><%= selectedFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
+                <button type="submit" form="<%= festplayRoomFormId %>" class="btn"><%= selectedFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
                 <% if (selectedFestplayRoom) { %>
                   <a
                     class="rp-room-editor-enter"
@@ -470,7 +486,15 @@
             </label>
 
             <div class="rp-room-editor-actions">
-              <button type="submit">Speichern</button>
+              <button type="submit" class="btn">Speichern</button>
+              <form
+                method="POST"
+                action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/delete"
+                class="inline-form"
+                onsubmit="return confirm('Festspiel wirklich loeschen? Zugeordnete Charaktere werden wieder in den normalen Bereich gesetzt.');"
+              >
+                <button type="submit" class="btn btn-danger">Festspiel l&ouml;schen</button>
+              </form>
             </div>
           </form>
         <% } %>
