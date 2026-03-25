@@ -23,6 +23,17 @@ const {
   TextRun
 } = require("docx");
 const db = require("./db");
+const CHAT_ROOM_COLUMN_NAMES = new Set(
+  db
+    .prepare("PRAGMA table_info(chat_rooms)")
+    .all()
+    .map((column) => String(column?.name || "").trim())
+    .filter(Boolean)
+);
+
+function hasChatRoomColumn(columnName) {
+  return CHAT_ROOM_COLUMN_NAMES.has(String(columnName || "").trim());
+}
 
 const THEME_OPTIONS = [
   { id: "glass-aurora", label: "Glass Aurora" },
@@ -2449,6 +2460,7 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
   const manualOnly = options?.manualOnly !== false;
+  const supportsSortOrder = hasChatRoomColumn("sort_order");
   if (
     !Number.isInteger(parsedUserId) ||
     parsedUserId < 1 ||
@@ -2471,7 +2483,7 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
               r.is_public_room,
               r.is_saved_room,
               COALESCE(r.is_manual_festplay_room, 0) AS is_manual_festplay_room,
-              COALESCE(r.sort_order, 0) AS sort_order,
+              ${supportsSortOrder ? "COALESCE(r.sort_order, 0)" : "0"} AS sort_order,
               r.server_id,
               r.created_at,
               r.created_by_user_id,
@@ -2493,7 +2505,7 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
           AND COALESCE(r.is_festplay_chat, 0) = 1
           AND COALESCE(r.created_by_user_id, 0) = COALESCE(f.created_by_user_id, 0)
           ${manualOnly ? "AND COALESCE(r.is_manual_festplay_room, 0) = 1" : ""}
-        ORDER BY COALESCE(r.sort_order, 0) ASC, r.created_at ASC, r.id ASC`
+        ORDER BY ${supportsSortOrder ? "COALESCE(r.sort_order, 0) ASC," : ""} r.created_at ASC, r.id ASC`
      )
     .all(parsedUserId, parsedUserId, parsedFestplayId)
     .map((room) => ({
@@ -6847,47 +6859,78 @@ function ensureFestplayRoomForCharacter(
     };
   }
 
-  const nextSortOrder = Number(
-    db
-      .prepare(
-        `SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_sort_order
-           FROM chat_rooms
-          WHERE festplay_id = ?
-            AND COALESCE(is_festplay_chat, 0) = 1
-            AND COALESCE(is_manual_festplay_room, 0) = 1`
+  const supportsSortOrder = hasChatRoomColumn("sort_order");
+  const nextSortOrder = supportsSortOrder
+    ? Number(
+        db
+          .prepare(
+            `SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_sort_order
+               FROM chat_rooms
+              WHERE festplay_id = ?
+                AND COALESCE(is_festplay_chat, 0) = 1
+                AND COALESCE(is_manual_festplay_room, 0) = 1`
+          )
+          .get(parsedFestplayId)?.next_sort_order || 1
       )
-      .get(parsedFestplayId)?.next_sort_order || 1
-  );
+    : 0;
 
-  const info = db.prepare(
-    `INSERT INTO chat_rooms (
-       character_id,
-       created_by_user_id,
-       name,
-       name_key,
-       description,
-       teaser,
-       email_log_enabled,
-       server_id,
-       sort_order,
-       is_saved_room,
-       is_festplay_chat,
-       is_manual_festplay_room,
-       festplay_id
-     )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
-  ).run(
-    parsedCharacterId,
-    parsedUserId,
-    normalizedRoomName,
-    roomNameKey,
-    normalizedRoomDescription,
-    normalizedRoomTeaser,
-    normalizedEmailLogEnabled,
-    normalizedServerId,
-    nextSortOrder,
-    parsedFestplayId
-  );
+  const info = supportsSortOrder
+    ? db.prepare(
+        `INSERT INTO chat_rooms (
+           character_id,
+           created_by_user_id,
+           name,
+           name_key,
+           description,
+           teaser,
+           email_log_enabled,
+           server_id,
+           sort_order,
+           is_saved_room,
+           is_festplay_chat,
+           is_manual_festplay_room,
+           festplay_id
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
+      ).run(
+        parsedCharacterId,
+        parsedUserId,
+        normalizedRoomName,
+        roomNameKey,
+        normalizedRoomDescription,
+        normalizedRoomTeaser,
+        normalizedEmailLogEnabled,
+        normalizedServerId,
+        nextSortOrder,
+        parsedFestplayId
+      )
+    : db.prepare(
+        `INSERT INTO chat_rooms (
+           character_id,
+           created_by_user_id,
+           name,
+           name_key,
+           description,
+           teaser,
+           email_log_enabled,
+           server_id,
+           is_saved_room,
+           is_festplay_chat,
+           is_manual_festplay_room,
+           festplay_id
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`
+      ).run(
+        parsedCharacterId,
+        parsedUserId,
+        normalizedRoomName,
+        roomNameKey,
+        normalizedRoomDescription,
+        normalizedRoomTeaser,
+        normalizedEmailLogEnabled,
+        normalizedServerId,
+        parsedFestplayId
+      );
 
   return {
     id: Number(info.lastInsertRowid),
@@ -8291,6 +8334,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     activeFestplayOverviewTab,
     activeFestplayTab,
     festplayRooms,
+    festplayRoomSortingEnabled: hasChatRoomColumn("sort_order"),
     selectedFestplayRoom,
     selectedFestplayRoomPreviewHtml,
     festplayPermissionEntries,

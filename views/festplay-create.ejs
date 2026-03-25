@@ -307,19 +307,18 @@
 
               <% if (festplayRooms && festplayRooms.length) { %>
                 <div
-                  class="rp-room-inline-list rp-room-inline-list-sortable"
-                  data-festplay-room-sort-list
-                  data-sort-endpoint="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/reorder"
+                  class="rp-room-inline-list<%= festplayRoomSortingEnabled ? ' rp-room-inline-list-sortable' : '' %>"
+                  <%= festplayRoomSortingEnabled ? `data-festplay-room-sort-list data-sort-endpoint="/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/reorder"` : '' %>
                 >
                   <% festplayRooms.forEach((room) => { %>
                     <div
-                      class="rp-room-sort-card<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
-                      data-room-sort-item
-                      data-room-id="<%= room.id %>"
-                      draggable="true"
-                      title="Mit der Maus verschieben"
+                      class="rp-room-sort-card<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %><%= festplayRoomSortingEnabled ? '' : ' is-static' %>"
+                      <%= festplayRoomSortingEnabled ? `data-room-sort-item data-room-id="${room.id}" draggable="true"` : '' %>
+                      title="<%= festplayRoomSortingEnabled ? 'Mit der Maus verschieben' : 'Raum öffnen' %>"
                     >
-                      <span class="rp-room-sort-handle" aria-hidden="true">&#8646;</span>
+                      <% if (festplayRoomSortingEnabled) { %>
+                        <span class="rp-room-sort-handle" aria-hidden="true">&#8646;</span>
+                      <% } %>
                       <a
                         class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
                         href="/characters/<%= character.id %>/festplays?selected_festplay=<%= selectedFestplay.id %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
@@ -336,8 +335,8 @@
                 <p
                   class="rp-room-editor-note rp-room-sort-status"
                   data-room-sort-status
-                  <%= festplayRooms.length > 1 ? '' : 'hidden' %>
-                ><%= festplayRooms.length > 1 ? 'Mit der Maus ziehen, um die Reihenfolge zu &auml;ndern.' : '' %></p>
+                  <%= festplayRoomSortingEnabled && festplayRooms.length > 1 ? '' : 'hidden' %>
+                ><%= festplayRoomSortingEnabled && festplayRooms.length > 1 ? 'Mit der Maus ziehen, um die Reihenfolge zu &auml;ndern.' : '' %></p>
               <% } else { %>
                 <p class="rp-room-editor-note">Noch keine Festspiel-R&auml;ume vorhanden.</p>
               <% } %>
