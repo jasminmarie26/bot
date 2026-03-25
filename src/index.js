@@ -8010,7 +8010,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
     }
 
     return res.redirect(
-      `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume&selected_room=${targetRoom.id}#festplay-selected-editor`
+      `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume#festplay-selected-editor`
     );
   } catch (error) {
     console.error("festplay room creation failed", {
