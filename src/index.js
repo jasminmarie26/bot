@@ -3375,6 +3375,32 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
   );
 }
 
+function getSavedNonFestplayRoomsForUser(userId, serverId) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room
+       FROM chat_rooms
+       WHERE server_id = ?
+         AND created_by_user_id = ?
+         AND COALESCE(is_saved_room, 0) = 1
+         AND COALESCE(is_festplay_chat, 0) = 0
+       ORDER BY created_at ASC, id ASC`
+    )
+    .all(normalizedServerId, parsedUserId)
+    .map((room) => ({
+      ...room,
+      email_log_enabled: Number(room.email_log_enabled) === 1,
+      is_locked: Number(room.is_locked) === 1,
+      is_public_room: Number(room.is_public_room) === 1
+    }));
+}
+
 function findOwnedFestplayRoomByNameKey(userId, festplayId, roomNameKey, roomDescription = "") {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
@@ -7283,23 +7309,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   }
 
   rememberPreferredCharacter(req, character);
-  const ownedRooms = db
-    .prepare(
-        `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room
-         FROM chat_rooms
-         WHERE server_id = ?
-           AND created_by_user_id = ?
-           AND COALESCE(is_saved_room, 0) = 1
-           AND COALESCE(is_festplay_chat, 0) = 0
-         ORDER BY created_at ASC, id ASC`
-    )
-    .all(normalizeServer(character.server_id), req.session.user.id)
-    .map((room) => ({
-      ...room,
-      email_log_enabled: Number(room.email_log_enabled) === 1,
-      is_locked: Number(room.is_locked) === 1,
-      is_public_room: Number(room.is_public_room) === 1
-    }));
+  const ownedRooms = getSavedNonFestplayRoomsForUser(req.session.user.id, character.server_id);
   const selectedRoomId = Number(req.query.selected_room);
   const selectedRoom =
     ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
@@ -7421,13 +7431,22 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
       getOnlineCharactersForChannel(room.id, normalizeServer(festplay.server_id || character.server_id))
     ])
   );
+  const ownedRooms = getSavedNonFestplayRoomsForUser(req.session.user.id, character.server_id);
+  const ownedRoomUsers = Object.fromEntries(
+    ownedRooms.map((room) => [
+      room.id,
+      getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id))
+    ])
+  );
 
   return res.render("festplay-rooms", {
     title: `Festspiel-Raume: ${festplay.name}`,
     character,
     festplay,
     festplayRooms,
-    festplayRoomUsers
+    festplayRoomUsers,
+    ownedRooms,
+    ownedRoomUsers
   });
 });
 
@@ -7440,6 +7459,7 @@ app.get("/characters/:id/festplays/:festplayId/chat", requireAuth, (req, res) =>
 app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
+  const fallbackReturnTarget = `/characters/${id}/festplays/${festplayId}/rooms`;
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
@@ -7470,11 +7490,29 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
 
   if (festplay.server_id && normalizeServer(character.server_id) !== festplay.server_id) {
     setFlash(req, "error", buildFestplayServerLockMessage(festplay));
-    return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
+    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
   }
 
-  setFlash(req, "error", "Auf der Festspiel-Seite werden nur feste Festspiel-Raeume angezeigt.");
-  return res.redirect(`/characters/${id}/festplays/${festplayId}/rooms`);
+  const roomName = normalizeRoomName(req.body.room_name);
+  const roomDescription = normalizeRoomDescription(req.body.room_description || req.body.room_teaser);
+  if (roomName.length < 2) {
+    setFlash(req, "error", "Bitte einen gueltigen Chatnamen eingeben.");
+    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+  }
+
+  rememberPreferredCharacter(req, character);
+  const targetRoom = ensureOwnedRoomForCharacter(
+    req.session.user.id,
+    character,
+    roomName,
+    roomDescription
+  );
+  if (!targetRoom) {
+    setFlash(req, "error", "Chat konnte nicht angelegt werden.");
+    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+  }
+
+  return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
 });
 
 app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) => {
@@ -11727,7 +11765,7 @@ io.on("connection", (socket) => {
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
     const canGrantRoomRights = canGrantRoomPermissions(socket.data.user, room);
 
-    if (isManagedFestplayChatRoom && /^\/(?:rw|rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
+    if (isManagedFestplayChatRoom && /^\/(?:rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
       socket.emit("chat:message", {
         type: "system",
         content: "Festspiel-Raeume steuerst du ueber die eigene Festspiel-Raumseite, nicht direkt im Chat.",

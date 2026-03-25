@@ -120,7 +120,7 @@
     <div class="rp-room-create-header">
       <div>
         <h1><%= festplay.name %></h1>
-        <p class="muted">Feste R&auml;ume f&uuml;r dieses Festspiel. Freigeschaltete Mitglieder k&ouml;nnen sie direkt betreten.</p>
+        <p class="muted">Feste R&auml;ume f&uuml;r dieses Festspiel. Darunter kannst du auch eigene Chats anlegen, die nicht als Festspiel-R&auml;ume gespeichert werden.</p>
       </div>
       <% if (festplayRoomIsOwner) { %>
         <a
@@ -129,6 +129,107 @@
         >R&auml;ume bearbeiten</a>
       <% } %>
     </div>
+
+    <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
+      <summary class="rp-room-section-summary">
+        <span>Eigene Chats</span>
+      </summary>
+      <div class="rp-room-section-divider" aria-hidden="true"></div>
+      <p class="muted">Diese Chats sind normale R&auml;ume auf dem Server und gelten nicht als Festspiel-R&auml;ume.</p>
+
+      <form
+        method="POST"
+        action="/characters/<%= character.id %>/festplays/<%= festplay.id %>/enter-room"
+        class="rp-room-form rp-room-form-inline"
+      >
+        <input type="hidden" name="return_to" value="/characters/<%= character.id %>/festplays/<%= festplay.id %>/rooms" />
+        <div class="rp-room-input">
+          <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+          <input
+            name="room_name"
+            maxlength="80"
+            placeholder="Chatname"
+            required
+          />
+        </div>
+        <input
+          name="room_description"
+          maxlength="160"
+          placeholder="Raumbeschreibung"
+        />
+        <button type="submit" class="rp-enter-btn">Chat &ouml;ffnen</button>
+      </form>
+
+      <% if (!ownedRooms || !ownedRooms.length) { %>
+        <p class="muted">Noch keine eigenen Chats auf diesem Server vorhanden.</p>
+      <% } else { %>
+        <div class="rp-room-list rp-room-list-owned">
+          <% ownedRooms.forEach((room) => { %>
+            <% const activeUsers = Array.isArray(ownedRoomUsers?.[room.id]) ? ownedRoomUsers[room.id] : []; %>
+            <div class="rp-room-standard-card rp-room-custom-card">
+              <div class="rp-room-custom-titleline">
+                <span
+                  class="rp-room-lock-indicator<%= room.is_locked ? ' is-visible' : '' %>"
+                  data-room-lock-target
+                  data-room-lock-room="<%= room.id %>"
+                  data-room-lock-server="<%= character.server_id %>"
+                  aria-hidden="<%= room.is_locked ? 'false' : 'true' %>"
+                  title="Raum ist abgeschlossen"
+                ><svg class="room-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path class="room-lock-fill" d="M12 3.7a4.45 4.45 0 0 0-4.45 4.45v1.92c0 .18-.06.35-.16.5l-1.31 2a1.08 1.08 0 0 0 .91 1.67h10.02a1.08 1.08 0 0 0 .91-1.67l-1.31-2c-.1-.15-.16-.32-.16-.5V8.15A4.45 4.45 0 0 0 12 3.7Z"/>
+                  <path d="M8.1 10.02V8.35a3.9 3.9 0 1 1 7.8 0v1.67"/>
+                  <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
+                  <path d="M12 13.15v2.8"/>
+                </svg></span>
+                <a
+                  class="rp-room-custom-link"
+                  href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  title="Chat betreten"
+                  data-room-link-target
+                  data-room-link-room="<%= room.id %>"
+                  data-room-link-server="<%= character.server_id %>"
+                  data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  aria-disabled="false"
+                ><%= room.name %></a>
+              </div>
+              <% if (room.description) { %>
+                <div class="rp-room-custom-description">
+                  <%= room.description %>
+                </div>
+              <% } %>
+              <div
+                class="rp-room-occupants"
+                data-room-watch-target
+                data-room-watch-room="<%= room.id %>"
+                data-room-watch-server="<%= character.server_id %>"
+              >
+                <% if (activeUsers.length) { %>
+                  <% activeUsers.forEach((entry, index) => { %>
+                    <% if (entry.character_id) { %>
+                      <a
+                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
+                        href="/characters/<%= entry.character_id %>/guestbook"
+                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
+                      ><%= entry.name %></a>
+                    <% } else { %>
+                      <span
+                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
+                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
+                      ><%= entry.name %></span>
+                    <% } %>
+                    <% if (index < activeUsers.length - 1) { %>
+                      <span class="rp-room-occupant-separator">, </span>
+                    <% } %>
+                  <% }) %>
+                <% } else { %>
+                  <span class="muted">Gerade niemand dort.</span>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </details>
 
     <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
       <summary class="rp-room-section-summary">
