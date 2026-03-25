@@ -47,6 +47,18 @@
   const roomId = Number(roomIdRaw);
   const activeCharacterId = Number(activeCharacterIdRaw);
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
+  const chatInputHistoryKey = [
+    "chat-input-history",
+    Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
+    serverId,
+    hasRoom ? `room-${roomId}` : "room-none"
+  ].join(":");
+  const chatInputDraftKey = [
+    "chat-input-draft",
+    Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
+    serverId,
+    hasRoom ? `room-${roomId}` : "room-none"
+  ].join(":");
   let selectedOnlineEntry = null;
   let typingEmitActive = false;
   let typingStopTimer = null;
@@ -59,6 +71,7 @@
   let activeWhisperThreadUserId = null;
   let whisperSequence = 0;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
+  const chatInputHistoryLimit = 50;
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
     on: [
@@ -82,6 +95,158 @@
   let soundEnabled = true;
 
   if (!chatBox || !form || !input) return;
+
+  function readSessionStorage(key) {
+    try {
+      return window.sessionStorage.getItem(key);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function writeSessionStorage(key, value) {
+    try {
+      window.sessionStorage.setItem(key, value);
+    } catch (_error) {
+      // Ignore unavailable storage.
+    }
+  }
+
+  function removeSessionStorage(key) {
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch (_error) {
+      // Ignore unavailable storage.
+    }
+  }
+
+  function loadChatInputHistory() {
+    const rawValue = readSessionStorage(chatInputHistoryKey);
+    if (!rawValue) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((entry) => String(entry || "").trim().slice(0, 500))
+        .filter(Boolean)
+        .slice(-chatInputHistoryLimit);
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  let chatInputHistory = loadChatInputHistory();
+  let chatInputHistoryIndex = -1;
+  let chatInputDraftBuffer = "";
+
+  function saveChatInputHistory() {
+    writeSessionStorage(chatInputHistoryKey, JSON.stringify(chatInputHistory.slice(-chatInputHistoryLimit)));
+  }
+
+  function getStoredChatDraft() {
+    return String(readSessionStorage(chatInputDraftKey) || "").slice(0, 500);
+  }
+
+  function rememberChatDraft(value) {
+    const nextValue = String(value || "").slice(0, 500);
+    if (!nextValue.trim()) {
+      return;
+    }
+
+    writeSessionStorage(chatInputDraftKey, nextValue);
+  }
+
+  function clearChatDraft() {
+    removeSessionStorage(chatInputDraftKey);
+  }
+
+  function rememberSentChatMessage(value) {
+    const nextValue = String(value || "").trim().slice(0, 500);
+    if (!nextValue) {
+      return;
+    }
+
+    chatInputHistory.push(nextValue);
+    if (chatInputHistory.length > chatInputHistoryLimit) {
+      chatInputHistory = chatInputHistory.slice(-chatInputHistoryLimit);
+    }
+    saveChatInputHistory();
+    clearChatDraft();
+    chatInputHistoryIndex = -1;
+    chatInputDraftBuffer = "";
+  }
+
+  function getChatHistoryNavigationEntries() {
+    const entries = chatInputHistory.slice();
+    const storedDraft = getStoredChatDraft();
+    const currentValue = String(input?.value || "");
+    const lastEntry = entries.length ? entries[entries.length - 1] : "";
+    if (
+      storedDraft &&
+      storedDraft !== currentValue &&
+      storedDraft !== chatInputDraftBuffer &&
+      storedDraft !== lastEntry
+    ) {
+      entries.push(storedDraft);
+    }
+    return entries;
+  }
+
+  function applyChatInputValue(value) {
+    const nextValue = String(value || "").slice(0, 500);
+    input.value = nextValue;
+    if (typeof input.setSelectionRange === "function") {
+      input.setSelectionRange(nextValue.length, nextValue.length);
+    }
+    handleTypingInput();
+  }
+
+  function handleChatHistoryNavigation(event) {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return false;
+    }
+
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+
+    const entries = getChatHistoryNavigationEntries();
+    if (!entries.length) {
+      return false;
+    }
+
+    event.preventDefault();
+
+    if (chatInputHistoryIndex === -1) {
+      chatInputDraftBuffer = String(input?.value || "");
+      chatInputHistoryIndex = entries.length;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (chatInputHistoryIndex > 0) {
+        chatInputHistoryIndex -= 1;
+      }
+      applyChatInputValue(entries[chatInputHistoryIndex] || "");
+      return true;
+    }
+
+    if (chatInputHistoryIndex < entries.length - 1) {
+      chatInputHistoryIndex += 1;
+      applyChatInputValue(entries[chatInputHistoryIndex] || "");
+      return true;
+    }
+
+    chatInputHistoryIndex = -1;
+    applyChatInputValue(chatInputDraftBuffer);
+    chatInputDraftBuffer = "";
+    return true;
+  }
 
   function normalizeChatTextColor(rawColor) {
     const value = String(rawColor || "").trim();
@@ -382,6 +547,13 @@
         ) {
           playEntryTone();
         }
+      } else if (systemKind === "dice-roll" && presenceActorName && content) {
+        const strong = document.createElement("strong");
+        strong.textContent = presenceActorName;
+        body.textContent = ` ${content}`;
+        applyChatTextColor(strong, presenceActorChatTextColor);
+        body.style.color = "#000000";
+        line.appendChild(strong);
       } else if (systemKind === "room-switch" && presenceActorName && roomSwitchTargetName) {
         const strong = document.createElement("strong");
         strong.textContent = presenceActorName;
@@ -1078,13 +1250,26 @@
     if (!content) return;
 
     stopTypingIndicator();
+    rememberSentChatMessage(content);
     socket.emit("chat:message", content);
     input.value = "";
     input.focus();
   });
 
-  input.addEventListener("input", handleTypingInput);
-  input.addEventListener("keydown", handleTypingInput);
+  input.addEventListener("input", () => {
+    if (chatInputHistoryIndex !== -1) {
+      chatInputHistoryIndex = -1;
+      chatInputDraftBuffer = "";
+    }
+    rememberChatDraft(input.value);
+    handleTypingInput();
+  });
+  input.addEventListener("keydown", (event) => {
+    if (handleChatHistoryNavigation(event)) {
+      return;
+    }
+    handleTypingInput();
+  });
   input.addEventListener("blur", stopTypingIndicator);
   window.addEventListener("beforeunload", stopTypingIndicator);
   document.addEventListener("visibilitychange", () => {
@@ -1126,10 +1311,9 @@
   if (onlineActionWhisper) {
     onlineActionWhisper.addEventListener("click", () => {
       if (!selectedOnlineEntry) return;
-      const panelIsOpen = isWhisperPanelOpen();
       activateWhisperThread(selectedOnlineEntry, {
-        focusInput: panelIsOpen,
-        openPanel: false
+        focusInput: true,
+        openPanel: true
       });
       closeOnlineMenu();
     });

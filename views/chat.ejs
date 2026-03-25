@@ -270,7 +270,14 @@
           <% messages.forEach((msg) => { %>
             <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">
               <% if (msg.type === "system") { %>
-                <p><span><%= msg.content %></span></p>
+                <% if (msg.system_kind === "dice-roll" && msg.presence_actor_name) { %>
+                  <p>
+                    <strong style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"><%= msg.presence_actor_name %></strong>
+                    <span> <%= msg.content %></span>
+                  </p>
+                <% } else { %>
+                  <p><span><%= msg.content %></span></p>
+                <% } %>
               <% } else { %>
                 <p>
                   <strong

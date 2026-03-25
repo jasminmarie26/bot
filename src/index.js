@@ -13222,7 +13222,12 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         roomId,
         serverId,
-        `${rollDisplayName} hat mit ${rollConfig.notation} gewuerfelt (${rollResult.resultLabel}).`
+        `hat mit ${rollConfig.notation} gewuerfelt (${rollResult.resultLabel}).`,
+        {
+          system_kind: "dice-roll",
+          presence_actor_name: rollDisplayName,
+          presence_actor_chat_text_color: rollDisplayProfile?.chat_text_color || ""
+        }
       );
       return;
     }
