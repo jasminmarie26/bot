@@ -2475,9 +2475,11 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
                 ELSE 0
               END AS can_manage_room
          FROM chat_rooms r
+         JOIN festplays f ON f.id = r.festplay_id
          JOIN characters anchor ON anchor.id = r.character_id
         WHERE r.festplay_id = ?
           AND COALESCE(r.is_festplay_chat, 0) = 1
+          AND COALESCE(r.created_by_user_id, 0) = COALESCE(f.created_by_user_id, 0)
           ${manualOnly ? "AND COALESCE(r.is_manual_festplay_room, 0) = 1" : ""}
         ORDER BY r.created_at ASC, r.id ASC`
      )

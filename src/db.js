@@ -615,6 +615,19 @@ db.prepare("UPDATE chat_rooms SET image_url = '' WHERE image_url IS NULL").run()
 db.prepare("UPDATE chat_rooms SET email_log_enabled = 0 WHERE email_log_enabled IS NULL").run();
 db.prepare("UPDATE chat_rooms SET is_locked = 0 WHERE is_locked IS NULL").run();
 db.prepare(
+  `UPDATE chat_rooms
+      SET is_festplay_chat = 0,
+          is_manual_festplay_room = 0
+    WHERE COALESCE(is_festplay_chat, 0) = 1
+      AND COALESCE(is_manual_festplay_room, 0) = 1
+      AND EXISTS (
+        SELECT 1
+          FROM festplays f
+         WHERE f.id = chat_rooms.festplay_id
+           AND COALESCE(chat_rooms.created_by_user_id, 0) != COALESCE(f.created_by_user_id, 0)
+      )`
+).run();
+db.prepare(
   `UPDATE chat_messages
    SET server_id = COALESCE(
      (
