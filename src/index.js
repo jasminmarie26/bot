@@ -7027,6 +7027,17 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     markFestplayApplicationNotificationAsRead(latestNotification.id, req.session.user.id);
 
     if (String(latestNotification.notification_type || "").trim() === "festplay_approval") {
+      const actorName = String(latestNotification.actor_name || "").trim();
+      const festplayName = String(latestNotification.festplay_name || "").trim();
+      setFlash(
+        req,
+        "success",
+        actorName && festplayName
+          ? `${actorName} hat dich fuer ${festplayName} freigeschaltet.`
+          : festplayName
+            ? `Du wurdest fuer ${festplayName} freigeschaltet.`
+            : "Du wurdest fuer ein Festspiel freigeschaltet."
+      );
       return res.redirect(req.get("referer") || "/dashboard");
     }
 

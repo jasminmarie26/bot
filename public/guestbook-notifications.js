@@ -103,37 +103,10 @@
   };
   applyNotificationPayload(initialPayload);
 
-  notificationLink.addEventListener("click", async (event) => {
+  notificationLink.addEventListener("click", (event) => {
     const notificationCount = Number(notificationLink.dataset.notificationCount || 0);
-    const notificationId = Number(notificationLink.dataset.notificationId || 0);
-    const notificationType = String(notificationLink.dataset.notificationType || "").trim().toLowerCase();
     if (!Number.isFinite(notificationCount) || notificationCount < 1) {
       event.preventDefault();
-      return;
-    }
-
-    if (notificationType === "festplay_approval" && Number.isInteger(notificationId) && notificationId > 0) {
-      event.preventDefault();
-      try {
-        const response = await fetch(`/guestbook/notifications/${notificationId}/dismiss`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
-          },
-          body: new URLSearchParams({
-            type: notificationType
-          }).toString()
-        });
-        if (!response.ok) {
-          return;
-        }
-        const result = await response.json();
-        if (result?.payload) {
-          applyNotificationPayload(result.payload);
-        }
-      } catch (_error) {
-        // Ignore dismiss errors and keep the notification visible.
-      }
     }
   });
 
