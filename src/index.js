@@ -7535,15 +7535,12 @@ function reorderOwnedFestplayRooms(userId, festplayId, orderedRoomIds = []) {
     .prepare(
       `SELECT r.id
          FROM chat_rooms r
-         JOIN festplays f ON f.id = r.festplay_id
         WHERE r.festplay_id = ?
           AND COALESCE(r.is_festplay_chat, 0) = 1
           AND COALESCE(r.is_manual_festplay_room, 0) = 1
-          AND COALESCE(r.created_by_user_id, 0) = ?
-          AND COALESCE(r.created_by_user_id, 0) = COALESCE(f.created_by_user_id, 0)
         ORDER BY COALESCE(r.sort_order, 0) ASC, r.created_at ASC, r.id ASC`
     )
-    .all(parsedFestplayId, parsedUserId)
+    .all(parsedFestplayId)
     .map((room) => Number(room.id))
     .filter((roomId) => Number.isInteger(roomId) && roomId > 0);
 
@@ -7569,13 +7566,12 @@ function reorderOwnedFestplayRooms(userId, festplayId, orderedRoomIds = []) {
       WHERE id = ?
         AND festplay_id = ?
         AND COALESCE(is_festplay_chat, 0) = 1
-        AND COALESCE(is_manual_festplay_room, 0) = 1
-        AND created_by_user_id = ?`
+        AND COALESCE(is_manual_festplay_room, 0) = 1`
   );
 
   db.transaction((roomIds) => {
     roomIds.forEach((roomId, index) => {
-      updateSortOrder.run(index + 1, roomId, parsedFestplayId, parsedUserId);
+      updateSortOrder.run(index + 1, roomId, parsedFestplayId);
     });
   })(normalizedRoomIds);
 
