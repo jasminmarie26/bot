@@ -5151,10 +5151,15 @@ function createGuestbookNotification(userId, characterId, guestbookEntryId) {
   }
 }
 
-function createFestplayApplicationNotification(userId, festplayId, festplayApplicationId) {
+function createFestplayApplicationNotification(userId, festplayId, festplayApplicationId, options = {}) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
   const parsedApplicationId = Number(festplayApplicationId);
+  const normalizedNotificationKind =
+    String(options?.notification_kind || "").trim().toLowerCase() === "approved"
+      ? "approved"
+      : "application";
+  const normalizedActorName = String(options?.actor_name || "").trim().slice(0, 120);
   if (
     !Number.isInteger(parsedUserId) ||
     parsedUserId < 1 ||
@@ -5167,13 +5172,29 @@ function createFestplayApplicationNotification(userId, festplayId, festplayAppli
   }
 
   db.prepare(
-    `INSERT INTO festplay_application_notifications (user_id, festplay_id, festplay_application_id, is_read, created_at)
-     VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+    `INSERT INTO festplay_application_notifications (
+       user_id,
+       festplay_id,
+       festplay_application_id,
+       notification_kind,
+       actor_name,
+       is_read,
+       created_at
+     )
+     VALUES (?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
      ON CONFLICT(user_id, festplay_application_id) DO UPDATE SET
        festplay_id = excluded.festplay_id,
+       notification_kind = excluded.notification_kind,
+       actor_name = excluded.actor_name,
        is_read = 0,
        created_at = CURRENT_TIMESTAMP`
-  ).run(parsedUserId, parsedFestplayId, parsedApplicationId);
+  ).run(
+    parsedUserId,
+    parsedFestplayId,
+    parsedApplicationId,
+    normalizedNotificationKind,
+    normalizedActorName
+  );
 
   emitGuestbookNotificationUpdateForUser(parsedUserId);
 }
@@ -5223,10 +5244,15 @@ function getLatestFestplayApplicationNotificationForUser(userId, unreadOnly = tr
   return db
     .prepare(
       `SELECT fan.id,
-              'festplay_application' AS notification_type,
+              CASE
+                WHEN COALESCE(fan.notification_kind, 'application') = 'approved'
+                  THEN 'festplay_approval'
+                ELSE 'festplay_application'
+              END AS notification_type,
               fan.user_id,
               fan.festplay_id,
               fan.festplay_application_id,
+              fan.actor_name,
               fan.is_read,
               fan.created_at,
               fa.applicant_character_id,
@@ -5319,14 +5345,18 @@ function buildGuestbookNotificationPayloadForUser(userId) {
   return {
     count,
     latest: latestNotification
-      ? String(latestNotification.notification_type || "").trim() === "festplay_application"
+      ? (
+        String(latestNotification.notification_type || "").trim() === "festplay_application" ||
+        String(latestNotification.notification_type || "").trim() === "festplay_approval"
+      )
         ? {
             id: Number(latestNotification.id),
-            type: "festplay_application",
+            type: String(latestNotification.notification_type || "").trim(),
             festplay_id: Number(latestNotification.festplay_id),
             festplay_application_id: Number(latestNotification.festplay_application_id),
             festplay_name: String(latestNotification.festplay_name || "").trim(),
             applicant_character_name: String(latestNotification.applicant_character_name || "").trim(),
+            actor_name: String(latestNotification.actor_name || "").trim(),
             festplay_server_id: normalizeServer(latestNotification.festplay_server_id)
           }
         : {
@@ -6990,8 +7020,15 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     return res.redirect("/dashboard");
   }
 
-  if (String(latestNotification.notification_type || "").trim() === "festplay_application") {
+  if (
+    String(latestNotification.notification_type || "").trim() === "festplay_application" ||
+    String(latestNotification.notification_type || "").trim() === "festplay_approval"
+  ) {
     markFestplayApplicationNotificationAsRead(latestNotification.id, req.session.user.id);
+
+    if (String(latestNotification.notification_type || "").trim() === "festplay_approval") {
+      return res.redirect(req.get("referer") || "/dashboard");
+    }
 
     const festplay = getOwnedFestplayById(req.session.user.id, latestNotification.festplay_id);
     if (!festplay) {
@@ -7062,6 +7099,26 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     Number.isInteger(targetEntryId) && targetEntryId > 0 ? `#guestbook-entry-${targetEntryId}` : "";
 
   return res.redirect(`/characters/${targetCharacterId}/guestbook${pageQuery}${anchor}`);
+});
+
+app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, res) => {
+  const notificationId = Number(req.params.notificationId);
+  const notificationType = String(req.body.type || "").trim().toLowerCase();
+
+  if (!Number.isInteger(notificationId) || notificationId < 1) {
+    return res.status(404).json({ ok: false });
+  }
+
+  if (notificationType === "festplay_application" || notificationType === "festplay_approval") {
+    markFestplayApplicationNotificationAsRead(notificationId, req.session.user.id);
+  } else {
+    markGuestbookNotificationAsRead(notificationId, req.session.user.id);
+  }
+
+  return res.json({
+    ok: true,
+    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id)
+  });
 });
 
 app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
@@ -9309,14 +9366,13 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     deleteFestplayApplicationNotificationsForApplication(applicationId);
 
     const approverProfile = getUserDisplayProfile(req.session.user);
-    emitDirectSystemMessageToUser(
+    createFestplayApplicationNotification(
       application.applicant_user_id,
-      `hat dich für das Festspiel ${festplay.name} freigeschaltet.`,
+      festplayId,
+      applicationId,
       {
-        system_kind: "actor-message",
-        presence_actor_name: approverProfile.label || getUserDefaultDisplayName(req.session.user),
-        presence_actor_role_style: approverProfile.role_style || "",
-        presence_actor_chat_text_color: approverProfile.chat_text_color || ""
+        notification_kind: "approved",
+        actor_name: approverProfile.label || getUserDefaultDisplayName(req.session.user)
       }
     );
   } catch (error) {

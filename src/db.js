@@ -162,6 +162,8 @@ db.exec(`
     user_id INTEGER NOT NULL,
     festplay_id INTEGER NOT NULL,
     festplay_application_id INTEGER NOT NULL,
+    notification_kind TEXT NOT NULL DEFAULT 'application',
+    actor_name TEXT NOT NULL DEFAULT '',
     is_read INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -311,6 +313,11 @@ const festplayColumns = db
 
 const festplayPermissionColumns = db
   .prepare("PRAGMA table_info(festplay_permissions)")
+  .all()
+  .map((column) => column.name);
+
+const festplayApplicationNotificationColumns = db
+  .prepare("PRAGMA table_info(festplay_application_notifications)")
   .all()
   .map((column) => column.name);
 
@@ -464,6 +471,16 @@ if (!festplayPermissionColumns.includes("source")) {
                  AND fa.status = 'approved'
             )`
   ).run();
+}
+
+if (!festplayApplicationNotificationColumns.includes("notification_kind")) {
+  db.exec(
+    "ALTER TABLE festplay_application_notifications ADD COLUMN notification_kind TEXT NOT NULL DEFAULT 'application'"
+  );
+}
+
+if (!festplayApplicationNotificationColumns.includes("actor_name")) {
+  db.exec("ALTER TABLE festplay_application_notifications ADD COLUMN actor_name TEXT NOT NULL DEFAULT ''");
 }
 
 if (!chatRoomColumns.includes("is_festplay_chat")) {
