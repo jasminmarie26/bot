@@ -141,7 +141,7 @@
       <% if (!festplayRooms || !festplayRooms.length) { %>
         <p class="muted">Noch keine Festspiel-R&auml;ume vorhanden.</p>
       <% } else { %>
-        <div class="rp-room-list rp-room-list-owned">
+        <div class="rp-room-list rp-room-list-owned rp-room-list-festplay-grid">
           <% festplayRooms.forEach((room) => { %>
             <% const activeUsers = Array.isArray(festplayRoomUsers?.[room.id]) ? festplayRoomUsers[room.id] : []; %>
             <div class="rp-room-standard-card rp-room-custom-card">
