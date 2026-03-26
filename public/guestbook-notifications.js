@@ -48,7 +48,7 @@
     threadWrap.className = "chat-whisper-thread-wrap";
 
     const threadShell = document.createElement("div");
-    threadShell.className = "whisper-thread-shell";
+    threadShell.className = "whisper-thread-shell guestbook-notification-approval-shell";
 
     const threadHead = document.createElement("div");
     threadHead.className = "chat-whisper-thread-head";
@@ -62,7 +62,7 @@
     thread.className = "whisper-thread";
 
     const article = document.createElement("article");
-    article.className = "whisper-thread-message is-incoming";
+    article.className = "whisper-thread-message is-incoming guestbook-notification-approval-message";
 
     const meta = document.createElement("div");
     meta.className = "whisper-thread-meta";

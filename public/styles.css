@@ -7279,6 +7279,11 @@ select:focus {
   background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
 }
 
+.guestbook-notification-approval-shell,
+.guestbook-notification-approval-message {
+  border-color: var(--success-edge);
+}
+
 .whisper-thread-meta,
 .whisper-thread-time {
   font-size: 0.76rem;
