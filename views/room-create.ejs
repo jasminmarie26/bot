@@ -126,10 +126,21 @@
       <% if (!ownedRooms || !ownedRooms.length) { %>
         <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
       <% } else { %>
-        <div class="rp-room-manage-list">
+        <div
+          class="rp-room-manage-list rp-room-inline-list-sortable"
+          data-owned-room-sort-list
+          data-sort-endpoint="/characters/<%= character.id %>/rooms/reorder"
+        >
           <% ownedRooms.forEach((room) => { %>
             <% const isSelectedRoom = selectedRoom && Number(selectedRoom.id) === Number(room.id); %>
-            <div class="rp-room-manage-row">
+            <div
+              class="rp-room-manage-row rp-room-sort-card<%= isSelectedRoom ? ' is-active' : '' %>"
+              data-room-sort-item
+              data-room-id="<%= room.id %>"
+              draggable="true"
+              title="Mit der Maus verschieben"
+            >
+              <span class="rp-room-sort-handle" aria-hidden="true">&#8646;</span>
               <div class="rp-room-manage-main">
                 <a
                   class="rp-room-inline-item rp-room-manage-link<%= isSelectedRoom ? ' is-active' : '' %>"
@@ -168,6 +179,7 @@
             </div>
           <% }) %>
         </div>
+        <p class="rp-room-editor-note rp-room-sort-status" data-room-sort-status <%= ownedRooms.length > 1 ? '' : 'hidden' %>>Mit der Maus ziehen, um die Reihenfolge zu ändern.</p>
       <% } %>
     </section>
 
@@ -308,5 +320,144 @@
     <% } %>
   </section>
 </section>
+
+<script>
+  (() => {
+    const sortList = document.querySelector("[data-owned-room-sort-list]");
+    if (!sortList) {
+      return;
+    }
+
+    const statusNode = document.querySelector("[data-room-sort-status]");
+    let draggedItem = null;
+    let startOrder = "";
+
+    const getItems = () => Array.from(sortList.querySelectorAll("[data-room-sort-item]"));
+    const getOrder = () => getItems().map((item) => item.dataset.roomId || "").filter(Boolean).join(",");
+    const clearDropMarkers = () => {
+      getItems().forEach((item) => item.classList.remove("is-drop-target"));
+    };
+
+    const setStatus = (message, mode = "") => {
+      if (!statusNode) {
+        return;
+      }
+      statusNode.hidden = !message;
+      statusNode.textContent = message;
+      statusNode.classList.remove("is-success", "is-error");
+      if (mode) {
+        statusNode.classList.add(mode);
+      }
+    };
+
+    const submitOrderFallback = (roomIds) => {
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        setStatus("Reihenfolge konnte nicht gespeichert werden.", "is-error");
+        return;
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = endpoint;
+      form.hidden = true;
+
+      const roomIdsInput = document.createElement("input");
+      roomIdsInput.type = "hidden";
+      roomIdsInput.name = "room_ids";
+      roomIdsInput.value = JSON.stringify(roomIds);
+      form.appendChild(roomIdsInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    };
+
+    const saveOrder = async () => {
+      const roomIds = getItems()
+        .map((item) => item.dataset.roomId || "")
+        .filter(Boolean);
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        return;
+      }
+
+      const body = new URLSearchParams();
+      body.set("room_ids", JSON.stringify(roomIds));
+
+      try {
+        setStatus("Reihenfolge wird gespeichert...");
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "fetch"
+          },
+          credentials: "same-origin",
+          body: body.toString()
+        });
+
+        if (!response.ok) {
+          submitOrderFallback(roomIds);
+          return;
+        }
+
+        setStatus("Reihenfolge gespeichert.", "is-success");
+        window.setTimeout(() => {
+          setStatus(getItems().length > 1 ? "Mit der Maus ziehen, um die Reihenfolge zu ändern." : "");
+        }, 1600);
+      } catch (error) {
+        console.error("owned room order save failed", error);
+        submitOrderFallback(roomIds);
+      }
+    };
+
+    sortList.addEventListener("dragover", (event) => {
+      if (!draggedItem) {
+        return;
+      }
+
+      event.preventDefault();
+      const targetItem = event.target.closest("[data-room-sort-item]");
+      if (!targetItem || targetItem === draggedItem) {
+        return;
+      }
+
+      clearDropMarkers();
+      targetItem.classList.add("is-drop-target");
+      const targetRect = targetItem.getBoundingClientRect();
+      const insertBeforeTarget = event.clientX < targetRect.left + targetRect.width / 2;
+      sortList.insertBefore(draggedItem, insertBeforeTarget ? targetItem : targetItem.nextSibling);
+    });
+
+    getItems().forEach((item) => {
+      item.addEventListener("dragstart", (event) => {
+        draggedItem = item;
+        startOrder = getOrder();
+        item.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", item.dataset.roomId || "");
+        }
+      });
+
+      item.addEventListener("drop", (event) => {
+        if (!draggedItem) {
+          return;
+        }
+        event.preventDefault();
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("is-dragging");
+        clearDropMarkers();
+        const endOrder = getOrder();
+        draggedItem = null;
+        if (startOrder && endOrder && startOrder !== endOrder) {
+          void saveOrder();
+        }
+      });
+    });
+  })();
+</script>
 
 <%- include("partials/end") %>

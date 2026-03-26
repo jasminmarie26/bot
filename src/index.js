@@ -3627,13 +3627,15 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
 function getSavedNonFestplayRoomsForUser(userId, serverId) {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
+  const supportsSortOrder = hasChatRoomColumn("sort_order");
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return [];
   }
 
   return db
     .prepare(
-      `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room
+      `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room,
+              ${supportsSortOrder ? "COALESCE(sort_order, 0)" : "0"} AS sort_order
        FROM chat_rooms
        WHERE server_id = ?
          AND created_by_user_id = ?
@@ -3642,11 +3644,12 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
          AND COALESCE(is_festplay_chat, 0) = 0
          AND COALESCE(is_manual_festplay_room, 0) = 0
          AND COALESCE(is_festplay_side_chat, 0) = 0
-        ORDER BY created_at ASC, id ASC`
+        ORDER BY ${supportsSortOrder ? "COALESCE(sort_order, 0) ASC," : ""} created_at ASC, id ASC`
     )
     .all(normalizedServerId, parsedUserId)
     .map((room) => ({
       ...room,
+      sort_order: Number(room.sort_order) || 0,
       email_log_enabled: Number(room.email_log_enabled) === 1,
       is_locked: Number(room.is_locked) === 1,
       is_public_room: Number(room.is_public_room) === 1
@@ -3904,23 +3907,123 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
     };
   }
 
-    const info = db.prepare(
-    `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, description, server_id, is_saved_room)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`
-    ).run(
-      parsedCharacterId,
-      parsedUserId,
-      normalizedRoomName,
-      roomNameKey,
-      normalizedRoomDescription,
-      normalizedServerId
-    );
+  const supportsSortOrder = hasChatRoomColumn("sort_order");
+  const nextSortOrder = supportsSortOrder
+    ? Number(
+        db
+          .prepare(
+            `SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_sort_order
+               FROM chat_rooms
+              WHERE server_id = ?
+                AND created_by_user_id = ?
+                AND COALESCE(festplay_id, 0) = 0
+                AND COALESCE(is_saved_room, 0) = 1
+                AND COALESCE(is_festplay_chat, 0) = 0
+                AND COALESCE(is_manual_festplay_room, 0) = 0
+                AND COALESCE(is_festplay_side_chat, 0) = 0`
+          )
+          .get(normalizedServerId, parsedUserId)?.next_sort_order || 1
+      )
+    : 0;
+
+  const info = supportsSortOrder
+    ? db.prepare(
+        `INSERT INTO chat_rooms (
+           character_id,
+           created_by_user_id,
+           name,
+           name_key,
+           description,
+           server_id,
+           sort_order,
+           is_saved_room
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
+      ).run(
+        parsedCharacterId,
+        parsedUserId,
+        normalizedRoomName,
+        roomNameKey,
+        normalizedRoomDescription,
+        normalizedServerId,
+        nextSortOrder
+      )
+    : db.prepare(
+        `INSERT INTO chat_rooms (character_id, created_by_user_id, name, name_key, description, server_id, is_saved_room)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`
+      ).run(
+        parsedCharacterId,
+        parsedUserId,
+        normalizedRoomName,
+        roomNameKey,
+        normalizedRoomDescription,
+        normalizedServerId
+      );
 
   return {
     id: Number(info.lastInsertRowid),
     name: normalizedRoomName,
     created: true
   };
+}
+
+function reorderOwnedRooms(userId, serverId, orderedRoomIds = []) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomIds = Array.isArray(orderedRoomIds)
+    ? orderedRoomIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    : [];
+
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedServerId || !normalizedRoomIds.length) {
+    return false;
+  }
+
+  const availableRoomIds = getSavedNonFestplayRoomsForUser(parsedUserId, normalizedServerId)
+    .map((room) => Number(room.id))
+    .filter((roomId) => Number.isInteger(roomId) && roomId > 0);
+
+  if (!availableRoomIds.length) {
+    return false;
+  }
+
+  const availableSet = new Set(availableRoomIds);
+  const normalizedSet = new Set(normalizedRoomIds);
+  if (normalizedSet.size !== normalizedRoomIds.length) {
+    return false;
+  }
+
+  for (const roomId of normalizedRoomIds) {
+    if (!availableSet.has(roomId)) {
+      return false;
+    }
+  }
+
+  const orderedIds = normalizedRoomIds.concat(
+    availableRoomIds.filter((roomId) => !normalizedSet.has(roomId))
+  );
+
+  const updateSortOrder = db.prepare(
+    `UPDATE chat_rooms
+        SET sort_order = ?
+      WHERE id = ?
+        AND server_id = ?
+        AND created_by_user_id = ?
+        AND COALESCE(festplay_id, 0) = 0
+        AND COALESCE(is_saved_room, 0) = 1
+        AND COALESCE(is_festplay_chat, 0) = 0
+        AND COALESCE(is_manual_festplay_room, 0) = 0
+        AND COALESCE(is_festplay_side_chat, 0) = 0`
+  );
+
+  db.transaction((roomIds) => {
+    roomIds.forEach((roomId, index) => {
+      updateSortOrder.run(index + 1, roomId, normalizedServerId, parsedUserId);
+    });
+  })(orderedIds);
+
+  return true;
 }
 
 function ensurePublicRoomForServer(userId, character, roomName, roomDescription = "") {
@@ -8215,6 +8318,86 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
     ownedRooms,
     selectedRoom
   });
+});
+
+app.post("/characters/:id/rooms/reorder", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const fallbackReturnTarget = `/characters/${id}/rooms/new#room-create`;
+  const isFetchRequest =
+    String(req.get("x-requested-with") || "").trim().toLowerCase() === "fetch";
+
+  if (!Number.isInteger(id) || id < 1) {
+    if (isFetchRequest) {
+      return res.status(404).json({ error: "Nicht gefunden" });
+    }
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    if (isFetchRequest) {
+      return res.status(404).json({ error: "Nicht gefunden" });
+    }
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    if (isFetchRequest) {
+      return res.status(403).json({ error: "Kein Zugriff" });
+    }
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf eigene Raeume sortieren."
+    });
+  }
+
+  let orderedRoomIds = [];
+  try {
+    const rawRoomIds = req.body.room_ids;
+    if (Array.isArray(rawRoomIds)) {
+      orderedRoomIds = rawRoomIds;
+    } else if (typeof rawRoomIds === "string") {
+      const trimmedValue = rawRoomIds.trim();
+      orderedRoomIds = trimmedValue.startsWith("[")
+        ? JSON.parse(trimmedValue)
+        : trimmedValue.split(",").map((entry) => entry.trim()).filter(Boolean);
+    }
+  } catch (error) {
+    console.error("owned room reorder payload parse failed", {
+      characterId: id,
+      userId: req.session.user.id,
+      error
+    });
+  }
+
+  try {
+    const updated = reorderOwnedRooms(req.session.user.id, character.server_id, orderedRoomIds);
+    if (!updated) {
+      if (isFetchRequest) {
+        return res.status(400).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
+      }
+      setFlash(req, "error", "Die Raumreihenfolge konnte nicht gespeichert werden.");
+      return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+    }
+  } catch (error) {
+    console.error("owned room reorder failed", {
+      characterId: id,
+      userId: req.session.user.id,
+      roomIds: orderedRoomIds,
+      error
+    });
+    if (isFetchRequest) {
+      return res.status(500).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
+    }
+    setFlash(req, "error", "Beim Sortieren der Raeume ist ein Fehler aufgetreten.");
+    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+  }
+
+  if (isFetchRequest) {
+    return res.status(204).end();
+  }
+
+  return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
 });
 
 app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
