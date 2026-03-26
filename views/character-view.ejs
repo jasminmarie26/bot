@@ -198,7 +198,7 @@
           <% if (!ownedRooms || !ownedRooms.length) { %>
             <p class="muted">Noch keine eigenen R&auml;ume vorhanden.</p>
           <% } else { %>
-            <div class="rp-room-list rp-room-list-owned">
+            <div class="rp-room-list rp-room-list-owned<%= Number(character.festplay_id) > 0 && String(character.festplay_dashboard_mode || '').trim().toLowerCase() === 'festplay' ? ' rp-room-list-owned-compact' : '' %>">
               <% ownedRooms.forEach((room) => { %>
                 <% const activeUsers = Array.isArray(roomUsers?.[room.id]) ? roomUsers[room.id] : []; %>
                 <div class="rp-room-standard-card rp-room-custom-card">

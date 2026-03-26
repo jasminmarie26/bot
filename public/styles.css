@@ -4566,6 +4566,18 @@ body.page-home-screen .home-hero-actions {
   max-width: none;
 }
 
+.rp-room-list-owned-compact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.55rem 1rem;
+}
+
+.rp-room-list-owned-compact .rp-room-standard-card {
+  flex: 0 1 16rem;
+  max-width: 100%;
+}
+
 .rp-room-list-owned .rp-room-standard-card.is-wrapped-row {
   border-top: 1px solid color-mix(in srgb, var(--panel-edge) 68%, transparent);
   padding-top: 0.48rem;
