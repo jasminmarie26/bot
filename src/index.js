@@ -9121,7 +9121,8 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     .prepare(
       `SELECT fa.id,
               fa.applicant_character_id,
-              c.server_id
+              c.server_id,
+              c.user_id AS applicant_user_id
          FROM festplay_applications fa
          JOIN characters c ON c.id = fa.applicant_character_id
          WHERE fa.id = ?
@@ -9159,6 +9160,18 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
          AND festplay_id = ?`
     ).run(req.session.user.id, applicationId, festplayId);
     deleteFestplayApplicationNotificationsForApplication(applicationId);
+
+    const approverProfile = getUserDisplayProfile(req.session.user);
+    emitDirectSystemMessageToUser(
+      application.applicant_user_id,
+      `hat dich für das Festspiel ${festplay.name} freigeschaltet.`,
+      {
+        system_kind: "actor-message",
+        presence_actor_name: approverProfile.label || getUserDefaultDisplayName(req.session.user),
+        presence_actor_role_style: approverProfile.role_style || "",
+        presence_actor_chat_text_color: approverProfile.chat_text_color || ""
+      }
+    );
   } catch (error) {
     console.error("festplay application approval failed", {
       festplayId,
@@ -12274,6 +12287,7 @@ function buildSystemChatPayload(content, options = {}) {
     system_kind: String(options?.system_kind || "").trim(),
     presence_kind: String(options?.presence_kind || "").trim(),
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
+    presence_actor_role_style: String(options?.presence_actor_role_style || "").trim(),
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
     presence_suffix: String(options?.presence_suffix || "").trim(),
     room_switch_target_name: String(options?.room_switch_target_name || "").trim(),

@@ -531,12 +531,16 @@
       const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
       const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
+      const presenceActorRoleStyle = String(msg?.presence_actor_role_style || "").trim().toLowerCase();
       const presenceActorChatTextColor = normalizeChatTextColor(msg?.presence_actor_chat_text_color);
       const presenceSuffix = String(msg?.presence_suffix || "").trim();
       const roomSwitchTargetName = String(msg?.room_switch_target_name || "").trim();
       if (systemKind === "presence" && presenceActorName && presenceSuffix) {
         const strong = document.createElement("strong");
         strong.textContent = presenceActorName;
+        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
+          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
+        }
         body.textContent = ` ${presenceSuffix}`;
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.style.color = "#000000";
@@ -550,6 +554,9 @@
       } else if (systemKind === "dice-roll" && presenceActorName && content) {
         const strong = document.createElement("strong");
         strong.textContent = presenceActorName;
+        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
+          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
+        }
         body.textContent = ` ${content}`;
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.style.color = "#000000";
@@ -557,8 +564,21 @@
       } else if (systemKind === "room-switch" && presenceActorName && roomSwitchTargetName) {
         const strong = document.createElement("strong");
         strong.textContent = presenceActorName;
+        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
+          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
+        }
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.textContent = ` hat in den Raum ${roomSwitchTargetName} gewechselt.`;
+        body.style.color = "#000000";
+        line.appendChild(strong);
+      } else if (systemKind === "actor-message" && presenceActorName && content) {
+        const strong = document.createElement("strong");
+        strong.textContent = presenceActorName;
+        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
+          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
+        }
+        applyChatTextColor(strong, presenceActorChatTextColor);
+        body.textContent = ` ${content}`;
         body.style.color = "#000000";
         line.appendChild(strong);
       } else {
