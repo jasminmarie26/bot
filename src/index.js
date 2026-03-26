@@ -7734,14 +7734,14 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         hasRoomInviteAccess(req.session.user, room)
     }));
   const publicRooms = rooms.filter(
-    (room) =>
-      room.is_public_room &&
-      !(isOwner && room.is_saved_room && Number(room.created_by_user_id) === Number(req.session.user.id))
+    (room) => room.is_public_room
   );
   const ownedRooms = isOwner
     ? rooms.filter(
         (room) =>
-          room.is_saved_room && Number(room.created_by_user_id) === Number(req.session.user.id)
+          room.is_saved_room &&
+          !room.is_public_room &&
+          Number(room.created_by_user_id) === Number(req.session.user.id)
       )
     : [];
   const standardRooms = getStandardRoomsForServer(character.server_id);
