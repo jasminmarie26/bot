@@ -523,6 +523,18 @@
               />
             </label>
 
+            <div class="rp-room-editor-checks">
+              <label class="rp-room-editor-check">
+                <input
+                  type="checkbox"
+                  name="is_public"
+                  value="1"
+                  <%= Number(selectedFestplay.is_public) === 1 ? "checked" : "" %>
+                />
+                &Ouml;ffentlich
+              </label>
+            </div>
+
             <label class="rp-room-editor-field">
               <span class="rp-room-editor-field-label">
                 Festplay Beschreibung
@@ -583,6 +595,17 @@
             placeholder="Festspielname (neu anlegen)"
             required
           />
+        </div>
+        <div class="rp-room-editor-checks">
+          <label class="rp-room-editor-check">
+            <input
+              type="checkbox"
+              name="is_public"
+              value="1"
+              checked
+            />
+            &Ouml;ffentlich
+          </label>
         </div>
       </form>
     <% } %>

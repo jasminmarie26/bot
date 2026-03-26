@@ -9136,7 +9136,7 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
   }
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
-  const isPublic = true;
+  const isPublic = String(req.body.is_public || "").trim() === "1";
   const shortDescription = "";
   const longDescription = normalizeBbcodeInput(req.body.long_description, 8000);
   if (!festplayName) {
@@ -9151,9 +9151,9 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
 
   try {
     const createdFestplay = db.prepare(
-      `INSERT INTO festplays (name, created_by_user_id, creator_character_id, server_id)
-       VALUES (?, ?, ?, ?)`
-    ).run(festplayName, req.session.user.id, id, normalizeServer(character.server_id));
+      `INSERT INTO festplays (name, is_public, created_by_user_id, creator_character_id, server_id)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(festplayName, isPublic ? 1 : 0, req.session.user.id, id, normalizeServer(character.server_id));
     const createdFestplayId = Number(createdFestplay.lastInsertRowid);
     if (Number.isInteger(createdFestplayId) && createdFestplayId > 0) {
       syncFestplayCreatorCharacter(createdFestplayId, req.session.user.id, id);
@@ -9426,7 +9426,7 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
   }
 
   const festplayName = normalizeFestplayName(req.body.festplay_name);
-  const isPublic = true;
+  const isPublic = String(req.body.is_public || "").trim() === "1";
   const shortDescription = normalizeFestplayText(req.body.short_description, 280);
   const longDescription = normalizeFestplayText(req.body.long_description, 8000);
   if (!festplayName) {
