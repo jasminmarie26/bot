@@ -9407,6 +9407,10 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
   }
 
+  if (targetRoom.created) {
+    emitRoomListRefresh(character.server_id);
+  }
+
   if (returnTarget === "roomlist") {
     return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
   }
@@ -9471,6 +9475,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
     deleteRoomData(roomId);
     io.emit("chat:room-removed", { room_id: roomId });
+    emitRoomListRefresh(room.server_id);
     setFlash(req, "success", "Raum geloescht.");
     return res.redirect(`/characters/${id}/rooms/new`);
   }
@@ -9570,6 +9575,7 @@ app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) =
   await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   deleteRoomData(roomId);
   io.emit("chat:room-removed", { room_id: roomId });
+  emitRoomListRefresh(room.server_id);
 
   return res.redirect(`/characters/${id}/rooms/new`);
 });
@@ -10141,14 +10147,15 @@ app.get("/chat", requireAuth, (req, res) => {
       return res.redirect("/dashboard");
     }
 
-    if (
-      Number(room.is_saved_room) === 1 &&
-      Number(room.is_public_room) !== 1 &&
-      Number(room.created_by_user_id) === Number(req.session.user.id)
-    ) {
-      setSavedRoomPublicState(room.id, true);
-      room = getRoomWithCharacter(roomId);
-    }
+      if (
+        Number(room.is_saved_room) === 1 &&
+        Number(room.is_public_room) !== 1 &&
+        Number(room.created_by_user_id) === Number(req.session.user.id)
+      ) {
+        setSavedRoomPublicState(room.id, true);
+        room = getRoomWithCharacter(roomId);
+        emitRoomListRefresh(room.server_id);
+      }
 
     if (!canAccessRoom(req.session.user, room)) {
       return res.status(403).render("error", {
@@ -12182,6 +12189,13 @@ function emitRoomStateUpdate(roomId, serverId = DEFAULT_SERVER_ID, room = null) 
   });
 }
 
+function emitRoomListRefresh(serverId = DEFAULT_SERVER_ID) {
+  const normalizedServerId = normalizeServer(serverId);
+  io.emit("roomlist:refresh", {
+    serverId: normalizedServerId
+  });
+}
+
 const pendingRoomDeletionTimers = new Map();
 const pendingRoomInvites = new Map();
 
@@ -12297,7 +12311,7 @@ function maybeRemoveEmptyRoom(roomId) {
     .get(roomId);
   if (!roomExists) return false;
 
-  const activeMembers = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId));
+  const activeMembers = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId, roomExists.server_id));
   if (activeMembers && activeMembers.size > 0) {
     clearPendingRoomDeletion(roomId);
     return false;
@@ -12308,11 +12322,13 @@ function maybeRemoveEmptyRoom(roomId) {
     if (Number(roomExists.is_public_room) === 1) {
       setSavedRoomPublicState(roomId, false);
       emitRoomStateUpdate(roomId, roomExists.server_id, getRoomWithCharacter(roomId));
+      emitRoomListRefresh(roomExists.server_id);
     }
     return false;
   }
   deleteRoomData(roomId);
   io.emit("chat:room-removed", { room_id: roomId });
+  emitRoomListRefresh(roomExists.server_id);
   return true;
 }
 

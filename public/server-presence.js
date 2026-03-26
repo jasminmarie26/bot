@@ -1,10 +1,19 @@
 (() => {
   const presenceSource = document.querySelector("[data-server-presence]");
   const headerIdentity = document.querySelector("[data-header-identity]");
-  const roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
-  const roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
-  const roomLinkTargets = Array.from(document.querySelectorAll("[data-room-link-target]"));
-  const ownedRoomLists = Array.from(document.querySelectorAll(".rp-room-list-owned"));
+  let roomWatchTargets = [];
+  let roomLockTargets = [];
+  let roomLinkTargets = [];
+  let ownedRoomLists = [];
+  let roomListRefreshPromise = null;
+  let roomListRefreshQueued = false;
+  function collectRoomTargets() {
+    roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
+    roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
+    roomLinkTargets = Array.from(document.querySelectorAll("[data-room-link-target]"));
+    ownedRoomLists = Array.from(document.querySelectorAll(".rp-room-list-owned"));
+  }
+  collectRoomTargets();
   if ((!presenceSource && roomWatchTargets.length === 0) || typeof io !== "function") return;
 
   const serverId = String(presenceSource?.dataset?.serverPresence || "")
@@ -110,6 +119,52 @@
     ownedRoomSeparatorFrame = window.requestAnimationFrame(refreshOwnedRoomRowSeparators);
   }
 
+  async function refreshRoomListFromServer() {
+    const currentRoomListWrap = document.querySelector(".rp-room-list-wrap");
+    if (!currentRoomListWrap) return;
+
+    const response = await fetch(window.location.pathname + window.location.search, {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Roomlist refresh failed with status ${response.status}`);
+    }
+
+    const html = await response.text();
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const nextRoomListWrap = parsed.querySelector(".rp-room-list-wrap");
+    if (!(nextRoomListWrap instanceof HTMLElement)) {
+      throw new Error("Updated roomlist markup missing");
+    }
+
+    currentRoomListWrap.replaceWith(nextRoomListWrap);
+    collectRoomTargets();
+    syncPresenceSubscriptions();
+  }
+
+  function queueRoomListRefresh() {
+    if (roomListRefreshPromise) {
+      roomListRefreshQueued = true;
+      return;
+    }
+
+    roomListRefreshPromise = refreshRoomListFromServer()
+      .catch((error) => {
+        console.error("roomlist refresh failed", error);
+      })
+      .finally(() => {
+        roomListRefreshPromise = null;
+        if (roomListRefreshQueued) {
+          roomListRefreshQueued = false;
+          queueRoomListRefresh();
+        }
+      });
+  }
+
   function renderRoomWatchTarget(target, entries) {
     target.replaceChildren();
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -201,6 +256,17 @@
   });
 
   socket.on("room:state:update", applyRoomStateToTarget);
+
+  socket.on("roomlist:refresh", (payload) => {
+    const refreshServerId = String(payload?.serverId || "")
+      .trim()
+      .toLowerCase();
+    if (refreshServerId && refreshServerId !== serverId) {
+      return;
+    }
+
+    queueRoomListRefresh();
+  });
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) {
