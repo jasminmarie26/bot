@@ -4,6 +4,138 @@
 
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
+  const approvalNotificationType = "festplay_approval";
+  let approvalPanelElements = null;
+
+  function getApprovalPanelElements() {
+    if (approvalPanelElements) {
+      return approvalPanelElements;
+    }
+
+    const panel = document.createElement("div");
+    panel.id = "guestbook-notification-panel";
+    panel.className = "chat-whisper-panel";
+    panel.hidden = true;
+
+    const card = document.createElement("div");
+    card.className = "chat-whisper-panel-card";
+
+    const head = document.createElement("header");
+    head.className = "chat-whisper-panel-head";
+
+    const copy = document.createElement("div");
+    copy.className = "chat-whisper-panel-copy";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "Brief";
+
+    const subheading = document.createElement("p");
+    subheading.textContent = "Systemnachricht";
+
+    copy.appendChild(heading);
+    copy.appendChild(subheading);
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "chat-whisper-close-btn";
+    closeButton.setAttribute("aria-label", "Schliessen");
+    closeButton.textContent = "\u00d7";
+
+    head.appendChild(copy);
+    head.appendChild(closeButton);
+
+    const threadWrap = document.createElement("section");
+    threadWrap.className = "chat-whisper-thread-wrap";
+
+    const threadShell = document.createElement("div");
+    threadShell.className = "whisper-thread-shell";
+
+    const threadHead = document.createElement("div");
+    threadHead.className = "chat-whisper-thread-head";
+
+    const threadTitle = document.createElement("h4");
+    threadTitle.textContent = "System Administrator";
+
+    threadHead.appendChild(threadTitle);
+
+    const thread = document.createElement("div");
+    thread.className = "whisper-thread";
+
+    const article = document.createElement("article");
+    article.className = "whisper-thread-message is-incoming";
+
+    const meta = document.createElement("div");
+    meta.className = "whisper-thread-meta";
+    meta.textContent = "Festspiel-Freischaltung";
+
+    const body = document.createElement("div");
+    body.className = "whisper-thread-body";
+
+    article.appendChild(meta);
+    article.appendChild(body);
+    thread.appendChild(article);
+    threadShell.appendChild(threadHead);
+    threadShell.appendChild(thread);
+    threadWrap.appendChild(threadShell);
+
+    card.appendChild(head);
+    card.appendChild(threadWrap);
+    panel.appendChild(card);
+    document.body.appendChild(panel);
+
+    const closePanel = () => {
+      panel.hidden = true;
+    };
+
+    closeButton.addEventListener("click", closePanel);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !panel.hidden) {
+        closePanel();
+      }
+    });
+
+    approvalPanelElements = {
+      panel,
+      body
+    };
+    return approvalPanelElements;
+  }
+
+  function openApprovalPanel(festplayName) {
+    const panelElements = getApprovalPanelElements();
+    const trimmedFestplayName = String(festplayName || "").trim();
+    panelElements.body.textContent = trimmedFestplayName
+      ? `Du wurdest fuer ${trimmedFestplayName} freigeschaltet.`
+      : "Du wurdest fuer ein Festspiel freigeschaltet.";
+    panelElements.panel.hidden = false;
+  }
+
+  async function dismissApprovalNotification(notificationId) {
+    const parsedNotificationId = Number(notificationId);
+    if (!Number.isInteger(parsedNotificationId) || parsedNotificationId < 1) {
+      return;
+    }
+
+    const response = await window.fetch(`/guestbook/notifications/${parsedNotificationId}/dismiss`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({
+        type: approvalNotificationType
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("dismiss_failed");
+    }
+
+    const result = await response.json();
+    if (result?.payload) {
+      applyNotificationPayload(result.payload);
+    }
+  }
 
   function buildNotificationTitle(
     notificationType,
@@ -103,10 +235,25 @@
   };
   applyNotificationPayload(initialPayload);
 
-  notificationLink.addEventListener("click", (event) => {
+  notificationLink.addEventListener("click", async (event) => {
     const notificationCount = Number(notificationLink.dataset.notificationCount || 0);
     if (!Number.isFinite(notificationCount) || notificationCount < 1) {
       event.preventDefault();
+      return;
+    }
+
+    const notificationType = String(notificationLink.dataset.notificationType || "").trim().toLowerCase();
+    if (notificationType !== approvalNotificationType) {
+      return;
+    }
+
+    event.preventDefault();
+    openApprovalPanel(notificationLink.dataset.notificationFestplayName || "");
+
+    try {
+      await dismissApprovalNotification(notificationLink.dataset.notificationId);
+    } catch (_error) {
+      // Keep the visible brief even if the dismiss request fails.
     }
   });
 
