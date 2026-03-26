@@ -15,6 +15,26 @@
     transports: ["websocket"]
   });
 
+  function syncPresenceSubscriptions() {
+    if (serverId) {
+      socket.emit("presence:set", {
+        serverId,
+        characterId: presenceSource?.dataset?.activeCharacterId || ""
+      });
+    }
+
+    roomWatchTargets.forEach((target) => {
+      socket.emit("room:watch", {
+        roomId: target.dataset.roomWatchRoom || "",
+        serverId: String(target.dataset.roomWatchServer || serverId || "")
+          .trim()
+          .toLowerCase()
+      });
+    });
+
+    scheduleOwnedRoomRowSeparators();
+  }
+
   function normalizeChatTextColor(rawColor) {
     const value = String(rawColor || "").trim();
     return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
@@ -155,23 +175,7 @@
   }
 
   socket.on("connect", () => {
-    if (serverId) {
-      socket.emit("presence:set", {
-        serverId,
-        characterId: presenceSource?.dataset?.activeCharacterId || ""
-      });
-    }
-
-    roomWatchTargets.forEach((target) => {
-      socket.emit("room:watch", {
-        roomId: target.dataset.roomWatchRoom || "",
-        serverId: String(target.dataset.roomWatchServer || serverId || "")
-          .trim()
-          .toLowerCase()
-      });
-    });
-
-    scheduleOwnedRoomRowSeparators();
+    syncPresenceSubscriptions();
   });
 
   socket.on("user:display-profile", updateHeaderIdentity);
@@ -197,6 +201,30 @@
   });
 
   socket.on("room:state:update", applyRoomStateToTarget);
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      window.location.reload();
+      return;
+    }
+
+    if (socket.connected) {
+      syncPresenceSubscriptions();
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+
+    if (socket.connected) {
+      syncPresenceSubscriptions();
+      return;
+    }
+
+    socket.connect();
+  });
 
   window.addEventListener("resize", scheduleOwnedRoomRowSeparators);
   scheduleOwnedRoomRowSeparators();

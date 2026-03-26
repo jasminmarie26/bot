@@ -5694,6 +5694,12 @@ app.use((req, res, next) => {
     }
   }
 
+  if (req.session.user && req.method === "GET" && req.accepts("html")) {
+    res.setHeader("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+
   res.locals.currentUser = req.session.user || null;
   res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
@@ -7696,18 +7702,18 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const rooms = db
     .prepare(
         `SELECT r.id, r.name, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
-                u.username AS creator_name,
+                COALESCE(owner_character.name, '') AS creator_name,
                  CASE
-                 WHEN r.created_by_user_id = ? THEN 1
-                 WHEN EXISTS (
-                   SELECT 1
-                   FROM chat_room_permissions crp
+                  WHEN r.created_by_user_id = ? THEN 1
+                  WHEN EXISTS (
+                    SELECT 1
+                    FROM chat_room_permissions crp
                    WHERE crp.room_id = r.id AND crp.user_id = ?
                  ) THEN 1
                  ELSE 0
-               END AS can_manage_room
+                END AS can_manage_room
        FROM chat_rooms r
-        JOIN users u ON u.id = r.created_by_user_id
+        LEFT JOIN characters owner_character ON owner_character.id = r.character_id
         WHERE r.server_id = ?
           AND COALESCE(r.festplay_id, 0) = 0
           AND COALESCE(r.is_festplay_chat, 0) = 0
