@@ -3136,7 +3136,16 @@ function submitFestplayApplication(festplayId, applicantCharacterId, applicantUs
        updated_at = CURRENT_TIMESTAMP`
   ).run(parsedFestplayId, parsedUserId, parsedCharacterId);
 
-  return true;
+  const application = db
+    .prepare(
+      `SELECT id
+         FROM festplay_applications
+        WHERE festplay_id = ?
+          AND applicant_character_id = ?`
+    )
+    .get(parsedFestplayId, parsedCharacterId);
+
+  return Number.isInteger(Number(application?.id)) ? Number(application.id) : null;
 }
 
 function getPendingFestplayApplications(festplayId, serverId) {
@@ -5037,7 +5046,34 @@ function createGuestbookNotification(userId, characterId, guestbookEntryId) {
   }
 }
 
-function getUnreadGuestbookNotificationCountForUser(userId) {
+function createFestplayApplicationNotification(userId, festplayId, festplayApplicationId) {
+  const parsedUserId = Number(userId);
+  const parsedFestplayId = Number(festplayId);
+  const parsedApplicationId = Number(festplayApplicationId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedFestplayId) ||
+    parsedFestplayId < 1 ||
+    !Number.isInteger(parsedApplicationId) ||
+    parsedApplicationId < 1
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO festplay_application_notifications (user_id, festplay_id, festplay_application_id, is_read, created_at)
+     VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id, festplay_application_id) DO UPDATE SET
+       festplay_id = excluded.festplay_id,
+       is_read = 0,
+       created_at = CURRENT_TIMESTAMP`
+  ).run(parsedUserId, parsedFestplayId, parsedApplicationId);
+
+  emitGuestbookNotificationUpdateForUser(parsedUserId);
+}
+
+function getUnreadFestplayApplicationNotificationCountForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return 0;
@@ -5047,11 +5083,62 @@ function getUnreadGuestbookNotificationCountForUser(userId) {
     db
       .prepare(
         `SELECT COUNT(*) AS count
+         FROM festplay_application_notifications
+         WHERE user_id = ? AND is_read = 0`
+      )
+      .get(parsedUserId)?.count || 0
+  );
+}
+
+function getUnreadGuestbookNotificationCountForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return 0;
+  }
+
+  const guestbookCount = Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
          FROM guestbook_notifications
          WHERE user_id = ? AND is_read = 0`
       )
       .get(parsedUserId)?.count || 0
   );
+
+  return guestbookCount + getUnreadFestplayApplicationNotificationCountForUser(parsedUserId);
+}
+
+function getLatestFestplayApplicationNotificationForUser(userId, unreadOnly = true) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT fan.id,
+              'festplay_application' AS notification_type,
+              fan.user_id,
+              fan.festplay_id,
+              fan.festplay_application_id,
+              fan.is_read,
+              fan.created_at,
+              fa.applicant_character_id,
+              applicant.name AS applicant_character_name,
+              f.name AS festplay_name,
+              f.creator_character_id,
+              f.server_id AS festplay_server_id
+       FROM festplay_application_notifications fan
+       JOIN festplay_applications fa ON fa.id = fan.festplay_application_id
+       JOIN festplays f ON f.id = fan.festplay_id
+       JOIN characters applicant ON applicant.id = fa.applicant_character_id
+       WHERE fan.user_id = ?
+         ${unreadOnly ? "AND fan.is_read = 0" : ""}
+       ORDER BY fan.created_at DESC, fan.id DESC
+       LIMIT 1`
+    )
+    .get(parsedUserId);
 }
 
 function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
@@ -5060,9 +5147,10 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
     return null;
   }
 
-  return db
+  const guestbookNotification = db
     .prepare(
       `SELECT gn.id,
+              'guestbook_entry' AS notification_type,
               gn.user_id,
               gn.character_id,
               gn.guestbook_entry_id,
@@ -5080,6 +5168,28 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
        LIMIT 1`
     )
     .get(parsedUserId);
+  const festplayNotification = getLatestFestplayApplicationNotificationForUser(parsedUserId, unreadOnly);
+
+  if (!guestbookNotification) {
+    return festplayNotification;
+  }
+
+  if (!festplayNotification) {
+    return guestbookNotification;
+  }
+
+  const guestbookCreatedAt = String(guestbookNotification.created_at || "");
+  const festplayCreatedAt = String(festplayNotification.created_at || "");
+  if (festplayCreatedAt > guestbookCreatedAt) {
+    return festplayNotification;
+  }
+  if (guestbookCreatedAt > festplayCreatedAt) {
+    return guestbookNotification;
+  }
+
+  return Number(festplayNotification.id) > Number(guestbookNotification.id)
+    ? festplayNotification
+    : guestbookNotification;
 }
 
 function socketChannelForGuestbookNotifications(userId) {
@@ -5104,14 +5214,25 @@ function buildGuestbookNotificationPayloadForUser(userId) {
   return {
     count,
     latest: latestNotification
-      ? {
-          id: Number(latestNotification.id),
-          character_id: Number(latestNotification.character_id),
-          guestbook_entry_id: Number(latestNotification.guestbook_entry_id),
-          guestbook_page_id: Number(latestNotification.guestbook_page_id),
-          author_name: String(latestNotification.author_name || "").trim(),
-          character_name: String(latestNotification.character_name || "").trim()
-        }
+      ? String(latestNotification.notification_type || "").trim() === "festplay_application"
+        ? {
+            id: Number(latestNotification.id),
+            type: "festplay_application",
+            festplay_id: Number(latestNotification.festplay_id),
+            festplay_application_id: Number(latestNotification.festplay_application_id),
+            festplay_name: String(latestNotification.festplay_name || "").trim(),
+            applicant_character_name: String(latestNotification.applicant_character_name || "").trim(),
+            festplay_server_id: normalizeServer(latestNotification.festplay_server_id)
+          }
+        : {
+            id: Number(latestNotification.id),
+            type: "guestbook_entry",
+            character_id: Number(latestNotification.character_id),
+            guestbook_entry_id: Number(latestNotification.guestbook_entry_id),
+            guestbook_page_id: Number(latestNotification.guestbook_page_id),
+            author_name: String(latestNotification.author_name || "").trim(),
+            character_name: String(latestNotification.character_name || "").trim()
+          }
       : null
   };
 }
@@ -5142,6 +5263,29 @@ function markGuestbookNotificationAsRead(notificationId, userId) {
 
   const result = db.prepare(
     `UPDATE guestbook_notifications
+     SET is_read = 1
+     WHERE id = ? AND user_id = ?`
+  ).run(parsedNotificationId, parsedUserId);
+
+  if (result.changes > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+  }
+}
+
+function markFestplayApplicationNotificationAsRead(notificationId, userId) {
+  const parsedNotificationId = Number(notificationId);
+  const parsedUserId = Number(userId);
+  if (
+    !Number.isInteger(parsedNotificationId) ||
+    parsedNotificationId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return;
+  }
+
+  const result = db.prepare(
+    `UPDATE festplay_application_notifications
      SET is_read = 1
      WHERE id = ? AND user_id = ?`
   ).run(parsedNotificationId, parsedUserId);
@@ -5182,6 +5326,32 @@ function deleteGuestbookNotificationsForEntry(entryId) {
   }
 
   db.prepare("DELETE FROM guestbook_notifications WHERE guestbook_entry_id = ?").run(parsedEntryId);
+}
+
+function deleteFestplayApplicationNotificationsForApplication(festplayApplicationId) {
+  const parsedApplicationId = Number(festplayApplicationId);
+  if (!Number.isInteger(parsedApplicationId) || parsedApplicationId < 1) {
+    return;
+  }
+
+  const userIds = db
+    .prepare(
+      `SELECT DISTINCT user_id
+         FROM festplay_application_notifications
+        WHERE festplay_application_id = ?`
+    )
+    .all(parsedApplicationId)
+    .map((row) => Number(row.user_id))
+    .filter((userId) => Number.isInteger(userId) && userId > 0);
+
+  db.prepare(
+    `DELETE FROM festplay_application_notifications
+     WHERE festplay_application_id = ?`
+  ).run(parsedApplicationId);
+
+  userIds.forEach((userId) => {
+    emitGuestbookNotificationUpdateForUser(userId);
+  });
 }
 
 function deleteGuestbookNotificationsForCharacterPage(characterId, pageId) {
@@ -6711,8 +6881,48 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   const latestNotification = getLatestGuestbookNotificationForUser(req.session.user.id, true);
 
   if (!latestNotification) {
-    setFlash(req, "error", "Du hast gerade keine neuen Gästebuch-Benachrichtigungen.");
+    setFlash(req, "error", "Du hast gerade keine neuen Benachrichtigungen.");
     return res.redirect("/dashboard");
+  }
+
+  if (String(latestNotification.notification_type || "").trim() === "festplay_application") {
+    markFestplayApplicationNotificationAsRead(latestNotification.id, req.session.user.id);
+
+    const festplay = getOwnedFestplayById(req.session.user.id, latestNotification.festplay_id);
+    if (!festplay) {
+      setFlash(req, "error", "Diese Festspiel-Bewerbung ist nicht mehr verfügbar.");
+      return res.redirect("/dashboard");
+    }
+
+    const notificationServerId = normalizeServer(latestNotification.festplay_server_id || festplay.server_id);
+    const preferredCharacterId = getPreferredCharacterIdFromSession(req, notificationServerId);
+    let targetCharacter = null;
+    const creatorCharacterId = Number(festplay.creator_character_id);
+
+    if (Number.isInteger(creatorCharacterId) && creatorCharacterId > 0) {
+      const creatorCharacter = getCharacterById(creatorCharacterId);
+      if (
+        creatorCharacter &&
+        Number(creatorCharacter.user_id) === Number(req.session.user.id) &&
+        normalizeServer(creatorCharacter.server_id) === notificationServerId
+      ) {
+        targetCharacter = creatorCharacter;
+      }
+    }
+
+    if (!targetCharacter) {
+      targetCharacter = getPreferredCharacterForUser(req.session.user.id, notificationServerId, preferredCharacterId);
+    }
+
+    if (!targetCharacter) {
+      setFlash(req, "error", "Es wurde kein passender Charakter für dieses Festspiel gefunden.");
+      return res.redirect("/dashboard");
+    }
+
+    rememberPreferredCharacter(req, targetCharacter);
+    return res.redirect(
+      `/characters/${targetCharacter.id}/festplays?selected_festplay=${festplay.id}&tab=bewerbungen#festplay-selected-editor`
+    );
   }
 
   markGuestbookNotificationAsRead(latestNotification.id, req.session.user.id);
@@ -8536,8 +8746,61 @@ app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req
   }
 
   if (!characterHasFestplayAccess(festplayId, character.id)) {
-    submitFestplayApplication(festplayId, character.id, req.session.user.id);
+    const applicationId = submitFestplayApplication(festplayId, character.id, req.session.user.id);
+    const festplayOwnerUserId = Number(festplay.created_by_user_id);
+    if (
+      Number.isInteger(applicationId) &&
+      applicationId > 0 &&
+      Number.isInteger(festplayOwnerUserId) &&
+      festplayOwnerUserId > 0 &&
+      festplayOwnerUserId !== Number(req.session.user.id)
+    ) {
+      createFestplayApplicationNotification(festplayOwnerUserId, festplayId, applicationId);
+    }
   }
+
+  return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+});
+
+app.post("/characters/:id/festplays/public/:festplayId/withdraw", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const festplayId = Number(req.params.festplayId);
+  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.redirect(`/characters/${id}`);
+  }
+
+  const festplay = getPublicFestplayById(festplayId, character.server_id);
+  if (!festplay) {
+    setFlash(req, "error", "Dieses Festspiel ist nicht öffentlich sichtbar.");
+    return res.redirect(`/characters/${id}/festplays/public`);
+  }
+
+  const application = getFestplayApplicationForCharacter(festplayId, character.id);
+  if (!application || String(application.status || "").trim().toLowerCase() !== "pending") {
+    setFlash(req, "error", "Es gibt gerade keine offene Bewerbung zum Zurückziehen.");
+    return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+  }
+
+  db.prepare(
+    `UPDATE festplay_applications
+     SET status = 'withdrawn',
+         approved_by_user_id = NULL,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?
+       AND festplay_id = ?
+       AND applicant_user_id = ?`
+  ).run(application.id, festplayId, req.session.user.id);
+
+  deleteFestplayApplicationNotificationsForApplication(application.id);
 
   return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
 });
@@ -8895,6 +9158,7 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
        WHERE id = ?
          AND festplay_id = ?`
     ).run(req.session.user.id, applicationId, festplayId);
+    deleteFestplayApplicationNotificationsForApplication(applicationId);
   } catch (error) {
     console.error("festplay application approval failed", {
       festplayId,

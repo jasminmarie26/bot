@@ -1,8 +1,14 @@
 <% if (currentUser) { %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
-  <% const guestbookNotificationTitle = latestGuestbookNotification?.character_name
-    ? `Neuer Gästebucheintrag für ${latestGuestbookNotification.character_name}`
-    : "Neuer Gästebucheintrag"; %>
+  <% const guestbookNotificationTitle = latestGuestbookNotification?.type === "festplay_application"
+    ? latestGuestbookNotification?.festplay_name
+      ? latestGuestbookNotification?.applicant_character_name
+        ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} für ${latestGuestbookNotification.festplay_name}`
+        : `Neue Bewerbung für ${latestGuestbookNotification.festplay_name}`
+      : "Neue Festspiel-Bewerbung"
+    : latestGuestbookNotification?.character_name
+      ? `Neuer Gästebucheintrag für ${latestGuestbookNotification.character_name}`
+      : "Neuer Gästebucheintrag"; %>
   <a
     class="guestbook-notification-link"
     href="/guestbook/notifications/open"
@@ -10,7 +16,10 @@
     title="<%= guestbookNotificationTitle %>"
     data-guestbook-notification-root
     data-notification-count="<%= guestbookNotificationCount || 0 %>"
+    data-notification-type="<%= latestGuestbookNotification?.type || "guestbook_entry" %>"
     data-notification-character-name="<%= latestGuestbookNotification?.character_name || "" %>"
+    data-notification-festplay-name="<%= latestGuestbookNotification?.festplay_name || "" %>"
+    data-notification-applicant-character-name="<%= latestGuestbookNotification?.applicant_character_name || "" %>"
     <%= guestbookNotificationCount > 0 && latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">

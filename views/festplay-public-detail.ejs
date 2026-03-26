@@ -147,6 +147,13 @@
             <p class="rp-room-editor-note">Du bist f&uuml;r dieses Festspiel bereits freigeschaltet.</p>
           <% } else if (applicationState === "pending") { %>
             <p class="rp-room-editor-note">Deine Bewerbung ist bereits eingegangen und wartet auf Freischaltung.</p>
+            <form
+              method="POST"
+              action="/characters/<%= character.id %>/festplays/public/<%= festplay.id %>/withdraw"
+              class="inline-form"
+            >
+              <button type="submit" class="btn btn-secondary">Bewerbung zur&uuml;ckziehen</button>
+            </form>
           <% } else { %>
             <p class="rp-room-editor-note">Du bewirbst dich mit <strong><%= character.name %></strong> f&uuml;r dieses Festspiel.</p>
             <form
@@ -154,7 +161,7 @@
               action="/characters/<%= character.id %>/festplays/public/<%= festplay.id %>/apply"
               class="inline-form"
             >
-              <button type="submit">Bewerben</button>
+              <button type="submit" class="btn">Bewerben</button>
             </form>
           <% } %>
         </section>

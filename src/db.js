@@ -157,6 +157,18 @@ db.exec(`
     FOREIGN KEY (guestbook_entry_id) REFERENCES guestbook_entries(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS festplay_application_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    festplay_id INTEGER NOT NULL,
+    festplay_application_id INTEGER NOT NULL,
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (festplay_id) REFERENCES festplays(id) ON DELETE CASCADE,
+    FOREIGN KEY (festplay_application_id) REFERENCES festplay_applications(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS chat_rooms (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       character_id INTEGER NOT NULL,
@@ -592,6 +604,12 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_entries_page_id ON guestbook_e
 db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_author_character_id ON guestbook_entries(author_character_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_guestbook_notifications_user_read ON guestbook_notifications(user_id, is_read, created_at)");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_guestbook_notifications_user_entry ON guestbook_notifications(user_id, guestbook_entry_id)");
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_festplay_application_notifications_user_read ON festplay_application_notifications(user_id, is_read, created_at)"
+);
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_festplay_application_notifications_user_application ON festplay_application_notifications(user_id, festplay_application_id)"
+);
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
