@@ -4862,6 +4862,64 @@ body.page-home-screen .home-hero-actions {
   line-height: 1.35;
 }
 
+.page-roomlist .container {
+  padding: 0.38rem 0.48rem 0.9rem;
+}
+
+.page-roomlist .rp-room-panel {
+  row-gap: 0.72rem;
+  padding: 0.78rem;
+  font-size: 0.84rem;
+}
+
+.page-roomlist .rp-room-form-title,
+.page-roomlist .rp-room-list-wrap h2,
+.page-roomlist .rp-room-section-summary {
+  font-size: 0.88rem;
+}
+
+.page-roomlist .rp-room-section-standard {
+  padding: 0.54rem 0.6rem;
+}
+
+.page-roomlist .rp-room-list-owned {
+  gap: 0.45rem;
+}
+
+.page-roomlist .rp-room-standard-card {
+  gap: 0.18rem;
+}
+
+.page-roomlist .rp-room-list-stacked .rp-room-standard-card {
+  padding: 0.54rem 0;
+}
+
+.page-roomlist .rp-room-link {
+  padding: 0.42rem 0.48rem;
+}
+
+.page-roomlist .rp-room-link-name,
+.page-roomlist .rp-room-inline-name,
+.page-roomlist .rp-room-custom-link {
+  font-size: 0.86rem;
+}
+
+.page-roomlist .rp-room-link small,
+.page-roomlist .rp-room-link-note,
+.page-roomlist .rp-room-custom-description,
+.page-roomlist .rp-room-occupants {
+  font-size: 0.66rem;
+}
+
+.page-roomlist .rp-room-custom-titleline {
+  gap: 0.28rem;
+}
+
+.page-roomlist .rp-room-lock-indicator {
+  width: 0.88rem;
+  height: 0.88rem;
+}
+
 .rp-room-occupant.has-room-rights {
   font-style: italic;
 }
