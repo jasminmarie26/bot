@@ -8,6 +8,10 @@
   const canUseRealtimeUpdates = typeof io === "function";
   let approvalPanelElements = null;
 
+  function isSystemNotificationType(notificationType) {
+    return String(notificationType || "").trim().toLowerCase() === approvalNotificationType;
+  }
+
   function getApprovalPanelElements() {
     if (approvalPanelElements) {
       return approvalPanelElements;
@@ -208,6 +212,7 @@
     notificationLink.dataset.notificationFestplayName = latestFestplayName;
     notificationLink.dataset.notificationApplicantCharacterName = latestApplicantCharacterName;
     notificationLink.dataset.notificationActorName = latestActorName;
+    notificationLink.classList.toggle("guestbook-notification-link-system", hasNotification && isSystemNotificationType(latestType));
 
     if (!hasNotification) {
       notificationLink.hidden = true;

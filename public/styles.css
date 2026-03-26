@@ -1354,6 +1354,19 @@ a:hover {
   color: color-mix(in srgb, var(--link) 86%, white 14%);
 }
 
+.guestbook-notification-link-system {
+  border-color: var(--success-edge);
+  color: color-mix(in srgb, var(--success-edge) 62%, #aee7b7 38%);
+  background: color-mix(in srgb, var(--panel-bg) 80%, #aee7b7 20%);
+}
+
+.guestbook-notification-link-system:hover,
+.guestbook-notification-link-system:focus-visible {
+  border-color: color-mix(in srgb, var(--success-edge) 78%, transparent);
+  color: color-mix(in srgb, var(--success-edge) 50%, #d7ffd9 50%);
+  background: color-mix(in srgb, var(--panel-bg) 74%, #b8efc2 26%);
+}
+
 .guestbook-notification-icon {
   display: inline-flex;
   align-items: center;

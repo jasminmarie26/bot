@@ -16,7 +16,7 @@
       ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
       : "Neuer Gaestebucheintrag"; %>
   <a
-    class="guestbook-notification-link"
+    class="guestbook-notification-link<%= latestGuestbookNotification?.type === 'festplay_approval' ? ' guestbook-notification-link-system' : '' %>"
     href="/guestbook/notifications/open"
     aria-label="<%= guestbookNotificationTitle %>"
     title="<%= guestbookNotificationTitle %>"
