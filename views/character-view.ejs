@@ -280,6 +280,7 @@
           <div class="rp-room-section-divider" aria-hidden="true"></div>
           <div class="rp-room-list rp-room-list-stacked">
             <% publicRooms.forEach((room) => { %>
+              <% const activeUsers = Array.isArray(publicRoomUsers?.[room.id]) ? publicRoomUsers[room.id] : []; %>
               <div class="rp-room-standard-card rp-room-custom-card">
                 <div class="rp-room-custom-titleline">
                   <span
@@ -311,13 +312,36 @@
                     <%= room.description %>
                   </div>
                 <% } %>
+                <div class="rp-room-custom-owner">
+                  <%= room.creator_name || "Freier Raum" %>
+                </div>
                 <div
-                  class="rp-room-custom-owner"
+                  class="rp-room-occupants"
                   data-room-watch-target
                   data-room-watch-room="<%= room.id %>"
                   data-room-watch-server="<%= character.server_id %>"
                 >
-                  <%= room.creator_name || "Freier Raum" %>
+                  <% if (activeUsers.length) { %>
+                    <% activeUsers.forEach((entry, index) => { %>
+                      <% if (entry.character_id) { %>
+                        <a
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
+                          href="/characters/<%= entry.character_id %>/guestbook"
+                          style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
+                        ><%= entry.name %></a>
+                      <% } else { %>
+                        <span
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
+                          style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
+                        ><%= entry.name %></span>
+                      <% } %>
+                      <% if (index < activeUsers.length - 1) { %>
+                        <span class="rp-room-occupant-separator">, </span>
+                      <% } %>
+                    <% }) %>
+                  <% } else { %>
+                    <span class="muted">Gerade niemand dort.</span>
+                  <% } %>
                 </div>
               </div>
             <% }) %>

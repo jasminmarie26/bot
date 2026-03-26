@@ -3503,7 +3503,9 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
          AND COALESCE(description, '') = ?
          AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_saved_room, 0) = 1
-         AND COALESCE(is_festplay_chat, 0) = 0`
+         AND COALESCE(is_festplay_chat, 0) = 0
+         AND COALESCE(is_manual_festplay_room, 0) = 0
+         AND COALESCE(is_festplay_side_chat, 0) = 0`
     ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey, normalizedRoomDescription) || null
   );
 }
@@ -3524,7 +3526,9 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
          AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_saved_room, 0) = 1
          AND COALESCE(is_festplay_chat, 0) = 0
-       ORDER BY created_at ASC, id ASC`
+         AND COALESCE(is_manual_festplay_room, 0) = 0
+         AND COALESCE(is_festplay_side_chat, 0) = 0
+        ORDER BY created_at ASC, id ASC`
     )
     .all(normalizedServerId, parsedUserId)
     .map((room) => ({
@@ -3673,8 +3677,10 @@ function findPublicRoomByNameKey(serverId, roomNameKey, roomDescription = "") {
           AND COALESCE(festplay_id, 0) = 0
           AND COALESCE(is_public_room, 0) = 1
           AND COALESCE(is_festplay_chat, 0) = 0
-        ORDER BY id ASC
-        LIMIT 1`
+          AND COALESCE(is_manual_festplay_room, 0) = 0
+          AND COALESCE(is_festplay_side_chat, 0) = 0
+         ORDER BY id ASC
+         LIMIT 1`
     ).get(normalizedServerId, normalizedRoomNameKey, normalizedRoomDescription) || null
   );
 }
@@ -7705,6 +7711,8 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         WHERE r.server_id = ?
           AND COALESCE(r.festplay_id, 0) = 0
           AND COALESCE(r.is_festplay_chat, 0) = 0
+          AND COALESCE(r.is_manual_festplay_room, 0) = 0
+          AND COALESCE(r.is_festplay_side_chat, 0) = 0
         ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(req.session.user.id, req.session.user.id, normalizeServer(character.server_id))
@@ -9424,7 +9432,10 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
       `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, is_saved_room
        FROM chat_rooms
        WHERE id = ?
-         AND COALESCE(festplay_id, 0) = 0`
+         AND COALESCE(festplay_id, 0) = 0
+         AND COALESCE(is_festplay_chat, 0) = 0
+         AND COALESCE(is_manual_festplay_room, 0) = 0
+         AND COALESCE(is_festplay_side_chat, 0) = 0`
     )
     .get(roomId);
   if (
