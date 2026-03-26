@@ -1514,10 +1514,10 @@ a:hover {
   top: calc(100% + 0.55rem);
   right: 0;
   left: auto;
-  width: min(18rem, calc(100vw - 1rem));
+  width: min(16.5rem, calc(100vw - 1rem));
   max-height: min(72vh, calc(100dvh - 4.75rem));
   overflow: hidden;
-  padding: 0.6rem;
+  padding: 0.5rem;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--link) 22%, var(--panel-edge));
   background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
@@ -1545,19 +1545,19 @@ a:hover {
 .rp-user-menu-meta {
   display: grid;
   gap: 0.18rem;
-  padding: 0.25rem 0.1rem 0.05rem;
+  padding: 0.18rem 0.08rem 0.04rem;
 }
 
 .topbar-user-menu-meta strong,
 .rp-user-menu-meta strong {
   color: var(--accent);
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .topbar-user-menu-meta span,
 .rp-user-menu-meta span {
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   line-height: 1.35;
 }
 
@@ -1574,12 +1574,13 @@ a:hover {
 .topbar-user-menu-links a,
 .rp-user-menu-links a {
   display: block;
-  padding: 0.5rem 0.65rem;
+  padding: 0.42rem 0.56rem;
   border-radius: 10px;
   border: 1px solid transparent;
   color: var(--text);
   text-decoration: none;
   background: color-mix(in srgb, var(--field-bg) 82%, transparent);
+  font-size: 0.92rem;
 }
 
 .topbar-user-menu-links a:hover,
@@ -1601,8 +1602,9 @@ a:hover {
   background: color-mix(in srgb, var(--field-bg) 80%, transparent);
   color: var(--link);
   border-radius: 10px;
-  padding: 0.5rem 0.7rem;
+  padding: 0.42rem 0.62rem;
   font: inherit;
+  font-size: 0.92rem;
   cursor: pointer;
 }
 
@@ -4918,6 +4920,46 @@ body.page-home-screen .home-hero-actions {
 .page-roomlist .rp-room-lock-indicator {
   width: 0.82rem;
   height: 0.82rem;
+}
+
+.page-chat .chat-layout {
+  grid-template-columns: minmax(170px, 210px) minmax(0, 1fr);
+  gap: 0.82rem;
+  --chat-copy-size: 0.84rem;
+}
+
+.page-chat .rp-room-panel.is-room-chat {
+  padding-top: 0.68rem;
+  padding-bottom: 0.16rem;
+}
+
+.page-chat .chat-online-panel {
+  padding: 0.46rem;
+}
+
+.page-chat .chat-room-title {
+  font-size: 1rem;
+}
+
+.page-chat .chat-room-heading {
+  margin-bottom: 0.36rem;
+}
+
+.page-chat .chat-room-description {
+  font-size: 0.68rem;
+}
+
+.page-chat .chat-online-item {
+  padding: 0.12rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.page-chat .chat-box {
+  padding: 0.34rem 0.68rem 0.68rem;
+}
+
+.page-chat .chat-form {
+  gap: 0.5rem;
 }
 
 .rp-room-occupant.has-room-rights {
