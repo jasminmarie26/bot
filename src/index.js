@@ -2424,7 +2424,7 @@ function getPublicFestplays(serverId = "") {
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.is_public = 1
            AND COALESCE(f.created_by_user_id, 0) > 0
-           AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
+           AND (? = '' OR trim(COALESCE(f.server_id, '')) = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
     .all(normalizedServerId, normalizedServerId)
@@ -2446,13 +2446,13 @@ function getPublicFestplayById(festplayId, serverId = "") {
                 f.server_id,
                 COALESCE(creator.name, '') AS creator_character_name,
                 f.created_by_user_id
-           FROM festplays f
-           LEFT JOIN characters creator ON creator.id = f.creator_character_id
-           WHERE f.id = ?
-             AND f.is_public = 1
-             AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
-             AND COALESCE(f.created_by_user_id, 0) > 0`
-      )
+             FROM festplays f
+             LEFT JOIN characters creator ON creator.id = f.creator_character_id
+             WHERE f.id = ?
+               AND f.is_public = 1
+               AND (? = '' OR trim(COALESCE(f.server_id, '')) = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
+               AND COALESCE(f.created_by_user_id, 0) > 0`
+        )
       .get(parsedFestplayId, normalizedServerId, normalizedServerId)
   );
 }
