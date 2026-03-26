@@ -425,7 +425,7 @@
             </div>
           <% } %>
         </details>
-        <% if ((character.server_id === "free-rp" || character.server_id === "erp") && ownedFestplays && ownedFestplays.length) { %>
+        <% if (character.server_id === "erp" && ownedFestplays && ownedFestplays.length) { %>
           <details class="rp-room-section rp-room-section-standard rp-room-accordion">
             <summary class="rp-room-section-summary">
               <span>Meine Festspiele</span>
