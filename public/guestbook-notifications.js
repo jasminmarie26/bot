@@ -4,7 +4,6 @@
 
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
-  const hasEmail = notificationLink.dataset.hasEmail === "true";
 
   function buildNotificationTitle(characterName) {
     const trimmedCharacterName = String(characterName || "").trim();
@@ -26,6 +25,7 @@
     notificationLink.href = notificationHref;
     notificationLink.title = title;
     notificationLink.setAttribute("aria-label", title);
+    notificationLink.setAttribute("aria-disabled", hasNotification ? "false" : "true");
     notificationLink.dataset.notificationCount = String(count);
     notificationLink.dataset.notificationCharacterName = latestCharacterName;
 
@@ -51,11 +51,12 @@
   };
   applyNotificationPayload(initialPayload);
 
-  if (!hasEmail) {
-    notificationLink.addEventListener("click", (event) => {
+  notificationLink.addEventListener("click", (event) => {
+    const notificationCount = Number(notificationLink.dataset.notificationCount || 0);
+    if (!Number.isFinite(notificationCount) || notificationCount < 1) {
       event.preventDefault();
-    });
-  }
+    }
+  });
 
   const socket = io({
     transports: ["websocket"]
