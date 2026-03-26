@@ -4527,9 +4527,8 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-room-list-owned {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
   align-items: flex-start;
   gap: 0.55rem;
   overflow: visible;
@@ -4537,9 +4536,8 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-room-list-owned .rp-room-standard-card {
-  flex: 0 1 240px;
   min-width: 0;
-  max-width: 280px;
+  max-width: none;
 }
 
 .rp-room-list-owned .rp-room-standard-card.is-wrapped-row {
