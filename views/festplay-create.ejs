@@ -356,12 +356,19 @@
               <% if (festplayRooms && festplayRooms.length) { %>
                 <div
                   class="rp-room-inline-list<%= festplayRoomSortingEnabled ? ' rp-room-inline-list-sortable' : '' %>"
-                  <%= festplayRoomSortingEnabled ? `data-festplay-room-sort-list data-sort-endpoint="/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/reorder"` : '' %>
+                  <% if (festplayRoomSortingEnabled) { %>
+                    data-festplay-room-sort-list
+                    data-sort-endpoint="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/reorder"
+                  <% } %>
                 >
                   <% festplayRooms.forEach((room) => { %>
                     <div
                       class="rp-room-sort-card<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %><%= festplayRoomSortingEnabled ? '' : ' is-static' %>"
-                      <%= festplayRoomSortingEnabled ? `data-room-sort-item data-room-id="${room.id}" draggable="true"` : '' %>
+                      <% if (festplayRoomSortingEnabled) { %>
+                        data-room-sort-item
+                        data-room-id="<%= room.id %>"
+                        draggable="true"
+                      <% } %>
                       title="<%= festplayRoomSortingEnabled ? 'Mit der Maus verschieben' : 'Raum öffnen' %>"
                     >
                       <% if (festplayRoomSortingEnabled) { %>
