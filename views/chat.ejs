@@ -148,12 +148,9 @@
             class="<%= chatIdentityRoleStyle ? `role-name-${chatIdentityRoleStyle}` : "" %>"
             style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : "" %>"
           ><%= chatIdentityName %></strong>
-          <% if (chatAccountDisplayName && chatAccountDisplayName !== chatIdentityName) { %>
-            <span>Konto: <%= chatAccountDisplayName %></span>
-          <% } %>
-          <% if (currentUser) { %>
-            <span>Account Nr.: <%= currentUser.account_number %></span>
-          <% } %>
+            <% if (currentUser) { %>
+              <span>Account Nr.: <%= currentUser.account_number %></span>
+            <% } %>
           <% if (activeCharacter) { %>
             <span>Server: <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %></span>
           <% } %>

@@ -91,10 +91,7 @@
             class="<%= roomcreateIdentityRoleStyle ? `role-name-${roomcreateIdentityRoleStyle}` : '' %>"
             style="<%= roomcreateIdentityColor ? `color:${roomcreateIdentityColor};` : '' %>"
           ><%= roomcreateIdentityName %></strong>
-          <% if (roomcreateAccountDisplayName && roomcreateAccountDisplayName !== roomcreateIdentityName) { %>
-            <span>Konto: <%= roomcreateAccountDisplayName %></span>
-          <% } %>
-          <span>Charakter: <%= character.name %></span>
+            <span>Charakter: <%= character.name %></span>
           <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
 
