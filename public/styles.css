@@ -5985,6 +5985,16 @@ body.page-guestbook-preview::after {
   font-weight: 600;
 }
 
+.gb-editor-inline-save-row {
+  margin-top: 0.15rem;
+}
+
+.gb-editor-inline-save {
+  min-width: auto;
+  padding: 0.48rem 1rem;
+  font-size: 0.84rem;
+}
+
 .gb-color-row {
   display: grid;
   grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
