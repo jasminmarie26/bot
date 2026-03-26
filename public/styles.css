@@ -4115,6 +4115,12 @@ body.page-home-screen .home-hero-actions {
 .rp-festplay-description-box {
   background: #d7d7d7;
   color: #1f1f1f;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.rp-festplay-description-box .guestbook-entry-body,
+.rp-festplay-description-box .guestbook-entry-body :where(p, div, span, a, strong, b, em, i, u, s, blockquote, table, tbody, thead, tfoot, tr, td, th, h1, h2, h3) {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .rp-room-editor-actions {
