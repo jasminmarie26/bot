@@ -1553,13 +1553,14 @@ a:hover {
 .topbar-user-menu-meta strong,
 .rp-user-menu-meta strong {
   color: var(--accent);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
 .topbar-user-menu-meta span,
 .rp-user-menu-meta span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1.35;
 }
 
@@ -1582,7 +1583,8 @@ a:hover {
   color: var(--text);
   text-decoration: none;
   background: color-mix(in srgb, var(--field-bg) 82%, transparent);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+  font-weight: 400;
 }
 
 .topbar-user-menu-links a:hover,
@@ -1606,7 +1608,8 @@ a:hover {
   border-radius: 10px;
   padding: 0.42rem 0.62rem;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+  font-weight: 400;
   cursor: pointer;
 }
 
