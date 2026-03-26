@@ -9399,9 +9399,12 @@ app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
     rememberPreferredCharacter(req, character);
   }
 
-  const targetRoom = returnTarget === "roomlist"
-    ? ensurePublicRoomForServer(req.session.user.id, character, roomName, roomDescription)
-    : ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomDescription);
+  const targetRoom = ensureOwnedRoomForCharacter(
+    req.session.user.id,
+    character,
+    roomName,
+    roomDescription
+  );
   if (!targetRoom) {
     setFlash(req, "error", "Raum konnte nicht angelegt werden.");
     return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
