@@ -308,15 +308,31 @@
               </div>
 
               <% if (festplayPlayerOverview?.characters?.length) { %>
-                <p class="rp-festplay-player-inline-list">
+                <div class="rp-festplay-player-inline-list">
                   <% festplayPlayerOverview.characters.forEach((entry, index) => { %>
-                    <a
-                      class="rp-festplay-player-link"
-                      href="/characters/<%= entry.id %>/guestbook"
-                      title="G&auml;stebuch von <%= entry.name %> &ouml;ffnen"
-                    ><%= entry.name %></a><% if (index < festplayPlayerOverview.characters.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
+                    <span class="rp-festplay-right-inline-item">
+                      <a
+                        class="rp-festplay-player-link"
+                        href="/characters/<%= entry.id %>/guestbook"
+                        title="G&auml;stebuch von <%= entry.name %> &ouml;ffnen"
+                      ><%= entry.name %></a>
+                      <% if (!entry.is_creator_character) { %>
+                        <form
+                          method="POST"
+                          action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/players/<%= entry.id %>/delete"
+                          class="inline-form rp-room-delete-form rp-festplay-right-remove-form"
+                        >
+                          <button
+                            class="rp-room-delete-btn"
+                            type="submit"
+                            aria-label="Spieler <%= entry.name %> aus dem Festspiel entfernen"
+                            title="Spieler entfernen"
+                          >X</button>
+                        </form>
+                      <% } %>
+                    </span><% if (index < festplayPlayerOverview.characters.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
                   <% }) %>
-                </p>
+                </div>
               <% } else { %>
                 <p class="rp-room-editor-note">Noch keine Charaktere diesem Festspiel zugeordnet.</p>
               <% } %>
