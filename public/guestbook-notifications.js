@@ -105,8 +105,8 @@
     const panelElements = getApprovalPanelElements();
     const trimmedFestplayName = String(festplayName || "").trim();
     panelElements.body.textContent = trimmedFestplayName
-      ? `Du wurdest fuer ${trimmedFestplayName} freigeschaltet.`
-      : "Du wurdest fuer ein Festspiel freigeschaltet.";
+      ? `Du wurdest f\u00fcr ${trimmedFestplayName} freigeschaltet.`
+      : "Du wurdest f\u00fcr ein Festspiel freigeschaltet.";
     panelElements.panel.hidden = false;
   }
 
@@ -119,12 +119,12 @@
     const response = await window.fetch(`/guestbook/notifications/${parsedNotificationId}/dismiss`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         "X-Requested-With": "XMLHttpRequest"
       },
-      body: JSON.stringify({
+      body: new URLSearchParams({
         type: approvalNotificationType
-      })
+      }).toString()
     });
 
     if (!response.ok) {
