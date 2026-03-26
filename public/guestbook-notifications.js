@@ -1,10 +1,11 @@
 (() => {
   const notificationLink = document.querySelector("[data-guestbook-notification-root]");
-  if (!notificationLink || typeof io !== "function") return;
+  if (!notificationLink) return;
 
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
   const approvalNotificationType = "festplay_approval";
+  const canUseRealtimeUpdates = typeof io === "function";
   let approvalPanelElements = null;
 
   function getApprovalPanelElements() {
@@ -257,8 +258,10 @@
     }
   });
 
-  const socket = io({
-    transports: ["websocket"]
-  });
-  socket.on("guestbook:notification:update", applyNotificationPayload);
+  if (canUseRealtimeUpdates) {
+    const socket = io({
+      transports: ["websocket"]
+    });
+    socket.on("guestbook:notification:update", applyNotificationPayload);
+  }
 })();
