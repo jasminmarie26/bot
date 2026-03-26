@@ -7559,7 +7559,7 @@ function reorderOwnedFestplayRooms(userId, festplayId, serverId, orderedRoomIds 
 
   const availableSet = new Set(availableRoomIds);
   const normalizedSet = new Set(normalizedRoomIds);
-  if (availableSet.size !== normalizedSet.size || normalizedSet.size !== normalizedRoomIds.length) {
+  if (normalizedSet.size !== normalizedRoomIds.length) {
     return false;
   }
 
@@ -7568,6 +7568,10 @@ function reorderOwnedFestplayRooms(userId, festplayId, serverId, orderedRoomIds 
       return false;
     }
   }
+
+  const orderedIds = normalizedRoomIds.concat(
+    availableRoomIds.filter((roomId) => !normalizedSet.has(roomId))
+  );
 
   const updateSortOrder = db.prepare(
     `UPDATE chat_rooms
@@ -7582,7 +7586,7 @@ function reorderOwnedFestplayRooms(userId, festplayId, serverId, orderedRoomIds 
     roomIds.forEach((roomId, index) => {
       updateSortOrder.run(index + 1, roomId, parsedFestplayId);
     });
-  })(normalizedRoomIds);
+  })(orderedIds);
 
   return true;
 }

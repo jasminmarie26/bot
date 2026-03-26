@@ -630,6 +630,28 @@
       }
     };
 
+    const submitOrderFallback = (roomIds) => {
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        setStatus("Reihenfolge konnte nicht gespeichert werden.", "is-error");
+        return;
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = endpoint;
+      form.hidden = true;
+
+      const roomIdsInput = document.createElement("input");
+      roomIdsInput.type = "hidden";
+      roomIdsInput.name = "room_ids";
+      roomIdsInput.value = JSON.stringify(roomIds);
+      form.appendChild(roomIdsInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    };
+
     const saveOrder = async () => {
       const roomIds = getItems()
         .map((item) => item.dataset.roomId || "")
@@ -655,7 +677,8 @@
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          submitOrderFallback(roomIds);
+          return;
         }
 
         setStatus("Reihenfolge gespeichert.", "is-success");
@@ -664,7 +687,7 @@
         }, 1600);
       } catch (error) {
         console.error("festplay room order save failed", error);
-        setStatus("Reihenfolge konnte nicht gespeichert werden.", "is-error");
+        submitOrderFallback(roomIds);
       }
     };
 
