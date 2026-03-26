@@ -4112,6 +4112,11 @@ body.page-home-screen .home-hero-actions {
   align-content: start;
 }
 
+.rp-festplay-description-box {
+  background: #d7d7d7;
+  color: #1f1f1f;
+}
+
 .rp-room-editor-actions {
   display: flex;
   flex-wrap: wrap;
