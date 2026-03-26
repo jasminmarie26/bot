@@ -7512,9 +7512,10 @@ function ensureFestplayRoomForCharacter(
   };
 }
 
-function reorderOwnedFestplayRooms(userId, festplayId, orderedRoomIds = []) {
+function reorderOwnedFestplayRooms(userId, festplayId, serverId, orderedRoomIds = []) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
+  const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomIds = Array.isArray(orderedRoomIds)
     ? orderedRoomIds
         .map((value) => Number(value))
@@ -7526,21 +7527,29 @@ function reorderOwnedFestplayRooms(userId, festplayId, orderedRoomIds = []) {
     parsedUserId < 1 ||
     !Number.isInteger(parsedFestplayId) ||
     parsedFestplayId < 1 ||
+    !normalizedServerId ||
     !normalizedRoomIds.length
   ) {
     return false;
   }
 
-  const availableRoomIds = db
-    .prepare(
-      `SELECT r.id
-         FROM chat_rooms r
-        WHERE r.festplay_id = ?
-          AND COALESCE(r.is_festplay_chat, 0) = 1
-          AND COALESCE(r.is_manual_festplay_room, 0) = 1
-        ORDER BY COALESCE(r.sort_order, 0) ASC, r.created_at ASC, r.id ASC`
-    )
-    .all(parsedFestplayId)
+  const festplay = getFestplayById(parsedFestplayId);
+  if (!festplay) {
+    return false;
+  }
+
+  const availableRoomIds = getFestplayRoomsForUser(parsedUserId, parsedFestplayId)
+    .filter((room) => {
+      if (!room || typeof room !== "object" || room.is_saved_room !== true) {
+        return false;
+      }
+
+      if (normalizeServer(room.server_id) !== normalizeServer(festplay.server_id || normalizedServerId)) {
+        return false;
+      }
+
+      return !isLegacyAutoFestplayRoom(room, festplay);
+    })
     .map((room) => Number(room.id))
     .filter((roomId) => Number.isInteger(roomId) && roomId > 0);
 
@@ -8613,7 +8622,12 @@ app.post("/characters/:id/festplays/:festplayId/rooms/reorder", requireAuth, (re
   }
 
   try {
-    const updated = reorderOwnedFestplayRooms(req.session.user.id, festplayId, orderedRoomIds);
+    const updated = reorderOwnedFestplayRooms(
+      req.session.user.id,
+      festplayId,
+      character.server_id,
+      orderedRoomIds
+    );
     if (!updated) {
       if (isFetchRequest) {
         return res.status(400).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
