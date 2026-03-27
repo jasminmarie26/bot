@@ -1,0 +1,64 @@
+<% if (currentUser && Number(boardCharacterId) > 0) { %>
+  <button
+    class="rp-board-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="rp-board-panel"
+    aria-label="RP-Aushang &ouml;ffnen"
+    title="RP-Aushang"
+    data-rp-board-root
+    data-rp-board-server-id="<%= boardServerId || 'free-rp' %>"
+    data-rp-board-festplay-id="<%= Number(boardFestplayId) > 0 ? Number(boardFestplayId) : 0 %>"
+    data-rp-board-character-id="<%= Number(boardCharacterId) %>"
+  >
+    <span class="rp-board-toggle-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path class="rp-board-fill" d="M6.1 4.4h11.8c1.05 0 1.9.85 1.9 1.9v11.4c0 1.05-.85 1.9-1.9 1.9H6.1a1.9 1.9 0 0 1-1.9-1.9V6.3c0-1.05.85-1.9 1.9-1.9Z" />
+        <path d="M6.1 4.4h11.8c1.05 0 1.9.85 1.9 1.9v11.4c0 1.05-.85 1.9-1.9 1.9H6.1a1.9 1.9 0 0 1-1.9-1.9V6.3c0-1.05.85-1.9 1.9-1.9Z" />
+        <path d="M8 8.4h8" />
+        <path d="M8 12h8" />
+        <path d="M8 15.6h5.3" />
+      </svg>
+    </span>
+    <span class="rp-board-toggle-badge" data-rp-board-badge hidden>0</span>
+  </button>
+
+  <div id="rp-board-panel" class="chat-whisper-panel rp-board-panel" data-rp-board-panel hidden>
+    <div class="chat-whisper-panel-card rp-board-panel-card">
+      <header class="chat-whisper-panel-head">
+        <div class="chat-whisper-panel-copy">
+          <h3>RP-Aushang</h3>
+          <p>Allgemeine RP-Suche f&uuml;r diesen Bereich. Keine Festspielsuche.</p>
+        </div>
+        <button type="button" class="chat-whisper-close-btn" data-rp-board-close aria-label="Schlie&szlig;en">
+          &times;
+        </button>
+      </header>
+
+      <div class="rp-board-layout">
+        <form class="rp-board-form" data-rp-board-form>
+          <label class="rp-board-label" for="rp-board-input">Neuer Eintrag</label>
+          <textarea
+            id="rp-board-input"
+            class="rp-board-input"
+            data-rp-board-input
+            name="content"
+            rows="3"
+            maxlength="500"
+            placeholder="Suche lockeres RP, biete eine Szene an oder frag allgemein nach Mitspielern."
+            required
+          ></textarea>
+          <p class="rp-board-hint">Ohne BBCode. Du kannst deinen eigenen Eintrag danach wieder l&ouml;schen.</p>
+          <div class="rp-board-actions">
+            <button type="submit" class="btn rp-board-submit">Eintrag setzen</button>
+          </div>
+        </form>
+
+        <section class="rp-board-entries-wrap">
+          <p class="muted rp-board-empty" data-rp-board-empty>Noch keine Eintr&auml;ge vorhanden.</p>
+          <div class="rp-board-entries" data-rp-board-list hidden></div>
+        </section>
+      </div>
+    </div>
+  </div>
+<% } %>

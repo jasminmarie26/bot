@@ -171,6 +171,30 @@ db.exec(`
     FOREIGN KEY (festplay_application_id) REFERENCES festplay_applications(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS rp_board_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    festplay_id INTEGER NOT NULL DEFAULT 0,
+    user_id INTEGER NOT NULL,
+    character_id INTEGER NOT NULL,
+    author_name TEXT NOT NULL DEFAULT '',
+    author_chat_text_color TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS rp_board_reads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    festplay_id INTEGER NOT NULL DEFAULT 0,
+    last_seen_entry_id INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS chat_rooms (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       character_id INTEGER NOT NULL,
@@ -630,6 +654,8 @@ db.exec(
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_rp_board_entries_context_created ON rp_board_entries(server_id, festplay_id, created_at, id)");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_rp_board_reads_user_context ON rp_board_reads(user_id, server_id, festplay_id)");
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user ON chat_room_permissions(room_id, user_id)"
 );

@@ -38,6 +38,9 @@
 <% const showChatAreaMenuLink = Boolean(
   activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
 ); %>
+<% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
+<% const chatBoardFestplayId = isFestplayContext ? activeRoom.festplay_id : 0; %>
+<% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -98,6 +101,11 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
+        <%- include("partials/rp-board-link", {
+          boardServerId: chatBoardServerId,
+          boardFestplayId: chatBoardFestplayId,
+          boardCharacterId: chatBoardCharacterId
+        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <button
           id="chat-whisper-toggle"

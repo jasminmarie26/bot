@@ -1290,7 +1290,8 @@ a:hover {
 }
 
 .chat-sound-toggle,
-.chat-whisper-toggle {
+.chat-whisper-toggle,
+.rp-board-toggle {
   width: 2.02rem;
   height: 2.02rem;
   display: inline-flex;
@@ -1309,7 +1310,9 @@ a:hover {
 .chat-sound-toggle:hover,
 .chat-sound-toggle:focus-visible,
 .chat-whisper-toggle:hover,
-.chat-whisper-toggle:focus-visible {
+.chat-whisper-toggle:focus-visible,
+.rp-board-toggle:hover,
+.rp-board-toggle:focus-visible {
   filter: brightness(1.04);
   background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
   border-color: color-mix(in srgb, var(--link) 34%, var(--field-edge) 66%);
@@ -1322,7 +1325,8 @@ a:hover {
   background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
 }
 
-.chat-whisper-toggle.is-open {
+.chat-whisper-toggle.is-open,
+.rp-board-toggle.is-open {
   background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
   border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
   color: color-mix(in srgb, var(--link) 88%, white 12%);
@@ -1456,7 +1460,8 @@ a:hover {
 }
 
 .chat-sound-toggle-icon svg,
-.chat-whisper-toggle-icon svg {
+.chat-whisper-toggle-icon svg,
+.rp-board-toggle-icon svg {
   width: 1rem;
   height: 1rem;
   display: block;
@@ -1464,7 +1469,8 @@ a:hover {
 }
 
 .chat-sound-toggle-icon svg path,
-.chat-whisper-toggle-icon svg path {
+.chat-whisper-toggle-icon svg path,
+.rp-board-toggle-icon svg path {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.75;
@@ -1495,7 +1501,21 @@ a:hover {
   stroke: none;
 }
 
-.chat-whisper-toggle-badge {
+.rp-board-toggle-icon {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rp-board-toggle-icon .rp-board-fill {
+  fill: currentColor;
+  opacity: 0.14;
+  stroke: none;
+}
+
+.chat-whisper-toggle-badge,
+.rp-board-toggle-badge {
   position: absolute;
   top: -0.18rem;
   right: -0.12rem;
@@ -1513,7 +1533,8 @@ a:hover {
   box-shadow: 0 10px 18px -14px var(--panel-shadow);
 }
 
-.chat-whisper-toggle-badge[hidden] {
+.chat-whisper-toggle-badge[hidden],
+.rp-board-toggle-badge[hidden] {
   display: none !important;
 }
 
@@ -3694,6 +3715,7 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-topline .guestbook-notification-link,
+.rp-topline .rp-board-toggle,
 .rp-topline .chat-whisper-toggle,
 .rp-topline .chat-sound-toggle {
   width: 2.02rem;
@@ -7322,6 +7344,142 @@ select:focus {
   border-color: var(--success-edge);
 }
 
+.rp-board-panel {
+  width: min(540px, calc(100vw - 2rem));
+}
+
+.rp-board-panel-card {
+  gap: 0.8rem;
+}
+
+.rp-board-layout {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.rp-board-form {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.rp-board-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rp-board-input {
+  width: 100%;
+  min-height: 5.6rem;
+  height: 5.6rem;
+  max-height: 5.6rem;
+  resize: none;
+  overflow-y: auto;
+  font: inherit;
+}
+
+.rp-board-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.rp-board-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rp-board-submit {
+  min-width: 0;
+}
+
+.rp-board-entries-wrap {
+  min-height: 0;
+}
+
+.rp-board-empty {
+  margin: 0;
+  padding: 0.25rem 0.1rem;
+}
+
+.rp-board-entries {
+  display: grid;
+  gap: 0.55rem;
+  max-height: min(44vh, 420px);
+  overflow-y: auto;
+  padding-right: 0.12rem;
+}
+
+.rp-board-entry {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.62rem 0.72rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 62%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 90%, black 10%);
+}
+
+.rp-board-entry-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.rp-board-entry-author-wrap {
+  min-width: 0;
+}
+
+.rp-board-entry-author {
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.rp-board-entry-author:hover,
+.rp-board-entry-author:focus-visible {
+  text-decoration: underline;
+}
+
+.rp-board-entry-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  flex: 0 0 auto;
+}
+
+.rp-board-entry-time {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rp-board-entry-delete {
+  border: 0;
+  background: transparent;
+  color: #d59282;
+  font: inherit;
+  font-size: 0.96rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.rp-board-entry-delete:hover,
+.rp-board-entry-delete:focus-visible {
+  color: #efb1a2;
+}
+
+.rp-board-entry-body {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .whisper-thread-meta,
 .whisper-thread-time {
   font-size: 0.76rem;
@@ -7366,6 +7524,12 @@ select:focus {
     left: 0.55rem;
     width: auto;
     max-height: calc(100dvh - 5.9rem);
+  }
+
+  .rp-board-panel {
+    right: 0.55rem;
+    left: 0.55rem;
+    width: auto;
   }
 
   .chat-whisper-layout {

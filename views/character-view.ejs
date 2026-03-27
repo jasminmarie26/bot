@@ -33,6 +33,7 @@
     character.server_id === "free-rp" || character.server_id === "erp"
       ? "Bereich"
       : "Raumliste"; %>
+  <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
       <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -91,6 +92,11 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
+        <%- include("partials/rp-board-link", {
+          boardServerId: character.server_id,
+          boardFestplayId: 0,
+          boardCharacterId: roomlistBoardCharacterId
+        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <details class="rp-user-menu">
           <summary

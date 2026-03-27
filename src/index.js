@@ -5533,6 +5533,218 @@ function markFestplayApplicationNotificationAsRead(notificationId, userId) {
   }
 }
 
+function normalizeRpBoardFestplayId(value) {
+  const parsedFestplayId = Number(value);
+  return Number.isInteger(parsedFestplayId) && parsedFestplayId > 0 ? parsedFestplayId : 0;
+}
+
+function normalizeRpBoardContent(value) {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .trim()
+    .slice(0, 500);
+}
+
+function socketChannelForRpBoard(serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  return `rp-board:${normalizedServerId}:${normalizedFestplayId}`;
+}
+
+function getRpBoardCharacterForUser(userId, characterId) {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id,
+              c.user_id,
+              c.name,
+              c.server_id,
+              COALESCE(c.festplay_id, 0) AS festplay_id,
+              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+       FROM characters c
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+       WHERE c.id = ? AND c.user_id = ?
+       LIMIT 1`
+    )
+    .get(parsedCharacterId, parsedUserId);
+}
+
+function resolveRpBoardContextForUser(userId, serverId, festplayId, characterId) {
+  const character = getRpBoardCharacterForUser(userId, characterId);
+  if (!character) {
+    return null;
+  }
+
+  const normalizedServerId = normalizeServer(serverId || character.server_id);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  const characterServerId = normalizeServer(character.server_id);
+
+  if (normalizedFestplayId > 0) {
+    if (
+      Number(character.festplay_id) !== normalizedFestplayId &&
+      !characterHasFestplayAccess(normalizedFestplayId, character.id)
+    ) {
+      return null;
+    }
+  } else if (characterServerId !== normalizedServerId) {
+    return null;
+  }
+
+  return {
+    serverId: normalizedServerId,
+    festplayId: normalizedFestplayId,
+    character: {
+      ...character,
+      server_id: characterServerId,
+      festplay_id: Number(character.festplay_id) || 0,
+      chat_text_color: normalizeGuestbookColor(character.chat_text_color)
+    }
+  };
+}
+
+function getLatestRpBoardEntryId(serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  const row = db
+    .prepare(
+      `SELECT MAX(id) AS latest_id
+       FROM rp_board_entries
+       WHERE server_id = ? AND festplay_id = ?`
+    )
+    .get(normalizedServerId, normalizedFestplayId);
+  return Number(row?.latest_id || 0);
+}
+
+function setRpBoardReadMarker(userId, serverId = DEFAULT_SERVER_ID, festplayId = 0, entryId = 0) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  const parsedEntryId = Number(entryId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedEntryId) ||
+    parsedEntryId < 0
+  ) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO rp_board_reads (
+       user_id,
+       server_id,
+       festplay_id,
+       last_seen_entry_id,
+       updated_at
+     )
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, server_id, festplay_id) DO UPDATE SET
+       last_seen_entry_id = CASE
+         WHEN excluded.last_seen_entry_id > rp_board_reads.last_seen_entry_id
+           THEN excluded.last_seen_entry_id
+         ELSE rp_board_reads.last_seen_entry_id
+       END,
+       updated_at = excluded.updated_at`
+  ).run(parsedUserId, normalizedServerId, normalizedFestplayId, parsedEntryId, formatChatTimestamp());
+}
+
+function getRpBoardReadMarker(userId, serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return 0;
+  }
+
+  const row = db
+    .prepare(
+      `SELECT last_seen_entry_id
+       FROM rp_board_reads
+       WHERE user_id = ? AND server_id = ? AND festplay_id = ?
+       LIMIT 1`
+    )
+    .get(parsedUserId, normalizeServer(serverId), normalizeRpBoardFestplayId(festplayId));
+  return Number(row?.last_seen_entry_id || 0);
+}
+
+function getRpBoardEntries(serverId = DEFAULT_SERVER_ID, festplayId = 0, currentUserId = 0) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  const parsedCurrentUserId = Number(currentUserId);
+
+  return db
+    .prepare(
+      `SELECT id,
+              user_id,
+              character_id,
+              author_name,
+              author_chat_text_color,
+              content,
+              created_at
+       FROM rp_board_entries
+       WHERE server_id = ? AND festplay_id = ?
+       ORDER BY id DESC
+       LIMIT 40`
+    )
+    .all(normalizedServerId, normalizedFestplayId)
+    .map((entry) => ({
+      id: Number(entry.id),
+      character_id: Number(entry.character_id),
+      author_name: String(entry.author_name || "").trim(),
+      author_chat_text_color: normalizeGuestbookColor(entry.author_chat_text_color),
+      content: String(entry.content || ""),
+      created_at: String(entry.created_at || "").trim(),
+      can_delete: parsedCurrentUserId > 0 && Number(entry.user_id) === parsedCurrentUserId
+    }));
+}
+
+function getRpBoardUnreadCountForUser(userId, serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return 0;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  const readMarker = getRpBoardReadMarker(parsedUserId, normalizedServerId, normalizedFestplayId);
+  return Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM rp_board_entries
+         WHERE server_id = ? AND festplay_id = ? AND id > ?`
+      )
+      .get(normalizedServerId, normalizedFestplayId, readMarker)?.count || 0
+  );
+}
+
+function buildRpBoardStateForUser(userId, serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+
+  return {
+    unreadCount: getRpBoardUnreadCountForUser(userId, normalizedServerId, normalizedFestplayId),
+    entries: getRpBoardEntries(normalizedServerId, normalizedFestplayId, userId)
+  };
+}
+
+function emitRpBoardChanged(serverId = DEFAULT_SERVER_ID, festplayId = 0) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
+  io.to(socketChannelForRpBoard(normalizedServerId, normalizedFestplayId)).emit("rp-board:changed", {
+    serverId: normalizedServerId,
+    festplayId: normalizedFestplayId
+  });
+}
+
 function getGuestbookEntryById(entryId) {
   const parsedEntryId = Number(entryId);
   if (!Number.isInteger(parsedEntryId) || parsedEntryId < 1) {
@@ -7113,6 +7325,119 @@ app.post("/account/delete", requireAuth, async (req, res) => {
   req.session.destroy(() => {
     res.redirect("/");
   });
+});
+
+app.get("/rp-board/state", requireAuth, (req, res) => {
+  const context = resolveRpBoardContextForUser(
+    req.session.user.id,
+    req.query.server_id,
+    req.query.festplay_id,
+    req.query.character_id
+  );
+  if (!context) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  return res.json({
+    boardName: "RP-Aushang",
+    ...buildRpBoardStateForUser(req.session.user.id, context.serverId, context.festplayId)
+  });
+});
+
+app.post("/rp-board/read", requireAuth, (req, res) => {
+  const context = resolveRpBoardContextForUser(
+    req.session.user.id,
+    req.body.server_id,
+    req.body.festplay_id,
+    req.body.character_id
+  );
+  if (!context) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  setRpBoardReadMarker(
+    req.session.user.id,
+    context.serverId,
+    context.festplayId,
+    getLatestRpBoardEntryId(context.serverId, context.festplayId)
+  );
+
+  return res.json(buildRpBoardStateForUser(req.session.user.id, context.serverId, context.festplayId));
+});
+
+app.post("/rp-board/entries", requireAuth, (req, res) => {
+  const context = resolveRpBoardContextForUser(
+    req.session.user.id,
+    req.body.server_id,
+    req.body.festplay_id,
+    req.body.character_id
+  );
+  if (!context) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  const content = normalizeRpBoardContent(req.body.content);
+  if (!content) {
+    return res.status(400).json({ error: "content_required" });
+  }
+
+  const createdAt = formatChatTimestamp();
+  const insertInfo = db.prepare(
+    `INSERT INTO rp_board_entries (
+       server_id,
+       festplay_id,
+       user_id,
+       character_id,
+       author_name,
+       author_chat_text_color,
+       content,
+       created_at
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    context.serverId,
+    context.festplayId,
+    req.session.user.id,
+    context.character.id,
+    context.character.name,
+    context.character.chat_text_color,
+    content,
+    createdAt
+  );
+
+  setRpBoardReadMarker(req.session.user.id, context.serverId, context.festplayId, Number(insertInfo.lastInsertRowid));
+  emitRpBoardChanged(context.serverId, context.festplayId);
+
+  return res.json(buildRpBoardStateForUser(req.session.user.id, context.serverId, context.festplayId));
+});
+
+app.post("/rp-board/entries/:entryId/delete", requireAuth, (req, res) => {
+  const entryId = Number(req.params.entryId);
+  if (!Number.isInteger(entryId) || entryId < 1) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const entry = db
+    .prepare(
+      `SELECT id, user_id, server_id, festplay_id
+       FROM rp_board_entries
+       WHERE id = ?
+       LIMIT 1`
+    )
+    .get(entryId);
+  if (!entry) {
+    return res.status(404).json({ error: "not_found" });
+  }
+  if (Number(entry.user_id) !== Number(req.session.user.id)) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  db.prepare("DELETE FROM rp_board_entries WHERE id = ? AND user_id = ?").run(entryId, req.session.user.id);
+  emitRpBoardChanged(entry.server_id, entry.festplay_id);
+
+  return res.json(
+    buildRpBoardStateForUser(req.session.user.id, normalizeServer(entry.server_id), normalizeRpBoardFestplayId(entry.festplay_id))
+  );
 });
 
 app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
@@ -13033,6 +13358,7 @@ io.on("connection", (socket) => {
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
   socket.data.roomWatchChannels = new Set();
+  socket.data.rpBoardChannels = new Set();
   socket.data.isTyping = false;
 
   socket.emit("site:stats:update", getLoginStats());
@@ -13108,6 +13434,26 @@ io.on("connection", (socket) => {
         "room:state:update",
         getRoomStatePayloadForUser(socket.data.user, watchedRoom, nextServerId)
       );
+    }
+  });
+
+  socket.on("rp-board:watch", (payload) => {
+    if (!socket.data.user) return;
+
+    const context = resolveRpBoardContextForUser(
+      socket.data.user.id,
+      payload?.serverId,
+      payload?.festplayId,
+      payload?.characterId
+    );
+    if (!context) {
+      return;
+    }
+
+    const boardChannel = socketChannelForRpBoard(context.serverId, context.festplayId);
+    if (!socket.data.rpBoardChannels.has(boardChannel)) {
+      socket.join(boardChannel);
+      socket.data.rpBoardChannels.add(boardChannel);
     }
   });
 

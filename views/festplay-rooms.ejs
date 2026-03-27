@@ -80,6 +80,11 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
+        <%- include("partials/rp-board-link", {
+          boardServerId: character.server_id,
+          boardFestplayId: festplay.id,
+          boardCharacterId: character.id
+        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <details class="rp-user-menu">
           <summary
@@ -129,6 +134,8 @@
         <a
           class="rp-room-editor-enter"
           href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor"
+          target="_blank"
+          rel="noopener noreferrer"
         >R&auml;ume bearbeiten</a>
       <% } %>
     </div>
