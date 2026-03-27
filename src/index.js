@@ -2082,6 +2082,14 @@ function cloneDbRows(rows) {
   return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
 }
 
+function sanitizeCharacterBackupName(rawValue) {
+  const originalName = String(rawValue || "").replace(/\s+/g, " ").trim();
+  if (!originalName) return "";
+
+  const sanitizedName = originalName.replace(/\bbackup\b/gi, " ").replace(/\s+/g, " ").trim();
+  return sanitizedName || originalName;
+}
+
 function buildCharacterBackupSnapshot(characterId) {
   const parsedCharacterId = Number(characterId);
   if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
@@ -2096,9 +2104,14 @@ function buildCharacterBackupSnapshot(characterId) {
     return null;
   }
 
+  const sanitizedCharacterName = sanitizeCharacterBackupName(character.name);
+
   return {
     version: 1,
-    character: cloneDbRow(character),
+    character: {
+      ...cloneDbRow(character),
+      name: sanitizedCharacterName
+    },
     guestbookSettings: cloneDbRow(
       db
         .prepare("SELECT * FROM guestbook_settings WHERE character_id = ?")
@@ -2155,7 +2168,7 @@ const deleteCharacterWithBackupTx = db.transaction((characterId) => {
   ).run(
     snapshot.character.user_id,
     snapshot.character.id,
-    snapshot.character.name,
+    sanitizeCharacterBackupName(snapshot.character.name),
     normalizeServer(snapshot.character.server_id),
     JSON.stringify(snapshot)
   );
@@ -2196,6 +2209,7 @@ const restoreCharacterBackupTx = db.transaction((backupId, userId) => {
   const restoredCharacter = {
     ...snapshot.character,
     user_id: parsedUserId,
+    name: sanitizeCharacterBackupName(snapshot.character.name),
     server_id: normalizeServer(snapshot.character.server_id),
     festplay_id: null,
     festplay_dashboard_mode: "main"
@@ -2255,6 +2269,84 @@ const restoreCharacterBackupTx = db.transaction((backupId, userId) => {
     name: restoredCharacter.name
   };
 });
+
+const cleanExistingCharacterBackupNamesTx = db.transaction(() => {
+  const backups = db
+    .prepare(
+      `SELECT id,
+              original_character_id,
+              character_name,
+              restored_at,
+              snapshot_json
+         FROM character_backups`
+    )
+    .all();
+
+  backups.forEach((backup) => {
+    const snapshot = parseCharacterBackupSnapshot(backup.snapshot_json);
+    const snapshotName = snapshot?.character?.name || backup.character_name || "";
+    const sanitizedName = sanitizeCharacterBackupName(snapshotName);
+    const currentBackupName = String(backup.character_name || "").trim();
+    let shouldUpdateBackupRow = false;
+    let nextSnapshotJson = backup.snapshot_json;
+
+    if (snapshot?.character && snapshot.character.name !== sanitizedName) {
+      snapshot.character.name = sanitizedName;
+      nextSnapshotJson = JSON.stringify(snapshot);
+      shouldUpdateBackupRow = true;
+    }
+
+    if (currentBackupName !== sanitizedName) {
+      shouldUpdateBackupRow = true;
+    }
+
+    if (shouldUpdateBackupRow) {
+      db.prepare(
+        `UPDATE character_backups
+            SET character_name = ?,
+                snapshot_json = ?
+          WHERE id = ?`
+      ).run(sanitizedName, nextSnapshotJson, backup.id);
+    }
+
+    if (!String(backup.restored_at || "").trim()) {
+      return;
+    }
+
+    const restoredCharacter = db
+      .prepare("SELECT id, name FROM characters WHERE id = ?")
+      .get(backup.original_character_id);
+
+    if (!restoredCharacter) {
+      return;
+    }
+
+    if (String(restoredCharacter.name || "").trim() === sanitizedName) {
+      return;
+    }
+
+    const duplicateCharacter = db
+      .prepare("SELECT id FROM characters WHERE lower(trim(name)) = lower(trim(?)) AND id != ? LIMIT 1")
+      .get(sanitizedName, restoredCharacter.id);
+
+    if (duplicateCharacter) {
+      return;
+    }
+
+    db.prepare(
+      `UPDATE characters
+          SET name = ?,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`
+    ).run(sanitizedName, restoredCharacter.id);
+  });
+});
+
+try {
+  cleanExistingCharacterBackupNamesTx();
+} catch (error) {
+  console.error("Konnte bestehende Backup-Namen nicht bereinigen:", error);
+}
 
 function getFestplays() {
   return db
