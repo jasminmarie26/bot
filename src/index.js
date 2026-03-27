@@ -819,6 +819,22 @@ function formatGermanDate(value) {
   }).format(parsed);
 }
 
+function formatGermanDateTime(value) {
+  const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
+  if (!parsed) return "";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  })
+    .format(parsed)
+    .replace(",", " -");
+}
+
 function getAgeFromBirthDate(rawBirthDate, referenceDate = new Date()) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
   if (!match) return null;
@@ -2024,6 +2040,221 @@ function getCharacterById(id) {
     )
     .get(id);
 }
+
+function getCharacterBackupsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+
+  return db
+    .prepare(
+      `SELECT id,
+              user_id,
+              original_character_id,
+              character_name,
+              server_id,
+              deleted_at,
+              restored_at
+         FROM character_backups
+        WHERE user_id = ?
+          AND trim(COALESCE(restored_at, '')) = ''
+        ORDER BY deleted_at DESC, id DESC`
+    )
+    .all(parsedUserId);
+}
+
+function parseCharacterBackupSnapshot(rawValue) {
+  const prepared = String(rawValue || "").trim();
+  if (!prepared) return null;
+
+  try {
+    const parsed = JSON.parse(prepared);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function cloneDbRow(row) {
+  return row && typeof row === "object" ? { ...row } : null;
+}
+
+function cloneDbRows(rows) {
+  return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+}
+
+function buildCharacterBackupSnapshot(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return null;
+  }
+
+  const character = db
+    .prepare("SELECT * FROM characters WHERE id = ?")
+    .get(parsedCharacterId);
+
+  if (!character) {
+    return null;
+  }
+
+  return {
+    version: 1,
+    character: cloneDbRow(character),
+    guestbookSettings: cloneDbRow(
+      db
+        .prepare("SELECT * FROM guestbook_settings WHERE character_id = ?")
+        .get(parsedCharacterId)
+    ),
+    guestbookPages: cloneDbRows(
+      db
+        .prepare(
+          `SELECT *
+             FROM guestbook_pages
+            WHERE character_id = ?
+            ORDER BY page_number ASC, id ASC`
+        )
+        .all(parsedCharacterId)
+    ),
+    guestbookEntries: cloneDbRows(
+      db
+        .prepare(
+          `SELECT *
+             FROM guestbook_entries
+            WHERE character_id = ?
+            ORDER BY id ASC`
+        )
+        .all(parsedCharacterId)
+    )
+  };
+}
+
+function insertTableRow(tableName, row) {
+  if (!row || typeof row !== "object") return;
+  const columns = Object.keys(row);
+  if (!columns.length) return;
+
+  const placeholders = columns.map(() => "?").join(", ");
+  const values = columns.map((column) => row[column]);
+  db.prepare(
+    `INSERT INTO ${tableName} (${columns.join(", ")})
+     VALUES (${placeholders})`
+  ).run(...values);
+}
+
+const deleteCharacterWithBackupTx = db.transaction((characterId) => {
+  const snapshot = buildCharacterBackupSnapshot(characterId);
+  if (!snapshot?.character) {
+    const error = new Error("character_not_found");
+    error.code = "CHARACTER_NOT_FOUND";
+    throw error;
+  }
+
+  db.prepare(
+    `INSERT INTO character_backups
+       (user_id, original_character_id, character_name, server_id, snapshot_json)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(
+    snapshot.character.user_id,
+    snapshot.character.id,
+    snapshot.character.name,
+    normalizeServer(snapshot.character.server_id),
+    JSON.stringify(snapshot)
+  );
+
+  db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id = ?").run(characterId);
+  db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id = ?").run(characterId);
+  db.prepare("UPDATE festplays SET creator_character_id = NULL WHERE creator_character_id = ?").run(characterId);
+  deleteGuestbookNotificationsForCharacter(characterId);
+  db.prepare("DELETE FROM characters WHERE id = ?").run(characterId);
+});
+
+const restoreCharacterBackupTx = db.transaction((backupId, userId) => {
+  const parsedBackupId = Number(backupId);
+  const parsedUserId = Number(userId);
+  const backup = db
+    .prepare(
+      `SELECT *
+         FROM character_backups
+        WHERE id = ?
+          AND user_id = ?
+          AND trim(COALESCE(restored_at, '')) = ''`
+    )
+    .get(parsedBackupId, parsedUserId);
+
+  if (!backup) {
+    const error = new Error("backup_not_found");
+    error.code = "BACKUP_NOT_FOUND";
+    throw error;
+  }
+
+  const snapshot = parseCharacterBackupSnapshot(backup.snapshot_json);
+  if (!snapshot?.character) {
+    const error = new Error("backup_invalid");
+    error.code = "BACKUP_INVALID";
+    throw error;
+  }
+
+  const restoredCharacter = {
+    ...snapshot.character,
+    user_id: parsedUserId,
+    server_id: normalizeServer(snapshot.character.server_id),
+    festplay_id: null,
+    festplay_dashboard_mode: "main"
+  };
+
+  const duplicateCharacter = findCharacterWithSameName(restoredCharacter.name);
+  if (duplicateCharacter) {
+    const error = new Error("character_name_taken");
+    error.code = "CHARACTER_NAME_TAKEN";
+    throw error;
+  }
+
+  const existingCharacterId = db
+    .prepare("SELECT id FROM characters WHERE id = ?")
+    .get(restoredCharacter.id);
+  if (existingCharacterId) {
+    const error = new Error("character_id_taken");
+    error.code = "CHARACTER_ID_TAKEN";
+    throw error;
+  }
+
+  insertTableRow("characters", restoredCharacter);
+
+  if (snapshot.guestbookSettings) {
+    insertTableRow("guestbook_settings", {
+      ...snapshot.guestbookSettings,
+      character_id: restoredCharacter.id
+    });
+  }
+
+  (Array.isArray(snapshot.guestbookPages) ? snapshot.guestbookPages : []).forEach((page) => {
+    insertTableRow("guestbook_pages", {
+      ...page,
+      character_id: restoredCharacter.id
+    });
+  });
+
+  (Array.isArray(snapshot.guestbookEntries) ? snapshot.guestbookEntries : []).forEach((entry) => {
+    insertTableRow("guestbook_entries", {
+      ...entry,
+      character_id: restoredCharacter.id,
+      author_character_id:
+        Number(entry.author_character_id) === Number(backup.original_character_id)
+          ? restoredCharacter.id
+          : entry.author_character_id
+    });
+  });
+
+  db.prepare(
+    `UPDATE character_backups
+        SET restored_at = CURRENT_TIMESTAMP
+      WHERE id = ?`
+  ).run(parsedBackupId);
+
+  return {
+    id: restoredCharacter.id,
+    name: restoredCharacter.name
+  };
+});
 
 function getFestplays() {
   return db
@@ -7382,9 +7613,79 @@ app.get("/rp-board", requireAuth, (req, res) => {
 });
 
 app.get("/character-backups", requireAuth, (req, res) => {
+  const characterBackups = getCharacterBackupsForUser(req.session.user.id).map((backup) => ({
+    ...backup,
+    server_label: getServerLabel(backup.server_id),
+    deleted_at_label: formatGermanDateTime(backup.deleted_at)
+  }));
+
   return res.render("character-backups", {
-    title: "Backup"
+    title: "Backup",
+    characterBackups
   });
+});
+
+app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {
+  const backupId = Number(req.params.backupId);
+  if (!Number.isInteger(backupId) || backupId < 1) {
+    setFlash(req, "error", "Backup wurde nicht gefunden.");
+    return res.redirect("/character-backups");
+  }
+
+  try {
+    const restoredCharacter = restoreCharacterBackupTx(backupId, req.session.user.id);
+    const refreshedUser = getUserForSessionById(req.session.user.id);
+    if (refreshedUser) {
+      req.session.user = toSessionUser(refreshedUser);
+    }
+    refreshConnectedUserDisplay(req.session.user.id);
+    emitHomeStatsUpdate();
+    setFlash(req, "success", `Charakter ${restoredCharacter.name} wurde wiederhergestellt.`);
+    return res.redirect("/character-backups");
+  } catch (error) {
+    if (error?.code === "BACKUP_NOT_FOUND") {
+      setFlash(req, "error", "Backup wurde nicht gefunden.");
+      return res.redirect("/character-backups");
+    }
+
+    if (error?.code === "BACKUP_INVALID") {
+      setFlash(req, "error", "Dieses Backup ist beschaedigt und kann nicht wiederhergestellt werden.");
+      return res.redirect("/character-backups");
+    }
+
+    if (error?.code === "CHARACTER_NAME_TAKEN") {
+      setFlash(req, "error", "Der Charaktername ist bereits vergeben. Das Backup kann gerade nicht wiederhergestellt werden.");
+      return res.redirect("/character-backups");
+    }
+
+    console.error(error);
+    setFlash(req, "error", "Backup konnte nicht wiederhergestellt werden.");
+    return res.redirect("/character-backups");
+  }
+});
+
+app.post("/character-backups/:backupId/delete", requireAuth, (req, res) => {
+  const backupId = Number(req.params.backupId);
+  if (!Number.isInteger(backupId) || backupId < 1) {
+    setFlash(req, "error", "Backup wurde nicht gefunden.");
+    return res.redirect("/character-backups");
+  }
+
+  const info = db
+    .prepare(
+      `DELETE FROM character_backups
+        WHERE id = ?
+          AND user_id = ?`
+    )
+    .run(backupId, req.session.user.id);
+
+  if (!info.changes) {
+    setFlash(req, "error", "Backup wurde nicht gefunden.");
+    return res.redirect("/character-backups");
+  }
+
+  setFlash(req, "success", "Backup endgueltig geloescht.");
+  return res.redirect("/character-backups");
 });
 
 app.get("/rp-board/state", requireAuth, (req, res) => {
@@ -10283,17 +10584,20 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     });
   }
 
-  db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id = ?").run(id);
-  db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id = ?").run(id);
-  db.prepare("UPDATE festplays SET creator_character_id = NULL WHERE creator_character_id = ?").run(id);
-  deleteGuestbookNotificationsForCharacter(id);
-  db.prepare("DELETE FROM characters WHERE id = ?").run(id);
+  try {
+    deleteCharacterWithBackupTx(id);
+  } catch (error) {
+    console.error(error);
+    setFlash(req, "error", "Charakter konnte nicht geloescht werden.");
+    return res.redirect("/dashboard");
+  }
+
   const refreshedUser = getUserForSessionById(req.session.user.id);
   if (refreshedUser) {
     req.session.user = toSessionUser(refreshedUser);
   }
   emitHomeStatsUpdate();
-  setFlash(req, "success", "Charakter gelöscht.");
+  setFlash(req, "success", "Charakter geloescht und als Backup gespeichert.");
   return res.redirect("/dashboard");
 });
 

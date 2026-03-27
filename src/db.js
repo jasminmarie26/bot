@@ -269,7 +269,21 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS character_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    original_character_id INTEGER NOT NULL,
+    character_name TEXT NOT NULL DEFAULT '',
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    restored_at TEXT NOT NULL DEFAULT '',
+    snapshot_json TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
+  CREATE INDEX IF NOT EXISTS idx_character_backups_user_id
+    ON character_backups(user_id, restored_at, deleted_at);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user
