@@ -8328,6 +8328,7 @@ app.get("/members", requireAuth, (req, res) => {
 const HELP_TOPICS = [
   { slug: "charakter-anlegen", title: "Charakter anlegen" },
   { slug: "festspiele-anlegen", title: "Festspiele anlegen" },
+  { slug: "rp-aushang", title: "RP-Aushang" },
   { slug: "eigene-raeume", title: "Eigene Räume" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },
   { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },

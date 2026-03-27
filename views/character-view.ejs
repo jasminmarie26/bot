@@ -34,6 +34,7 @@
       ? "Bereich"
       : "Raumliste"; %>
   <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
+  <% const roomlistBoardHref = `${currentPath || "/"}#rp-board-panel`; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
       <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -42,6 +43,7 @@
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
         <% } %>
+        <a href="<%= roomlistBoardHref %>" target="_blank" rel="noopener noreferrer">RP-Aushang</a>
         <a
           class="live-updates-nav-link"
         href="/live-updates"
@@ -95,7 +97,8 @@
         <%- include("partials/rp-board-link", {
           boardServerId: character.server_id,
           boardFestplayId: 0,
-          boardCharacterId: roomlistBoardCharacterId
+          boardCharacterId: roomlistBoardCharacterId,
+          hideRpBoardTrigger: true
         }) %>
         <%- include("partials/guestbook-notification-link") %>
         <details class="rp-user-menu">

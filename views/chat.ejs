@@ -39,8 +39,9 @@
   activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
 ); %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
-<% const chatBoardFestplayId = isFestplayContext ? activeRoom.festplay_id : 0; %>
+<% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
+<% const chatBoardHref = `${currentPath || "/"}#rp-board-panel`; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -51,6 +52,7 @@
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
       <% } %>
+      <a href="<%= chatBoardHref %>" target="_blank" rel="noopener noreferrer">RP-Aushang</a>
       <a
         class="live-updates-nav-link"
         href="/live-updates"
@@ -104,7 +106,8 @@
         <%- include("partials/rp-board-link", {
           boardServerId: chatBoardServerId,
           boardFestplayId: chatBoardFestplayId,
-          boardCharacterId: chatBoardCharacterId
+          boardCharacterId: chatBoardCharacterId,
+          hideRpBoardTrigger: true
         }) %>
         <%- include("partials/guestbook-notification-link") %>
         <button

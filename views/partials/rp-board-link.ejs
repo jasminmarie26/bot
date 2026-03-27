@@ -10,6 +10,7 @@
     data-rp-board-server-id="<%= boardServerId || 'free-rp' %>"
     data-rp-board-festplay-id="<%= Number(boardFestplayId) > 0 ? Number(boardFestplayId) : 0 %>"
     data-rp-board-character-id="<%= Number(boardCharacterId) %>"
+    <%= hideRpBoardTrigger ? "hidden" : "" %>
   >
     <span class="rp-board-toggle-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">

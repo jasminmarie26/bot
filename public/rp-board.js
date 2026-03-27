@@ -33,6 +33,9 @@
     panel.hidden = !shouldOpen;
     toggle.classList.toggle("is-open", shouldOpen);
     toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    if (!shouldOpen && window.location.hash === "#rp-board-panel") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
   }
 
   function formatBadgeCount(count) {
@@ -277,6 +280,20 @@
 
   loadState().catch((error) => {
     console.error("rp board initial load failed", error);
+  });
+
+  if (window.location.hash === "#rp-board-panel") {
+    openBoardPanel().catch((error) => {
+      console.error("rp board auto-open failed", error);
+    });
+  }
+
+  window.addEventListener("hashchange", () => {
+    if (window.location.hash === "#rp-board-panel") {
+      openBoardPanel().catch((error) => {
+        console.error("rp board hash-open failed", error);
+      });
+    }
   });
 
   if (canUseRealtimeUpdates) {
