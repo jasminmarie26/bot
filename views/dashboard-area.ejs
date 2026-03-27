@@ -58,21 +58,6 @@
                 <span class="character-mini-name"><%= char.name %></span>
               </a>
               <div class="character-mini-actions">
-                <form
-                  method="POST"
-                  action="/characters/<%= char.id %>/guestbook-code-email"
-                  class="character-mini-export-form"
-                >
-                  <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
-                  <button
-                    type="submit"
-                    class="character-mini-export-btn"
-                    aria-label="Gaestebuch-Code per E-Mail senden"
-                    title="Gaestebuch-Code per E-Mail senden"
-                  >
-                    &#9711;
-                  </button>
-                </form>
                 <% if (char.can_dashboard_move) { %>
                   <form
                     method="POST"
@@ -97,6 +82,21 @@
                     </button>
                   </form>
                 <% } %>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/guestbook-code-email"
+                  class="character-mini-export-form"
+                >
+                  <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+                  <button
+                    type="submit"
+                    class="character-mini-export-btn"
+                    aria-label="Gaestebuch-Code per E-Mail senden"
+                    title="Gaestebuch-Code per E-Mail senden"
+                  >
+                    <span class="character-mini-export-icon" aria-hidden="true"></span>
+                  </button>
+                </form>
                 <form
                   method="POST"
                   action="/characters/<%= char.id %>/delete"
@@ -172,21 +172,6 @@
                   <div class="character-mini-actions">
                     <form
                       method="POST"
-                      action="/characters/<%= char.id %>/guestbook-code-email"
-                      class="character-mini-export-form"
-                    >
-                      <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
-                      <button
-                        type="submit"
-                        class="character-mini-export-btn"
-                        aria-label="Gaestebuch-Code per E-Mail senden"
-                        title="Gaestebuch-Code per E-Mail senden"
-                      >
-                        &#9711;
-                      </button>
-                    </form>
-                    <form
-                      method="POST"
                       action="/characters/<%= char.id %>/move"
                       class="character-mini-move-form"
                       data-dashboard-move-confirm
@@ -205,6 +190,21 @@
                         title="Zielserver auswaehlen"
                       >
                         &harr;
+                      </button>
+                    </form>
+                    <form
+                      method="POST"
+                      action="/characters/<%= char.id %>/guestbook-code-email"
+                      class="character-mini-export-form"
+                    >
+                      <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+                      <button
+                        type="submit"
+                        class="character-mini-export-btn"
+                        aria-label="Gaestebuch-Code per E-Mail senden"
+                        title="Gaestebuch-Code per E-Mail senden"
+                      >
+                        <span class="character-mini-export-icon" aria-hidden="true"></span>
                       </button>
                     </form>
                     <% if (isInFestplayArea) { %>

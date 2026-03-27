@@ -1437,7 +1437,6 @@ function buildGuestbookExportText(items) {
     const character = item.character || {};
     const settings = item.settings || {};
     const pages = Array.isArray(item.pages) ? item.pages : [];
-    const entries = Array.isArray(item.entries) ? item.entries : [];
     const lines = [
       `Charakter: ${String(character.name || "").trim() || "-"}`,
       `Server: ${getServerLabel(character.server_id) || "-"}`,
@@ -1464,33 +1463,6 @@ function buildGuestbookExportText(items) {
         lines.push("");
         lines.push(`Seite ${page.page_number || "-"}: ${String(page.title || "").trim() || "-"}`);
         lines.push(String(page.content || "").trim() || "(leer)");
-      });
-    }
-
-    lines.push("");
-    lines.push("Gaestebucheintraege:");
-
-    if (!entries.length) {
-      lines.push("Keine Eintraege vorhanden.");
-    } else {
-      entries.forEach((entry) => {
-        const authorLabel =
-          String(entry.author_character_name || "").trim() ||
-          String(entry.author_name || "").trim() ||
-          "Unbekannt";
-        const entryParts = [
-          formatGermanDateTime(entry.created_at) || "-",
-          authorLabel
-        ];
-        if (entry.is_private) {
-          entryParts.push("Privat");
-        }
-        if (Number.isInteger(Number(entry.guestbook_page_id)) && Number(entry.guestbook_page_id) > 0) {
-          entryParts.push(`Seite-ID ${entry.guestbook_page_id}`);
-        }
-        lines.push("");
-        lines.push(entryParts.join(" | "));
-        lines.push(String(entry.content || "").trim() || "(leer)");
       });
     }
 

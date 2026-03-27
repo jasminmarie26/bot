@@ -6562,6 +6562,53 @@ body.page-guestbook-preview::after {
   cursor: pointer;
 }
 
+.character-mini-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  min-width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+}
+
+.character-mini-export-icon {
+  position: relative;
+  display: block;
+  width: 0.68rem;
+  height: 0.68rem;
+  background: linear-gradient(currentColor, currentColor) center 0.18rem / 2px 0.28rem no-repeat;
+}
+
+.character-mini-export-icon::before {
+  content: "";
+  position: absolute;
+  left: 0.08rem;
+  right: 0.08rem;
+  bottom: 0.04rem;
+  height: 0.18rem;
+  border: 1px solid currentColor;
+  border-top: none;
+  border-radius: 0 0 0.14rem 0.14rem;
+}
+
+.character-mini-export-icon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.03rem;
+  width: 0.24rem;
+  height: 0.24rem;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: translateX(-50%) rotate(45deg);
+  box-sizing: border-box;
+}
+
+.character-mini-delete-btn {
+  font-size: 0.78rem;
+}
+
 .character-mini-export-btn:hover,
 .character-mini-move-btn:hover,
 .character-mini-delete-btn:hover {
