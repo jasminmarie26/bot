@@ -1451,7 +1451,6 @@ function buildGuestbookExportText(items) {
       `Seitenstil: ${String(settings.page_style || "").trim() || "-"}`,
       `Design: ${String(settings.theme_style || "").trim() || "-"}`,
       `Schrift: ${String(settings.font_style || "").trim() || "-"}`,
-      `Tags: ${String(settings.tags || "").trim() || "-"}`,
       "",
       "Gästebuch-Seiten:"
     ];
@@ -5421,8 +5420,6 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     GUESTBOOK_FONT_STYLE_OPTIONS,
     "default"
   );
-  const tags = (safeBody.tags || "").trim().slice(0, 500);
-
   return {
     pageContent,
     settings: {
@@ -5435,7 +5432,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       page_style: pageStyle,
       theme_style: themeStyle,
       font_style: fontStyle,
-      tags
+      tags: ""
     }
   };
 }
