@@ -1362,6 +1362,341 @@ async function sendAccountDeletionEmail(payload) {
   return true;
 }
 
+function sanitizeGuestbookExportAttachmentPart(rawValue, fallback = "gaestebuch") {
+  const prepared = String(rawValue || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+
+  return prepared || fallback;
+}
+
+function buildGuestbookExportAttachmentBaseName(label, exportedAt = new Date()) {
+  const safeLabel = sanitizeGuestbookExportAttachmentPart(label, "gaestebuch");
+  const safeDate =
+    formatChatTimestamp(exportedAt)
+      .replace(/[^0-9]/g, "")
+      .slice(0, 14) || formatChatTimestamp().replace(/[^0-9]/g, "").slice(0, 14);
+  return `${safeLabel}-${safeDate}`;
+}
+
+function getGuestbookExportDataForCharacter(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return null;
+  }
+
+  const character = getCharacterById(parsedCharacterId);
+  if (!character) {
+    return null;
+  }
+
+  const settings = getOrCreateGuestbookSettings(parsedCharacterId);
+  const pages = ensureGuestbookPages(parsedCharacterId);
+  const entries = db
+    .prepare(
+      `SELECT ge.id,
+              ge.character_id,
+              ge.author_id,
+              ge.author_character_id,
+              ge.author_name,
+              ge.content,
+              ge.is_private,
+              ge.guestbook_page_id,
+              ge.created_at,
+              ge.updated_at,
+              author_character.name AS author_character_name
+         FROM guestbook_entries ge
+         LEFT JOIN characters author_character ON author_character.id = ge.author_character_id
+         WHERE ge.character_id = ?
+         ORDER BY COALESCE(ge.guestbook_page_id, 0) ASC,
+                  ge.created_at ASC,
+                  ge.id ASC`
+    )
+    .all(parsedCharacterId)
+    .map((entry) => ({
+      ...entry,
+      is_private: Number(entry.is_private) === 1
+    }));
+
+  return {
+    character,
+    settings,
+    pages,
+    entries
+  };
+}
+
+function buildGuestbookExportText(items) {
+  const exports = Array.isArray(items) ? items.filter(Boolean) : [];
+  const sections = [];
+
+  exports.forEach((item, index) => {
+    const character = item.character || {};
+    const settings = item.settings || {};
+    const pages = Array.isArray(item.pages) ? item.pages : [];
+    const entries = Array.isArray(item.entries) ? item.entries : [];
+    const lines = [
+      `Charakter: ${String(character.name || "").trim() || "-"}`,
+      `Server: ${getServerLabel(character.server_id) || "-"}`,
+      "",
+      "Gaestebuch-Einstellungen:",
+      `Bild: ${String(settings.image_url || "").trim() || "-"}`,
+      `Zensur: ${String(settings.censor_level || "").trim() || "-"}`,
+      `Textfarbe: ${String(settings.chat_text_color || "").trim() || "-"}`,
+      `Rahmenfarbe: ${String(settings.frame_color || "").trim() || "-"}`,
+      `Hintergrundfarbe: ${String(settings.background_color || "").trim() || "-"}`,
+      `Flaeche hinter dem Rahmen: ${String(settings.surround_color || "").trim() || "-"}`,
+      `Seitenstil: ${String(settings.page_style || "").trim() || "-"}`,
+      `Design: ${String(settings.theme_style || "").trim() || "-"}`,
+      `Schrift: ${String(settings.font_style || "").trim() || "-"}`,
+      `Tags: ${String(settings.tags || "").trim() || "-"}`,
+      "",
+      "Gaestebuch-Seiten:"
+    ];
+
+    if (!pages.length) {
+      lines.push("Keine Seiten vorhanden.");
+    } else {
+      pages.forEach((page) => {
+        lines.push("");
+        lines.push(`Seite ${page.page_number || "-"}: ${String(page.title || "").trim() || "-"}`);
+        lines.push(String(page.content || "").trim() || "(leer)");
+      });
+    }
+
+    lines.push("");
+    lines.push("Gaestebucheintraege:");
+
+    if (!entries.length) {
+      lines.push("Keine Eintraege vorhanden.");
+    } else {
+      entries.forEach((entry) => {
+        const authorLabel =
+          String(entry.author_character_name || "").trim() ||
+          String(entry.author_name || "").trim() ||
+          "Unbekannt";
+        const entryParts = [
+          formatGermanDateTime(entry.created_at) || "-",
+          authorLabel
+        ];
+        if (entry.is_private) {
+          entryParts.push("Privat");
+        }
+        if (Number.isInteger(Number(entry.guestbook_page_id)) && Number(entry.guestbook_page_id) > 0) {
+          entryParts.push(`Seite-ID ${entry.guestbook_page_id}`);
+        }
+        lines.push("");
+        lines.push(entryParts.join(" | "));
+        lines.push(String(entry.content || "").trim() || "(leer)");
+      });
+    }
+
+    sections.push(lines.join("\n"));
+
+    if (index < exports.length - 1) {
+      sections.push("========================================================================");
+    }
+  });
+
+  return sections.join("\n\n").trim() || "Keine Gaestebuchdaten vorhanden.";
+}
+
+function createGuestbookExportPdfBuffer(payload) {
+  return new Promise((resolve, reject) => {
+    try {
+      const title = String(payload.title || "Gaestebuch-Code").trim() || "Gaestebuch-Code";
+      const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 48,
+        info: {
+          Title: title,
+          Author: "Heldenhafte Reisen"
+        }
+      });
+      const chunks = [];
+
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      doc.font("Helvetica-Bold").fontSize(20).fillColor("#16324f").text(title);
+      doc.moveDown(0.25);
+      doc.font("Helvetica").fontSize(10.5).fillColor("#243447").text(exportText, {
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right
+      });
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function createGuestbookExportDocxBuffer(payload) {
+  const title = String(payload.title || "Gaestebuch-Code").trim() || "Gaestebuch-Code";
+  const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+  const paragraphs = [
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      children: [
+        new TextRun({
+          text: title,
+          color: "16324f"
+        })
+      ]
+    })
+  ];
+
+  exportText.split(/\r?\n/).forEach((line) => {
+    paragraphs.push(
+      new Paragraph({
+        children: line
+          ? [
+              new TextRun({
+                text: line,
+                color: "243447"
+              })
+            ]
+          : []
+      })
+    );
+  });
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: paragraphs
+      }
+    ]
+  });
+
+  return Packer.toBuffer(doc);
+}
+
+async function sendGuestbookCodeEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) return false;
+
+  const email = normalizeEmail(payload.email || "");
+  if (!email) return false;
+
+  const username = String(payload.username || "Abenteurer").trim() || "Abenteurer";
+  const exportLabel = String(payload.exportLabel || "deinem Gaestebuch").trim() || "deinem Gaestebuch";
+  const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+  const attachmentBaseName =
+    String(payload.attachmentBaseName || "").trim() ||
+    buildGuestbookExportAttachmentBaseName(exportLabel, new Date());
+  const [pdfBuffer, docxBuffer] = await Promise.all([
+    createGuestbookExportPdfBuffer(payload),
+    createGuestbookExportDocxBuffer(payload)
+  ]);
+
+  const text = [
+    `Hallo ${username},`,
+    "",
+    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
+    "Im Anhang findest du den Export zusaetzlich als PDF und Word-Datei.",
+    "",
+    "Gaestebuch-Code:",
+    "",
+    exportText,
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ].join("\n");
+
+  const pdfOnlyText = [
+    `Hallo ${username},`,
+    "",
+    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
+    "Im Anhang findest du den Export als PDF.",
+    "Der Word-Anhang wurde vom Mailserver nicht akzeptiert und deshalb weggelassen.",
+    "",
+    "Gaestebuch-Code:",
+    "",
+    exportText,
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ].join("\n");
+
+  const plainText = [
+    `Hallo ${username},`,
+    "",
+    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
+    "Die Anhaenge wurden vom Mailserver nicht akzeptiert.",
+    "Darum bekommst du den Export diesmal direkt in der E-Mail ohne PDF- oder Word-Datei.",
+    "",
+    "Gaestebuch-Code:",
+    "",
+    exportText,
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ].join("\n");
+
+  const mailBase = {
+    from: MAIL_FROM,
+    to: email,
+    subject: `Gaestebuch-Code: ${exportLabel}`
+  };
+  const attempts = [
+    {
+      deliveryMode: "pdf-docx",
+      text,
+      attachments: [
+        {
+          filename: `${attachmentBaseName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        },
+        {
+          filename: `${attachmentBaseName}.docx`,
+          content: docxBuffer,
+          contentType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        }
+      ]
+    },
+    {
+      deliveryMode: "pdf",
+      text: pdfOnlyText,
+      attachments: [
+        {
+          filename: `${attachmentBaseName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
+      ]
+    },
+    {
+      deliveryMode: "plain",
+      text: plainText,
+      attachments: []
+    }
+  ];
+
+  let lastError = null;
+  for (const attempt of attempts) {
+    try {
+      await transporter.sendMail({
+        ...mailBase,
+        text: attempt.text,
+        attachments: attempt.attachments
+      });
+      return {
+        delivered: true,
+        deliveryMode: attempt.deliveryMode
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Guestbook export email delivery failed");
+}
+
 async function sendRoomLogEmail(payload) {
   const transporter = getVerificationMailer();
   if (!transporter) return false;
@@ -8570,6 +8905,34 @@ function getDashboardServerSection(userId, serverId) {
   return buildDashboardServerSection(server, ownCharacters, userId);
 }
 
+function getDashboardGuestbookExportCharacters(serverSection) {
+  if (!serverSection) {
+    return [];
+  }
+
+  const characters = [];
+  const characterIds = new Set();
+  const addCharacter = (character) => {
+    const characterId = Number(character?.id);
+    if (!Number.isInteger(characterId) || characterId < 1 || characterIds.has(characterId)) {
+      return;
+    }
+
+    characterIds.add(characterId);
+    characters.push({
+      id: characterId,
+      name: String(character.name || "").trim()
+    });
+  };
+
+  (Array.isArray(serverSection.characters) ? serverSection.characters : []).forEach(addCharacter);
+  (Array.isArray(serverSection.festplays) ? serverSection.festplays : []).forEach((festplay) => {
+    (Array.isArray(festplay.characters) ? festplay.characters : []).forEach(addCharacter);
+  });
+
+  return characters;
+}
+
 function getDashboardLarpSection() {
   return {
     title: "LARP Bereich",
@@ -8605,6 +8968,123 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
     serverSection,
     erpMoveAllowed
   });
+});
+
+app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+  const returnTarget = getSafeReturnTarget(req, "/dashboard");
+
+  if (!character) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Gaestebuch-Code per E-Mail anfordern."
+    });
+  }
+
+  const accountUser = getAccountUserById(req.session.user.id);
+  const email = normalizeEmail(accountUser?.email || "");
+  if (!email) {
+    setFlash(req, "error", "In deinem Account ist keine gueltige E-Mail-Adresse hinterlegt.");
+    return res.redirect(returnTarget);
+  }
+
+  const exportData = getGuestbookExportDataForCharacter(id);
+  if (!exportData) {
+    setFlash(req, "error", "Gaestebuch-Code konnte nicht geladen werden.");
+    return res.redirect(returnTarget);
+  }
+
+  try {
+    const deliveryResult = await sendGuestbookCodeEmail({
+      email,
+      username: accountUser?.username || req.session.user.username,
+      exportLabel: exportData.character.name,
+      title: `Gaestebuch-Code: ${exportData.character.name}`,
+      exportText: buildGuestbookExportText([exportData]),
+      attachmentBaseName: buildGuestbookExportAttachmentBaseName(exportData.character.name, new Date())
+    });
+    if (!deliveryResult?.delivered) {
+      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfuegbar.");
+      return res.redirect(returnTarget);
+    }
+    setFlash(req, "success", `Gaestebuch-Code von ${exportData.character.name} wurde per E-Mail verschickt.`);
+  } catch (error) {
+    console.error(error);
+    setFlash(
+      req,
+      "error",
+      `Gaestebuch-Code konnte nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
+    );
+  }
+
+  return res.redirect(returnTarget);
+});
+
+app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (req, res) => {
+  const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
+  if (!serverSection) {
+    return res.redirect("/dashboard");
+  }
+
+  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}`);
+  const dashboardCharacters = getDashboardGuestbookExportCharacters(serverSection);
+  if (!dashboardCharacters.length) {
+    setFlash(req, "error", "Es sind keine eigenen Charaktere fuer diesen Bereich vorhanden.");
+    return res.redirect(returnTarget);
+  }
+
+  const accountUser = getAccountUserById(req.session.user.id);
+  const email = normalizeEmail(accountUser?.email || "");
+  if (!email) {
+    setFlash(req, "error", "In deinem Account ist keine gueltige E-Mail-Adresse hinterlegt.");
+    return res.redirect(returnTarget);
+  }
+
+  const exportItems = dashboardCharacters
+    .map((character) => getGuestbookExportDataForCharacter(character.id))
+    .filter((item) => item && Number(item.character?.user_id) === Number(req.session.user.id));
+
+  if (!exportItems.length) {
+    setFlash(req, "error", "Gaestebuch-Codes konnten nicht geladen werden.");
+    return res.redirect(returnTarget);
+  }
+
+  try {
+    const deliveryResult = await sendGuestbookCodeEmail({
+      email,
+      username: accountUser?.username || req.session.user.username,
+      exportLabel: `${serverSection.dashboard_label || serverSection.label} (${exportItems.length})`,
+      title: `Gaestebuch-Codes: ${serverSection.dashboard_label || serverSection.label}`,
+      exportText: buildGuestbookExportText(exportItems),
+      attachmentBaseName: buildGuestbookExportAttachmentBaseName(
+        `${serverSection.dashboard_label || serverSection.label}-alle`,
+        new Date()
+      )
+    });
+    if (!deliveryResult?.delivered) {
+      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfuegbar.");
+      return res.redirect(returnTarget);
+    }
+    setFlash(
+      req,
+      "success",
+      `Gaestebuch-Codes von ${exportItems.length} Charakteren wurden per E-Mail verschickt.`
+    );
+  } catch (error) {
+    console.error(error);
+    setFlash(
+      req,
+      "error",
+      `Gaestebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
+    );
+  }
+
+  return res.redirect(returnTarget);
 });
 
 app.get("/dashboard-legacy", requireAuth, (req, res) => {
