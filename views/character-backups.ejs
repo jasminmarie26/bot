@@ -2,8 +2,8 @@
 
 <section class="header-line dashboard-page-header">
   <div>
-    <h1>Geloeschte Charaktere</h1>
-    <p class="muted">Hier kannst du geloeschte Charaktere mit Gaestebuch, Farbe und Gaestebucheintraegen wiederherstellen.</p>
+    <h1>Gelöschte Charaktere</h1>
+    <p class="muted">Hier kannst du gelöschte Charaktere mit Gästebuch, Farbe und Gästebucheinträgen wiederherstellen.</p>
   </div>
 </section>
 
@@ -11,7 +11,7 @@
   <details class="dashboard-festplay-overview dashboard-character-overview" open>
     <summary class="dashboard-festplay-overview-header">
       <div class="dashboard-festplay-overview-title">
-        <h3>Geloeschte Charaktere</h3>
+        <h3>Gelöschte Charaktere</h3>
         <span class="dashboard-festplay-count">(<%= Array.isArray(characterBackups) ? characterBackups.length : 0 %>)</span>
       </div>
       <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
@@ -19,7 +19,7 @@
 
     <div class="dashboard-server-panel dashboard-character-overview-body">
       <% if (!characterBackups || !characterBackups.length) { %>
-        <p class="muted">Noch keine geloeschten Charaktere vorhanden.</p>
+        <p class="muted">Noch keine gelöschten Charaktere vorhanden.</p>
       <% } else { %>
         <div class="character-mini-grid">
           <% characterBackups.forEach((backup) => { %>
@@ -47,13 +47,13 @@
                   method="POST"
                   action="/character-backups/<%= backup.id %>/delete"
                   class="character-mini-delete-form"
-                  onsubmit="return confirm('Backup endgueltig loeschen? Danach kann der Charakter nie wieder wiederhergestellt werden.')"
+                  onsubmit="return confirm('Backup endgültig löschen? Danach kann der Charakter nie wieder wiederhergestellt werden.')"
                 >
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
-                    aria-label="Backup endgueltig loeschen"
-                    title="Backup endgueltig loeschen"
+                    aria-label="Backup endgültig löschen"
+                    title="Backup endgültig löschen"
                   >
                     X
                   </button>

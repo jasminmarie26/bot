@@ -1,6 +1,6 @@
 # RP Chat Plattform (Web)
 
-Web-App mit zentralem Chat, unendlich vielen Charakteren pro Account und Gaestebuechern auf Charakterseiten.
+Web-App mit zentralem Chat, unendlich vielen Charakteren pro Account und Gästebüchern auf Charakterseiten.
 
 ## Features
 
@@ -9,13 +9,13 @@ Web-App mit zentralem Chat, unendlich vielen Charakteren pro Account und Gaesteb
 - Unbegrenzte Charaktererstellung pro User
 - Festplay-Auswahl beim Charakter-Anlegen
 - Charakterprofile mit Beschreibung, Avatar und Festplay
-- Sichtbarkeit pro Charakter: oeffentlich oder privat
-- Gaestebuch pro Charakter mit Eintraegen anderer User
-- Admin-Rolle mit Adminbereich fuer Benutzerverwaltung
-- Admin-Verwaltung fuer Festplays (anlegen/loeschen)
+- Sichtbarkeit pro Charakter: öffentlich oder privat
+- Gästebuch pro Charakter mit Einträgen anderer User
+- Admin-Rolle mit Adminbereich für Benutzerverwaltung
+- Admin-Verwaltung für Festplays (anlegen/löschen)
 - Mehrere waehlbare Designs pro User (inkl. Glass-Themes)
 - Optionaler Social Login mit Google (Gmail) und Facebook
-- Live-Updates auf der Startseite (Admins koennen sie direkt per UI veroeffentlichen)
+- Live-Updates auf der Startseite (Admins können sie direkt per UI veröffentlichen)
 
 ## Installation
 
@@ -43,13 +43,13 @@ FACEBOOK_APP_SECRET=
 npm run dev
 ```
 
-oder fuer normal:
+oder für normal:
 
 ```bash
 npm start
 ```
 
-4. Im Browser oeffnen:
+4. Im Browser öffnen:
 
 `http://localhost:3000`
 
@@ -93,6 +93,6 @@ npm run make-admin -- <username>
 
 ## Hinweis
 
-Das ist eine funktionsfaehige Basis fuer ein RP-Portal im Stil von Foren-/Charakterseiten mit Chat. Fuer produktiven Betrieb solltest du zusaetzlich Rate-Limits, CSRF-Schutz, Backups und ein Rollen-/Moderationssystem ergaenzen.
+Das ist eine funktionsfähige Basis für ein RP-Portal im Stil von Foren-/Charakterseiten mit Chat. Für produktiven Betrieb solltest du zusätzlich Rate-Limits, CSRF-Schutz, Backups und ein Rollen-/Moderationssystem ergänzen.
 
 

@@ -1,7 +1,7 @@
 {
   "name": "rp-chat-platform",
   "version": "1.0.0",
-  "description": "Webbasierte RP-Chat-Plattform mit Charakteren und Gaestebuechern",
+  "description": "Webbasierte RP-Chat-Plattform mit Charakteren und Gästebüchern",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

@@ -3,18 +3,18 @@
   <% const guestbookNotificationTitle = latestGuestbookNotification?.type === "festplay_application"
     ? latestGuestbookNotification?.festplay_name
       ? latestGuestbookNotification?.applicant_character_name
-        ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} fuer ${latestGuestbookNotification.festplay_name}`
-        : `Neue Bewerbung fuer ${latestGuestbookNotification.festplay_name}`
+        ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} für ${latestGuestbookNotification.festplay_name}`
+        : `Neue Bewerbung für ${latestGuestbookNotification.festplay_name}`
       : "Neue Festspiel-Bewerbung"
     : latestGuestbookNotification?.type === "festplay_approval"
       ? latestGuestbookNotification?.festplay_name
         ? latestGuestbookNotification?.actor_name
-          ? `${latestGuestbookNotification.actor_name} hat dich fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
-          : `Du wurdest fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
+          ? `${latestGuestbookNotification.actor_name} hat dich für ${latestGuestbookNotification.festplay_name} freigeschaltet`
+          : `Du wurdest für ${latestGuestbookNotification.festplay_name} freigeschaltet`
         : "Neue Festspiel-Freischaltung"
     : latestGuestbookNotification?.character_name
-      ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
-      : "Neuer Gaestebucheintrag"; %>
+      ? `Neuer Gästebucheintrag für ${latestGuestbookNotification.character_name}`
+      : "Neuer Gästebucheintrag"; %>
   <a
     class="guestbook-notification-link<%= latestGuestbookNotification?.type === 'festplay_approval' ? ' guestbook-notification-link-system' : '' %>"
     href="/guestbook/notifications/open"

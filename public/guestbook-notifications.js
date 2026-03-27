@@ -157,27 +157,27 @@
 
     if (normalizedType === "festplay_application") {
       if (trimmedFestplayName && trimmedApplicantCharacterName) {
-        return `Neue Bewerbung von ${trimmedApplicantCharacterName} fuer ${trimmedFestplayName}`;
+        return `Neue Bewerbung von ${trimmedApplicantCharacterName} für ${trimmedFestplayName}`;
       }
       if (trimmedFestplayName) {
-        return `Neue Bewerbung fuer ${trimmedFestplayName}`;
+        return `Neue Bewerbung für ${trimmedFestplayName}`;
       }
       return "Neue Festspiel-Bewerbung";
     }
 
     if (normalizedType === "festplay_approval") {
       if (trimmedFestplayName && trimmedActorName) {
-        return `${trimmedActorName} hat dich fuer ${trimmedFestplayName} freigeschaltet`;
+        return `${trimmedActorName} hat dich für ${trimmedFestplayName} freigeschaltet`;
       }
       if (trimmedFestplayName) {
-        return `Du wurdest fuer ${trimmedFestplayName} freigeschaltet`;
+        return `Du wurdest für ${trimmedFestplayName} freigeschaltet`;
       }
       return "Neue Festspiel-Freischaltung";
     }
 
     return trimmedCharacterName
-      ? `Neuer Gaestebucheintrag fuer ${trimmedCharacterName}`
-      : "Neuer Gaestebucheintrag";
+      ? `Neuer Gästebucheintrag für ${trimmedCharacterName}`
+      : "Neuer Gästebucheintrag";
   }
 
   function formatBadgeCount(count) {

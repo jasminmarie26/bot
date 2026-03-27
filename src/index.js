@@ -1441,19 +1441,19 @@ function buildGuestbookExportText(items) {
       `Charakter: ${String(character.name || "").trim() || "-"}`,
       `Server: ${getServerLabel(character.server_id) || "-"}`,
       "",
-      "Gaestebuch-Einstellungen:",
+      "Gästebuch-Einstellungen:",
       `Bild: ${String(settings.image_url || "").trim() || "-"}`,
       `Zensur: ${String(settings.censor_level || "").trim() || "-"}`,
       `Textfarbe: ${String(settings.chat_text_color || "").trim() || "-"}`,
       `Rahmenfarbe: ${String(settings.frame_color || "").trim() || "-"}`,
       `Hintergrundfarbe: ${String(settings.background_color || "").trim() || "-"}`,
-      `Flaeche hinter dem Rahmen: ${String(settings.surround_color || "").trim() || "-"}`,
+      `Fläche hinter dem Rahmen: ${String(settings.surround_color || "").trim() || "-"}`,
       `Seitenstil: ${String(settings.page_style || "").trim() || "-"}`,
       `Design: ${String(settings.theme_style || "").trim() || "-"}`,
       `Schrift: ${String(settings.font_style || "").trim() || "-"}`,
       `Tags: ${String(settings.tags || "").trim() || "-"}`,
       "",
-      "Gaestebuch-Seiten:"
+      "Gästebuch-Seiten:"
     ];
 
     if (!pages.length) {
@@ -1473,14 +1473,14 @@ function buildGuestbookExportText(items) {
     }
   });
 
-  return sections.join("\n\n").trim() || "Keine Gaestebuchdaten vorhanden.";
+  return sections.join("\n\n").trim() || "Keine Gästebuchdaten vorhanden.";
 }
 
 function createGuestbookExportPdfBuffer(payload) {
   return new Promise((resolve, reject) => {
     try {
-      const title = String(payload.title || "Gaestebuch-Code").trim() || "Gaestebuch-Code";
-      const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+      const title = String(payload.title || "Gästebuch-Code").trim() || "Gästebuch-Code";
+      const exportText = String(payload.exportText || "").trim() || "Keine Gästebuchdaten vorhanden.";
       const doc = new PDFDocument({
         size: "A4",
         margin: 48,
@@ -1508,8 +1508,8 @@ function createGuestbookExportPdfBuffer(payload) {
 }
 
 async function createGuestbookExportDocxBuffer(payload) {
-  const title = String(payload.title || "Gaestebuch-Code").trim() || "Gaestebuch-Code";
-  const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+  const title = String(payload.title || "Gästebuch-Code").trim() || "Gästebuch-Code";
+  const exportText = String(payload.exportText || "").trim() || "Keine Gästebuchdaten vorhanden.";
   const paragraphs = [
     new Paragraph({
       heading: HeadingLevel.TITLE,
@@ -1557,8 +1557,8 @@ async function sendGuestbookCodeEmail(payload) {
   if (!email) return false;
 
   const username = String(payload.username || "Abenteurer").trim() || "Abenteurer";
-  const exportLabel = String(payload.exportLabel || "deinem Gaestebuch").trim() || "deinem Gaestebuch";
-  const exportText = String(payload.exportText || "").trim() || "Keine Gaestebuchdaten vorhanden.";
+  const exportLabel = String(payload.exportLabel || "deinem Gästebuch").trim() || "deinem Gästebuch";
+  const exportText = String(payload.exportText || "").trim() || "Keine Gästebuchdaten vorhanden.";
   const attachmentBaseName =
     String(payload.attachmentBaseName || "").trim() ||
     buildGuestbookExportAttachmentBaseName(exportLabel, new Date());
@@ -1570,10 +1570,10 @@ async function sendGuestbookCodeEmail(payload) {
   const text = [
     `Hallo ${username},`,
     "",
-    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
-    "Im Anhang findest du den Export zusaetzlich als PDF und Word-Datei.",
+    `hier ist der Gästebuch-Code aus ${exportLabel}.`,
+    "Im Anhang findest du den Export zusätzlich als PDF und Word-Datei.",
     "",
-    "Gaestebuch-Code:",
+    "Gästebuch-Code:",
     "",
     exportText,
     "",
@@ -1583,11 +1583,11 @@ async function sendGuestbookCodeEmail(payload) {
   const pdfOnlyText = [
     `Hallo ${username},`,
     "",
-    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
+    `hier ist der Gästebuch-Code aus ${exportLabel}.`,
     "Im Anhang findest du den Export als PDF.",
     "Der Word-Anhang wurde vom Mailserver nicht akzeptiert und deshalb weggelassen.",
     "",
-    "Gaestebuch-Code:",
+    "Gästebuch-Code:",
     "",
     exportText,
     "",
@@ -1597,11 +1597,11 @@ async function sendGuestbookCodeEmail(payload) {
   const plainText = [
     `Hallo ${username},`,
     "",
-    `hier ist der Gaestebuch-Code aus ${exportLabel}.`,
-    "Die Anhaenge wurden vom Mailserver nicht akzeptiert.",
+    `hier ist der Gästebuch-Code aus ${exportLabel}.`,
+    "Die Anhänge wurden vom Mailserver nicht akzeptiert.",
     "Darum bekommst du den Export diesmal direkt in der E-Mail ohne PDF- oder Word-Datei.",
     "",
-    "Gaestebuch-Code:",
+    "Gästebuch-Code:",
     "",
     exportText,
     "",
@@ -1611,7 +1611,7 @@ async function sendGuestbookCodeEmail(payload) {
   const mailBase = {
     from: MAIL_FROM,
     to: email,
-    subject: `Gaestebuch-Code: ${exportLabel}`
+    subject: `Gästebuch-Code: ${exportLabel}`
   };
   const attempts = [
     {
@@ -7988,7 +7988,7 @@ app.get("/rp-board", requireAuth, (req, res) => {
   if (!context) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Fuer diesen RP-Aushang wurde kein passender eigener Charakter gefunden."
+      message: "Für diesen RP-Aushang wurde kein passender eigener Charakter gefunden."
     });
   }
 
@@ -8015,7 +8015,7 @@ app.get("/character-backups", requireAuth, (req, res) => {
   const characterBackups = getCharacterBackupsForUser(req.session.user.id);
 
   return res.render("character-backups", {
-    title: "Geloeschte Charaktere",
+    title: "Gelöschte Charaktere",
     characterBackups
   });
 });
@@ -8044,7 +8044,7 @@ app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {
     }
 
     if (error?.code === "BACKUP_INVALID") {
-      setFlash(req, "error", "Dieses Backup ist beschaedigt und kann nicht wiederhergestellt werden.");
+      setFlash(req, "error", "Dieses Backup ist beschädigt und kann nicht wiederhergestellt werden.");
       return res.redirect("/character-backups");
     }
 
@@ -8079,7 +8079,7 @@ app.post("/character-backups/:backupId/delete", requireAuth, (req, res) => {
     return res.redirect("/character-backups");
   }
 
-  setFlash(req, "success", "Backup endgueltig geloescht.");
+  setFlash(req, "success", "Backup endgültig gelöscht.");
   return res.redirect("/character-backups");
 });
 
@@ -8216,8 +8216,8 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
         req,
         "success",
         festplayName
-          ? `System Administrator: Du wurdest fuer ${festplayName} freigeschaltet.`
-          : "System Administrator: Du wurdest fuer ein Festspiel freigeschaltet."
+          ? `System Administrator: Du wurdest für ${festplayName} freigeschaltet.`
+          : "System Administrator: Du wurdest für ein Festspiel freigeschaltet."
       );
       return res.redirect(req.get("referer") || "/dashboard");
     }
@@ -8535,11 +8535,11 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
     dashboard_label: isFreeRp ? "Free - RP" : server.label,
     dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
     dashboard_area_description: isFreeRp
-      ? "Hier liegen deine Charaktere und Festspiele fuer Free RP."
-      : "Hier liegen deine Charaktere und Festspiele fuer den Erotik-Bereich.",
+      ? "Hier liegen deine Charaktere und Festspiele für Free RP."
+      : "Hier liegen deine Charaktere und Festspiele für den Erotik-Bereich.",
     dashboard_card_caption: isFreeRp
-      ? "Charaktere und Festspiele fuer offene Geschichten und lockere Begegnungen."
-      : "Charaktere und Festspiele fuer intensivere Szenen und feste Dynamiken.",
+      ? "Charaktere und Festspiele für offene Geschichten und lockere Begegnungen."
+      : "Charaktere und Festspiele für intensivere Szenen und feste Dynamiken.",
     festplays,
     characters: ownCharacters
       .filter((character) => {
@@ -8909,7 +8909,7 @@ function getDashboardLarpSection() {
   return {
     title: "LARP Bereich",
     description:
-      "Hier entsteht spaeter dein Bereich fuer LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
+      "Hier entsteht später dein Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
     note: "Noch nicht freigeschaltet."
   };
 }
@@ -8954,20 +8954,20 @@ app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) =
   if (character.user_id !== req.session.user.id) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf diesen Gaestebuch-Code per E-Mail anfordern."
+      message: "Nur der Besitzer darf diesen Gästebuch-Code per E-Mail anfordern."
     });
   }
 
   const accountUser = getAccountUserById(req.session.user.id);
   const email = normalizeEmail(accountUser?.email || "");
   if (!email) {
-    setFlash(req, "error", "In deinem Account ist keine gueltige E-Mail-Adresse hinterlegt.");
+    setFlash(req, "error", "In deinem Account ist keine gültige E-Mail-Adresse hinterlegt.");
     return res.redirect(returnTarget);
   }
 
   const exportData = getGuestbookExportDataForCharacter(id);
   if (!exportData) {
-    setFlash(req, "error", "Gaestebuch-Code konnte nicht geladen werden.");
+    setFlash(req, "error", "Gästebuch-Code konnte nicht geladen werden.");
     return res.redirect(returnTarget);
   }
 
@@ -8976,21 +8976,21 @@ app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) =
       email,
       username: accountUser?.username || req.session.user.username,
       exportLabel: exportData.character.name,
-      title: `Gaestebuch-Code: ${exportData.character.name}`,
+      title: `Gästebuch-Code: ${exportData.character.name}`,
       exportText: buildGuestbookExportText([exportData]),
       attachmentBaseName: buildGuestbookExportAttachmentBaseName(exportData.character.name, new Date())
     });
     if (!deliveryResult?.delivered) {
-      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfuegbar.");
+      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfügbar.");
       return res.redirect(returnTarget);
     }
-    setFlash(req, "success", `Gaestebuch-Code von ${exportData.character.name} wurde per E-Mail verschickt.`);
+    setFlash(req, "success", `Gästebuch-Code von ${exportData.character.name} wurde per E-Mail verschickt.`);
   } catch (error) {
     console.error(error);
     setFlash(
       req,
       "error",
-      `Gaestebuch-Code konnte nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
+      `Gästebuch-Code konnte nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
     );
   }
 
@@ -9006,14 +9006,14 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
   const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}`);
   const dashboardCharacters = getDashboardGuestbookExportCharacters(serverSection);
   if (!dashboardCharacters.length) {
-    setFlash(req, "error", "Es sind keine eigenen Charaktere fuer diesen Bereich vorhanden.");
+    setFlash(req, "error", "Es sind keine eigenen Charaktere für diesen Bereich vorhanden.");
     return res.redirect(returnTarget);
   }
 
   const accountUser = getAccountUserById(req.session.user.id);
   const email = normalizeEmail(accountUser?.email || "");
   if (!email) {
-    setFlash(req, "error", "In deinem Account ist keine gueltige E-Mail-Adresse hinterlegt.");
+    setFlash(req, "error", "In deinem Account ist keine gültige E-Mail-Adresse hinterlegt.");
     return res.redirect(returnTarget);
   }
 
@@ -9022,7 +9022,7 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
     .filter((item) => item && Number(item.character?.user_id) === Number(req.session.user.id));
 
   if (!exportItems.length) {
-    setFlash(req, "error", "Gaestebuch-Codes konnten nicht geladen werden.");
+    setFlash(req, "error", "Gästebuch-Codes konnten nicht geladen werden.");
     return res.redirect(returnTarget);
   }
 
@@ -9031,7 +9031,7 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
       email,
       username: accountUser?.username || req.session.user.username,
       exportLabel: `${serverSection.dashboard_label || serverSection.label} (${exportItems.length})`,
-      title: `Gaestebuch-Codes: ${serverSection.dashboard_label || serverSection.label}`,
+      title: `Gästebuch-Codes: ${serverSection.dashboard_label || serverSection.label}`,
       exportText: buildGuestbookExportText(exportItems),
       attachmentBaseName: buildGuestbookExportAttachmentBaseName(
         `${serverSection.dashboard_label || serverSection.label}-alle`,
@@ -9039,20 +9039,20 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
       )
     });
     if (!deliveryResult?.delivered) {
-      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfuegbar.");
+      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfügbar.");
       return res.redirect(returnTarget);
     }
     setFlash(
       req,
       "success",
-      `Gaestebuch-Codes von ${exportItems.length} Charakteren wurden per E-Mail verschickt.`
+      `Gästebuch-Codes von ${exportItems.length} Charakteren wurden per E-Mail verschickt.`
     );
   } catch (error) {
     console.error(error);
     setFlash(
       req,
       "error",
-      `Gaestebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
+      `Gästebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
     );
   }
 
@@ -9714,7 +9714,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   if (!characterHasFestplayAccess(festplayId, character.id)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Dieser Charakter ist nicht fuer dieses Festspiel freigeschaltet."
+      message: "Dieser Charakter ist nicht für dieses Festspiel freigeschaltet."
     });
   }
 
@@ -9781,7 +9781,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     );
 
     return res.render("festplay-rooms", {
-      title: `Festspiel-Raume: ${festplay.name}`,
+      title: `Festspiel-Räume: ${festplay.name}`,
       character,
       festplay,
       festplayRooms,
@@ -9835,7 +9835,7 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
   if (!characterHasFestplayAccess(festplayId, character.id)) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Dieser Charakter ist nicht fuer dieses Festspiel freigeschaltet."
+      message: "Dieser Charakter ist nicht für dieses Festspiel freigeschaltet."
     });
   }
 
@@ -9847,7 +9847,7 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
   const roomName = normalizeRoomName(req.body.room_name);
   const roomDescription = normalizeRoomDescription(req.body.room_description || req.body.room_teaser);
   if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gueltigen Chatnamen eingeben.");
+    setFlash(req, "error", "Bitte einen gültigen Chatnamen eingeben.");
     return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
   }
 
@@ -9904,14 +9904,14 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
   if (character.user_id !== req.session.user.id) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf mit diesem Charakter Festspiel-Raeume anlegen."
+      message: "Nur der Besitzer darf mit diesem Charakter Festspiel-Räume anlegen."
     });
   }
 
   if (!canManageFestplayRooms) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Mit diesem Charakter duerfen fuer dieses Festspiel keine eigenen Raeume angelegt werden."
+      message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume angelegt werden."
     });
   }
 
@@ -9925,7 +9925,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
   const roomTeaser = normalizeBbcodeInput(req.body.room_teaser, 4000);
   const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
   if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gueltigen Raumnamen eingeben.");
+    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
   }
 
@@ -10122,7 +10122,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   if (!canManageFestplayRooms) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Mit diesem Charakter duerfen fuer dieses Festspiel keine eigenen Raeume bearbeitet werden."
+      message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume bearbeitet werden."
     });
   }
 
@@ -10160,7 +10160,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
 
   if (req.body.delete_room) {
     if (getSocketsInChannel(roomId, room.server_id).length > 0) {
-      setFlash(req, "error", "Der Raum kann erst geloescht werden, wenn niemand mehr darin ist.");
+      setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
       return res.redirect(getSafeReturnTarget(req, editorReturnTarget));
     }
 
@@ -10168,12 +10168,12 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
     deleteRoomData(roomId);
     io.emit("chat:room-removed", { room_id: roomId });
-    setFlash(req, "success", "Festspiel-Raum geloescht.");
+    setFlash(req, "success", "Festspiel-Raum gelöscht.");
     return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
   }
 
   if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gueltigen Raumnamen eingeben.");
+    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
     return res.redirect(getSafeReturnTarget(req, editorReturnTarget));
   }
 
@@ -10241,7 +10241,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   if (character.user_id !== req.session.user.id) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Nur der Besitzer darf eigene Festspiel-Raeume loeschen."
+      message: "Nur der Besitzer darf eigene Festspiel-Räume löschen."
     });
   }
 
@@ -10267,7 +10267,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   if (!canManageFestplayRooms) {
     return res.status(403).render("error", {
       title: "Kein Zugriff",
-      message: "Mit diesem Charakter duerfen fuer dieses Festspiel keine eigenen Raeume geloescht werden."
+      message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume gelöscht werden."
     });
   }
 
@@ -10297,7 +10297,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   }
 
   if (getSocketsInChannel(roomId, room.server_id).length > 0) {
-    setFlash(req, "error", "Der Raum kann erst geloescht werden, wenn niemand mehr darin ist.");
+    setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
     return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
   }
 
@@ -10305,7 +10305,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
   deleteRoomData(roomId);
   io.emit("chat:room-removed", { room_id: roomId });
-  setFlash(req, "success", "Festspiel-Raum geloescht.");
+  setFlash(req, "success", "Festspiel-Raum gelöscht.");
   return res.redirect(getSafeReturnTarget(req, editorBaseTarget));
 });
 
@@ -10913,14 +10913,14 @@ app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res)
       characterId: character.id,
       error
     });
-    setFlash(req, "error", "Das Festspiel konnte nicht geloescht werden.");
+    setFlash(req, "error", "Das Festspiel konnte nicht gelöscht werden.");
     return res.redirect(`/characters/${id}/festplays`);
   }
 
   setFlash(
     req,
     "success",
-    `Festspiel ${festplay.name} wurde geloescht. Zugeordnete Charaktere wurden wieder in den normalen Bereich gesetzt.`
+    `Festspiel ${festplay.name} wurde gelöscht. Zugeordnete Charaktere wurden wieder in den normalen Bereich gesetzt.`
   );
   return res.redirect(`/characters/${id}/festplays`);
 });
@@ -11129,7 +11129,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     deleteCharacterWithBackupTx(id);
   } catch (error) {
     console.error(error);
-    setFlash(req, "error", "Charakter konnte nicht geloescht werden.");
+    setFlash(req, "error", "Charakter konnte nicht gelöscht werden.");
     return res.redirect("/dashboard");
   }
 
@@ -11138,7 +11138,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     req.session.user = toSessionUser(refreshedUser);
   }
   emitHomeStatsUpdate();
-  setFlash(req, "success", "Charakter geloescht und als Backup gespeichert.");
+  setFlash(req, "success", "Charakter gelöscht und als Backup gespeichert.");
   return res.redirect("/dashboard");
 });
 
@@ -11187,7 +11187,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   );
 
   if (!ALLOWED_SERVER_IDS.has(nextServerId)) {
-    setFlash(req, "error", "Bitte einen gueltigen Zielserver auswaehlen.");
+    setFlash(req, "error", "Bitte einen gültigen Zielserver auswählen.");
     return res.redirect(returnTarget);
   }
 
@@ -11206,7 +11206,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   const accountUser = getAccountUserById(req.session.user.id);
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   if (nextServerId === "erp" && (viewerAge === null || viewerAge < 18)) {
-    setFlash(req, "error", "ERP ist erst ab 18 Jahren verfuegbar.");
+    setFlash(req, "error", "ERP ist erst ab 18 Jahren verfügbar.");
     return res.redirect(returnTarget);
   }
 
@@ -11230,7 +11230,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
     nextServerId === festplayHomeServerId &&
     nextDashboardPlacement === "festplay"
   ) {
-    successMessage = "Charakter wurde zurueck ins Festspiel gelegt.";
+    successMessage = "Charakter wurde zurück ins Festspiel gelegt.";
   } else if (
     festplayHomeServerId &&
     nextServerId === festplayHomeServerId &&
@@ -11386,7 +11386,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
 
   if (req.body.delete_room) {
     if (getSocketsInChannel(roomId, room.server_id).length > 0) {
-      setFlash(req, "error", "Der Raum kann erst geloescht werden, wenn niemand mehr darin ist.");
+      setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
       return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
     }
 
@@ -11395,7 +11395,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     deleteRoomData(roomId);
     io.emit("chat:room-removed", { room_id: roomId });
     emitRoomListRefresh(room.server_id);
-    setFlash(req, "success", "Raum geloescht.");
+    setFlash(req, "success", "Raum gelöscht.");
     return res.redirect(`/characters/${id}/rooms/new`);
   }
 
@@ -14569,7 +14569,7 @@ io.on("connection", (socket) => {
     if (isManagedFestplayChatRoom && /^\/(?:rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
       socket.emit("chat:message", {
         type: "system",
-        content: "Festspiel-Raeume steuerst du ueber die eigene Festspiel-Raumseite, nicht direkt im Chat.",
+        content: "Festspiel-Räume steuerst du über die eigene Festspiel-Raumseite, nicht direkt im Chat.",
         created_at: formatChatTimestamp()
       });
       return;
@@ -15163,7 +15163,7 @@ io.on("connection", (socket) => {
       if (!roomId || !room) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Du kannst nur in einem geoeffneten Raum wuerfeln.",
+          content: "Du kannst nur in einem geöffneten Raum würfeln.",
           created_at: formatChatTimestamp()
         });
         return;
@@ -15196,7 +15196,7 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         roomId,
         serverId,
-        `hat mit ${rollConfig.notation} gewuerfelt (${rollResult.resultLabel}).`,
+        `hat mit ${rollConfig.notation} gewürfelt (${rollResult.resultLabel}).`,
         {
           system_kind: "dice-roll",
           presence_actor_name: rollDisplayName,

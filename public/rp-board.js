@@ -113,8 +113,8 @@
         deleteButton.type = "button";
         deleteButton.className = "rp-board-entry-delete";
         deleteButton.dataset.entryId = String(Number(entry?.id || 0));
-        deleteButton.setAttribute("aria-label", "Eintrag loeschen");
-        deleteButton.title = "Eintrag loeschen";
+        deleteButton.setAttribute("aria-label", "Eintrag löschen");
+        deleteButton.title = "Eintrag löschen";
         deleteButton.textContent = "\u00d7";
         meta.appendChild(deleteButton);
       }

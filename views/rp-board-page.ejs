@@ -13,7 +13,7 @@
   <div class="header-line">
     <div>
       <h1>RP-Aushang</h1>
-      <p class="muted">Allgemeine RP-Suche fuer <%= rpBoardServerLabel %>. Keine Festspielsuche.</p>
+      <p class="muted">Allgemeine RP-Suche für <%= rpBoardServerLabel %>. Keine Festspielsuche.</p>
     </div>
   </div>
 
@@ -30,7 +30,7 @@
         placeholder="Suche lockeres RP, biete eine Szene an oder frag allgemein nach Mitspielern."
         required
       ></textarea>
-      <p class="rp-board-hint">Ohne BBCode. Du kannst deinen eigenen Eintrag danach wieder loeschen.</p>
+      <p class="rp-board-hint">Ohne BBCode. Du kannst deinen eigenen Eintrag danach wieder löschen.</p>
       <div class="rp-board-actions">
         <button type="submit" class="btn rp-board-submit">Eintrag setzen</button>
       </div>
@@ -38,7 +38,7 @@
 
     <section class="rp-board-entries-wrap rp-board-page-entries-wrap">
       <p class="muted rp-board-empty" data-rp-board-empty <%= rpBoardEntries && rpBoardEntries.length ? "hidden" : "" %>>
-        Noch keine Eintraege vorhanden.
+        Noch keine Einträge vorhanden.
       </p>
       <div class="rp-board-entries rp-board-page-entries" data-rp-board-list <%= rpBoardEntries && rpBoardEntries.length ? "" : "hidden" %>>
         <% (rpBoardEntries || []).forEach((entry) => { %>
@@ -68,8 +68,8 @@
                     type="button"
                     class="rp-board-entry-delete"
                     data-entry-id="<%= Number(entry.id) %>"
-                    aria-label="Eintrag loeschen"
-                    title="Eintrag loeschen"
+                    aria-label="Eintrag löschen"
+                    title="Eintrag löschen"
                   >
                     &times;
                   </button>

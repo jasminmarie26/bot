@@ -24,8 +24,8 @@
       <button
         type="submit"
         class="btn dashboard-add-character-btn dashboard-export-all-btn"
-        aria-label="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
-        title="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+        aria-label="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
+        title="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
       >
         &#10003;
       </button>
@@ -76,7 +76,7 @@
                       type="submit"
                       class="character-mini-move-btn"
                       aria-label="Charakter verschieben"
-                      title="Zielserver auswaehlen"
+                      title="Zielserver auswählen"
                     >
                       &harr;
                     </button>
@@ -91,8 +91,8 @@
                   <button
                     type="submit"
                     class="character-mini-export-btn"
-                    aria-label="Gaestebuch-Code per E-Mail senden"
-                    title="Gaestebuch-Code per E-Mail senden"
+                    aria-label="Gästebuch-Code per E-Mail senden"
+                    title="Gästebuch-Code per E-Mail senden"
                   >
                     <span class="character-mini-export-icon" aria-hidden="true"></span>
                   </button>
@@ -101,13 +101,13 @@
                   method="POST"
                   action="/characters/<%= char.id %>/delete"
                   class="character-mini-delete-form"
-                  onsubmit="return confirm('Charakter wirklich loeschen?')"
+                  onsubmit="return confirm('Charakter wirklich löschen?')"
                 >
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
-                    aria-label="Charakter loeschen"
-                    title="Charakter loeschen"
+                    aria-label="Charakter löschen"
+                    title="Charakter löschen"
                   >
                     X
                   </button>
@@ -155,7 +155,7 @@
                     <a
                       class="character-mini-item"
                       href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/rooms"
-                      title="Festspiel-Raume mit <%= char.name %> oeffnen"
+                      title="Festspiel-Räume mit <%= char.name %> öffnen"
                     >
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
@@ -187,7 +187,7 @@
                         type="submit"
                         class="character-mini-move-btn"
                         aria-label="Charakter verschieben"
-                        title="Zielserver auswaehlen"
+                        title="Zielserver auswählen"
                       >
                         &harr;
                       </button>
@@ -201,8 +201,8 @@
                       <button
                         type="submit"
                         class="character-mini-export-btn"
-                        aria-label="Gaestebuch-Code per E-Mail senden"
-                        title="Gaestebuch-Code per E-Mail senden"
+                        aria-label="Gästebuch-Code per E-Mail senden"
+                        title="Gästebuch-Code per E-Mail senden"
                       >
                         <span class="character-mini-export-icon" aria-hidden="true"></span>
                       </button>
@@ -212,13 +212,13 @@
                         method="POST"
                         action="/characters/<%= char.id %>/delete"
                         class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich loeschen?')"
+                        onsubmit="return confirm('Charakter wirklich löschen?')"
                       >
                         <button
                           type="submit"
                           class="character-mini-delete-btn"
-                          aria-label="Charakter loeschen"
-                          title="Charakter loeschen"
+                          aria-label="Charakter löschen"
+                          title="Charakter löschen"
                         >
                           X
                         </button>
@@ -350,7 +350,7 @@
               mode: "main"
             },
             {
-              label: "Zurueck zum Festspiel",
+              label: "Zurück zum Festspiel",
               serverId: homeServer,
               mode: "festplay"
             }
@@ -395,11 +395,11 @@
         if (homeServer === currentServer && position === "festplay") {
           note.textContent = `Du kannst ${characterName} oben in ${getServerButtonLabel(homeServer)} ablegen oder auf ${getServerButtonLabel(getOtherServerId(homeServer))} verschieben.`;
         } else if (homeServer && position === "main") {
-          note.textContent = `Du kannst ${characterName} auf den anderen RP-Server legen oder zurueck ins Festspiel schieben.`;
+          note.textContent = `Du kannst ${characterName} auf den anderen RP-Server legen oder zurück ins Festspiel schieben.`;
         }
 
         if (!erpMoveAllowed && options.some((option) => option.serverId === "erp")) {
-          note.textContent = `${note.textContent} ERP ist fuer Accounts unter 18 nicht verfuegbar.`;
+          note.textContent = `${note.textContent} ERP ist für Accounts unter 18 nicht verfügbar.`;
         }
 
         modal.hidden = false;
