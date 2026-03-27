@@ -5494,10 +5494,39 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   };
 }
 
+function buildGuestbookPageSettings(baseSettings = null, page = null) {
+  return {
+    image_url: /^https?:\/\/.+/i.test(String(page?.image_url || "").trim())
+      ? String(page.image_url || "").trim().slice(0, 500)
+      : "",
+    inner_image_url: /^https?:\/\/.+/i.test(String(page?.inner_image_url || "").trim())
+      ? String(page.inner_image_url || "").trim().slice(0, 500)
+      : "",
+    outer_image_url: /^https?:\/\/.+/i.test(String(page?.outer_image_url || "").trim())
+      ? String(page.outer_image_url || "").trim().slice(0, 500)
+      : "",
+    inner_image_opacity: normalizeGuestbookOpacity(page?.inner_image_opacity, 100),
+    outer_image_opacity: normalizeGuestbookOpacity(page?.outer_image_opacity, 100),
+    inner_image_repeat: Number(page?.inner_image_repeat) === 1 ? 1 : 0,
+    outer_image_repeat: Number(page?.outer_image_repeat) === 1 ? 1 : 0,
+    censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
+    chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
+    frame_color: normalizeOptionalGuestbookColor(page?.frame_color),
+    background_color: normalizeOptionalGuestbookColor(page?.background_color),
+    surround_color: normalizeOptionalGuestbookColor(page?.surround_color),
+    page_style: normalizeGuestbookOption(page?.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, "scroll"),
+    theme_style: normalizeGuestbookOption(page?.theme_style, GUESTBOOK_THEME_STYLE_OPTIONS, "pergament-gold"),
+    font_style: normalizeGuestbookOption(baseSettings?.font_style, GUESTBOOK_FONT_STYLE_OPTIONS, "default"),
+    tags: ""
+  };
+}
+
 function ensureGuestbookPages(characterId) {
   const existingPages = db
     .prepare(
-      `SELECT id, character_id, page_number, title, content, created_at, updated_at
+      `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
+              inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
+              background_color, surround_color, page_style, theme_style, created_at, updated_at
        FROM guestbook_pages
        WHERE character_id = ?
        ORDER BY page_number ASC, id ASC`
@@ -5508,14 +5537,50 @@ function ensureGuestbookPages(characterId) {
     return existingPages;
   }
 
+  const currentSettings = getOrCreateGuestbookSettings(characterId);
+  const defaultSettings = buildGuestbookPageSettings(currentSettings, currentSettings);
+
   db.prepare(
-    `INSERT INTO guestbook_pages (character_id, page_number, title, content)
-     VALUES (?, 1, '1', '')`
-  ).run(characterId);
+    `INSERT INTO guestbook_pages (
+       character_id,
+       page_number,
+       title,
+       content,
+       image_url,
+       inner_image_url,
+       outer_image_url,
+       inner_image_opacity,
+       outer_image_opacity,
+       inner_image_repeat,
+       outer_image_repeat,
+       frame_color,
+       background_color,
+       surround_color,
+       page_style,
+       theme_style
+     )
+     VALUES (?, 1, '1', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    characterId,
+    defaultSettings.image_url,
+    defaultSettings.inner_image_url,
+    defaultSettings.outer_image_url,
+    defaultSettings.inner_image_opacity,
+    defaultSettings.outer_image_opacity,
+    defaultSettings.inner_image_repeat,
+    defaultSettings.outer_image_repeat,
+    defaultSettings.frame_color,
+    defaultSettings.background_color,
+    defaultSettings.surround_color,
+    defaultSettings.page_style,
+    defaultSettings.theme_style
+  );
 
   return db
     .prepare(
-      `SELECT id, character_id, page_number, title, content, created_at, updated_at
+      `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
+              inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
+              background_color, surround_color, page_style, theme_style, created_at, updated_at
        FROM guestbook_pages
        WHERE character_id = ?
        ORDER BY page_number ASC, id ASC`
@@ -11573,7 +11638,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const requestedPageId = Number(req.query.page_id);
   const activeGuestbookPage =
     guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
-  const guestbookSettings = getOrCreateGuestbookSettings(id);
+  const guestbookSettings = buildGuestbookPageSettings(
+    getOrCreateGuestbookSettings(id),
+    activeGuestbookPage
+  );
   const requestedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(req.query.entries_page);
   const totalGuestbookEntries = getGuestbookEntriesCountForViewer(
     character,
@@ -11845,7 +11913,7 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const settings = getOrCreateGuestbookSettings(id);
+  const settings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
 
   return res.render("guestbook-editor", {
     title: `Gästebuch bearbeiten: ${character.name}`,
@@ -11886,7 +11954,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     ? pages.find((page) => page.id === Number(storedPreview.page_id)) || fallbackPage
     : fallbackPage;
 
-  const baseSettings = getOrCreateGuestbookSettings(id);
+  const baseSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), previewPage);
   const previewSettings = canUseStoredPreview
     ? { ...baseSettings, ...(storedPreview.settings || {}) }
     : baseSettings;
@@ -11930,14 +11998,43 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.body.page_id);
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const currentSettings = getOrCreateGuestbookSettings(id);
+  const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
 
   db.prepare(
     `UPDATE guestbook_pages
-     SET content = ?, updated_at = CURRENT_TIMESTAMP
+     SET content = ?,
+         image_url = ?,
+         inner_image_url = ?,
+         outer_image_url = ?,
+         inner_image_opacity = ?,
+         outer_image_opacity = ?,
+         inner_image_repeat = ?,
+         outer_image_repeat = ?,
+         frame_color = ?,
+         background_color = ?,
+         surround_color = ?,
+         page_style = ?,
+         theme_style = ?,
+         updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND character_id = ?`
-  ).run(payload.pageContent, activePage.id, id);
+  ).run(
+    payload.pageContent,
+    payload.settings.image_url,
+    payload.settings.inner_image_url,
+    payload.settings.outer_image_url,
+    payload.settings.inner_image_opacity,
+    payload.settings.outer_image_opacity,
+    payload.settings.inner_image_repeat,
+    payload.settings.outer_image_repeat,
+    payload.settings.frame_color,
+    payload.settings.background_color,
+    payload.settings.surround_color,
+    payload.settings.page_style,
+    payload.settings.theme_style,
+    activePage.id,
+    id
+  );
 
   db.prepare(
     `UPDATE guestbook_settings
@@ -12014,7 +12111,7 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.body.page_id);
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const currentSettings = getOrCreateGuestbookSettings(id);
+  const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
 
   req.session.guestbookPreview = {
@@ -12044,6 +12141,10 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
     });
   }
 
+  const pages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.body.page_id);
+  const sourcePage = pages.find((page) => page.id === requestedPageId) || pages[0];
+  const sourcePageSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), sourcePage);
   const nextPageNumber =
     db
       .prepare(
@@ -12055,10 +12156,43 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
 
   const info = db
     .prepare(
-      `INSERT INTO guestbook_pages (character_id, page_number, title, content)
-       VALUES (?, ?, ?, '')`
+      `INSERT INTO guestbook_pages (
+         character_id,
+         page_number,
+         title,
+         content,
+         image_url,
+         inner_image_url,
+         outer_image_url,
+         inner_image_opacity,
+         outer_image_opacity,
+         inner_image_repeat,
+         outer_image_repeat,
+         frame_color,
+         background_color,
+         surround_color,
+         page_style,
+         theme_style
+       )
+       VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(id, nextPageNumber, String(nextPageNumber));
+    .run(
+      id,
+      nextPageNumber,
+      String(nextPageNumber),
+      sourcePageSettings.image_url,
+      sourcePageSettings.inner_image_url,
+      sourcePageSettings.outer_image_url,
+      sourcePageSettings.inner_image_opacity,
+      sourcePageSettings.outer_image_opacity,
+      sourcePageSettings.inner_image_repeat,
+      sourcePageSettings.outer_image_repeat,
+      sourcePageSettings.frame_color,
+      sourcePageSettings.background_color,
+      sourcePageSettings.surround_color,
+      sourcePageSettings.page_style,
+      sourcePageSettings.theme_style
+    );
 
   if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
     delete req.session.guestbookPreview;
@@ -12749,13 +12883,46 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
 
   try {
     const tx = db.transaction((id) => {
+      const currentSettings = getOrCreateGuestbookSettings(id);
+      const resetPageSettings = buildGuestbookPageSettings(currentSettings, currentSettings);
       deleteGuestbookNotificationsForCharacter(id);
       db.prepare("DELETE FROM guestbook_entries WHERE character_id = ?").run(id);
       db.prepare("DELETE FROM guestbook_pages WHERE character_id = ?").run(id);
       db.prepare(
-        `INSERT INTO guestbook_pages (character_id, page_number, title, content)
-         VALUES (?, 1, '1', '')`
-      ).run(id);
+        `INSERT INTO guestbook_pages (
+           character_id,
+           page_number,
+           title,
+           content,
+           image_url,
+           inner_image_url,
+           outer_image_url,
+           inner_image_opacity,
+           outer_image_opacity,
+           inner_image_repeat,
+           outer_image_repeat,
+           frame_color,
+           background_color,
+           surround_color,
+           page_style,
+           theme_style
+         )
+         VALUES (?, 1, '1', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        id,
+        resetPageSettings.image_url,
+        resetPageSettings.inner_image_url,
+        resetPageSettings.outer_image_url,
+        resetPageSettings.inner_image_opacity,
+        resetPageSettings.outer_image_opacity,
+        resetPageSettings.inner_image_repeat,
+        resetPageSettings.outer_image_repeat,
+        resetPageSettings.frame_color,
+        resetPageSettings.background_color,
+        resetPageSettings.surround_color,
+        resetPageSettings.page_style,
+        resetPageSettings.theme_style
+      );
     });
     tx(characterId);
   } catch (error) {

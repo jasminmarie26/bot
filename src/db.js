@@ -108,6 +108,18 @@ db.exec(`
     page_number INTEGER NOT NULL,
     title TEXT NOT NULL DEFAULT '',
     content TEXT NOT NULL DEFAULT '',
+    image_url TEXT NOT NULL DEFAULT '',
+    inner_image_url TEXT NOT NULL DEFAULT '',
+    outer_image_url TEXT NOT NULL DEFAULT '',
+    inner_image_opacity INTEGER NOT NULL DEFAULT 100,
+    outer_image_opacity INTEGER NOT NULL DEFAULT 100,
+    inner_image_repeat INTEGER NOT NULL DEFAULT 0,
+    outer_image_repeat INTEGER NOT NULL DEFAULT 0,
+    frame_color TEXT NOT NULL DEFAULT '',
+    background_color TEXT NOT NULL DEFAULT '',
+    surround_color TEXT NOT NULL DEFAULT '',
+    page_style TEXT NOT NULL DEFAULT 'scroll',
+    theme_style TEXT NOT NULL DEFAULT 'pergament-gold',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
@@ -325,10 +337,29 @@ const guestbookEntryColumns = db
   .all()
   .map((column) => column.name);
 
+const guestbookPageColumns = db
+  .prepare("PRAGMA table_info(guestbook_pages)")
+  .all()
+  .map((column) => column.name);
+
 const guestbookSettingsColumns = db
   .prepare("PRAGMA table_info(guestbook_settings)")
   .all()
   .map((column) => column.name);
+
+const guestbookPageDesignColumnsWereMissing =
+  !guestbookPageColumns.includes("image_url") ||
+  !guestbookPageColumns.includes("inner_image_url") ||
+  !guestbookPageColumns.includes("outer_image_url") ||
+  !guestbookPageColumns.includes("inner_image_opacity") ||
+  !guestbookPageColumns.includes("outer_image_opacity") ||
+  !guestbookPageColumns.includes("inner_image_repeat") ||
+  !guestbookPageColumns.includes("outer_image_repeat") ||
+  !guestbookPageColumns.includes("frame_color") ||
+  !guestbookPageColumns.includes("background_color") ||
+  !guestbookPageColumns.includes("surround_color") ||
+  !guestbookPageColumns.includes("page_style") ||
+  !guestbookPageColumns.includes("theme_style");
 
 const chatRoomColumns = db
   .prepare("PRAGMA table_info(chat_rooms)")
@@ -559,6 +590,54 @@ if (!guestbookSettingsColumns.includes("surround_color")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN surround_color TEXT NOT NULL DEFAULT ''");
 }
 
+if (!guestbookPageColumns.includes("image_url")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("inner_image_url")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("outer_image_url")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("inner_image_opacity")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!guestbookPageColumns.includes("outer_image_opacity")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!guestbookPageColumns.includes("inner_image_repeat")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_repeat INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookPageColumns.includes("outer_image_repeat")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_repeat INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookPageColumns.includes("frame_color")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN frame_color TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("background_color")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN background_color TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("surround_color")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN surround_color TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookPageColumns.includes("page_style")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN page_style TEXT NOT NULL DEFAULT 'scroll'");
+}
+
+if (!guestbookPageColumns.includes("theme_style")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN theme_style TEXT NOT NULL DEFAULT 'pergament-gold'");
+}
+
 if (!guestbookSettingsColumns.includes("inner_image_url")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_url TEXT NOT NULL DEFAULT ''");
 }
@@ -725,6 +804,18 @@ db.prepare("UPDATE guestbook_settings SET inner_image_opacity = 100 WHERE inner_
 db.prepare("UPDATE guestbook_settings SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET image_url = '' WHERE image_url IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET inner_image_url = '' WHERE inner_image_url IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET inner_image_opacity = 100 WHERE inner_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET frame_color = '' WHERE frame_color IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET background_color = '' WHERE background_color IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET surround_color = '' WHERE surround_color IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET page_style = 'scroll' WHERE page_style IS NULL OR trim(page_style) = ''").run();
+db.prepare("UPDATE guestbook_pages SET theme_style = 'pergament-gold' WHERE theme_style IS NULL OR trim(theme_style) = ''").run();
 db.prepare("UPDATE guestbook_settings SET theme_style = 'pergament-gold' WHERE theme_style IS NULL OR trim(theme_style) = ''").run();
 db.prepare(`
   UPDATE guestbook_settings
@@ -738,6 +829,44 @@ db.prepare(`
   END
   WHERE theme_style IN ('blumen', 'nacht', 'minimal', 'neutral-weiss', 'tiefschwarz')
 `).run();
+db.prepare(`
+  UPDATE guestbook_pages
+  SET theme_style = CASE theme_style
+    WHEN 'blumen' THEN 'rosenlack'
+    WHEN 'nacht' THEN 'sternsamt'
+    WHEN 'minimal' THEN 'mondsilber'
+    WHEN 'neutral-weiss' THEN 'winterglas'
+    WHEN 'tiefschwarz' THEN 'obsidian-ornament'
+    ELSE theme_style
+  END
+  WHERE theme_style IN ('blumen', 'nacht', 'minimal', 'neutral-weiss', 'tiefschwarz')
+`).run();
+if (guestbookPageDesignColumnsWereMissing) {
+  db.prepare(`
+    UPDATE guestbook_pages
+    SET image_url = gs.image_url,
+        inner_image_url = gs.inner_image_url,
+        outer_image_url = gs.outer_image_url,
+        inner_image_opacity = gs.inner_image_opacity,
+        outer_image_opacity = gs.outer_image_opacity,
+        inner_image_repeat = gs.inner_image_repeat,
+        outer_image_repeat = gs.outer_image_repeat,
+        frame_color = gs.frame_color,
+        background_color = gs.background_color,
+        surround_color = gs.surround_color,
+        page_style = gs.page_style,
+        theme_style = CASE gs.theme_style
+          WHEN 'blumen' THEN 'rosenlack'
+          WHEN 'nacht' THEN 'sternsamt'
+          WHEN 'minimal' THEN 'mondsilber'
+          WHEN 'neutral-weiss' THEN 'winterglas'
+          WHEN 'tiefschwarz' THEN 'obsidian-ornament'
+          ELSE gs.theme_style
+        END
+    FROM guestbook_settings gs
+    WHERE gs.character_id = guestbook_pages.character_id
+  `).run();
+}
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();
 db.prepare("UPDATE users SET password_reset_token = '' WHERE password_reset_token IS NULL").run();

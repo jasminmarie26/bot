@@ -18,6 +18,7 @@
       </button>
 
       <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+        <input type="hidden" name="page_id" value="<%= activePage.id %>" />
         <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
       </form>
 
