@@ -159,6 +159,33 @@
       </section>
     <% } %>
 
+    <% if (helpTopic.slug === "backup") { %>
+      <section class="panel help-section">
+        <h2>Backup</h2>
+        <p>Hier findest du geloeschte Charaktere zur Wiederherstellung.</p>
+
+        <h3>Wichtig</h3>
+        <ul class="help-list">
+          <li>Den Link <code>Backup</code> findest du oben im Header im Bereich mit Charakterauswahl vor <code>Live Updates</code>.</li>
+          <li>Er oeffnet sich in einem neuen Tab auf einer eigenen Seite.</li>
+          <li>Dort werden nur geloeschte Charaktere angezeigt.</li>
+        </ul>
+
+        <h3>Wiederherstellen</h3>
+        <ul class="help-list">
+          <li>Vor dem <code>X</code> sitzt der Button zum Wiederherstellen.</li>
+          <li>Damit kommt der Charakter mit Gaestebuch, Farbe, Gaestebuch-Seiten und Gaestebucheintraegen zurueck.</li>
+          <li>Der Charakter erscheint danach wieder normal im Bereich.</li>
+        </ul>
+
+        <h3>Endgueltig loeschen</h3>
+        <ul class="help-list">
+          <li>Mit dem <code>X</code> loeschst du das Backup endgueltig.</li>
+          <li>Danach kann der Charakter nicht mehr wiederhergestellt werden.</li>
+        </ul>
+      </section>
+    <% } %>
+
     <% if (helpTopic.slug === "gaestebuch-design-bbcode") { %>
       <section class="panel help-section">
         <h2>G&auml;stebuch Design &amp; BBCode</h2>

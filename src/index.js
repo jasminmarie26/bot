@@ -7613,14 +7613,10 @@ app.get("/rp-board", requireAuth, (req, res) => {
 });
 
 app.get("/character-backups", requireAuth, (req, res) => {
-  const characterBackups = getCharacterBackupsForUser(req.session.user.id).map((backup) => ({
-    ...backup,
-    server_label: getServerLabel(backup.server_id),
-    deleted_at_label: formatGermanDateTime(backup.deleted_at)
-  }));
+  const characterBackups = getCharacterBackupsForUser(req.session.user.id);
 
   return res.render("character-backups", {
-    title: "Backup",
+    title: "Geloeschte Charaktere",
     characterBackups
   });
 });
@@ -8689,6 +8685,7 @@ app.get("/members", requireAuth, (req, res) => {
 const HELP_TOPICS = [
   { slug: "charakter-anlegen", title: "Charakter anlegen" },
   { slug: "festspiele-anlegen", title: "Festspiele anlegen" },
+  { slug: "backup", title: "Backup" },
   { slug: "rp-aushang", title: "RP-Aushang" },
   { slug: "eigene-raeume", title: "Eigene Räume" },
   { slug: "raumliste-raeume", title: "Raumliste & Räume" },

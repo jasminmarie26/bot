@@ -2,7 +2,7 @@
 
 <section class="header-line dashboard-page-header">
   <div>
-    <h1>Backup</h1>
+    <h1>Geloeschte Charaktere</h1>
     <p class="muted">Hier kannst du geloeschte Charaktere mit Gaestebuch, Farbe und Gaestebucheintraegen wiederherstellen.</p>
   </div>
 </section>
@@ -19,17 +19,13 @@
 
     <div class="dashboard-server-panel dashboard-character-overview-body">
       <% if (!characterBackups || !characterBackups.length) { %>
-        <p class="muted">Noch keine geloeschten Charaktere im Backup vorhanden.</p>
+        <p class="muted">Noch keine geloeschten Charaktere vorhanden.</p>
       <% } else { %>
         <div class="character-mini-grid">
           <% characterBackups.forEach((backup) => { %>
             <article class="character-mini-card">
               <div class="character-mini-item">
                 <span class="character-mini-name"><%= backup.character_name %></span>
-                <span class="muted"><%= backup.server_label %></span>
-                <% if (backup.deleted_at_label) { %>
-                  <span class="muted">Geloescht: <%= backup.deleted_at_label %></span>
-                <% } %>
               </div>
               <div class="character-mini-actions">
                 <form
