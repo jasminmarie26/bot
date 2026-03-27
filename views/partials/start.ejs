@@ -140,6 +140,11 @@
       topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
     ); %>
     <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive); %>
+    <% const showTopbarBackupLink = Boolean(
+      currentUser &&
+      !topbarGuestbookModeActive &&
+      isDashboardPath
+    ); %>
     <% const showTopbarRpBoardLink = Boolean(
       !topbarGuestbookModeActive &&
       menuCharacter &&
@@ -213,6 +218,9 @@
             <% } else { %>
               <a href="/login">Login</a>
               <a href="/register">Registrieren</a>
+            <% } %>
+            <% if (showTopbarBackupLink) { %>
+              <a href="/character-backups" target="_blank" rel="noopener noreferrer">Backup</a>
             <% } %>
             <% if (showTopbarLiveUpdatesLink) { %>
               <a

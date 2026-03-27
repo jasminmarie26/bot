@@ -7381,6 +7381,12 @@ app.get("/rp-board", requireAuth, (req, res) => {
   });
 });
 
+app.get("/character-backups", requireAuth, (req, res) => {
+  return res.render("character-backups", {
+    title: "Backup"
+  });
+});
+
 app.get("/rp-board/state", requireAuth, (req, res) => {
   const context = resolveRpBoardContextForUser(
     req.session.user.id,
