@@ -3,13 +3,38 @@
   const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
   const topbarBrandModifier = "is-character";
   const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
+  const normalizeGuestbookOpacity = (value, fallback = 100) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, Math.round(parsed)));
+  };
+  const buildGuestbookCssUrl = (value) => {
+    const normalized = String(value || "").trim();
+    return normalized ? `url(${JSON.stringify(normalized)})` : "";
+  };
+  const innerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.inner_image_opacity, 100);
+  const outerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.outer_image_opacity, 100);
+  const innerImageRepeat = Number(guestbookSettings?.inner_image_repeat) === 1;
+  const outerImageRepeat = Number(guestbookSettings?.outer_image_repeat) === 1;
   const guestbookPageStyle = [
     `color:${guestbookSettings?.chat_text_color || '#AEE7B7'}`,
     guestbookSettings?.frame_color ? `--gb-frame-color:${guestbookSettings.frame_color}` : "",
-    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : ""
+    guestbookSettings?.background_color ? `--gb-background-color:${guestbookSettings.background_color}` : "",
+    guestbookSettings?.inner_image_url ? `--gb-inner-image:${buildGuestbookCssUrl(guestbookSettings.inner_image_url)}` : "",
+    `--gb-inner-image-opacity:${innerImageOpacity / 100}`,
+    `--gb-inner-image-repeat:${innerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-inner-image-size:${innerImageRepeat ? "auto" : "cover"}`,
+    `--gb-inner-image-position:${innerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
   const guestbookLayoutStyle = [
-    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : ""
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
+    guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",
+    `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
+    `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
+    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
   const guestbookContainerStyle = [
     effectiveGuestbookSurroundColor ? `--gb-page-fill:${effectiveGuestbookSurroundColor}` : ""
@@ -39,7 +64,7 @@
     <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
 
     <article
-      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'blumen' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
+      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %>"
       style="<%= guestbookPageStyle %>"
     >
       <% if (guestbookSettings?.image_url) { %>

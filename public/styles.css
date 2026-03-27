@@ -5131,6 +5131,27 @@ body.page-home-screen .home-hero-actions {
   position: relative;
   padding-top: 0;
   background: var(--gb-surround-color, transparent);
+  isolation: isolate;
+}
+
+.guestbook-layout::before,
+.guestbook-preview-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--gb-outer-image, none);
+  background-position: var(--gb-outer-image-position, center top);
+  background-size: var(--gb-outer-image-size, cover);
+  background-repeat: var(--gb-outer-image-repeat, no-repeat);
+  opacity: var(--gb-outer-image-opacity, 0);
+}
+
+.guestbook-layout > *,
+.guestbook-preview-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 body:has(.guestbook-layout) .container {
@@ -5332,6 +5353,19 @@ body.theme-atari .guestbook-entry-panel {
   font-size: var(--gb-base-font-size, 10.16px);
 }
 
+.guestbook-page-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--gb-inner-image, none);
+  background-position: var(--gb-inner-image-position, center top);
+  background-size: var(--gb-inner-image-size, cover);
+  background-repeat: var(--gb-inner-image-repeat, no-repeat);
+  opacity: var(--gb-inner-image-opacity, 0);
+}
+
 .guestbook-page-shell {
   position: relative;
   width: min(100%, var(--guestbook-frame-width));
@@ -5392,18 +5426,47 @@ body.theme-atari .guestbook-entry-panel {
   right: calc(-1.8rem - 0.55rem);
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss {
+.guestbook-page-preview[class*="gb-theme-"] {
   --gb-content-width: 600px;
-  background: var(--gb-background-color, #ffffff);
-  border: 1px solid var(--gb-frame-color, #181818);
-  border-radius: 0;
-  padding: 20px;
-  box-shadow:
-    0 0 0 4px rgba(255, 255, 255, 0.98) inset,
-    0 0 0 1px rgba(0, 0, 0, 0.18);
+  --gb-theme-border: rgba(178, 138, 84, 0.92);
+  --gb-theme-line: color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 48%, transparent);
+  --gb-theme-base: #241a12;
+  --gb-theme-surface:
+    radial-gradient(circle at 14% 14%, rgba(255, 255, 255, 0.08), transparent 24%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent 44%, rgba(0, 0, 0, 0.16));
+  --gb-theme-frame:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 78%, white 22%), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 70%, black 10%), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 74%, white 14%), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 68%, black 10%), transparent) right/1px 100% no-repeat;
+  --gb-theme-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--gb-frame-color, var(--gb-theme-border));
+  border-radius: var(--gb-theme-radius, 18px);
+  background: var(--gb-theme-surface), var(--gb-background-color, var(--gb-theme-base));
+  box-shadow: var(--gb-theme-shadow);
+  overflow: hidden;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body {
+.guestbook-page-preview[class*="gb-theme-"]::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  z-index: 1;
+  border-radius: calc(var(--gb-theme-radius, 18px) - 6px);
+  border: 1px solid color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 62%, transparent);
+  background: var(--gb-theme-frame);
+  pointer-events: none;
+  opacity: 0.96;
+}
+
+.guestbook-page-preview[class*="gb-theme-"] > * {
+  position: relative;
+  z-index: 2;
+}
+
+.guestbook-page-preview[class*="gb-theme-"] .guestbook-entry-body {
   color: inherit;
   max-width: var(--gb-content-width);
   line-height: 1.34;
@@ -5412,56 +5475,48 @@ body.theme-atari .guestbook-entry-panel {
   overflow-wrap: normal;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body a,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body strong,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body b,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body em,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body i,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body u,
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-entry-body s {
-  color: #111 !important;
+.guestbook-page-preview[class*="gb-theme-"] .guestbook-entry-body a {
+  color: color-mix(in srgb, currentColor 84%, white 16%);
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-hr {
-  border-top-color: rgba(0, 0, 0, 0.42);
+.guestbook-page-preview[class*="gb-theme-"] .bb-hr {
+  border-top-color: var(--gb-theme-line);
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-table td {
-  border-color: rgba(0, 0, 0, 0.42);
+.guestbook-page-preview[class*="gb-theme-"] .bb-table td {
+  border-color: var(--gb-theme-line);
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .guestbook-page-image {
+.guestbook-page-preview[class*="gb-theme-"] .guestbook-page-image {
   max-height: none;
   object-fit: contain;
   margin-bottom: 0;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-image {
+.guestbook-page-preview[class*="gb-theme-"] .bb-image {
   width: auto;
   margin-top: 0;
   margin-bottom: 0;
   vertical-align: top;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-image-left {
+.guestbook-page-preview[class*="gb-theme-"] .bb-image-left {
   width: auto;
   max-width: 120px;
   margin: 0 0.35rem 0.25rem 0;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-image-right {
+.guestbook-page-preview[class*="gb-theme-"] .bb-image-right {
   width: auto;
   max-width: 120px;
   margin: 0 0 0.25rem 0.35rem;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-gradient {
+.guestbook-page-preview[class*="gb-theme-"] .bb-gradient {
   font-weight: 400;
 }
 
-.guestbook-page-preview.gb-theme-neutral-weiss .bb-block {
+.guestbook-page-preview[class*="gb-theme-"] .bb-block {
   text-align: justify;
   text-justify: inter-word;
   hyphens: none;
@@ -5469,83 +5524,164 @@ body.theme-atari .guestbook-entry-panel {
   word-break: normal;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz {
-  --gb-content-width: 600px;
-  background: var(--gb-background-color, #030303);
-  border: 2px solid var(--gb-frame-color, rgba(255, 255, 255, 0.92));
-  border-radius: 0;
-  padding: 16px;
-  box-shadow:
-    0 0 0 4px rgba(0, 0, 0, 0.98) inset;
+.guestbook-page-preview.gb-theme-pergament-gold {
+  --gb-theme-border: rgba(199, 154, 92, 0.94);
+  --gb-theme-base: #2e2117;
+  --gb-theme-radius: 20px;
+  --gb-theme-surface:
+    radial-gradient(circle at 12% 14%, rgba(255, 220, 152, 0.16), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(255, 203, 129, 0.12), transparent 18%),
+    linear-gradient(135deg, rgba(88, 64, 37, 0.44), transparent 42%, rgba(10, 8, 6, 0.26));
+  --gb-theme-frame:
+    radial-gradient(circle at top left, rgba(255, 218, 160, 0.24), transparent 18%),
+    radial-gradient(circle at top right, rgba(255, 218, 160, 0.18), transparent 16%),
+    linear-gradient(90deg, transparent, rgba(255, 214, 153, 0.72), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(186, 130, 66, 0.56), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(255, 214, 153, 0.66), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(186, 130, 66, 0.54), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body {
-  color: inherit;
-  max-width: var(--gb-content-width);
-  line-height: 1.34;
-  margin-top: 0;
-  word-break: normal;
-  overflow-wrap: normal;
+.guestbook-page-preview.gb-theme-rosenlack {
+  --gb-theme-border: rgba(223, 141, 160, 0.94);
+  --gb-theme-base: #2b131a;
+  --gb-theme-radius: 22px;
+  --gb-theme-surface:
+    radial-gradient(circle at 18% 16%, rgba(255, 186, 201, 0.18), transparent 22%),
+    radial-gradient(circle at 84% 12%, rgba(128, 19, 54, 0.42), transparent 22%),
+    linear-gradient(150deg, rgba(80, 23, 40, 0.52), transparent 40%, rgba(22, 7, 11, 0.3));
+  --gb-theme-frame:
+    linear-gradient(90deg, rgba(255, 215, 223, 0.18), transparent 14%, transparent 86%, rgba(255, 215, 223, 0.18)) top/100% 100% no-repeat,
+    linear-gradient(90deg, transparent, rgba(239, 167, 182, 0.74), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(147, 51, 80, 0.64), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(239, 167, 182, 0.6), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(147, 51, 80, 0.56), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body strong,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body b,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body em,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body i,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body u,
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body s {
-  color: #f2f2f2 !important;
+.guestbook-page-preview.gb-theme-mondsilber {
+  --gb-theme-border: rgba(194, 205, 219, 0.94);
+  --gb-theme-base: #242930;
+  --gb-theme-radius: 18px;
+  --gb-theme-surface:
+    radial-gradient(circle at 16% 14%, rgba(237, 243, 255, 0.14), transparent 20%),
+    radial-gradient(circle at 82% 18%, rgba(112, 126, 156, 0.24), transparent 18%),
+    linear-gradient(135deg, rgba(120, 133, 154, 0.28), transparent 40%, rgba(9, 13, 18, 0.26));
+  --gb-theme-frame:
+    linear-gradient(90deg, transparent 8%, rgba(225, 232, 242, 0.8) 50%, transparent 92%) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent 8%, rgba(130, 146, 171, 0.64) 50%, transparent 92%) bottom/100% 1px no-repeat,
+    linear-gradient(transparent 8%, rgba(225, 232, 242, 0.66) 50%, transparent 92%) left/1px 100% no-repeat,
+    linear-gradient(transparent 8%, rgba(130, 146, 171, 0.58) 50%, transparent 92%) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-entry-body a {
-  color: #cfe4ff !important;
+.guestbook-page-preview.gb-theme-elfenhain {
+  --gb-theme-border: rgba(154, 196, 122, 0.94);
+  --gb-theme-base: #1c2819;
+  --gb-theme-radius: 22px;
+  --gb-theme-surface:
+    radial-gradient(circle at 14% 16%, rgba(190, 232, 162, 0.14), transparent 22%),
+    radial-gradient(circle at 88% 18%, rgba(71, 118, 44, 0.3), transparent 20%),
+    linear-gradient(140deg, rgba(73, 110, 46, 0.3), transparent 42%, rgba(7, 12, 7, 0.28));
+  --gb-theme-frame:
+    linear-gradient(90deg, transparent 4%, rgba(197, 232, 171, 0.72) 18%, transparent 32%, transparent 68%, rgba(197, 232, 171, 0.72) 82%, transparent 96%) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent 4%, rgba(108, 145, 78, 0.62) 18%, transparent 32%, transparent 68%, rgba(108, 145, 78, 0.62) 82%, transparent 96%) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(197, 232, 171, 0.58), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(108, 145, 78, 0.54), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-hr {
-  border-top-color: rgba(255, 255, 255, 0.24);
+.guestbook-page-preview.gb-theme-kupferpatina {
+  --gb-theme-border: rgba(196, 135, 96, 0.94);
+  --gb-theme-base: #162622;
+  --gb-theme-radius: 20px;
+  --gb-theme-surface:
+    radial-gradient(circle at 15% 14%, rgba(124, 211, 191, 0.14), transparent 22%),
+    radial-gradient(circle at 86% 18%, rgba(209, 143, 96, 0.18), transparent 18%),
+    linear-gradient(145deg, rgba(28, 88, 83, 0.34), transparent 42%, rgba(17, 10, 8, 0.24));
+  --gb-theme-frame:
+    linear-gradient(90deg, rgba(35, 82, 78, 0.18), transparent 16%, transparent 84%, rgba(35, 82, 78, 0.18)) top/100% 100% no-repeat,
+    linear-gradient(90deg, transparent, rgba(218, 161, 126, 0.72), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(85, 151, 143, 0.62), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(218, 161, 126, 0.58), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(85, 151, 143, 0.54), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-table td {
-  border-color: rgba(255, 255, 255, 0.24);
+.guestbook-page-preview.gb-theme-bernsteinfeuer {
+  --gb-theme-border: rgba(220, 164, 88, 0.96);
+  --gb-theme-base: #342114;
+  --gb-theme-radius: 18px;
+  --gb-theme-surface:
+    radial-gradient(circle at 14% 16%, rgba(255, 193, 106, 0.22), transparent 22%),
+    radial-gradient(circle at 84% 18%, rgba(121, 49, 19, 0.24), transparent 18%),
+    linear-gradient(150deg, rgba(128, 65, 22, 0.32), transparent 42%, rgba(18, 9, 6, 0.3));
+  --gb-theme-frame:
+    radial-gradient(circle at center top, rgba(255, 201, 116, 0.24), transparent 26%),
+    linear-gradient(90deg, transparent, rgba(255, 201, 116, 0.78), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(181, 94, 37, 0.64), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(255, 201, 116, 0.6), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(181, 94, 37, 0.56), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .guestbook-page-image {
-  max-height: none;
-  object-fit: contain;
-  margin-bottom: 0;
+.guestbook-page-preview.gb-theme-sternsamt {
+  --gb-theme-border: rgba(126, 147, 226, 0.94);
+  --gb-theme-base: #15192a;
+  --gb-theme-radius: 22px;
+  --gb-theme-surface:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14) 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.1) 0 1px, transparent 2px),
+    radial-gradient(circle at 77% 20%, rgba(214, 224, 255, 0.16) 0 1px, transparent 2px),
+    radial-gradient(circle at 84% 36%, rgba(255, 255, 255, 0.12) 0 1px, transparent 2px),
+    radial-gradient(circle at 13% 72%, rgba(255, 255, 255, 0.08) 0 1px, transparent 2px),
+    linear-gradient(155deg, rgba(78, 88, 150, 0.26), transparent 42%, rgba(5, 7, 14, 0.32));
+  --gb-theme-frame:
+    linear-gradient(90deg, transparent 12%, rgba(190, 204, 255, 0.8) 50%, transparent 88%) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent 12%, rgba(107, 128, 212, 0.64) 50%, transparent 88%) bottom/100% 1px no-repeat,
+    linear-gradient(transparent 12%, rgba(190, 204, 255, 0.62) 50%, transparent 88%) left/1px 100% no-repeat,
+    linear-gradient(transparent 12%, rgba(107, 128, 212, 0.56) 50%, transparent 88%) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-image {
-  width: auto;
-  margin-top: 0;
-  margin-bottom: 0;
-  vertical-align: top;
+.guestbook-page-preview.gb-theme-winterglas {
+  --gb-theme-border: rgba(195, 226, 235, 0.94);
+  --gb-theme-base: #263136;
+  --gb-theme-radius: 18px;
+  --gb-theme-surface:
+    radial-gradient(circle at 18% 16%, rgba(230, 246, 251, 0.18), transparent 22%),
+    radial-gradient(circle at 86% 20%, rgba(156, 191, 202, 0.16), transparent 18%),
+    linear-gradient(150deg, rgba(169, 202, 212, 0.16), transparent 44%, rgba(14, 18, 24, 0.2));
+  --gb-theme-frame:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 14%, transparent 86%, rgba(255, 255, 255, 0.12)) top/100% 100% no-repeat,
+    linear-gradient(90deg, transparent, rgba(231, 247, 255, 0.76), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(137, 171, 186, 0.58), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(231, 247, 255, 0.64), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(137, 171, 186, 0.54), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-image-left {
-  width: auto;
-  max-width: 104px;
-  margin: 0 0.2rem 0 0;
+.guestbook-page-preview.gb-theme-tintenmeer {
+  --gb-theme-border: rgba(103, 176, 191, 0.94);
+  --gb-theme-base: #13242c;
+  --gb-theme-radius: 20px;
+  --gb-theme-surface:
+    radial-gradient(circle at 16% 14%, rgba(111, 194, 210, 0.12), transparent 22%),
+    radial-gradient(circle at 84% 18%, rgba(18, 64, 79, 0.22), transparent 18%),
+    linear-gradient(145deg, rgba(30, 102, 116, 0.22), transparent 42%, rgba(5, 10, 14, 0.28));
+  --gb-theme-frame:
+    linear-gradient(90deg, transparent, rgba(130, 212, 226, 0.76), transparent) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(60, 126, 141, 0.62), transparent) bottom/100% 1px no-repeat,
+    linear-gradient(transparent, rgba(130, 212, 226, 0.58), transparent) left/1px 100% no-repeat,
+    linear-gradient(transparent, rgba(60, 126, 141, 0.54), transparent) right/1px 100% no-repeat;
 }
 
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-image-right {
-  width: auto;
-  max-width: 104px;
-  margin: 0 0 0 0.2rem;
-}
-
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-gradient {
-  font-weight: 400;
-}
-
-.guestbook-page-preview.gb-theme-tiefschwarz .bb-block {
-  text-align: justify;
-  text-justify: inter-word;
-  hyphens: none;
-  overflow-wrap: normal;
-  word-break: normal;
+.guestbook-page-preview.gb-theme-obsidian-ornament {
+  --gb-theme-border: rgba(214, 175, 106, 0.94);
+  --gb-theme-base: #0c0d10;
+  --gb-theme-radius: 16px;
+  --gb-theme-surface:
+    radial-gradient(circle at 16% 14%, rgba(255, 220, 157, 0.1), transparent 18%),
+    radial-gradient(circle at 84% 18%, rgba(115, 86, 43, 0.22), transparent 20%),
+    linear-gradient(145deg, rgba(42, 33, 18, 0.22), transparent 42%, rgba(0, 0, 0, 0.34));
+  --gb-theme-frame:
+    linear-gradient(90deg, rgba(255, 234, 194, 0.12), transparent 12%, transparent 88%, rgba(255, 234, 194, 0.12)) top/100% 100% no-repeat,
+    linear-gradient(90deg, transparent 8%, rgba(233, 201, 141, 0.82) 50%, transparent 92%) top/100% 1px no-repeat,
+    linear-gradient(90deg, transparent 8%, rgba(132, 95, 41, 0.64) 50%, transparent 92%) bottom/100% 1px no-repeat,
+    linear-gradient(transparent 8%, rgba(233, 201, 141, 0.62) 50%, transparent 92%) left/1px 100% no-repeat,
+    linear-gradient(transparent 8%, rgba(132, 95, 41, 0.56) 50%, transparent 92%) right/1px 100% no-repeat;
 }
 
 .guestbook-page-preview.gb-font-default {
@@ -5854,6 +5990,7 @@ body.page-guestbook-preview::after {
   min-height: 100vh;
   padding: 0 0 2.4rem;
   background: var(--gb-surround-color, transparent);
+  isolation: isolate;
 }
 
 .guestbook-preview-header {
@@ -5901,6 +6038,37 @@ body.page-guestbook-preview::after {
   gap: 0.7rem;
 }
 
+.gb-image-field {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.gb-image-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.gb-image-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.gb-image-opacity-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.gb-image-opacity-field input {
+  width: 6rem;
+}
+
 .page-guestbook-preview .guestbook-preview-page-shell {
   margin-top: 1.15rem;
 }
@@ -5918,7 +6086,7 @@ body.page-guestbook-preview::after {
     width: 100%;
   }
 
-  .guestbook-page-preview.gb-theme-neutral-weiss {
+  .guestbook-page-preview[class*="gb-theme-"] {
     padding: 14px;
   }
 

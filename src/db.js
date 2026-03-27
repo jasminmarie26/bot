@@ -116,13 +116,19 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS guestbook_settings (
     character_id INTEGER PRIMARY KEY,
     image_url TEXT NOT NULL DEFAULT '',
+    inner_image_url TEXT NOT NULL DEFAULT '',
+    outer_image_url TEXT NOT NULL DEFAULT '',
+    inner_image_opacity INTEGER NOT NULL DEFAULT 100,
+    outer_image_opacity INTEGER NOT NULL DEFAULT 100,
+    inner_image_repeat INTEGER NOT NULL DEFAULT 0,
+    outer_image_repeat INTEGER NOT NULL DEFAULT 0,
     censor_level TEXT NOT NULL DEFAULT 'none',
     chat_text_color TEXT NOT NULL DEFAULT '#AEE7B7',
     frame_color TEXT NOT NULL DEFAULT '',
     background_color TEXT NOT NULL DEFAULT '',
     surround_color TEXT NOT NULL DEFAULT '',
     page_style TEXT NOT NULL DEFAULT 'scroll',
-    theme_style TEXT NOT NULL DEFAULT 'blumen',
+    theme_style TEXT NOT NULL DEFAULT 'pergament-gold',
     font_style TEXT NOT NULL DEFAULT 'default',
     tags TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -553,6 +559,30 @@ if (!guestbookSettingsColumns.includes("surround_color")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN surround_color TEXT NOT NULL DEFAULT ''");
 }
 
+if (!guestbookSettingsColumns.includes("inner_image_url")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookSettingsColumns.includes("outer_image_url")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!guestbookSettingsColumns.includes("inner_image_opacity")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!guestbookSettingsColumns.includes("outer_image_opacity")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!guestbookSettingsColumns.includes("inner_image_repeat")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_repeat INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookSettingsColumns.includes("outer_image_repeat")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_repeat INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!chatRoomColumns.includes("server_id")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
@@ -689,6 +719,25 @@ db.prepare("UPDATE festplay_permissions SET source = 'manual' WHERE source IS NU
 db.prepare("UPDATE guestbook_settings SET frame_color = '' WHERE frame_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET background_color = '' WHERE background_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET surround_color = '' WHERE surround_color IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET inner_image_url = '' WHERE inner_image_url IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET inner_image_opacity = 100 WHERE inner_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET theme_style = 'pergament-gold' WHERE theme_style IS NULL OR trim(theme_style) = ''").run();
+db.prepare(`
+  UPDATE guestbook_settings
+  SET theme_style = CASE theme_style
+    WHEN 'blumen' THEN 'rosenlack'
+    WHEN 'nacht' THEN 'sternsamt'
+    WHEN 'minimal' THEN 'mondsilber'
+    WHEN 'neutral-weiss' THEN 'winterglas'
+    WHEN 'tiefschwarz' THEN 'obsidian-ornament'
+    ELSE theme_style
+  END
+  WHERE theme_style IN ('blumen', 'nacht', 'minimal', 'neutral-weiss', 'tiefschwarz')
+`).run();
 db.prepare("UPDATE users SET email_verified = 1 WHERE email_verified IS NULL").run();
 db.prepare("UPDATE users SET email_verification_token = '' WHERE email_verification_token IS NULL").run();
 db.prepare("UPDATE users SET password_reset_token = '' WHERE password_reset_token IS NULL").run();

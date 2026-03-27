@@ -54,7 +54,18 @@ const SERVER_OPTIONS = [
 const GUESTBOOK_PAGE_SIZE = 12;
 const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
 const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
-const GUESTBOOK_THEME_STYLE_OPTIONS = new Set(["blumen", "nacht", "minimal", "neutral-weiss", "tiefschwarz"]);
+const GUESTBOOK_THEME_STYLE_OPTIONS = new Set([
+  "pergament-gold",
+  "rosenlack",
+  "mondsilber",
+  "elfenhain",
+  "kupferpatina",
+  "bernsteinfeuer",
+  "sternsamt",
+  "winterglas",
+  "tintenmeer",
+  "obsidian-ornament"
+]);
 const GUESTBOOK_FONT_OPTIONS = [
   { id: "default", label: "Default" },
   { id: "serif", label: "Serif" },
@@ -5363,10 +5374,20 @@ function normalizeGuestbookOption(input, allowedValues, fallback) {
   return allowedValues.has(value) ? value : fallback;
 }
 
+function normalizeGuestbookOpacity(input, fallback = 100) {
+  const value = Number.parseInt(String(input ?? "").trim(), 10);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(100, Math.max(0, value));
+}
+
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeBbcodeInput(body.page_content, 12000);
   const safeBody = body || {};
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
+  const existingInnerImageUrl = String(existingSettings?.inner_image_url || "").trim().slice(0, 500);
+  const existingOuterImageUrl = String(existingSettings?.outer_image_url || "").trim().slice(0, 500);
   const existingCensorLevel = normalizeGuestbookOption(
     existingSettings?.censor_level,
     GUESTBOOK_CENSOR_OPTIONS,
@@ -5381,7 +5402,17 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingFrameColor = normalizeOptionalGuestbookColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookColor(existingSettings?.background_color);
   const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
+  const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
+  const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
+  const existingInnerImageRepeat = Number(existingSettings?.inner_image_repeat) === 1 ? 1 : 0;
+  const existingOuterImageRepeat = Number(existingSettings?.outer_image_repeat) === 1 ? 1 : 0;
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
+  const hasInnerImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_url");
+  const hasOuterImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_url");
+  const hasInnerImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_opacity");
+  const hasOuterImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_opacity");
+  const hasInnerImageRepeatField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_repeat");
+  const hasOuterImageRepeatField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_repeat");
   const hasCensorLevelField = Object.prototype.hasOwnProperty.call(safeBody, "censor_level");
   const hasChatTextColorField = Object.prototype.hasOwnProperty.call(safeBody, "chat_text_color");
   const hasFrameColorField = Object.prototype.hasOwnProperty.call(safeBody, "frame_color");
@@ -5391,7 +5422,15 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const imageUrl = hasImageUrlField
     ? String(safeBody.image_url || "").trim().slice(0, 500)
     : existingImageUrl;
+  const innerImageUrl = hasInnerImageUrlField
+    ? String(safeBody.inner_image_url || "").trim().slice(0, 500)
+    : existingInnerImageUrl;
+  const outerImageUrl = hasOuterImageUrlField
+    ? String(safeBody.outer_image_url || "").trim().slice(0, 500)
+    : existingOuterImageUrl;
   const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
+  const sanitizedInnerImageUrl = /^https?:\/\/.+/i.test(innerImageUrl) ? innerImageUrl : "";
+  const sanitizedOuterImageUrl = /^https?:\/\/.+/i.test(outerImageUrl) ? outerImageUrl : "";
   const censorLevel = hasCensorLevelField
     ? normalizeGuestbookOption(safeBody.censor_level, GUESTBOOK_CENSOR_OPTIONS, existingCensorLevel)
     : existingCensorLevel;
@@ -5407,13 +5446,25 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const surroundColor = hasSurroundColorField
     ? normalizeOptionalGuestbookColor(safeBody.surround_color)
     : existingSurroundColor;
+  const innerImageOpacity = hasInnerImageOpacityField
+    ? normalizeGuestbookOpacity(safeBody.inner_image_opacity, existingInnerImageOpacity)
+    : existingInnerImageOpacity;
+  const outerImageOpacity = hasOuterImageOpacityField
+    ? normalizeGuestbookOpacity(safeBody.outer_image_opacity, existingOuterImageOpacity)
+    : existingOuterImageOpacity;
+  const innerImageRepeat = hasInnerImageRepeatField
+    ? (String(safeBody.inner_image_repeat || "").trim() === "1" ? 1 : 0)
+    : existingInnerImageRepeat;
+  const outerImageRepeat = hasOuterImageRepeatField
+    ? (String(safeBody.outer_image_repeat || "").trim() === "1" ? 1 : 0)
+    : existingOuterImageRepeat;
   const pageStyle = hasPageStyleField
     ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
     : existingPageStyle;
   const themeStyle = normalizeGuestbookOption(
     safeBody.theme_style,
     GUESTBOOK_THEME_STYLE_OPTIONS,
-    "blumen"
+    "pergament-gold"
   );
   const fontStyle = normalizeGuestbookOption(
     safeBody.font_style,
@@ -5424,6 +5475,12 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     pageContent,
     settings: {
       image_url: sanitizedImageUrl,
+      inner_image_url: sanitizedInnerImageUrl,
+      outer_image_url: sanitizedOuterImageUrl,
+      inner_image_opacity: innerImageOpacity,
+      outer_image_opacity: outerImageOpacity,
+      inner_image_repeat: innerImageRepeat,
+      outer_image_repeat: outerImageRepeat,
       censor_level: censorLevel,
       chat_text_color: chatTextColor,
       frame_color: frameColor,
@@ -5522,7 +5579,7 @@ function renumberGuestbookPages(characterId) {
 function getOrCreateGuestbookSettings(characterId) {
   let settings = db
     .prepare(
-      `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
        FROM guestbook_settings
        WHERE character_id = ?`
     )
@@ -5535,7 +5592,7 @@ function getOrCreateGuestbookSettings(characterId) {
     ).run(characterId);
     settings = db
       .prepare(
-        `SELECT character_id, image_url, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
          FROM guestbook_settings
          WHERE character_id = ?`
       )
@@ -11885,6 +11942,12 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   db.prepare(
     `UPDATE guestbook_settings
      SET image_url = ?,
+         inner_image_url = ?,
+         outer_image_url = ?,
+         inner_image_opacity = ?,
+         outer_image_opacity = ?,
+         inner_image_repeat = ?,
+         outer_image_repeat = ?,
          censor_level = ?,
          chat_text_color = ?,
          frame_color = ?,
@@ -11898,6 +11961,12 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
      WHERE character_id = ?`
   ).run(
     payload.settings.image_url,
+    payload.settings.inner_image_url,
+    payload.settings.outer_image_url,
+    payload.settings.inner_image_opacity,
+    payload.settings.outer_image_opacity,
+    payload.settings.inner_image_repeat,
+    payload.settings.outer_image_repeat,
     payload.settings.censor_level,
     payload.settings.chat_text_color,
     payload.settings.frame_color,

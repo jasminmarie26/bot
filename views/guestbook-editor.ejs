@@ -89,11 +89,16 @@
     <label>
       Style
       <select name="theme_style">
-        <option value="blumen" <%= settings.theme_style === "blumen" ? "selected" : "" %>>Blumen</option>
-        <option value="nacht" <%= settings.theme_style === "nacht" ? "selected" : "" %>>Nacht</option>
-        <option value="minimal" <%= settings.theme_style === "minimal" ? "selected" : "" %>>Minimal</option>
-        <option value="tiefschwarz" <%= settings.theme_style === "tiefschwarz" ? "selected" : "" %>>Schwarz mit wei&szlig;em Rahmen</option>
-        <option value="neutral-weiss" <%= settings.theme_style === "neutral-weiss" ? "selected" : "" %>>Neutral Wei&szlig;</option>
+        <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
+        <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
+        <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
+        <option value="elfenhain" <%= settings.theme_style === "elfenhain" ? "selected" : "" %>>Elfenhain</option>
+        <option value="kupferpatina" <%= settings.theme_style === "kupferpatina" ? "selected" : "" %>>Kupferpatina</option>
+        <option value="bernsteinfeuer" <%= settings.theme_style === "bernsteinfeuer" ? "selected" : "" %>>Bernsteinfeuer</option>
+        <option value="sternsamt" <%= settings.theme_style === "sternsamt" ? "selected" : "" %>>Sternensamt</option>
+        <option value="winterglas" <%= settings.theme_style === "winterglas" ? "selected" : "" %>>Winterglas</option>
+        <option value="tintenmeer" <%= settings.theme_style === "tintenmeer" ? "selected" : "" %>>Tintenmeer</option>
+        <option value="obsidian-ornament" <%= settings.theme_style === "obsidian-ornament" ? "selected" : "" %>>Obsidian Ornament</option>
       </select>
     </label>
 
@@ -192,6 +197,74 @@
         <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-surround-color">
           Standard
         </button>
+      </div>
+    </div>
+
+    <div class="gb-image-field">
+      <label>
+        Bild innerhalb des Rahmens
+        <span class="gb-editor-helptext">Bild-URL f&uuml;r die Fl&auml;che direkt im G&auml;stebuchrahmen.</span>
+        <input
+          name="inner_image_url"
+          value="<%= settings.inner_image_url || '' %>"
+          maxlength="500"
+          placeholder="https://..."
+          spellcheck="false"
+          autocomplete="off"
+        />
+      </label>
+
+      <div class="gb-image-controls">
+        <label class="gb-image-toggle">
+          <input type="checkbox" name="inner_image_repeat" value="1" <%= Number(settings.inner_image_repeat) === 1 ? "checked" : "" %> />
+          Endlos scroll
+        </label>
+
+        <label class="gb-image-opacity-field">
+          Transparenz
+          <input
+            type="number"
+            name="inner_image_opacity"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number.isFinite(Number(settings.inner_image_opacity)) ? Number(settings.inner_image_opacity) : 100 %>"
+          />
+        </label>
+      </div>
+    </div>
+
+    <div class="gb-image-field">
+      <label>
+        Bild au&szlig;erhalb des Rahmens
+        <span class="gb-editor-helptext">Bild-URL f&uuml;r den Bereich um das G&auml;stebuch herum.</span>
+        <input
+          name="outer_image_url"
+          value="<%= settings.outer_image_url || '' %>"
+          maxlength="500"
+          placeholder="https://..."
+          spellcheck="false"
+          autocomplete="off"
+        />
+      </label>
+
+      <div class="gb-image-controls">
+        <label class="gb-image-toggle">
+          <input type="checkbox" name="outer_image_repeat" value="1" <%= Number(settings.outer_image_repeat) === 1 ? "checked" : "" %> />
+          Endlos scroll
+        </label>
+
+        <label class="gb-image-opacity-field">
+          Transparenz
+          <input
+            type="number"
+            name="outer_image_opacity"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number.isFinite(Number(settings.outer_image_opacity)) ? Number(settings.outer_image_opacity) : 100 %>"
+          />
+        </label>
       </div>
     </div>
 
