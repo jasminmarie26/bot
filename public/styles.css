@@ -3071,7 +3071,7 @@ body.page-home-screen .home-hero-actions {
   min-height: 0 !important;
   margin: 0 !important;
   border: 0 !important;
-  border-top: 1px solid color-mix(in srgb, var(--field-edge) 90%, white 10%);
+  border-top: 1px solid color-mix(in srgb, var(--link) 55%, var(--field-edge) 45%);
   border-radius: 0 !important;
   background: none !important;
   box-shadow: none !important;
