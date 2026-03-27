@@ -9399,7 +9399,7 @@ const HELP_BBCODE_EXAMPLES = [
     code: "[img float=right]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild rechts"
   },
   {
-    title: "Tag als Text",
+    title: "BBCode als Text",
     code: "\\[center\\]Das bleibt normaler Text\\[/center\\]"
   },
   { title: "Link", code: "[url=https://heldenhaftereisen.net]Startseite[/url]" },
