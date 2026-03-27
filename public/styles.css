@@ -3063,6 +3063,13 @@ body.page-home-screen .home-hero-actions {
   text-align: center;
 }
 
+.help-example-line-text {
+  display: block;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--link) 60%, var(--field-edge) 40%);
+}
+
 .help-example-line {
   display: block !important;
   width: 100% !important;
