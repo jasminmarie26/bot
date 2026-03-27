@@ -9411,7 +9411,7 @@ function decorateHelpBbcodeExamples() {
     ...entry,
     preview_html:
       entry.title === "Linie"
-        ? "<hr class=\"bb-hr\">"
+        ? "<div class=\"help-example-line\" aria-hidden=\"true\"></div>"
         : renderGuestbookBbcode(entry.code)
   }));
 }
