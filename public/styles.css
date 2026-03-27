@@ -3041,6 +3041,14 @@ body.page-home-screen .home-hero-actions {
   line-height: 1.35;
 }
 
+.help-example-preview.is-line {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .help-example-preview.guestbook-entry-body > :first-child {
   margin-top: 0;
 }
@@ -3061,7 +3069,7 @@ body.page-home-screen .home-hero-actions {
   min-width: 100%;
   height: 0 !important;
   min-height: 0 !important;
-  margin: 0.72rem 0 !important;
+  margin: 0 !important;
   border: 0 !important;
   border-top: 1px solid color-mix(in srgb, var(--field-edge) 90%, white 10%);
   border-radius: 0 !important;

@@ -134,7 +134,7 @@
               <h3><%= entry.title %></h3>
               <div class="help-example-split">
                 <code class="help-example-code"><%= entry.code %></code>
-                <div class="help-example-preview guestbook-entry-body"><%- entry.preview_html %></div>
+                <div class="help-example-preview guestbook-entry-body<%= entry.title === "Linie" ? " is-line" : "" %>"><%- entry.preview_html %></div>
               </div>
             </article>
           <% }) %>
