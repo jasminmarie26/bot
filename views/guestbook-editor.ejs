@@ -73,6 +73,7 @@
     method="POST"
     action="/characters/<%= character.id %>/guestbook/edit/save"
     class="panel form gb-editor-form"
+    data-preview-sync-url="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
   >
     <input type="hidden" name="page_id" value="<%= activePage.id %>" />
 
@@ -379,6 +380,53 @@
     bindColorField("guestbook-frame-color", "#7A6855");
     bindColorField("guestbook-background-color", "#3E3935");
     bindColorField("guestbook-surround-color", "#2C2118");
+
+    const editorForm = document.getElementById("guestbook-editor-form");
+    const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
+    let previewSyncTimeout = null;
+
+    const syncPreviewDraft = () => {
+      if (!editorForm || !previewSyncUrl) {
+        return;
+      }
+
+      const formData = new FormData(editorForm);
+      fetch(previewSyncUrl, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      }).catch(() => {});
+    };
+
+    const schedulePreviewSync = (delay = 220) => {
+      if (!editorForm || !previewSyncUrl) {
+        return;
+      }
+
+      if (previewSyncTimeout) {
+        window.clearTimeout(previewSyncTimeout);
+      }
+
+      previewSyncTimeout = window.setTimeout(() => {
+        previewSyncTimeout = null;
+        syncPreviewDraft();
+      }, delay);
+    };
+
+    if (editorForm && previewSyncUrl) {
+      editorForm.addEventListener("input", () => {
+        schedulePreviewSync();
+      });
+
+      editorForm.addEventListener("change", () => {
+        schedulePreviewSync(80);
+      });
+
+      schedulePreviewSync(0);
+    }
   })();
 </script>
 

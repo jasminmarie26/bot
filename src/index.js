@@ -12131,6 +12131,10 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     saved_at: Date.now()
   };
 
+  if (String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest") {
+    return res.status(204).end();
+  }
+
   return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}`);
 });
 
