@@ -5462,6 +5462,14 @@ body.theme-atari .guestbook-entry-panel {
   opacity: 0.96;
 }
 
+.guestbook-page-preview[class*="gb-theme-"].gb-custom-colors {
+  background: var(--gb-background-color, var(--gb-theme-base));
+}
+
+.guestbook-page-preview[class*="gb-theme-"].gb-custom-colors::before {
+  background: none;
+}
+
 .guestbook-page-preview[class*="gb-theme-"] > * {
   position: relative;
   z-index: 2;
