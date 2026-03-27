@@ -5137,7 +5137,7 @@ body.page-home-screen .home-hero-actions {
 .guestbook-layout::before,
 .guestbook-preview-shell::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -5145,6 +5145,7 @@ body.page-home-screen .home-hero-actions {
   background-position: var(--gb-outer-image-position, center top);
   background-size: var(--gb-outer-image-size, cover);
   background-repeat: var(--gb-outer-image-repeat, no-repeat);
+  background-attachment: fixed;
   opacity: var(--gb-outer-image-opacity, 0);
 }
 

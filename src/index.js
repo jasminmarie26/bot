@@ -5404,8 +5404,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
   const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
   const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
-  const existingInnerImageRepeat = Number(existingSettings?.inner_image_repeat) === 1 ? 1 : 0;
-  const existingOuterImageRepeat = Number(existingSettings?.outer_image_repeat) === 1 ? 1 : 0;
+  const existingInnerImageRepeat = 0;
+  const existingOuterImageRepeat = 0;
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
   const hasInnerImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_url");
   const hasOuterImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_url");
@@ -5454,10 +5454,10 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     : existingOuterImageOpacity;
   const innerImageRepeat = hasInnerImageRepeatField
     ? (String(safeBody.inner_image_repeat || "").trim() === "1" ? 1 : 0)
-    : existingInnerImageRepeat;
+    : 0;
   const outerImageRepeat = hasOuterImageRepeatField
     ? (String(safeBody.outer_image_repeat || "").trim() === "1" ? 1 : 0)
-    : existingOuterImageRepeat;
+    : 0;
   const pageStyle = hasPageStyleField
     ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
     : existingPageStyle;
@@ -5507,8 +5507,8 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
       : "",
     inner_image_opacity: normalizeGuestbookOpacity(page?.inner_image_opacity, 100),
     outer_image_opacity: normalizeGuestbookOpacity(page?.outer_image_opacity, 100),
-    inner_image_repeat: Number(page?.inner_image_repeat) === 1 ? 1 : 0,
-    outer_image_repeat: Number(page?.outer_image_repeat) === 1 ? 1 : 0,
+    inner_image_repeat: 0,
+    outer_image_repeat: 0,
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
     chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
     frame_color: normalizeOptionalGuestbookColor(page?.frame_color),
