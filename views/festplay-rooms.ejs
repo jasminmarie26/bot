@@ -23,7 +23,7 @@
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
       : festplayRoomIdentityName; %>
   <% const festplayRoomIsOwner = Number(currentUser?.id) === Number(festplay?.created_by_user_id); %>
-  <% const festplayRoomBoardHref = `${currentPath || "/"}#rp-board-panel`; %>
+  <% const festplayRoomBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
@@ -32,7 +32,19 @@
       <% if (festplayRoomIsOwner) { %>
         <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
       <% } %>
-      <a href="<%= festplayRoomBoardHref %>" target="_blank" rel="noopener noreferrer">RP-Aushang</a>
+      <a
+        class="rp-board-nav-link"
+        href="<%= festplayRoomBoardHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-rp-board-link-root
+        data-rp-board-server-id="<%= character.server_id %>"
+        data-rp-board-festplay-id="0"
+        data-rp-board-character-id="<%= Number(character.id) %>"
+      >
+        <span>RP-Aushang</span>
+        <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+      </a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
         class="live-updates-nav-link"
@@ -82,12 +94,6 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
-        <%- include("partials/rp-board-link", {
-          boardServerId: character.server_id,
-          boardFestplayId: 0,
-          boardCharacterId: character.id,
-          hideRpBoardTrigger: true
-        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <details class="rp-user-menu">
           <summary

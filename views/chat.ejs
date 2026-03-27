@@ -41,7 +41,7 @@
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
-<% const chatBoardHref = `${currentPath || "/"}#rp-board-panel`; %>
+<% const chatBoardHref = `/rp-board?server_id=${chatBoardServerId}&character_id=${Number(chatBoardCharacterId)}`; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -52,7 +52,19 @@
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
       <% } %>
-      <a href="<%= chatBoardHref %>" target="_blank" rel="noopener noreferrer">RP-Aushang</a>
+      <a
+        class="rp-board-nav-link"
+        href="<%= chatBoardHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-rp-board-link-root
+        data-rp-board-server-id="<%= chatBoardServerId %>"
+        data-rp-board-festplay-id="0"
+        data-rp-board-character-id="<%= Number(chatBoardCharacterId) %>"
+      >
+        <span>RP-Aushang</span>
+        <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+      </a>
       <a
         class="live-updates-nav-link"
         href="/live-updates"
@@ -103,12 +115,6 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
-        <%- include("partials/rp-board-link", {
-          boardServerId: chatBoardServerId,
-          boardFestplayId: chatBoardFestplayId,
-          boardCharacterId: chatBoardCharacterId,
-          hideRpBoardTrigger: true
-        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <button
           id="chat-whisper-toggle"

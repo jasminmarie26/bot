@@ -1,41 +1,31 @@
 (() => {
-  const toggle = document.querySelector("[data-rp-board-root]");
-  const panel = document.querySelector("[data-rp-board-panel]");
-  if (!toggle || !panel) return;
+  const pageRoot = document.querySelector("[data-rp-board-page-root]");
+  const linkRoots = Array.from(document.querySelectorAll("[data-rp-board-link-root]"));
+  const contextRoot = pageRoot || linkRoots[0];
+  if (!contextRoot) return;
 
-  const badge = toggle.querySelector("[data-rp-board-badge]");
-  const closeButton = panel.querySelector("[data-rp-board-close]");
-  const form = panel.querySelector("[data-rp-board-form]");
-  const input = panel.querySelector("[data-rp-board-input]");
-  const list = panel.querySelector("[data-rp-board-list]");
-  const emptyState = panel.querySelector("[data-rp-board-empty]");
-  const serverId = String(toggle.dataset.rpBoardServerId || "").trim().toLowerCase();
-  const festplayId = Number(toggle.dataset.rpBoardFestplayId || 0);
-  const characterId = Number(toggle.dataset.rpBoardCharacterId || 0);
+  const badgeNodes = linkRoots
+    .map((link) => link.querySelector("[data-rp-board-badge]"))
+    .filter((node) => node instanceof HTMLElement);
+  const form = pageRoot?.querySelector("[data-rp-board-form]") || null;
+  const input = pageRoot?.querySelector("[data-rp-board-input]") || null;
+  const list = pageRoot?.querySelector("[data-rp-board-list]") || null;
+  const emptyState = pageRoot?.querySelector("[data-rp-board-empty]") || null;
+  const serverId = String(contextRoot.dataset.rpBoardServerId || "").trim().toLowerCase();
+  const festplayId = Number(contextRoot.dataset.rpBoardFestplayId || 0);
+  const characterId = Number(contextRoot.dataset.rpBoardCharacterId || 0);
+  const normalizedFestplayId = Number.isInteger(festplayId) && festplayId > 0 ? festplayId : 0;
   const canUseRealtimeUpdates = typeof io === "function";
   const requestBaseParams = new URLSearchParams({
     server_id: serverId,
-    festplay_id: String(Number.isInteger(festplayId) && festplayId > 0 ? festplayId : 0),
+    festplay_id: String(normalizedFestplayId),
     character_id: String(Number.isInteger(characterId) && characterId > 0 ? characterId : 0)
   });
+  const storageKey = `rp-board-unread:${serverId}:${normalizedFestplayId}`;
   let requestSequence = 0;
 
   if (!serverId || !Number.isInteger(characterId) || characterId < 1) {
     return;
-  }
-
-  function isPanelOpen() {
-    return panel.hidden === false;
-  }
-
-  function setPanelOpen(nextOpen) {
-    const shouldOpen = Boolean(nextOpen);
-    panel.hidden = !shouldOpen;
-    toggle.classList.toggle("is-open", shouldOpen);
-    toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-    if (!shouldOpen && window.location.hash === "#rp-board-panel") {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    }
   }
 
   function formatBadgeCount(count) {
@@ -44,15 +34,29 @@
 
   function updateBadge(count) {
     const unreadCount = Number(count || 0);
-    if (!badge) return;
-    if (!Number.isFinite(unreadCount) || unreadCount < 1) {
-      badge.hidden = true;
-      badge.textContent = "0";
-      return;
-    }
+    badgeNodes.forEach((badge) => {
+      if (!Number.isFinite(unreadCount) || unreadCount < 1) {
+        badge.hidden = true;
+        badge.textContent = "0";
+        return;
+      }
 
-    badge.hidden = false;
-    badge.textContent = formatBadgeCount(unreadCount);
+      badge.hidden = false;
+      badge.textContent = formatBadgeCount(unreadCount);
+    });
+  }
+
+  function broadcastUnreadCount(count) {
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          unreadCount: Number(count || 0),
+          updatedAt: Date.now()
+        })
+      );
+    } catch (_error) {
+    }
   }
 
   function renderEntries(entries) {
@@ -88,6 +92,7 @@
       } else {
         authorNode = document.createElement("span");
       }
+
       authorNode.className = "rp-board-entry-author";
       authorNode.textContent = String(entry?.author_name || "").trim() || "Unbekannt";
       if (entry?.author_chat_text_color) {
@@ -127,9 +132,14 @@
     });
   }
 
-  function applyState(payload) {
-    updateBadge(payload?.unreadCount || 0);
+  function applyState(payload, options = {}) {
+    const broadcast = options.broadcast !== false;
+    const unreadCount = Number(payload?.unreadCount || 0);
+    updateBadge(unreadCount);
     renderEntries(payload?.entries || []);
+    if (broadcast) {
+      broadcastUnreadCount(unreadCount);
+    }
   }
 
   async function fetchBoardState() {
@@ -167,42 +177,25 @@
     return response.json();
   }
 
-  async function loadState() {
+  async function loadState(options = {}) {
     const requestId = ++requestSequence;
     const payload = await fetchBoardState();
     if (requestId !== requestSequence) {
       return null;
     }
-    applyState(payload);
+    applyState(payload, options);
     return payload;
   }
 
-  async function markBoardRead() {
+  async function markBoardRead(options = {}) {
     const payload = await postBoardForm("/rp-board/read", {});
-    applyState(payload);
+    applyState(payload, options);
     return payload;
   }
 
-  async function openBoardPanel() {
-    setPanelOpen(true);
+  async function refreshBoardState() {
     try {
-      await markBoardRead();
-    } catch (error) {
-      console.error("rp board read failed", error);
-      try {
-        await loadState();
-      } catch (innerError) {
-        console.error("rp board load failed", innerError);
-      }
-    }
-    if (input) {
-      input.focus();
-    }
-  }
-
-  async function refreshAfterContextChange() {
-    try {
-      if (isPanelOpen()) {
+      if (pageRoot && document.visibilityState !== "hidden") {
         await markBoardRead();
       } else {
         await loadState();
@@ -211,27 +204,6 @@
       console.error("rp board refresh failed", error);
     }
   }
-
-  toggle.addEventListener("click", async () => {
-    if (isPanelOpen()) {
-      setPanelOpen(false);
-      return;
-    }
-
-    await openBoardPanel();
-  });
-
-  if (closeButton) {
-    closeButton.addEventListener("click", () => {
-      setPanelOpen(false);
-    });
-  }
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isPanelOpen()) {
-      setPanelOpen(false);
-    }
-  });
 
   if (form) {
     form.addEventListener("submit", async (event) => {
@@ -242,9 +214,7 @@
       }
 
       try {
-        const payload = await postBoardForm("/rp-board/entries", {
-          content
-        });
+        const payload = await postBoardForm("/rp-board/entries", { content });
         applyState(payload);
         input.value = "";
         input.focus();
@@ -278,23 +248,44 @@
     });
   }
 
-  loadState().catch((error) => {
-    console.error("rp board initial load failed", error);
-  });
+  window.addEventListener("storage", (event) => {
+    if (event.key !== storageKey || !event.newValue) {
+      return;
+    }
 
-  if (window.location.hash === "#rp-board-panel") {
-    openBoardPanel().catch((error) => {
-      console.error("rp board auto-open failed", error);
-    });
-  }
-
-  window.addEventListener("hashchange", () => {
-    if (window.location.hash === "#rp-board-panel") {
-      openBoardPanel().catch((error) => {
-        console.error("rp board hash-open failed", error);
-      });
+    try {
+      const payload = JSON.parse(event.newValue);
+      updateBadge(payload?.unreadCount || 0);
+    } catch (_error) {
     }
   });
+
+  if (pageRoot) {
+    markBoardRead().catch((error) => {
+      console.error("rp board initial read failed", error);
+      loadState().catch((innerError) => {
+        console.error("rp board initial load failed", innerError);
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        markBoardRead().catch((error) => {
+          console.error("rp board visibility read failed", error);
+        });
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      markBoardRead().catch((error) => {
+        console.error("rp board focus read failed", error);
+      });
+    });
+  } else {
+    loadState().catch((error) => {
+      console.error("rp board initial load failed", error);
+    });
+  }
 
   if (canUseRealtimeUpdates) {
     const socket = io({
@@ -304,7 +295,7 @@
     socket.on("connect", () => {
       socket.emit("rp-board:watch", {
         serverId,
-        festplayId,
+        festplayId: normalizedFestplayId,
         characterId
       });
     });
@@ -315,11 +306,11 @@
       if (payloadServerId !== serverId) {
         return;
       }
-      if (payloadFestplayId !== (Number.isInteger(festplayId) && festplayId > 0 ? festplayId : 0)) {
+      if (payloadFestplayId !== normalizedFestplayId) {
         return;
       }
 
-      refreshAfterContextChange();
+      refreshBoardState();
     });
   }
 })();

@@ -22,6 +22,7 @@
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
       : festplayIdentityName; %>
+  <% const festplayBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
@@ -29,6 +30,19 @@
       <a href="<%= character.server_id === 'free-rp' || character.server_id === 'erp' ? `/dashboard/areas/${character.server_id}` : `/characters/${character.id}#roomlist` %>"><%= character.server_id === "free-rp" || character.server_id === "erp" ? "Bereich" : "Raumliste" %></a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+      <a
+        class="rp-board-nav-link"
+        href="<%= festplayBoardHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-rp-board-link-root
+        data-rp-board-server-id="<%= character.server_id %>"
+        data-rp-board-festplay-id="0"
+        data-rp-board-character-id="<%= Number(character.id) %>"
+      >
+        <span>RP-Aushang</span>
+        <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+      </a>
       <a
         class="live-updates-nav-link"
         href="/live-updates"

@@ -140,6 +140,14 @@
       topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
     ); %>
     <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive); %>
+    <% const showTopbarRpBoardLink = Boolean(
+      !topbarGuestbookModeActive &&
+      menuCharacter &&
+      (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
+    ); %>
+    <% const topbarRpBoardHref = showTopbarRpBoardLink
+      ? `/rp-board?server_id=${menuCharacter.server_id}&character_id=${Number(menuCharacter.id)}`
+      : ""; %>
     <% const topbarLiveUpdatesInitialRevision = String(
       typeof latestSiteUpdateRevisionToken !== "undefined" ? latestSiteUpdateRevisionToken || "" : ""
     ).trim(); %>
@@ -182,6 +190,21 @@
                 <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a href="/characters/<%= menuCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+                <% } %>
+                <% if (showTopbarRpBoardLink) { %>
+                  <a
+                    class="rp-board-nav-link"
+                    href="<%= topbarRpBoardHref %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-rp-board-link-root
+                    data-rp-board-server-id="<%= menuCharacter.server_id %>"
+                    data-rp-board-festplay-id="0"
+                    data-rp-board-character-id="<%= Number(menuCharacter.id) %>"
+                  >
+                    <span>RP-Aushang</span>
+                    <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+                  </a>
                 <% } %>
               <% } %>
               <% if (currentUser.is_admin) { %>

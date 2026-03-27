@@ -33,8 +33,9 @@
     character.server_id === "free-rp" || character.server_id === "erp"
       ? "Bereich"
       : "Raumliste"; %>
+  <% const roomlistBoardServerId = currentHeaderCharacter?.server_id || character.server_id; %>
   <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
-  <% const roomlistBoardHref = `${currentPath || "/"}#rp-board-panel`; %>
+  <% const roomlistBoardHref = `/rp-board?server_id=${roomlistBoardServerId}&character_id=${Number(roomlistBoardCharacterId)}`; %>
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
       <nav class="rp-menu" aria-label="Charakter Navigation">
@@ -43,7 +44,19 @@
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
         <% } %>
-        <a href="<%= roomlistBoardHref %>" target="_blank" rel="noopener noreferrer">RP-Aushang</a>
+        <a
+          class="rp-board-nav-link"
+          href="<%= roomlistBoardHref %>"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-rp-board-link-root
+          data-rp-board-server-id="<%= roomlistBoardServerId %>"
+          data-rp-board-festplay-id="0"
+          data-rp-board-character-id="<%= Number(roomlistBoardCharacterId) %>"
+        >
+          <span>RP-Aushang</span>
+          <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+        </a>
         <a
           class="live-updates-nav-link"
         href="/live-updates"
@@ -94,12 +107,6 @@
         </select>
       </form>
       <div class="rp-topline-quick-actions">
-        <%- include("partials/rp-board-link", {
-          boardServerId: character.server_id,
-          boardFestplayId: 0,
-          boardCharacterId: roomlistBoardCharacterId,
-          hideRpBoardTrigger: true
-        }) %>
         <%- include("partials/guestbook-notification-link") %>
         <details class="rp-user-menu">
           <summary

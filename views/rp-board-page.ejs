@@ -1,0 +1,88 @@
+<%- include("partials/start", {
+  topbarCharacter: activeCharacter,
+  pageClass: "page-rp-board"
+}) %>
+
+<section
+  class="panel rp-board-page-panel"
+  data-rp-board-page-root
+  data-rp-board-server-id="<%= rpBoardServerId %>"
+  data-rp-board-festplay-id="0"
+  data-rp-board-character-id="<%= rpBoardCharacterId %>"
+>
+  <div class="header-line">
+    <div>
+      <h1>RP-Aushang</h1>
+      <p class="muted">Allgemeine RP-Suche fuer <%= rpBoardServerLabel %>. Keine Festspielsuche.</p>
+    </div>
+  </div>
+
+  <div class="rp-board-layout rp-board-layout-page">
+    <form class="rp-board-form" data-rp-board-form>
+      <label class="rp-board-label" for="rp-board-input">Neuer Eintrag</label>
+      <textarea
+        id="rp-board-input"
+        class="rp-board-input"
+        data-rp-board-input
+        name="content"
+        rows="3"
+        maxlength="500"
+        placeholder="Suche lockeres RP, biete eine Szene an oder frag allgemein nach Mitspielern."
+        required
+      ></textarea>
+      <p class="rp-board-hint">Ohne BBCode. Du kannst deinen eigenen Eintrag danach wieder loeschen.</p>
+      <div class="rp-board-actions">
+        <button type="submit" class="btn rp-board-submit">Eintrag setzen</button>
+      </div>
+    </form>
+
+    <section class="rp-board-entries-wrap rp-board-page-entries-wrap">
+      <p class="muted rp-board-empty" data-rp-board-empty <%= rpBoardEntries && rpBoardEntries.length ? "hidden" : "" %>>
+        Noch keine Eintraege vorhanden.
+      </p>
+      <div class="rp-board-entries rp-board-page-entries" data-rp-board-list <%= rpBoardEntries && rpBoardEntries.length ? "" : "hidden" %>>
+        <% (rpBoardEntries || []).forEach((entry) => { %>
+          <article class="rp-board-entry">
+            <div class="rp-board-entry-head">
+              <div class="rp-board-entry-author-wrap">
+                <% if (Number(entry.character_id) > 0) { %>
+                  <a
+                    class="rp-board-entry-author"
+                    href="/characters/<%= Number(entry.character_id) %>/guestbook"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="<%= entry.author_chat_text_color ? `color:${entry.author_chat_text_color};` : '' %>"
+                  ><%= entry.author_name %></a>
+                <% } else { %>
+                  <span
+                    class="rp-board-entry-author"
+                    style="<%= entry.author_chat_text_color ? `color:${entry.author_chat_text_color};` : '' %>"
+                  ><%= entry.author_name %></span>
+                <% } %>
+              </div>
+
+              <div class="rp-board-entry-meta">
+                <time class="rp-board-entry-time"><%= entry.created_at %></time>
+                <% if (entry.can_delete) { %>
+                  <button
+                    type="button"
+                    class="rp-board-entry-delete"
+                    data-entry-id="<%= Number(entry.id) %>"
+                    aria-label="Eintrag loeschen"
+                    title="Eintrag loeschen"
+                  >
+                    &times;
+                  </button>
+                <% } %>
+              </div>
+            </div>
+
+            <p class="rp-board-entry-body"><%= entry.content %></p>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  </div>
+</section>
+
+<%- include("partials/end") %>

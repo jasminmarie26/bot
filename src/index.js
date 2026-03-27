@@ -7327,6 +7327,60 @@ app.post("/account/delete", requireAuth, async (req, res) => {
   });
 });
 
+app.get("/rp-board", requireAuth, (req, res) => {
+  const requestedServerId = normalizeServer(req.query.server_id);
+  const requestedCharacterId = Number(req.query.character_id);
+  let context = resolveRpBoardContextForUser(
+    req.session.user.id,
+    requestedServerId,
+    0,
+    requestedCharacterId
+  );
+
+  if (!context) {
+    const preferredCharacterId = getPreferredCharacterIdFromSession(req, requestedServerId);
+    const preferredCharacter = getPreferredCharacterForUser(
+      req.session.user.id,
+      requestedServerId,
+      preferredCharacterId
+    );
+
+    if (preferredCharacter) {
+      context = resolveRpBoardContextForUser(
+        req.session.user.id,
+        requestedServerId,
+        0,
+        preferredCharacter.id
+      );
+    }
+  }
+
+  if (!context) {
+    return res.status(403).render("error", {
+      title: "Kein Zugriff",
+      message: "Fuer diesen RP-Aushang wurde kein passender eigener Charakter gefunden."
+    });
+  }
+
+  rememberPreferredCharacter(req, context.character);
+  setRpBoardReadMarker(
+    req.session.user.id,
+    context.serverId,
+    0,
+    getLatestRpBoardEntryId(context.serverId, 0)
+  );
+
+  return res.render("rp-board-page", {
+    title: `RP-Aushang: ${getServerLabel(context.serverId)}`,
+    topbarCharacter: context.character,
+    activeCharacter: context.character,
+    rpBoardServerId: context.serverId,
+    rpBoardCharacterId: context.character.id,
+    rpBoardServerLabel: getServerLabel(context.serverId),
+    rpBoardEntries: getRpBoardEntries(context.serverId, 0, req.session.user.id)
+  });
+});
+
 app.get("/rp-board/state", requireAuth, (req, res) => {
   const context = resolveRpBoardContextForUser(
     req.session.user.id,
