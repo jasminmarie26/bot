@@ -7402,11 +7402,15 @@ select:focus {
 
 .rp-board-page-entries-wrap {
   min-width: 0;
+  overflow: visible;
 }
 
 .rp-board-page-entries {
   display: grid;
   gap: 0.8rem;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .rp-board-form {
