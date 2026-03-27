@@ -5012,7 +5012,7 @@ body.page-home-screen .home-hero-actions {
   padding: 0.48rem 0.54rem;
 }
 
-.page-roomlist .rp-room-list-owned {
+.page-roomlist .rp-room-list.rp-room-list-owned {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -5020,9 +5020,9 @@ body.page-home-screen .home-hero-actions {
   gap: 0.38rem;
 }
 
-.page-roomlist .rp-room-list-owned .rp-room-standard-card {
-  flex: 0 1 16rem;
-  min-width: min(16rem, 100%);
+.page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {
+  flex: 0 1 13rem;
+  min-width: min(13rem, 100%);
   max-width: 100%;
 }
 
