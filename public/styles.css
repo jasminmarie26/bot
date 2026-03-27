@@ -7467,6 +7467,17 @@ select:focus {
   padding-right: 0.12rem;
 }
 
+.page-rp-board .rp-board-entries-wrap {
+  min-height: 0;
+  overflow: visible;
+}
+
+.page-rp-board .rp-board-entries {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
 .rp-board-entry {
   display: grid;
   gap: 0.42rem;
