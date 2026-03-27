@@ -9354,18 +9354,24 @@ app.get("/members", requireAuth, (req, res) => {
 });
 
 const HELP_TOPICS = [
-  { slug: "charakter-anlegen", title: "Charakter anlegen" },
-  { slug: "festspiele-anlegen", title: "Festspiele anlegen" },
+  { slug: "bereich-charaktere", title: "Bereich & Charaktere" },
+  { slug: "raeume-chat", title: "Räume & Chat" },
+  { slug: "festspiele-rp-aushang", title: "Festspiele & RP-Aushang" },
+  { slug: "gaestebuch-design-bbcode", title: "Gästebuch, Design & BBCode" },
   { slug: "backup", title: "Backup" },
-  { slug: "rp-aushang", title: "RP-Aushang" },
-  { slug: "eigene-raeume", title: "Eigene Räume" },
-  { slug: "raumliste-raeume", title: "Raumliste & Räume" },
-  { slug: "gaestebuch-design-bbcode", title: "Gästebuch Design & BBCode" },
-  { slug: "auto-logoff", title: "Auto-Logoff" },
-  { slug: "admin-moderatorname", title: "Admin- und Moderatorname" },
-  { slug: "chat-fluestern", title: "Chat & Flüstern" },
-  { slug: "chat-formatierung", title: "Chat-Formatierung" }
+  { slug: "staff-sicherheit", title: "Staff & Sicherheit" }
 ];
+const HELP_TOPIC_ALIASES = {
+  "charakter-anlegen": "bereich-charaktere",
+  "eigene-raeume": "raeume-chat",
+  "raumliste-raeume": "raeume-chat",
+  "chat-fluestern": "raeume-chat",
+  "chat-formatierung": "raeume-chat",
+  "festspiele-anlegen": "festspiele-rp-aushang",
+  "rp-aushang": "festspiele-rp-aushang",
+  "admin-moderatorname": "staff-sicherheit",
+  "auto-logoff": "staff-sicherheit"
+};
 
 const HELP_BBCODE_EXAMPLES = [
   { title: "Fett", code: "[b]Das ist fett[/b]" },
@@ -9421,7 +9427,9 @@ app.get("/help", (req, res) => {
 });
 
 app.get("/help/:slug", (req, res) => {
-  const helpTopic = HELP_TOPICS.find((topic) => topic.slug === String(req.params.slug || "").trim().toLowerCase());
+  const requestedSlug = String(req.params.slug || "").trim().toLowerCase();
+  const resolvedSlug = HELP_TOPIC_ALIASES[requestedSlug] || requestedSlug;
+  const helpTopic = HELP_TOPICS.find((topic) => topic.slug === resolvedSlug);
   if (!helpTopic) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
   }
