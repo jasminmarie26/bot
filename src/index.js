@@ -5409,6 +5409,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
   const hasInnerImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_url");
   const hasOuterImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_url");
+  const hasClearInnerImageField = Object.prototype.hasOwnProperty.call(safeBody, "clear_inner_image");
+  const hasClearOuterImageField = Object.prototype.hasOwnProperty.call(safeBody, "clear_outer_image");
   const hasInnerImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_opacity");
   const hasOuterImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_opacity");
   const hasInnerImageRepeatField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_repeat");
@@ -5428,9 +5430,15 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const outerImageUrl = hasOuterImageUrlField
     ? String(safeBody.outer_image_url || "").trim().slice(0, 500)
     : existingOuterImageUrl;
+  const shouldClearInnerImage = hasClearInnerImageField && String(safeBody.clear_inner_image || "").trim() === "1";
+  const shouldClearOuterImage = hasClearOuterImageField && String(safeBody.clear_outer_image || "").trim() === "1";
   const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
-  const sanitizedInnerImageUrl = /^https?:\/\/.+/i.test(innerImageUrl) ? innerImageUrl : "";
-  const sanitizedOuterImageUrl = /^https?:\/\/.+/i.test(outerImageUrl) ? outerImageUrl : "";
+  const sanitizedInnerImageUrl = shouldClearInnerImage
+    ? ""
+    : (/^https?:\/\/.+/i.test(innerImageUrl) ? innerImageUrl : "");
+  const sanitizedOuterImageUrl = shouldClearOuterImage
+    ? ""
+    : (/^https?:\/\/.+/i.test(outerImageUrl) ? outerImageUrl : "");
   const censorLevel = hasCensorLevelField
     ? normalizeGuestbookOption(safeBody.censor_level, GUESTBOOK_CENSOR_OPTIONS, existingCensorLevel)
     : existingCensorLevel;
