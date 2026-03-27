@@ -5021,8 +5021,8 @@ body.page-home-screen .home-hero-actions {
 }
 
 .page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {
-  flex: 0 1 13rem;
-  min-width: min(13rem, 100%);
+  flex: 0 1 10rem;
+  min-width: min(10rem, 100%);
   max-width: 100%;
 }
 
