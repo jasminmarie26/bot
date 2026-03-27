@@ -9398,10 +9398,6 @@ const HELP_BBCODE_EXAMPLES = [
     title: "Bild rechts",
     code: "[img float=right]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild rechts"
   },
-  {
-    title: "BBCode als Text",
-    code: "\\[center\\]Das bleibt normaler Text\\[/center\\]"
-  },
   { title: "Link", code: "[url=https://heldenhaftereisen.net]Startseite[/url]" },
   { title: "Zitat", code: "[quote]Ein stilles Zitat.[/quote]" },
   { title: "Code", code: "[code]Beispielcode[/code]" },
@@ -9413,7 +9409,10 @@ const HELP_BBCODE_EXAMPLES = [
 function decorateHelpBbcodeExamples() {
   return HELP_BBCODE_EXAMPLES.map((entry) => ({
     ...entry,
-    preview_html: renderGuestbookBbcode(entry.code)
+    preview_html:
+      entry.title === "Linie"
+        ? "<hr class=\"bb-hr\">"
+        : renderGuestbookBbcode(entry.code)
   }));
 }
 
