@@ -7610,6 +7610,11 @@ select:focus {
   line-height: 1.35;
 }
 
+.chat-whisper-panel-tip {
+  font-size: 0.74rem !important;
+  opacity: 0.92;
+}
+
 .chat-whisper-close-btn {
   border: 1px solid var(--field-edge);
   border-radius: 8px;
@@ -7968,11 +7973,6 @@ select:focus {
   max-height: 5.4rem;
   resize: none;
   overflow-y: auto;
-}
-
-.whisper-input-hint {
-  margin: -0.1rem 0 0;
-  font-size: 0.84rem;
 }
 
 .whisper-actions {

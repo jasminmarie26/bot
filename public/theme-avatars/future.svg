@@ -8,17 +8,17 @@
   </defs>
   <circle cx="32" cy="32" r="30" fill="#081624"/>
   <circle cx="32" cy="32" r="28" fill="url(#bg)" opacity=".24"/>
-  <ellipse cx="32" cy="53" rx="16" ry="6" fill="#041019" opacity=".25"/>
-  <path d="M18 48c1-9 7-14 14-14 7 0 13 5 14 14" fill="#1d3b67"/>
-  <rect x="23" y="19" width="18" height="18" rx="8.5" fill="#d4f7ff"/>
-  <rect x="23" y="22" width="18" height="8" rx="4" fill="#163052"/>
-  <path d="M26 26h12" stroke="#6ffcff" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="29.5" cy="33.5" r="1.2" fill="#1c2945"/>
-  <circle cx="34.5" cy="33.5" r="1.2" fill="#1c2945"/>
-  <path d="M29 36c2 1 4 1 6 0" stroke="#688bb2" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-  <path d="M25 49c2-7 5-12 7-13 4 1 7 6 7 13" fill="#29d4ff"/>
-  <path d="M32 15v5" stroke="#b4feff" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="32" cy="12" r="2.4" fill="#79fff5"/>
-  <path d="M45 25l3 15" stroke="#8ee2ff" stroke-width="2.2" stroke-linecap="round"/>
-  <path d="M43 27h7l-2 5h-7Z" fill="#5ffeff"/>
+  <ellipse cx="32" cy="54" rx="16" ry="6" fill="#041019" opacity=".25"/>
+  <path d="M19 49c2-9 7-14 13-14s11 5 13 14" fill="#24d5ff"/>
+  <rect x="23" y="18.5" width="18" height="19" rx="9" fill="#d7f9ff"/>
+  <path d="M23 26c0-4.7 4-8 9-8s9 3.3 9 8v2.2H23Z" fill="#163052"/>
+  <path d="M27.2 29.5h9.6" stroke="#73fcff" stroke-width="2.1" stroke-linecap="round"/>
+  <circle cx="28.8" cy="34" r="1.2" fill="#182743"/>
+  <circle cx="35.2" cy="34" r="1.2" fill="#182743"/>
+  <path d="M29.4 37c1.7.9 3.5.9 5.2 0" stroke="#6a89ad" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M25.5 49c2-6.6 4.4-11 6.5-12.3 3 1.3 5.4 5.7 6.5 12.3" fill="#2a82c8"/>
+  <path d="M32 14v4.8" stroke="#b6feff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="32" cy="11.7" r="2.5" fill="#79fff5"/>
+  <path d="M44.2 24.5 47 39.5" stroke="#8ee2ff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="47.5" cy="41.5" r="3.1" fill="#70fff7"/>
 </svg>
