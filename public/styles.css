@@ -7338,6 +7338,7 @@ select:focus {
 .chat-online-panel h2 {
   margin: 0 0 0.48rem;
   font-size: 0.9rem;
+  color: #1a1c20;
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
