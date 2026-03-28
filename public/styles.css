@@ -1583,11 +1583,11 @@ a:hover {
 }
 
 .topbar-user-menu-toggle-icon {
-  background: center / cover no-repeat url("/hr-icon.png");
+  background: center / cover no-repeat url("/hr-icon-square.png");
 }
 
 .rp-user-menu-toggle-icon {
-  background: center / cover no-repeat url("/hr-icon.png");
+  background: center / cover no-repeat url("/hr-icon-square.png");
 }
 
 .topbar-user-menu-panel,
