@@ -62,6 +62,7 @@
     <% if (includeRealtimeAssets) { %>
       <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
+    <link rel="icon" type="image/png" href="/Seiten-Icon.png?v=<%= staticAssetVersion %>" />
     <link rel="stylesheet" href="/styles.css?v=<%= staticAssetVersion %>" />
   </head>
     <% const bodyClassNames = [`theme-${activeTheme}`]; %>
