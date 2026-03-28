@@ -402,13 +402,26 @@
   window.addEventListener("touchstart", unlockNotificationAudio, { once: true });
   window.addEventListener("click", unlockNotificationAudio, { once: true });
   updateSoundToggle();
+  let hasJoinedCurrentChatSession = false;
+  let lastDisconnectAt = 0;
 
   socket.on("connect", () => {
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
-      characterId: Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null
+      characterId: Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null,
+      isReconnect: hasJoinedCurrentChatSession,
+      reconnectAgeMs:
+        hasJoinedCurrentChatSession && lastDisconnectAt > 0
+          ? Math.max(0, Date.now() - lastDisconnectAt)
+          : null
     });
+    hasJoinedCurrentChatSession = true;
+    lastDisconnectAt = 0;
+  });
+
+  socket.on("disconnect", () => {
+    lastDisconnectAt = Date.now();
   });
 
   function appendFormattedChatNodes(

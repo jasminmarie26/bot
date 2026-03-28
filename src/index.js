@@ -14370,6 +14370,96 @@ function emitRoomListRefresh(serverId = DEFAULT_SERVER_ID) {
 
 const pendingRoomDeletionTimers = new Map();
 const pendingRoomInvites = new Map();
+const pendingChatDisconnects = new Map();
+const CHAT_RECONNECT_GRACE_MS = 25000;
+
+function getPendingChatDisconnectKey(userId, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
+  return `${parsedUserId}:${normalizedServerId}:${roomKey}`;
+}
+
+function clearPendingChatDisconnect(userId, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  const key = getPendingChatDisconnectKey(parsedUserId, roomId, serverId);
+  const entry = pendingChatDisconnects.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  clearTimeout(entry.timer);
+  pendingChatDisconnects.delete(key);
+  return entry;
+}
+
+function schedulePendingChatDisconnect({
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  displayName = "",
+  chatTextColor = "",
+  skipPresence = false
+}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  clearPendingChatDisconnect(parsedUserId, roomId, normalizedServerId);
+  const key = getPendingChatDisconnectKey(parsedUserId, roomId, normalizedServerId);
+
+  const entry = {
+    userId: parsedUserId,
+    roomId: Number.isInteger(roomId) && roomId > 0 ? roomId : null,
+    serverId: normalizedServerId,
+    displayName: String(displayName || "").trim(),
+    chatTextColor: String(chatTextColor || "").trim(),
+    skipPresence: Boolean(skipPresence),
+    timer: null
+  };
+
+  entry.timer = setTimeout(() => {
+    pendingChatDisconnects.delete(key);
+
+    if (getUserSocketsInChannel(entry.roomId, entry.serverId, entry.userId).length > 0) {
+      return;
+    }
+
+    if (!entry.skipPresence) {
+      const disconnectPresenceMessage = buildRoomPresenceMessage(
+        "leave",
+        entry.displayName || `User ${entry.userId}`
+      );
+      emitSystemChatMessage(
+        entry.roomId,
+        entry.serverId,
+        disconnectPresenceMessage.text,
+        {
+          chat_text_color: "#000000",
+          system_kind: "presence",
+          presence_kind: disconnectPresenceMessage.kind,
+          presence_actor_name: disconnectPresenceMessage.actorName,
+          presence_actor_chat_text_color: entry.chatTextColor,
+          presence_suffix: disconnectPresenceMessage.suffix
+        }
+      );
+    }
+
+    emitOnlineCharacters(entry.roomId, entry.serverId);
+    void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId);
+    scheduleRoomDeletion(entry.roomId);
+    emitHomeStatsUpdate();
+  }, CHAT_RECONNECT_GRACE_MS);
+
+  pendingChatDisconnects.set(key, entry);
+  return entry;
+}
 
 function getPendingRoomInvite(inviteId) {
   const normalizedInviteId = String(inviteId || "").trim();
@@ -14624,6 +14714,12 @@ io.on("connection", (socket) => {
       payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
     const rawCharacterId =
       payload && typeof payload === "object" ? payload.characterId : null;
+    const isReconnectJoin =
+      payload && typeof payload === "object" && payload.isReconnect === true;
+    const reconnectAgeMs =
+      payload && typeof payload === "object"
+        ? Number(payload.reconnectAgeMs)
+        : NaN;
 
     const parsedRoomId = Number(rawRoomId);
     const parsedCharacterId = Number(rawCharacterId);
@@ -14648,6 +14744,18 @@ io.on("connection", (socket) => {
       }
       nextServerId = normalizeServer(nextRoom.server_id || nextRoom.character_server_id);
     }
+
+    const recoveredDisconnect = clearPendingChatDisconnect(
+      socket.data.user.id,
+      nextRoomId,
+      nextServerId
+    );
+    const shouldSuppressReconnectPresence =
+      Boolean(recoveredDisconnect) ||
+      (isReconnectJoin &&
+        Number.isFinite(reconnectAgeMs) &&
+        reconnectAgeMs >= 0 &&
+        reconnectAgeMs <= CHAT_RECONNECT_GRACE_MS);
 
     const previousRoomId =
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
@@ -14720,7 +14828,7 @@ io.on("connection", (socket) => {
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
-    if (!isSameChannel) {
+    if (!isSameChannel && !shouldSuppressReconnectPresence) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
       emitSystemChatMessage(
         nextRoomId,
@@ -15693,28 +15801,18 @@ io.on("connection", (socket) => {
         socket.data.isTyping = false;
         emitChatTypingState(socket, previousRoomId, previousServerId);
       }
-      if (!socket.data.skipDisconnectPresence) {
-        const displayProfile = getSocketDisplayProfile(socket, previousServerId);
-        const displayName = displayProfile.label || `User ${socket.data.user?.id || "?"}`;
-        const disconnectPresenceMessage = buildRoomPresenceMessage("leave", displayName);
-        emitSystemChatMessage(
-          previousRoomId,
-          previousServerId,
-          disconnectPresenceMessage.text,
-          {
-            chat_text_color: "#000000",
-            system_kind: "presence",
-            presence_kind: disconnectPresenceMessage.kind,
-            presence_actor_name: disconnectPresenceMessage.actorName,
-            presence_actor_chat_text_color: displayProfile?.chat_text_color || "",
-            presence_suffix: disconnectPresenceMessage.suffix
-          }
-        );
-      }
-      emitOnlineCharacters(previousRoomId, previousServerId);
-      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
-      scheduleRoomDeletion(previousRoomId);
+      const disconnectDisplayProfile = getSocketDisplayProfile(socket, previousServerId);
+      schedulePendingChatDisconnect({
+        userId: socket.data.user.id,
+        roomId: previousRoomId,
+        serverId: previousServerId,
+        displayName: disconnectDisplayProfile.label || `User ${socket.data.user?.id || "?"}`,
+        chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
+        skipPresence: socket.data.skipDisconnectPresence
+      });
+      return;
     }
+
     if (socket.data.user?.id) {
       emitHomeStatsUpdate();
     }

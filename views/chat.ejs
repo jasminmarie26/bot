@@ -25,19 +25,11 @@
     ? "Moderatorenbereich im neuen Tab öffnen"
     : chatIdentityName; %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
-<% const chatAreaHref = activeCharacter
-  ? ((activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
-      ? `/dashboard/areas/${activeCharacter.server_id}`
-      : `/characters/${activeCharacter.id}#roomlist`)
-  : "/dashboard"; %>
 <% const chatRoomListHref = activeCharacter
   ? (isFestplayContext
       ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
       : `/characters/${activeCharacter.id}#roomlist`)
   : "/dashboard"; %>
-<% const showChatAreaMenuLink = Boolean(
-  activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")
-); %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
@@ -176,9 +168,6 @@
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account">Account</a>
           <a href="/dashboard">Dashboard</a>
-          <% if (showChatAreaMenuLink) { %>
-            <a href="<%= chatAreaHref %>">Bereich</a>
-          <% } %>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <% } %>
