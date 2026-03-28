@@ -7970,6 +7970,11 @@ select:focus {
   overflow-y: auto;
 }
 
+.whisper-input-hint {
+  margin: -0.1rem 0 0;
+  font-size: 0.84rem;
+}
+
 .whisper-actions {
   display: flex;
   gap: 0.55rem;

@@ -1567,31 +1567,50 @@
     whisperPanelCloseBtn.addEventListener("click", closeWhisperPanel);
   }
 
+  function submitWhisperMessage() {
+    const targetUserId = Number(whisperTargetUserIdInput?.value);
+    const content = String(whisperInput?.value || "").trim();
+    if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
+      return false;
+    }
+
+    socket.emit("chat:whisper", {
+      targetUserId,
+      content
+    });
+
+    whisperInput.value = "";
+    activateWhisperThread({
+      userId: targetUserId,
+      name:
+        getOnlineEntryByUserId(targetUserId)?.name ||
+        whisperThreadsByUserId.get(targetUserId)?.name ||
+        "Unbekannt"
+    }, {
+      focusInput: true,
+      openPanel: false
+    });
+    return true;
+  }
+
   if (whisperForm) {
     whisperForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      const targetUserId = Number(whisperTargetUserIdInput?.value);
-      const content = String(whisperInput?.value || "").trim();
-      if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
+      submitWhisperMessage();
+    });
+  }
+
+  if (whisperInput) {
+    whisperInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      if (event.isComposing || event.keyCode === 229) {
         return;
       }
 
-      socket.emit("chat:whisper", {
-        targetUserId,
-        content
-      });
-
-      whisperInput.value = "";
-      activateWhisperThread({
-        userId: targetUserId,
-        name:
-          getOnlineEntryByUserId(targetUserId)?.name ||
-          whisperThreadsByUserId.get(targetUserId)?.name ||
-          "Unbekannt"
-      }, {
-        focusInput: true,
-        openPanel: false
-      });
+      event.preventDefault();
+      submitWhisperMessage();
     });
   }
 
