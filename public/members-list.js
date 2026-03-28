@@ -15,14 +15,22 @@
   function applyFilter() {
     const query = searchInput.value.trim().toLowerCase();
     let visibleCount = 0;
+    const hasNameMatch =
+      query.length > 0 &&
+      cards.some((card) => (card.dataset.memberName || "").includes(query));
 
     cards.forEach((card) => {
+      const memberName = card.dataset.memberName || "";
       const haystack = [
-        card.dataset.memberName || "",
+        memberName,
         card.dataset.memberOwner || "",
         card.dataset.memberServer || ""
       ].join(" ");
-      const isVisible = !query || haystack.includes(query);
+      const isVisible = !query
+        ? true
+        : hasNameMatch
+          ? memberName.includes(query)
+          : haystack.includes(query);
       card.hidden = !isVisible;
       if (isVisible) {
         visibleCount += 1;
