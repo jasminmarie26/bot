@@ -15009,11 +15009,11 @@ io.on("connection", (socket) => {
       nextServerId
     );
     const shouldSuppressReconnectPresence =
-      Boolean(recoveredDisconnect) ||
-      (isReconnectJoin &&
-        Number.isFinite(reconnectAgeMs) &&
-        reconnectAgeMs >= 0 &&
-        reconnectAgeMs <= CHAT_RECONNECT_GRACE_MS);
+      isReconnectJoin &&
+      (Boolean(recoveredDisconnect) ||
+        (Number.isFinite(reconnectAgeMs) &&
+          reconnectAgeMs >= 0 &&
+          reconnectAgeMs <= CHAT_RECONNECT_GRACE_MS));
 
     const previousRoomId =
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
@@ -15105,21 +15105,32 @@ io.on("connection", (socket) => {
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
     rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
-    if (!isSameChannel && !shouldSuppressReconnectPresence && !hasOtherPresenceInNextChannel) {
+    if (!isSameChannel) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
-      emitSystemChatMessage(
-        nextRoomId,
-        nextServerId,
-        nextPresenceMessage.text,
-        {
+      if (!shouldSuppressReconnectPresence && !hasOtherPresenceInNextChannel) {
+        emitSystemChatMessage(
+          nextRoomId,
+          nextServerId,
+          nextPresenceMessage.text,
+          {
+            chat_text_color: "#000000",
+            system_kind: "presence",
+            presence_kind: nextPresenceMessage.kind,
+            presence_actor_name: nextPresenceMessage.actorName,
+            presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
+            presence_suffix: nextPresenceMessage.suffix
+          }
+        );
+      } else {
+        emitDirectSystemMessageToSocket(socket, nextPresenceMessage.text, {
           chat_text_color: "#000000",
           system_kind: "presence",
           presence_kind: nextPresenceMessage.kind,
           presence_actor_name: nextPresenceMessage.actorName,
           presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
           presence_suffix: nextPresenceMessage.suffix
-        }
-      );
+        });
+      }
     }
     clearPendingRoomDeletion(nextRoomId);
     if (nextRoom) {
