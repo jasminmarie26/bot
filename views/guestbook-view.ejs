@@ -42,7 +42,13 @@
     `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
   const guestbookContainerStyle = [
-    effectiveGuestbookSurroundColor ? `--gb-page-fill:${effectiveGuestbookSurroundColor}` : ""
+    effectiveGuestbookSurroundColor ? `--gb-page-fill:${effectiveGuestbookSurroundColor}` : "",
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
+    guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",
+    `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
+    `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
+    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", {
