@@ -11189,7 +11189,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     });
   }
 
-  if (!payload.festplay_id || !festplayExists(payload.festplay_id)) {
+  if (payload.festplay_id && !festplayExists(payload.festplay_id)) {
     return res.status(400).render("character-form", {
       title: `Bearbeiten: ${character.name}`,
       mode: "edit",
