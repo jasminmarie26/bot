@@ -46,6 +46,12 @@
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
   const activeCharacterId = Number(activeCharacterIdRaw);
+  const currentPresenceKey =
+    Number.isInteger(activeCharacterId) && activeCharacterId > 0
+      ? `character:${activeCharacterId}`
+      : Number.isInteger(currentUserId) && currentUserId > 0
+        ? `user:${currentUserId}`
+        : "guest";
   const afkTimeoutMinutesRaw = Number(chatBox?.dataset?.afkTimeoutMinutes || "");
   const afkTimeoutMinutes =
     Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
@@ -62,6 +68,12 @@
   const chatInputDraftKey = [
     "chat-input-draft",
     Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
+    serverId,
+    hasRoom ? `room-${roomId}` : "room-none"
+  ].join(":");
+  const chatAfkStateKey = [
+    "chat-afk-state",
+    currentPresenceKey,
     serverId,
     hasRoom ? `room-${roomId}` : "room-none"
   ].join(":");
@@ -129,6 +141,25 @@
     }
   }
 
+  function resolvePresenceKey(payload) {
+    const explicitKey = String(payload?.presence_key || "").trim();
+    if (explicitKey) {
+      return explicitKey;
+    }
+
+    const characterId = Number(payload?.character_id);
+    if (Number.isInteger(characterId) && characterId > 0) {
+      return `character:${characterId}`;
+    }
+
+    const userId = Number(payload?.user_id);
+    if (Number.isInteger(userId) && userId > 0) {
+      return `user:${userId}`;
+    }
+
+    return "";
+  }
+
   function loadChatInputHistory() {
     const rawValue = readSessionStorage(chatInputHistoryKey);
     if (!rawValue) {
@@ -173,6 +204,41 @@
 
   function clearChatDraft() {
     removeSessionStorage(chatInputDraftKey);
+  }
+
+  function getStoredAfkState() {
+    const rawValue = readSessionStorage(chatAfkStateKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (!parsed || typeof parsed !== "object") {
+        return null;
+      }
+
+      return {
+        mode: String(parsed.mode || "").trim().toLowerCase() === "auto" ? "auto" : "manual",
+        reason: String(parsed.reason || "").trim().slice(0, 180)
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function rememberAfkState(mode, reason) {
+    writeSessionStorage(
+      chatAfkStateKey,
+      JSON.stringify({
+        mode: String(mode || "").trim().toLowerCase() === "auto" ? "auto" : "manual",
+        reason: String(reason || "").trim().slice(0, 180)
+      })
+    );
+  }
+
+  function clearStoredAfkState() {
+    removeSessionStorage(chatAfkStateKey);
   }
 
   function rememberSentChatMessage(value) {
@@ -304,25 +370,27 @@
   });
   socket.on("user:display-profile", updateHeaderIdentity);
   socket.on("chat:typing", (payload) => {
-    const userId = Number(payload?.user_id);
-    if (!Number.isInteger(userId) || userId < 1) {
+    const presenceKey = resolvePresenceKey(payload);
+    if (!presenceKey) {
       return;
     }
 
-    setTypingStateForUser(userId, Boolean(payload?.is_typing));
+    setTypingStateForUser(presenceKey, Boolean(payload?.is_typing));
   });
   socket.on("chat:afk-state", (payload) => {
-    if (Number(payload?.user_id) !== currentUserId) {
+    if (resolvePresenceKey(payload) !== currentPresenceKey) {
       return;
     }
 
     isCurrentChannelAfk = Boolean(payload?.active);
     currentAfkMode = isCurrentChannelAfk ? String(payload?.mode || "") : "";
     if (isCurrentChannelAfk) {
+      rememberAfkState(currentAfkMode, String(payload?.reason || ""));
       clearAfkTimer();
       return;
     }
 
+    clearStoredAfkState();
     scheduleAfkTimer();
   });
   socket.on("chat:room-state", updateRoomLockState);
@@ -439,9 +507,22 @@
           ? Math.max(0, Date.now() - lastDisconnectAt)
           : null
     });
+    const storedAfkState = getStoredAfkState();
+    if (storedAfkState) {
+      isCurrentChannelAfk = true;
+      currentAfkMode = storedAfkState.mode;
+      clearAfkTimer();
+      socket.emit("chat:afk:set", {
+        reason: storedAfkState.reason,
+        mode: storedAfkState.mode,
+        silent: true
+      });
+    }
     hasJoinedCurrentChatSession = true;
     lastDisconnectAt = 0;
-    scheduleAfkTimer();
+    if (!storedAfkState) {
+      scheduleAfkTimer();
+    }
   });
 
   socket.on("disconnect", () => {
@@ -704,10 +785,25 @@
     return null;
   }
 
+  function getOnlineEntryByUserId(userId) {
+    const parsedUserId = Number(userId);
+    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+      return null;
+    }
+
+    for (const entry of onlineEntriesByUserId.values()) {
+      if (Number(entry?.userId) === parsedUserId) {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
   function getWhisperPartnerName(msg, partnerUserId = getWhisperPartnerUserId(msg)) {
     const explicitName = Boolean(msg?.outgoing) ? msg?.to_name : msg?.from_name;
     const rememberedName = whisperThreadsByUserId.get(partnerUserId)?.name;
-    const onlineName = onlineEntriesByUserId.get(partnerUserId)?.name;
+    const onlineName = getOnlineEntryByUserId(partnerUserId)?.name;
     const resolvedName = String(explicitName || rememberedName || onlineName || "").trim();
     return resolvedName || "Unbekannt";
   }
@@ -996,7 +1092,12 @@
     const userId = Number(entry?.userId);
     if (!Number.isInteger(userId) || userId < 1) return;
 
-    const name = String(entry?.name || onlineEntriesByUserId.get(userId)?.name || whisperThreadsByUserId.get(userId)?.name || "Unbekannt").trim() || "Unbekannt";
+    const name = String(
+      entry?.name ||
+      getOnlineEntryByUserId(userId)?.name ||
+      whisperThreadsByUserId.get(userId)?.name ||
+      "Unbekannt"
+    ).trim() || "Unbekannt";
     ensureWhisperThread(userId, name);
     activeWhisperThreadUserId = userId;
     whisperUnreadUserIds.delete(userId);
@@ -1119,9 +1220,11 @@
 
     const userId = Number(triggerEl.dataset.userId);
     const characterId = Number(triggerEl.dataset.characterId);
+    const presenceKey = String(triggerEl.dataset.presenceKey || "").trim();
     const name = String(triggerEl.dataset.name || triggerEl.textContent || "").trim() || "Unbekannt";
 
     selectedOnlineEntry = {
+      presenceKey,
       userId: Number.isInteger(userId) && userId > 0 ? userId : null,
       characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
       name
@@ -1164,28 +1267,28 @@
   }
 
   function syncTypingIndicatorForUser(userId) {
-    const parsedUserId = Number(userId);
-    if (!onlineCharList || !Number.isInteger(parsedUserId) || parsedUserId < 1) return;
+    const presenceKey = String(userId || "").trim();
+    if (!onlineCharList || !presenceKey) return;
 
-    const targetNode = onlineCharList.querySelector(`[data-user-id="${parsedUserId}"]`);
+    const targetNode = onlineCharList.querySelector(`[data-presence-key="${presenceKey}"]`);
     if (!targetNode) return;
 
-    updateTypingIndicator(targetNode, typingStateByUserId.get(parsedUserId) === true);
+    updateTypingIndicator(targetNode, typingStateByUserId.get(presenceKey) === true);
   }
 
   function setTypingStateForUser(userId, isTyping) {
-    const parsedUserId = Number(userId);
-    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    const presenceKey = String(userId || "").trim();
+    if (!presenceKey) {
       return;
     }
 
     if (isTyping) {
-      typingStateByUserId.set(parsedUserId, true);
+      typingStateByUserId.set(presenceKey, true);
     } else {
-      typingStateByUserId.delete(parsedUserId);
+      typingStateByUserId.delete(presenceKey);
     }
 
-    syncTypingIndicatorForUser(parsedUserId);
+    syncTypingIndicatorForUser(presenceKey);
   }
 
   function clearAfkTimer() {
@@ -1233,7 +1336,7 @@
     }
 
     typingEmitActive = nextState;
-    setTypingStateForUser(currentUserId, nextState);
+    setTypingStateForUser(currentPresenceKey, nextState);
     socket.emit("chat:typing", { isTyping: nextState });
   }
 
@@ -1277,7 +1380,7 @@
         sensitivity: "base"
       })
     );
-    const presentUserIds = new Set();
+    const presentPresenceKeys = new Set();
     onlineEntriesByUserId.clear();
 
     onlineCharList.innerHTML = "";
@@ -1293,6 +1396,7 @@
     list.forEach((entry) => {
       const userId = Number(entry?.user_id);
       const characterId = Number(entry?.character_id);
+      const presenceKey = resolvePresenceKey(entry);
       const label = String(entry?.name || "").trim();
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
@@ -1316,9 +1420,10 @@
       if (roleStyle === "admin" || roleStyle === "moderator") {
         textNode.classList.add(`role-name-${roleStyle}`);
       }
-      if (Number.isInteger(userId) && userId > 0) {
-        presentUserIds.add(userId);
-        onlineEntriesByUserId.set(userId, {
+      if (presenceKey) {
+        presentPresenceKeys.add(presenceKey);
+        onlineEntriesByUserId.set(presenceKey, {
+          presenceKey,
           userId,
           characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
           name: text,
@@ -1327,6 +1432,7 @@
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
+      node.dataset.presenceKey = presenceKey;
       node.dataset.name = text;
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
@@ -1340,15 +1446,15 @@
       }
       contentNode.appendChild(textNode);
       node.appendChild(contentNode);
-      if (Number.isInteger(userId) && userId > 0) {
-        updateTypingIndicator(node, typingStateByUserId.get(userId) === true);
+      if (presenceKey) {
+        updateTypingIndicator(node, typingStateByUserId.get(presenceKey) === true);
       }
       onlineCharList.appendChild(node);
     });
 
-    Array.from(typingStateByUserId.keys()).forEach((userId) => {
-      if (!presentUserIds.has(userId)) {
-        typingStateByUserId.delete(userId);
+    Array.from(typingStateByUserId.keys()).forEach((presenceKey) => {
+      if (!presentPresenceKeys.has(presenceKey)) {
+        typingStateByUserId.delete(presenceKey);
       }
     });
 
@@ -1421,7 +1527,7 @@
       if (
         !onlineActionsMenu?.hidden &&
         selectedOnlineEntry &&
-        String(selectedOnlineEntry.userId || "") === String(trigger.dataset.userId || "")
+        String(selectedOnlineEntry.presenceKey || "") === String(trigger.dataset.presenceKey || "")
       ) {
         closeOnlineMenu();
         return;
@@ -1478,7 +1584,10 @@
       whisperInput.value = "";
       activateWhisperThread({
         userId: targetUserId,
-        name: onlineEntriesByUserId.get(targetUserId)?.name || whisperThreadsByUserId.get(targetUserId)?.name || "Unbekannt"
+        name:
+          getOnlineEntryByUserId(targetUserId)?.name ||
+          whisperThreadsByUserId.get(targetUserId)?.name ||
+          "Unbekannt"
       }, {
         focusInput: true,
         openPanel: false
