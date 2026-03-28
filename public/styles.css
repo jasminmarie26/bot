@@ -1574,8 +1574,13 @@ a:hover {
 
 .topbar-user-menu-toggle-icon,
 .rp-user-menu-toggle-icon {
-  font-size: 1rem;
-  line-height: 1;
+  width: 1.7rem;
+  height: 1.7rem;
+  display: inline-block;
+  background: center / cover no-repeat url("/Seiten-Icon.png");
+  border-radius: 999px;
+  font-size: 0;
+  line-height: 0;
 }
 
 .topbar-user-menu-panel,
