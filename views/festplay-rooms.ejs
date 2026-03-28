@@ -200,17 +200,17 @@
                 <% if (activeUsers.length) { %>
                   <% activeUsers.forEach((entry, index) => { %>
                     <% if (entry.character_id) { %>
-                      <a
-                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
-                        href="/characters/<%= entry.character_id %>/guestbook"
-                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
-                      ><%= entry.name %></a>
-                    <% } else { %>
-                      <span
-                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
-                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
-                      ><%= entry.name %></span>
-                    <% } %>
+                        <a
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
+                          href="/characters/<%= entry.character_id %>/guestbook"
+                          style="<%= entry.chat_text_color && !entry.role_style ? `color:${entry.chat_text_color};` : '' %>"
+                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= entry.name %></a>
+                      <% } else { %>
+                        <span
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
+                          style="<%= entry.chat_text_color && !entry.role_style ? `color:${entry.chat_text_color};` : '' %>"
+                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= entry.name %></span>
+                      <% } %>
                     <% if (index < activeUsers.length - 1) { %>
                       <span class="rp-room-occupant-separator">, </span>
                     <% } %>
@@ -302,17 +302,17 @@
                 <% if (activeUsers.length) { %>
                   <% activeUsers.forEach((entry, index) => { %>
                     <% if (entry.character_id) { %>
-                      <a
-                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
-                        href="/characters/<%= entry.character_id %>/guestbook"
-                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
-                      ><%= entry.name %></a>
-                    <% } else { %>
-                      <span
-                        class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %>"
-                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : '' %>"
-                      ><%= entry.name %></span>
-                    <% } %>
+                        <a
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
+                          href="/characters/<%= entry.character_id %>/guestbook"
+                          style="<%= entry.chat_text_color && !entry.role_style ? `color:${entry.chat_text_color};` : '' %>"
+                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= entry.name %></a>
+                      <% } else { %>
+                        <span
+                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
+                          style="<%= entry.chat_text_color && !entry.role_style ? `color:${entry.chat_text_color};` : '' %>"
+                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= entry.name %></span>
+                      <% } %>
                     <% if (index < activeUsers.length - 1) { %>
                       <span class="rp-room-occupant-separator">, </span>
                     <% } %>

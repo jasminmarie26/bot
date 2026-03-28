@@ -53,25 +53,32 @@
     if (!headerIdentity) return;
     const nextName = String(payload?.name || "").trim();
     const nextColor = normalizeChatTextColor(payload?.chat_text_color);
+    const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
     if (!nextName) return;
 
     headerIdentity.textContent = nextName;
     headerIdentity.title = nextName;
-    headerIdentity.style.color = nextColor;
+    headerIdentity.classList.toggle("role-name-admin", nextRoleStyle === "admin");
+    headerIdentity.classList.toggle("role-name-moderator", nextRoleStyle === "moderator");
+    headerIdentity.style.color = nextRoleStyle ? "" : nextColor;
   }
 
   function createOccupantNode(entry) {
     const displayName = String(entry?.name || "").trim() || "Unbekannt";
     const characterId = Number(entry?.character_id);
     const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
+    const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
     const hasRoomRights = Boolean(entry?.has_room_rights);
     const isAfk = entry?.is_afk === true;
     const nameNode = document.createElement("span");
+    if (roleStyle) {
+      nameNode.classList.add(`role-name-${roleStyle}`);
+    }
     if (isAfk) {
       nameNode.classList.add("is-afk");
     }
     nameNode.textContent = displayName;
-    if (chatTextColor) {
+    if (chatTextColor && !roleStyle) {
       nameNode.style.color = chatTextColor;
     }
 

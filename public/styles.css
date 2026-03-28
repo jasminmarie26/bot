@@ -2079,62 +2079,6 @@ a:hover {
   margin-bottom: 1rem;
 }
 
-.idle-logout-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-}
-
-.idle-logout-modal[hidden] {
-  display: none !important;
-}
-
-.idle-logout-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.48);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.idle-logout-card {
-  position: relative;
-  z-index: 1;
-  width: min(460px, 96vw);
-  border-radius: 16px;
-  display: grid;
-  gap: 0.85rem;
-}
-
-.idle-logout-card h2 {
-  margin: 0;
-  font-size: 1.08rem;
-  line-height: 1.2;
-}
-
-.idle-logout-copy,
-.idle-logout-note {
-  margin: 0;
-}
-
-.idle-logout-copy {
-  line-height: 1.5;
-}
-
-.idle-logout-copy strong {
-  font-variant-numeric: tabular-nums;
-}
-
-.idle-logout-actions {
-  display: flex;
-  gap: 0.6rem;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
 .hero {
   border-radius: 22px;
   padding: 1.2rem 1.3rem;

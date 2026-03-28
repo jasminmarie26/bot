@@ -1,40 +1,10 @@
     </main>
-    <% if (currentUser && !currentUser.is_admin && !currentUser.is_moderator) { %>
-      <div id="idle-logout-modal" class="idle-logout-modal" hidden>
-        <div class="idle-logout-backdrop" aria-hidden="true"></div>
-        <section
-          class="panel idle-logout-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="idle-logout-title"
-          aria-describedby="idle-logout-copy"
-        >
-          <h2 id="idle-logout-title">Automatischer Logout</h2>
-          <p id="idle-logout-copy" class="idle-logout-copy">
-            Du warst l&auml;nger inaktiv. In
-            <strong id="idle-logout-countdown">15</strong>
-            <span id="idle-logout-countdown-label">Sekunden</span>
-            wirst du automatisch ausgeloggt.
-          </p>
-          <p class="muted idle-logout-note">
-            Wenn du angemeldet bleiben m&ouml;chtest, klicke auf Abbrechen.
-          </p>
-          <div class="idle-logout-actions">
-            <button id="idle-logout-cancel" type="button" class="btn btn-secondary">Abbrechen</button>
-            <button id="idle-logout-continue" type="button" class="btn">Jetzt ausloggen</button>
-          </div>
-        </section>
-      </div>
-    <% } %>
     <script src="/updates.js?v=<%= staticAssetVersion %>"></script>
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
     <script src="/rp-board.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
     <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
       <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
-    <% } %>
-    <% if (currentUser && !currentUser.is_admin && !currentUser.is_moderator) { %>
-      <script src="/idle-logout.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
   </body>
 </html>

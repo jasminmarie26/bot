@@ -7095,8 +7095,7 @@ app.use((req, res, next) => {
     const normalizedPath = String(req.path || "").trim();
     const isAllowedPath =
       normalizedPath === "/auth/complete-profile" ||
-      normalizedPath === "/logout" ||
-      normalizedPath === "/logout-idle";
+      normalizedPath === "/logout";
 
     if (!isAllowedPath) {
       return res.redirect("/auth/complete-profile");
@@ -7553,15 +7552,7 @@ app.get("/verify-email", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const logoutReason = String(req.query.reason || "").trim().toLowerCase();
-  const success =
-    logoutReason === "idle"
-      ? "Du wurdest wegen zu langer Inaktivität automatisch ausgeloggt."
-      : null;
-
-  return renderLoginPage(req, res, {
-    success
-  });
+  return renderLoginPage(req, res, {});
 });
 
 app.post("/login", (req, res) => {
@@ -7927,14 +7918,7 @@ app.post("/logout", (req, res) => {
 
 app.post("/session/touch", requireAuth, (req, res) => {
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
-  req.session.last_activity_at = Date.now();
   return res.status(204).end();
-});
-
-app.get("/logout-idle", (req, res) => {
-  req.session.destroy(() => {
-    res.redirect("/login?reason=idle");
-  });
 });
 
 app.get("/account", requireAuth, (req, res) => {
@@ -11288,7 +11272,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geändert werden.`
       : "Charakter aktualisiert."
   );
-  return res.redirect(`/characters/${id}`);
+  return res.redirect(`/characters/${id}/edit`);
 });
 
 app.post("/characters/:id/delete", requireAuth, (req, res) => {
