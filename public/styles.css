@@ -1577,14 +1577,60 @@ a:hover {
   border-radius: 999px;
   font-size: 0;
   line-height: 0;
+  background-image: url("/theme-avatars/glass-aurora.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
-.topbar-user-menu-toggle-icon {
-  background: center / cover no-repeat url("/hr-icon-square.png");
+.theme-glass-aurora .topbar-user-menu-toggle-icon,
+.theme-glass-aurora .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/glass-aurora.svg");
 }
 
-.rp-user-menu-toggle-icon {
-  background: center / cover no-repeat url("/hr-icon-square.png");
+.theme-glass-noir .topbar-user-menu-toggle-icon,
+.theme-glass-noir .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/glass-noir.svg");
+}
+
+.theme-glass-sunset .topbar-user-menu-toggle-icon,
+.theme-glass-sunset .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/glass-sunset.svg");
+}
+
+.theme-future .topbar-user-menu-toggle-icon,
+.theme-future .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/future.svg");
+}
+
+.theme-paper-ink .topbar-user-menu-toggle-icon,
+.theme-paper-ink .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/paper-ink.svg");
+}
+
+.theme-windows-xp .topbar-user-menu-toggle-icon,
+.theme-windows-xp .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/windows-xp.svg");
+}
+
+.theme-atari .topbar-user-menu-toggle-icon,
+.theme-atari .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/atari.svg");
+}
+
+.theme-sith .topbar-user-menu-toggle-icon,
+.theme-sith .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/sith.svg");
+}
+
+.theme-jedi .topbar-user-menu-toggle-icon,
+.theme-jedi .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/jedi.svg");
+}
+
+.theme-larp .topbar-user-menu-toggle-icon,
+.theme-larp .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/larp.svg");
 }
 
 .topbar-user-menu-panel,
