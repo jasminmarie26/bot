@@ -31,7 +31,7 @@
       : "#roomlist"; %>
   <% const roomlistAreaLabel =
     character.server_id === "free-rp" || character.server_id === "erp"
-      ? "Bereich"
+      ? "Serverliste"
       : "Raumliste"; %>
   <% const roomlistBoardServerId = currentHeaderCharacter?.server_id || character.server_id; %>
   <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
@@ -130,7 +130,7 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account">Account</a>
-          <a href="/dashboard">Dashboard</a>
+          <a href="/dashboard">Serverliste</a>
           <% if (isOwner) { %>
             <a
               href="/characters/<%= character.id %>/edit"

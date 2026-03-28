@@ -131,10 +131,7 @@
       menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
         ? `/dashboard/areas/${menuCharacter.server_id}`
         : "/dashboard"; %>
-    <% const topbarAreaLabel =
-      menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
-        ? "Bereich"
-        : "Dashboard"; %>
+    <% const topbarAreaLabel = "Serverliste"; %>
     <% const isDashboardPath = Boolean(currentPath && currentPath.startsWith("/dashboard")); %>
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
@@ -287,7 +284,7 @@
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="/account">Account</a>
                     <% if (!isDashboardPath) { %>
-                      <a href="/dashboard">Dashboard</a>
+                      <a href="/dashboard">Serverliste</a>
                     <% } %>
                     <% if (menuCharacter) { %>
                       <a href="/characters/<%= menuCharacter.id %>">Charakter</a>

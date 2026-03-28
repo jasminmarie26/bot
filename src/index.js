@@ -9130,7 +9130,7 @@ app.get("/dashboard", requireAuth, (req, res) => {
   const larpSection = getDashboardLarpSection();
 
   return res.render("dashboard", {
-    title: "Dashboard",
+    title: "Serverliste",
     serverSections,
     larpSection
   });
@@ -9321,7 +9321,7 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
   };
 
   return res.render("dashboard", {
-    title: "Dashboard",
+    title: "Serverliste",
     serverSections,
     larpSection
   });
