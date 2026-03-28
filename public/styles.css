@@ -1698,7 +1698,7 @@ a:hover {
   max-width: none;
   width: 100%;
   margin: 0;
-  padding: 0 1rem 2.3rem;
+  padding: 0;
   min-height: calc(100vh - var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
 }
 
@@ -6061,6 +6061,7 @@ body.page-guestbook-preview::after {
 
 .guestbook-view-shell {
   min-height: calc(100vh - var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
+  padding: 0 0 2.4rem;
 }
 
 .guestbook-preview-header {
