@@ -41,15 +41,6 @@
     `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
     `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
-  const guestbookContainerStyle = [
-    effectiveGuestbookSurroundColor ? `--gb-page-fill:${effectiveGuestbookSurroundColor}` : "",
-    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
-    guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",
-    `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
-    `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
-    `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
-    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
-  ].filter(Boolean).join(";");
 %>
 <%- include("partials/start", {
   topbarCharacter,
@@ -57,8 +48,7 @@
   topbarBrandHref,
   topbarBrandModifier,
   topbarGuestbookMode: true,
-  pageClass: "page-guestbook-view",
-  containerStyle: guestbookContainerStyle
+  pageClass: "page-guestbook-view"
 }) %>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
@@ -70,33 +60,34 @@
     guestbookContextQuery;
 %>
 
-<section class="panel guestbook-layout" style="<%= guestbookLayoutStyle %>">
-  <div class="guestbook-page-shell">
-    <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
+<div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookLayoutStyle %>">
+  <section class="panel guestbook-layout">
+    <div class="guestbook-page-shell">
+      <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
 
-    <article
-      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
-      style="<%= guestbookPageStyle %>"
-    >
-      <% if (guestbookSettings?.image_url) { %>
-        <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
-      <% } %>
-      <% if (activeGuestbookPage?.content_html) { %>
-        <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
-      <% } else { %>
-        <p class="muted">Diese Seite ist noch leer.</p>
-      <% } %>
-    </article>
-  </div>
-</section>
+      <article
+        class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
+        style="<%= guestbookPageStyle %>"
+      >
+        <% if (guestbookSettings?.image_url) { %>
+          <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+        <% } %>
+        <% if (activeGuestbookPage?.content_html) { %>
+          <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
+        <% } else { %>
+          <p class="muted">Diese Seite ist noch leer.</p>
+        <% } %>
+      </article>
+    </div>
+  </section>
 
-<section
-  class="guestbook-entry-panel"
-  id="guestbook-entry-panel"
-  data-guestbook-panel
-  data-auto-open="<%= guestbookAccessState?.viaReplyAccess ? "true" : "false" %>"
-  hidden
->
+  <section
+    class="guestbook-entry-panel"
+    id="guestbook-entry-panel"
+    data-guestbook-panel
+    data-auto-open="<%= guestbookAccessState?.viaReplyAccess ? "true" : "false" %>"
+    hidden
+  >
   <% if (guestbookAccessState?.viaReplyAccess) { %>
     <p class="muted guestbook-reply-hint">
       Du bist &uuml;ber einen G&auml;stebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.
@@ -266,7 +257,8 @@
       </nav>
     </div>
   <% } %>
-</section>
+  </section>
+</div>
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>

@@ -121,12 +121,15 @@
 
     <div class="character-form-actions">
       <button type="submit" class="btn">Speichern</button>
-      <% if (mode !== "create" && guestbookEditorUrl) { %>
-        <a class="character-form-meta-link" href="<%= guestbookEditorUrl %>" target="_blank" rel="noopener noreferrer">
-          Zum G&auml;stebuch-Design
-        </a>
-      <% } %>
     </div>
+
+    <% if (mode !== "create" && guestbookEditorUrl) { %>
+      <div class="character-form-meta-link-row">
+        <a class="character-form-meta-link" href="<%= guestbookEditorUrl %>" target="_blank" rel="noopener noreferrer">
+          G&auml;stebuch-Design
+        </a>
+      </div>
+    <% } %>
   </form>
 </section>
 
