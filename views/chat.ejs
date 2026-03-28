@@ -298,8 +298,19 @@
           <% }) %>
         </div>
 
-        <form id="chat-form" class="chat-form">
-          <input id="chat-input" maxlength="500" placeholder="Nachricht eingeben..." required />
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <input
+            id="chat-input"
+            maxlength="500"
+            placeholder="Nachricht eingeben..."
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-autocomplete="none"
+            data-lpignore="true"
+            required
+          />
           <button class="btn" type="submit">Senden</button>
         </form>
       </div>
@@ -350,11 +361,22 @@
           <div id="whisper-thread" class="whisper-thread" aria-live="polite"></div>
         </div>
 
-        <form id="whisper-form" class="chat-whisper-form" hidden>
+        <form id="whisper-form" class="chat-whisper-form" autocomplete="off" hidden>
           <input id="whisper-target-user-id" type="hidden" />
           <label>
             Nachricht
-            <textarea id="whisper-input" rows="4" maxlength="500" required></textarea>
+            <textarea
+              id="whisper-input"
+              rows="4"
+              maxlength="500"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-autocomplete="none"
+              data-lpignore="true"
+              required
+            ></textarea>
           </label>
           <div class="whisper-actions">
             <button class="btn" type="submit">Senden</button>

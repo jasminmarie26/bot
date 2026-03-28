@@ -15411,6 +15411,7 @@ io.on("connection", (socket) => {
     const content = rawMessage.trim().slice(0, 500);
     if (!content) return;
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
+    const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
     if (afkMatch) {
       const afkDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const afkDisplayName =
@@ -15430,13 +15431,15 @@ io.on("connection", (socket) => {
       return;
     }
 
-    clearChatAfkState(
-      socket.data.user.id,
-      roomId,
-      serverId,
-      {},
-      getSocketPreferredCharacterId(socket, serverId)
-    );
+    if (!shouldKeepAfkState) {
+      clearChatAfkState(
+        socket.data.user.id,
+        roomId,
+        serverId,
+        {},
+        getSocketPreferredCharacterId(socket, serverId)
+      );
+    }
 
     const normalizedCommand = content.toLowerCase();
     const isFestplayChatRoom = Boolean(room) && Number(room.is_festplay_chat) === 1;
