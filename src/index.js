@@ -957,6 +957,56 @@ function getCharacterRenameAvailability(character) {
   };
 }
 
+function normalizeCharacterEditGuestbookPageId(value) {
+  const pageId = Number(value);
+  return Number.isInteger(pageId) && pageId > 0 ? pageId : null;
+}
+
+function buildStandaloneGuestbookEditorUrl(characterId, guestbookPageId = null) {
+  const normalizedPageId = normalizeCharacterEditGuestbookPageId(guestbookPageId);
+  return normalizedPageId
+    ? `/characters/${characterId}/guestbook/edit?page_id=${normalizedPageId}`
+    : `/characters/${characterId}/guestbook/edit`;
+}
+
+function buildEmbeddedGuestbookEditorUrl(characterId, guestbookPageId = null) {
+  const normalizedPageId = normalizeCharacterEditGuestbookPageId(guestbookPageId);
+  const query = normalizedPageId ? `?guestbook_page_id=${normalizedPageId}` : "";
+  return `/characters/${characterId}/edit${query}#guestbook-design`;
+}
+
+function buildGuestbookEditorReturnUrl(req, character, guestbookPageId = null) {
+  const isOwner = Number(character?.user_id) === Number(req?.session?.user?.id);
+  return isOwner
+    ? buildEmbeddedGuestbookEditorUrl(character.id, guestbookPageId)
+    : buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId);
+}
+
+function buildCharacterGuestbookEditorState(characterId, requestedPageId = null) {
+  const pages = ensureGuestbookPages(characterId);
+  const normalizedRequestedPageId = normalizeCharacterEditGuestbookPageId(requestedPageId);
+  const activePage = pages.find((page) => page.id === normalizedRequestedPageId) || pages[0];
+  const settings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(characterId), activePage);
+  return {
+    pages,
+    activePage,
+    settings
+  };
+}
+
+function buildCharacterEditFormViewModel(character, options = {}) {
+  return {
+    title: options.title || `Bearbeiten: ${character.name}`,
+    mode: "edit",
+    error: options.error || null,
+    festplays: options.festplays || getFestplays(),
+    serverOptions: SERVER_OPTIONS,
+    renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
+    guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
+    character: options.character || character
+  };
+}
+
 function getEmailDomain(email) {
   const normalized = normalizeEmail(email);
   const atIndex = normalized.lastIndexOf("@");
@@ -11112,17 +11162,17 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
   }
 
   const renameAvailability = getCharacterRenameAvailability(character);
+  const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(
+    req.query.guestbook_page_id || req.query.page_id
+  );
 
-  return res.render("character-form", {
-    title: `Bearbeiten: ${character.name}`,
-    mode: "edit",
-    error: null,
-    festplays: getFestplays(),
-    serverOptions: SERVER_OPTIONS,
-    guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-    renameAvailability,
-    character
-  });
+  return res.render(
+    "character-form",
+    buildCharacterEditFormViewModel(character, {
+      renameAvailability,
+      requestedGuestbookPageId
+    })
+  );
 });
 
 app.post("/characters/:id/update", requireAuth, (req, res) => {
@@ -11143,6 +11193,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   const renameAvailability = getCharacterRenameAvailability(character);
   const payload = normalizeCharacterInput(req.body);
+  const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(req.body.guestbook_page_id);
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
@@ -11151,42 +11202,42 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     : { ...character, ...payload, name: character.name };
 
   if (!payload.name) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: "Name ist erforderlich.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Name ist erforderlich.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: "Avatar-URL muss mit http:// oder https:// starten.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Avatar-URL muss mit http:// oder https:// starten.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   if (payload.festplay_id && !festplayExists(payload.festplay_id)) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: "Bitte ein gültiges Festplay auswählen.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Bitte ein gültiges Festplay auswählen.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   const selectedFestplayServer = getFestplayServerBinding(payload.festplay_id);
@@ -11200,43 +11251,43 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     selectedFestplayServer.server_id !== normalizeServer(payload.server_id) &&
     !keepsExistingFestplayBinding
   ) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   const nameChanged = payload.name !== character.name;
   if (nameChanged && !renameAvailability.can_change) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geändert werden.`,
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geändert werden.`,
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   if (findCharacterWithSameName(payload.name, id)) {
-    return res.status(400).render("character-form", {
-      title: `Bearbeiten: ${character.name}`,
-      mode: "edit",
-      error: "Dieser Charaktername ist bereits vergeben.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      guestbookEditorUrl: `/characters/${id}/guestbook/edit`,
-      renameAvailability,
-      character: characterFormValues
-    });
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Dieser Charaktername ist bereits vergeben.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
   }
 
   db.prepare(
@@ -11956,17 +12007,21 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
     });
   }
 
-  const pages = ensureGuestbookPages(id);
-  const requestedPageId = Number(req.query.page_id);
-  const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const settings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
+  const guestbookEditorState = buildCharacterGuestbookEditorState(
+    id,
+    normalizeCharacterEditGuestbookPageId(req.query.page_id)
+  );
+
+  if (character.user_id === req.session.user.id) {
+    return res.redirect(buildEmbeddedGuestbookEditorUrl(id, guestbookEditorState.activePage.id));
+  }
 
   return res.render("guestbook-editor", {
     title: `Gästebuch bearbeiten: ${character.name}`,
     character,
-    pages,
-    activePage,
-    settings
+    pages: guestbookEditorState.pages,
+    activePage: guestbookEditorState.activePage,
+    settings: guestbookEditorState.settings
   });
 });
 
@@ -12022,7 +12077,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     guestbookPageNavigation,
     guestbookSettings: previewSettings,
     previewHtml: renderGuestbookBbcode(previewContent),
-    previewBackUrl: `/characters/${id}/guestbook/edit?page_id=${previewPage.id}`
+    previewBackUrl: buildGuestbookEditorReturnUrl(req, character, previewPage.id)
   });
 });
 
@@ -12136,7 +12191,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Gästebuch gespeichert.");
-  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${activePage.id}`);
+  return res.redirect(buildGuestbookEditorReturnUrl(req, character, activePage.id));
 });
 
 app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
@@ -12249,7 +12304,7 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
   }
 
   setFlash(req, "success", `Seite ${nextPageNumber} erstellt.`);
-  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${info.lastInsertRowid}`);
+  return res.redirect(buildGuestbookEditorReturnUrl(req, character, info.lastInsertRowid));
 });
 
 app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) => {
@@ -12270,7 +12325,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   const pages = ensureGuestbookPages(id);
   if (pages.length <= 1) {
     setFlash(req, "error", "Mindestens eine Seite muss bestehen bleiben.");
-    return res.redirect(`/characters/${id}/guestbook/edit?page_id=${pages[0].id}`);
+    return res.redirect(buildGuestbookEditorReturnUrl(req, character, pages[0].id));
   }
 
   const requestedPageId = Number(req.body.page_id);
@@ -12296,7 +12351,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
     delete req.session.guestbookPreview;
   }
   setFlash(req, "success", "Aktuelle Seite gelöscht.");
-  return res.redirect(`/characters/${id}/guestbook/edit?page_id=${redirectPage.id}`);
+  return res.redirect(buildGuestbookEditorReturnUrl(req, character, redirectPage.id));
 });
 
 app.get("/chat", requireAuth, (req, res) => {

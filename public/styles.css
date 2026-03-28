@@ -6633,6 +6633,17 @@ body.page-guestbook-preview::after {
   align-items: center;
 }
 
+.character-guestbook-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.character-guestbook-header h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  line-height: 1.05;
+}
+
 .character-form-meta-link-row {
   margin-top: 0.2rem;
 }

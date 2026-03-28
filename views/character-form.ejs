@@ -1,5 +1,7 @@
 <%- include("partials/start", { enableRealtime: false }) %>
 
+<% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
+
 <section class="panel character-form-panel">
   <div class="header-line">
     <div>
@@ -18,6 +20,9 @@
   >
     <input type="hidden" name="server_id" value="<%= character.server_id || 'free-rp' %>" />
     <input type="hidden" name="festplay_id" value="<%= character.festplay_id || '' %>" />
+    <% if (activeGuestbookEditor?.activePage) { %>
+      <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookEditor.activePage.id %>" />
+    <% } %>
 
     <% const isNameLocked = mode === "edit" && typeof renameAvailability !== "undefined" && renameAvailability && !renameAvailability.can_change; %>
 
@@ -122,16 +127,64 @@
     <div class="character-form-actions">
       <button type="submit" class="btn">Speichern</button>
     </div>
-
-    <% if (mode !== "create" && guestbookEditorUrl) { %>
-      <div class="character-form-meta-link-row">
-        <a class="character-form-meta-link" href="<%= guestbookEditorUrl %>" target="_blank" rel="noopener noreferrer">
-          G&auml;stebuch-Design
-        </a>
-      </div>
-    <% } %>
   </form>
 </section>
+
+<% if (activeGuestbookEditor) { const { pages, activePage, settings } = activeGuestbookEditor; %>
+  <section id="guestbook-design" class="panel character-form-panel character-guestbook-panel">
+    <div class="header-line character-guestbook-header">
+      <div>
+        <h2>G&auml;stebuch-Design</h2>
+        <p>Bearbeite das G&auml;stebuch direkt hier unter dem Charakter, ohne extra Editor-Link.</p>
+      </div>
+
+      <div class="gb-editor-actions">
+        <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
+        <button
+          class="btn btn-secondary"
+          type="submit"
+          form="guestbook-editor-form"
+          formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+          formmethod="POST"
+          formtarget="guestbook-preview-<%= character.id %>"
+        >
+          Vorschau
+        </button>
+
+        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+          <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
+        </form>
+
+        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
+          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+          <button
+            class="btn btn-danger"
+            type="submit"
+            onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
+          >
+            Aktuelle Seite l&ouml;schen
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <% if ((pages || []).length > 1) { %>
+      <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
+        <% pages.forEach((page) => { %>
+          <a
+            class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+            href="/characters/<%= character.id %>/edit?guestbook_page_id=<%= page.id %>#guestbook-design"
+          >
+            <%= page.page_number %>
+          </a>
+        <% }) %>
+      </nav>
+    <% } %>
+
+    <%- include("partials/guestbook-editor-form", { character, activePage, settings, guestbookEditorFormClass: "panel form gb-editor-form" }) %>
+  </section>
+<% } %>
 
 <script>
   (() => {
