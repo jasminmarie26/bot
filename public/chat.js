@@ -92,6 +92,7 @@
   let activeWhisperThreadUserId = null;
   let whisperSequence = 0;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
+  const ownMessageTimestampPreferenceKey = "chat-show-own-message-time";
   const chatInputHistoryLimit = 50;
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
@@ -114,6 +115,7 @@
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   let notificationAudioContext = null;
   let soundEnabled = true;
+  let showOwnMessageTimestamp = false;
 
   if (!chatBox || !form || !input) return;
 
@@ -401,6 +403,13 @@
     soundEnabled = true;
   }
 
+  try {
+    showOwnMessageTimestamp =
+      window.localStorage.getItem(ownMessageTimestampPreferenceKey) === "1";
+  } catch (_error) {
+    showOwnMessageTimestamp = false;
+  }
+
   function getNotificationAudioContext() {
     if (!AudioContextCtor) return null;
     if (!notificationAudioContext) {
@@ -492,6 +501,12 @@
   window.addEventListener("keydown", unlockNotificationAudio, { once: true });
   window.addEventListener("touchstart", unlockNotificationAudio, { once: true });
   window.addEventListener("click", unlockNotificationAudio, { once: true });
+  window.addEventListener("storage", (event) => {
+    if (event.key !== ownMessageTimestampPreferenceKey) {
+      return;
+    }
+    showOwnMessageTimestamp = event.newValue === "1";
+  });
   updateSoundToggle();
   let hasJoinedCurrentChatSession = false;
   let lastDisconnectAt = 0;
@@ -637,6 +652,7 @@
   function appendMessage(msg) {
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
+    const isOwnMessage = Number(msg?.user_id) === currentUserId;
     const emoteActionText = !isSystemMessage
       ? getEmoteActionText(msg?.content, msg?.username)
       : "";
@@ -645,6 +661,13 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
+    const createdAtMatch = String(msg?.created_at || "").match(/\b(\d{1,2}):(\d{2})(?::\d{2})?\b/);
+    if (!isSystemMessage && isOwnMessage && showOwnMessageTimestamp && createdAtMatch) {
+      const timePrefix = document.createElement("span");
+      timePrefix.className = "chat-own-message-time";
+      timePrefix.textContent = `[${createdAtMatch[1].padStart(2, "0")}:${createdAtMatch[2]}] `;
+      line.appendChild(timePrefix);
+    }
     if (isSystemMessage) {
       const content = String(msg?.content || "");
       const systemKind = String(msg?.system_kind || "").trim().toLowerCase();

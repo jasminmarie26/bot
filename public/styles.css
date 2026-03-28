@@ -8129,6 +8129,11 @@ select:focus {
   white-space: pre-wrap;
 }
 
+.chat-own-message-time {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .chat-room-scene {
   margin: 0 0 0.34rem;
   padding: 0 0 0.34rem;

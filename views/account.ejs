@@ -97,6 +97,14 @@
       Nach dieser Zeit ohne Aktivität im Chat gilt dein Charakter automatisch als afk.
     </p>
 
+    <label class="checkbox">
+      <input id="chat-show-own-message-time" type="checkbox" />
+      <span>Eigene Chat-Nachrichten mit Uhrzeit vor dem Namen anzeigen</span>
+    </label>
+    <p class="muted">
+      Nur f&uuml;r dich auf diesem Ger&auml;t sichtbar. Beispiel: [11:30] Name: Blabla
+    </p>
+
     <div class="dashboard-server-actions">
       <button class="btn" type="submit">Account speichern</button>
     </div>
@@ -112,5 +120,27 @@
     </p>
   </section>
 <% } %>
+
+<script>
+  (() => {
+    const checkbox = document.getElementById("chat-show-own-message-time");
+    const storageKey = "chat-show-own-message-time";
+    if (!checkbox) return;
+
+    try {
+      checkbox.checked = window.localStorage.getItem(storageKey) === "1";
+    } catch (_error) {
+      checkbox.checked = false;
+    }
+
+    checkbox.addEventListener("change", () => {
+      try {
+        window.localStorage.setItem(storageKey, checkbox.checked ? "1" : "0");
+      } catch (_error) {
+        // Ignore unavailable localStorage; the setting remains local-only when possible.
+      }
+    });
+  })();
+</script>
 
 <%- include("partials/end") %>
