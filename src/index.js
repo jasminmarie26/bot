@@ -12316,15 +12316,7 @@ app.get("/chat", requireAuth, (req, res) => {
       return res.redirect("/dashboard");
     }
 
-      if (
-        Number(room.is_saved_room) === 1 &&
-        Number(room.is_public_room) !== 1 &&
-        Number(room.created_by_user_id) === Number(req.session.user.id)
-      ) {
-        setSavedRoomPublicState(room.id, true);
-        room = getRoomWithCharacter(roomId);
-        emitRoomListRefresh(room.server_id);
-      }
+    room = ensureSavedRoomVisibleForOwner(room, req.session.user.id);
 
     if (!canAccessRoom(req.session.user, room)) {
       return res.status(403).render("error", {
@@ -14881,6 +14873,31 @@ function setSavedRoomPublicState(roomId, isPublic) {
   return Number(result.changes) > 0;
 }
 
+function ensureSavedRoomVisibleForOwner(room, userId) {
+  const parsedUserId = Number(userId);
+  const parsedRoomId = Number(room?.id);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedRoomId) ||
+    parsedRoomId < 1 ||
+    Number(room?.is_saved_room) !== 1 ||
+    Number(room?.is_public_room) === 1 ||
+    Number(room?.created_by_user_id) !== parsedUserId
+  ) {
+    return room;
+  }
+
+  if (!setSavedRoomPublicState(parsedRoomId, true)) {
+    return room;
+  }
+
+  const refreshedRoom = getRoomWithCharacter(parsedRoomId) || room;
+  emitRoomStateUpdate(parsedRoomId, refreshedRoom.server_id, refreshedRoom);
+  emitRoomListRefresh(refreshedRoom.server_id);
+  return refreshedRoom;
+}
+
 function shouldAutoDeleteRoom(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return false;
   const room = db
@@ -15101,6 +15118,7 @@ io.on("connection", (socket) => {
         });
         return;
       }
+      nextRoom = ensureSavedRoomVisibleForOwner(nextRoom, socket.data.user.id);
       nextServerId = normalizeServer(nextRoom.server_id || nextRoom.character_server_id);
     }
 
@@ -16394,6 +16412,7 @@ io.on("connection", (socket) => {
         chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
         skipPresence: socket.data.skipDisconnectPresence
       });
+      maybeRemoveEmptyRoom(previousRoomId);
       return;
     }
 
