@@ -2834,6 +2834,11 @@ body.page-home-screen .home-hero-actions {
   min-width: 0;
 }
 
+.members-section[hidden],
+.members-card[hidden] {
+  display: none !important;
+}
+
 .members-card:not(:last-child)::after {
   content: ",";
   margin-right: 0.45rem;
