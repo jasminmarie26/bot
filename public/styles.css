@@ -1577,10 +1577,17 @@ a:hover {
   width: 1.7rem;
   height: 1.7rem;
   display: inline-block;
-  background: center / cover no-repeat url("/Seiten-Icon.png");
   border-radius: 999px;
   font-size: 0;
   line-height: 0;
+}
+
+.topbar-user-menu-toggle-icon {
+  background: center / cover no-repeat url("/HR%20-%20ICON.png");
+}
+
+.rp-user-menu-toggle-icon {
+  background: center / cover no-repeat url("/Seiten-Icon.png");
 }
 
 .topbar-user-menu-panel,
