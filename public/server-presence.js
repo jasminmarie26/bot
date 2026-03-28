@@ -65,17 +65,38 @@
     const characterId = Number(entry?.character_id);
     const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
     const hasRoomRights = Boolean(entry?.has_room_rights);
+    const isAfk = entry?.is_afk === true;
+    const nameNode = document.createElement("span");
+    if (isAfk) {
+      nameNode.classList.add("is-afk");
+    }
+    nameNode.textContent = displayName;
+    if (chatTextColor) {
+      nameNode.style.color = chatTextColor;
+    }
+
+    function appendOccupantContent(target) {
+      if (isAfk) {
+        const icon = document.createElement("span");
+        icon.className = "rp-room-afk-clock";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = "\u25F7";
+        target.appendChild(icon);
+      }
+      target.appendChild(nameNode);
+    }
+
     if (Number.isInteger(characterId) && characterId > 0) {
       const link = document.createElement("a");
       link.className = "rp-room-occupant";
       if (hasRoomRights) {
         link.classList.add("has-room-rights");
       }
-      link.href = `/characters/${characterId}/guestbook`;
-      link.textContent = displayName;
-      if (chatTextColor) {
-        link.style.color = chatTextColor;
+      if (isAfk) {
+        link.classList.add("is-afk");
       }
+      link.href = `/characters/${characterId}/guestbook`;
+      appendOccupantContent(link);
       return link;
     }
 
@@ -84,10 +105,10 @@
     if (hasRoomRights) {
       text.classList.add("has-room-rights");
     }
-    text.textContent = displayName;
-    if (chatTextColor) {
-      text.style.color = chatTextColor;
+    if (isAfk) {
+      text.classList.add("is-afk");
     }
+    appendOccupantContent(text);
     return text;
   }
 

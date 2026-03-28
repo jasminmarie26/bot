@@ -38,6 +38,7 @@ db.exec(`
     last_login_ip TEXT DEFAULT '',
     last_login_at TEXT DEFAULT '',
     username_changed_at TEXT DEFAULT '',
+    afk_timeout_minutes INTEGER NOT NULL DEFAULT 20,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -515,6 +516,10 @@ if (!userColumns.includes("last_login_at")) {
 
 if (!userColumns.includes("username_changed_at")) {
   db.exec("ALTER TABLE users ADD COLUMN username_changed_at TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("afk_timeout_minutes")) {
+  db.exec("ALTER TABLE users ADD COLUMN afk_timeout_minutes INTEGER NOT NULL DEFAULT 20");
 }
 
 if (!characterColumns.includes("festplay_id")) {

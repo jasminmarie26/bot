@@ -5197,9 +5197,26 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-room-occupant {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.16rem;
   color: color-mix(in srgb, var(--accent) 78%, white 22%);
   font-weight: 600;
   text-decoration: none;
+}
+
+.rp-room-occupant.is-afk {
+  font-style: italic;
+}
+
+.rp-room-afk-clock,
+.chat-afk-clock {
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: 0.62em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--muted) 80%, var(--accent) 20%);
+  -webkit-text-fill-color: currentColor;
 }
 
 .rp-room-occupant:hover {
@@ -7418,15 +7435,23 @@ select:focus {
 
 .chat-online-item > .chat-online-content {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0;
+  align-items: center;
+  gap: 0.18rem;
   max-width: 100%;
   flex-wrap: nowrap;
+}
+
+.chat-online-content.is-afk {
+  font-style: italic;
 }
 
 .chat-online-name {
   display: inline-block;
   max-width: 100%;
+}
+
+.chat-online-name.is-afk {
+  font-style: italic;
 }
 
 .chat-online-typing {

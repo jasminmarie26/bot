@@ -1125,7 +1125,10 @@ function renderAccountPage(req, res, options = {}) {
     formValues: {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
-      birth_date: options.values?.birth_date ?? accountUser.birth_date ?? ""
+      birth_date: options.values?.birth_date ?? accountUser.birth_date ?? "",
+      afk_timeout_minutes:
+        options.values?.afk_timeout_minutes ??
+        normalizeAfkTimeoutMinutes(accountUser.afk_timeout_minutes)
     },
     usernameChangeInfo
   });
@@ -1986,6 +1989,33 @@ function normalizeStaffDisplayName(value) {
     .slice(0, 40);
 }
 
+const DEFAULT_AFK_TIMEOUT_MINUTES = 20;
+const MIN_AFK_TIMEOUT_MINUTES = 5;
+const MAX_AFK_TIMEOUT_MINUTES = 240;
+
+function parseAfkTimeoutMinutes(value) {
+  const parsedValue = Number(value);
+  if (!Number.isInteger(parsedValue)) {
+    return null;
+  }
+
+  if (parsedValue < MIN_AFK_TIMEOUT_MINUTES || parsedValue > MAX_AFK_TIMEOUT_MINUTES) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function normalizeAfkTimeoutMinutes(value, fallback = DEFAULT_AFK_TIMEOUT_MINUTES) {
+  const parsedValue = parseAfkTimeoutMinutes(value);
+  if (parsedValue != null) {
+    return parsedValue;
+  }
+
+  const parsedFallback = parseAfkTimeoutMinutes(fallback);
+  return parsedFallback != null ? parsedFallback : DEFAULT_AFK_TIMEOUT_MINUTES;
+}
+
 function getUserRoleCharacter(user, role) {
   if (!user) return null;
 
@@ -2104,6 +2134,7 @@ function toSessionUser(user) {
     display_role_style: displayProfile.role_style,
     display_chat_text_color: displayProfile.chat_text_color || "",
     theme: normalizeTheme(user.theme),
+    afk_timeout_minutes: normalizeAfkTimeoutMinutes(user?.afk_timeout_minutes),
     account_number: getAccountNumberByUserId(user.id)
   };
 }
@@ -2111,7 +2142,8 @@ function toSessionUser(user) {
 function getUserForSessionById(userId) {
   return db
     .prepare(
-      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
+              afk_timeout_minutes
        , admin_character_id, moderator_character_id
        FROM users
        WHERE id = ?`
@@ -2122,7 +2154,7 @@ function getUserForSessionById(userId) {
 function getAccountUserById(userId) {
   return db
     .prepare(
-      `SELECT id, username, email, birth_date, is_admin, created_at, username_changed_at
+      `SELECT id, username, email, birth_date, afk_timeout_minutes, is_admin, created_at, username_changed_at
        FROM users
        WHERE id = ?`
     )
@@ -7927,7 +7959,9 @@ app.post("/account/update", requireAuth, (req, res) => {
   const username = String(req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
   const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
+  const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
   const usernameChanged = username !== accountUser.username;
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
 
@@ -7938,7 +7972,8 @@ app.post("/account/update", requireAuth, (req, res) => {
       values: {
         username,
         email,
-        birth_date: rawBirthDate
+        birth_date: rawBirthDate,
+        afk_timeout_minutes: rawAfkTimeoutMinutes
       }
     });
 
@@ -7954,6 +7989,12 @@ app.post("/account/update", requireAuth, (req, res) => {
 
   if (rawBirthDate && !birthDate) {
     return renderWithError("Bitte ein gültiges Geburtsdatum verwenden.");
+  }
+
+  if (afkTimeoutMinutes == null) {
+    return renderWithError(
+      `Bitte eine AFK-Zeit zwischen ${MIN_AFK_TIMEOUT_MINUTES} und ${MAX_AFK_TIMEOUT_MINUTES} Minuten verwenden.`
+    );
   }
 
   if (usernameChanged && !usernameChangeInfo.can_change) {
@@ -7979,13 +8020,19 @@ app.post("/account/update", requireAuth, (req, res) => {
      SET username = ?,
          email = ?,
          birth_date = ?,
+         afk_timeout_minutes = ?,
          username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
      WHERE id = ?`
-  ).run(username, email, birthDate, usernameChanged ? 1 : 0, currentUserId);
+  ).run(username, email, birthDate, afkTimeoutMinutes, usernameChanged ? 1 : 0, currentUserId);
 
-  const refreshedUser = getUserForSessionById(currentUserId);
-  if (refreshedUser) {
-    req.session.user = toSessionUser(refreshedUser);
+  const refreshedSessionUser = refreshConnectedUserDisplay(currentUserId);
+  if (refreshedSessionUser) {
+    req.session.user = refreshedSessionUser;
+  } else {
+    const refreshedUser = getUserForSessionById(currentUserId);
+    if (refreshedUser) {
+      req.session.user = toSessionUser(refreshedUser);
+    }
   }
 
   if (usernameChanged) {
@@ -12984,6 +13031,184 @@ function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID) {
   return `lobby:${normalizeServer(serverId)}`;
 }
 
+const chatAfkStates = new Map();
+const CHAT_AFK_REASON_PREFIXES = [
+  "versucht gerade,",
+  "muss kurz",
+  "ist gerade damit beschäftigt,",
+  "nimmt sich einen Moment und",
+  "hat sich kurz verabschiedet, um",
+  "ist für einen Augenblick weg und",
+  "hat sich kurz verloren, um",
+  "kümmert sich gerade darum,",
+  "wurde kurz abgelenkt und",
+  "ist heimlich unterwegs, um",
+  "ist für einen Moment verschwunden, um",
+  "hat gerade Wichtigeres vor und",
+  "wurde von der Realität entführt, um",
+  "ist kurz im Nebenplot und",
+  "bearbeitet gerade ein dringendes Problem und",
+  "musste plötzlich los, um",
+  "steht kurz nicht zur Verfügung und",
+  "ist eben aus dem Bild, um",
+  "macht eine winzige Pause und",
+  "ist gerade auf geheimer Mission und"
+];
+const CHAT_AFK_REASON_SUFFIXES = [
+  "den letzten Keks zu retten",
+  "einen widerspenstigen Umhang zu falten",
+  "einem Teebeutel gut zuzureden",
+  "das Sockenmysterium zu lösen",
+  "einen verirrten Würfel einzusammeln",
+  "eine Tür ohne Tür zu finden",
+  "den inneren Dramabalken neu zu justieren",
+  "einer Brieftaube den Weg zu erklären",
+  "ein beleidigtes Schwert zu besänftigen",
+  "den Plot kurz wieder einzufangen"
+];
+const CHAT_AUTOMATIC_AFK_REASONS = CHAT_AFK_REASON_PREFIXES.flatMap((prefix) =>
+  CHAT_AFK_REASON_SUFFIXES.map((suffix) => `${prefix} ${suffix}`)
+);
+
+function getChatAfkStateKey(userId, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
+  return `${parsedUserId}:${normalizedServerId}:${roomKey}`;
+}
+
+function getChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  return chatAfkStates.get(getChatAfkStateKey(parsedUserId, roomId, serverId)) || null;
+}
+
+function getRandomAutomaticAfkReason() {
+  if (!CHAT_AUTOMATIC_AFK_REASONS.length) {
+    return "kurz in einem mysteriösen Nebenplot verschwunden";
+  }
+
+  return CHAT_AUTOMATIC_AFK_REASONS[crypto.randomInt(CHAT_AUTOMATIC_AFK_REASONS.length)];
+}
+
+function emitChatAfkStateToChannel(userId, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const afkState = getChatAfkState(parsedUserId, normalizedRoomId, normalizedServerId);
+
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:afk-state", {
+    user_id: parsedUserId,
+    active: Boolean(afkState),
+    mode: afkState?.mode || "",
+    reason: afkState?.reason || ""
+  });
+}
+
+function emitChatAfkStateToSocket(memberSocket, roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedUserId = Number(memberSocket?.data?.user?.id);
+  if (!memberSocket || !Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const afkState = getChatAfkState(parsedUserId, normalizedRoomId, normalizedServerId);
+  memberSocket.emit("chat:afk-state", {
+    user_id: parsedUserId,
+    active: Boolean(afkState),
+    mode: afkState?.mode || "",
+    reason: afkState?.reason || ""
+  });
+}
+
+function setChatAfkState({
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  actorName = "",
+  roleStyle = "",
+  chatTextColor = "",
+  reason = "",
+  mode = "manual"
+}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedActorName = String(actorName || "").trim() || `User ${parsedUserId}`;
+  const normalizedReason = String(reason || "").trim() || getRandomAutomaticAfkReason();
+  const normalizedMode = String(mode || "").trim().toLowerCase() === "auto" ? "auto" : "manual";
+  const afkState = {
+    userId: parsedUserId,
+    roomId: normalizedRoomId,
+    serverId: normalizedServerId,
+    actorName: normalizedActorName,
+    roleStyle: String(roleStyle || "").trim().toLowerCase(),
+    chatTextColor: String(chatTextColor || "").trim(),
+    reason: normalizedReason,
+    mode: normalizedMode
+  };
+
+  chatAfkStates.set(getChatAfkStateKey(parsedUserId, normalizedRoomId, normalizedServerId), afkState);
+  emitChatAfkStateToChannel(parsedUserId, normalizedRoomId, normalizedServerId);
+  emitOnlineCharacters(normalizedRoomId, normalizedServerId);
+  emitSystemChatMessage(
+    normalizedRoomId,
+    normalizedServerId,
+    `ist afk (${normalizedReason})`,
+    {
+      system_kind: "actor-message",
+      presence_actor_name: normalizedActorName,
+      presence_actor_role_style: afkState.roleStyle,
+      presence_actor_chat_text_color: afkState.chatTextColor
+    }
+  );
+  return afkState;
+}
+
+function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options = {}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const afkStateKey = getChatAfkStateKey(parsedUserId, normalizedRoomId, normalizedServerId);
+  const existingAfkState = chatAfkStates.get(afkStateKey);
+  if (!existingAfkState) {
+    return false;
+  }
+
+  const onlyMode = String(options?.onlyMode || "").trim().toLowerCase();
+  if (onlyMode && existingAfkState.mode !== onlyMode) {
+    return false;
+  }
+
+  chatAfkStates.delete(afkStateKey);
+
+  if (!options?.skipStateEmit) {
+    emitChatAfkStateToChannel(parsedUserId, normalizedRoomId, normalizedServerId);
+  }
+
+  if (!options?.skipOnlineRefresh) {
+    emitOnlineCharacters(normalizedRoomId, normalizedServerId);
+  }
+
+  return true;
+}
+
 function getPreferredCharacterForUser(
   userId,
   serverId = DEFAULT_SERVER_ID,
@@ -13103,6 +13328,32 @@ function getAllSocketsForUser(userId) {
     }
   }
   return sockets;
+}
+
+function hasOtherSocketInChannel(userId, roomId, serverId = DEFAULT_SERVER_ID, excludedSocketId = "") {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const excludedId = String(excludedSocketId || "").trim();
+
+  return getAllSocketsForUser(userId).some((memberSocket) => {
+    if (!memberSocket) {
+      return false;
+    }
+
+    if (excludedId && memberSocket.id === excludedId) {
+      return false;
+    }
+
+    const memberServerId = ALLOWED_SERVER_IDS.has(String(memberSocket.data.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : null;
+    const memberRoomId =
+      Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
+        ? memberSocket.data.roomId
+        : null;
+
+    return memberServerId === normalizedServerId && memberRoomId === normalizedRoomId;
+  });
 }
 
 function findInviteTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_ID, excludeUserId = null) {
@@ -14273,7 +14524,8 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       character_id: chosenCharacter?.id || null,
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
-      has_room_rights: room ? canBypassRoomLock(user, room) : false
+      has_room_rights: room ? canBypassRoomLock(user, room) : false,
+      is_afk: Boolean(getChatAfkState(userId, roomId, serverId))
     });
   }
 
@@ -14297,7 +14549,8 @@ function sanitizeOnlineCharacterEntries(entries) {
         : null,
       role_style: String(entry.role_style || "").trim(),
       chat_text_color: String(entry.chat_text_color || "").trim(),
-      has_room_rights: entry.has_room_rights === true
+      has_room_rights: entry.has_room_rights === true,
+      is_afk: entry.is_afk === true
     }))
     .filter((entry) => entry.user_id > 0 || entry.name);
 }
@@ -14430,6 +14683,11 @@ function schedulePendingChatDisconnect({
     if (getUserSocketsInChannel(entry.roomId, entry.serverId, entry.userId).length > 0) {
       return;
     }
+
+    clearChatAfkState(entry.userId, entry.roomId, entry.serverId, {
+      skipStateEmit: true,
+      skipOnlineRefresh: true
+    });
 
     if (!entry.skipPresence) {
       const disconnectPresenceMessage = buildRoomPresenceMessage(
@@ -14771,6 +15029,17 @@ io.on("connection", (socket) => {
       ? getSocketDisplayProfile(socket, previousServerId)
       : null;
     const previousDisplayName = previousDisplayProfile?.label || "";
+    const shouldSkipPreviousDisconnectPresence = socket.data.skipDisconnectPresence === true;
+    socket.data.skipDisconnectPresence = false;
+    const hasOtherPresenceInPreviousChannel = previousServerId
+      ? hasOtherSocketInChannel(socket.data.user.id, previousRoomId, previousServerId, socket.id)
+      : false;
+    const hasOtherPresenceInNextChannel = hasOtherSocketInChannel(
+      socket.data.user.id,
+      nextRoomId,
+      nextServerId,
+      socket.id
+    );
     const preferredCharacterId =
       Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
         ? parsedCharacterId
@@ -14793,20 +15062,27 @@ io.on("connection", (socket) => {
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
       if (!isSameChannel) {
-        const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
-        emitSystemChatMessage(
-          previousRoomId,
-          previousServerId,
-          previousPresenceMessage.text,
-          {
-            chat_text_color: "#000000",
-            system_kind: "presence",
-            presence_kind: previousPresenceMessage.kind,
-            presence_actor_name: previousPresenceMessage.actorName,
-            presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
-            presence_suffix: previousPresenceMessage.suffix
-          }
-        );
+        clearChatAfkState(socket.data.user.id, previousRoomId, previousServerId, {
+          skipStateEmit: true,
+          skipOnlineRefresh: true
+        });
+
+        if (!shouldSkipPreviousDisconnectPresence && !hasOtherPresenceInPreviousChannel) {
+          const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
+          emitSystemChatMessage(
+            previousRoomId,
+            previousServerId,
+            previousPresenceMessage.text,
+            {
+              chat_text_color: "#000000",
+              system_kind: "presence",
+              presence_kind: previousPresenceMessage.kind,
+              presence_actor_name: previousPresenceMessage.actorName,
+              presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
+              presence_suffix: previousPresenceMessage.suffix
+            }
+          );
+        }
       }
     }
 
@@ -14827,8 +15103,9 @@ io.on("connection", (socket) => {
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
     rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
-    if (!isSameChannel && !shouldSuppressReconnectPresence) {
+    if (!isSameChannel && !shouldSuppressReconnectPresence && !hasOtherPresenceInNextChannel) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
       emitSystemChatMessage(
         nextRoomId,
@@ -14891,6 +15168,85 @@ io.on("connection", (socket) => {
     emitChatTypingState(socket, roomId, serverId);
   });
 
+  socket.on("chat:activity", () => {
+    if (!socket.data.user) return;
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (!canAccessRoom(socket.data.user, room)) {
+        return;
+      }
+      serverId = normalizeServer(room.server_id || room.character_server_id);
+    }
+
+    clearChatAfkState(socket.data.user.id, roomId, serverId, {
+      onlyMode: "auto"
+    });
+  });
+
+  socket.on("chat:afk:set", (payload) => {
+    if (!socket.data.user) return;
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (!canAccessRoom(socket.data.user, room)) {
+        return;
+      }
+      serverId = normalizeServer(room.server_id || room.character_server_id);
+    }
+
+    const displayProfile = getSocketDisplayProfile(socket, serverId);
+    const actorName = displayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+    const reason = String(payload?.reason || "").trim().slice(0, 180);
+    const mode = String(payload?.mode || "").trim().toLowerCase() === "auto" ? "auto" : "manual";
+
+    setChatAfkState({
+      userId: socket.data.user.id,
+      roomId,
+      serverId,
+      actorName,
+      roleStyle: displayProfile?.role_style || "",
+      chatTextColor: displayProfile?.chat_text_color || "",
+      reason,
+      mode
+    });
+  });
+
+  socket.on("chat:afk:clear", () => {
+    if (!socket.data.user) return;
+
+    const roomId =
+      Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+        ? socket.data.roomId
+        : null;
+    let serverId = normalizeServer(socket.data.serverId);
+
+    if (roomId) {
+      const room = getRoomWithCharacter(roomId);
+      if (!room) return;
+      if (!canAccessRoom(socket.data.user, room)) {
+        return;
+      }
+      serverId = normalizeServer(room.server_id || room.character_server_id);
+    }
+
+    clearChatAfkState(socket.data.user.id, roomId, serverId);
+  });
+
   socket.on("chat:message", async (rawMessage) => {
     if (!socket.data.user) return;
     if (typeof rawMessage !== "string") return;
@@ -14918,6 +15274,27 @@ io.on("connection", (socket) => {
 
     const content = rawMessage.trim().slice(0, 500);
     if (!content) return;
+    const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
+    if (afkMatch) {
+      const afkDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const afkDisplayName =
+        afkDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      setChatAfkState({
+        userId: socket.data.user.id,
+        roomId,
+        serverId,
+        actorName: afkDisplayName,
+        roleStyle: afkDisplayProfile?.role_style || "",
+        chatTextColor: afkDisplayProfile?.chat_text_color || "",
+        reason: String(afkMatch[1] || "").trim().slice(0, 180),
+        mode: "manual"
+      });
+      return;
+    }
+
+    clearChatAfkState(socket.data.user.id, roomId, serverId);
+
     const normalizedCommand = content.toLowerCase();
     const isFestplayChatRoom = Boolean(room) && Number(room.is_festplay_chat) === 1;
     const isManagedFestplayChatRoom =
@@ -15519,8 +15896,50 @@ io.on("connection", (socket) => {
     }
 
     const rollMatch = content.match(/^\/roll(?:\s+(.+))?$/i);
+    const canRollInOpenTreffpunkt =
+      !roomId && !room && (serverId === "free-rp" || serverId === "erp");
+    if (rollMatch && canRollInOpenTreffpunkt) {
+      const rollConfig = parseRollCommandArguments(rollMatch[1] || "");
+      if (!rollConfig) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Bitte nutze /roll 1w20, /roll 1w10 oder /roll 2w6+3.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const rollResult = rollDiceExpression(rollConfig);
+      if (!rollResult) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Der Wurf konnte gerade nicht ausgeführt werden.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const rollDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const rollDisplayName =
+        rollDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        `hat mit ${rollConfig.notation} gewürfelt (${rollResult.resultLabel}).`,
+        {
+          system_kind: "dice-roll",
+          presence_actor_name: rollDisplayName,
+          presence_actor_chat_text_color: rollDisplayProfile?.chat_text_color || ""
+        }
+      );
+      return;
+    }
+
+    const canRollInCurrentChannel =
+      Boolean((roomId && room) || serverId === "free-rp" || serverId === "erp");
     if (rollMatch) {
-      if (!roomId || !room) {
+      if (!canRollInCurrentChannel) {
         socket.emit("chat:message", {
           type: "system",
           content: "Du kannst nur in einem geöffneten Raum würfeln.",
@@ -15710,6 +16129,7 @@ io.on("connection", (socket) => {
       serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
+    clearChatAfkState(socket.data.user.id, roomId, serverId);
     emitWhisperBetweenUsers(socket, targetUserId, content, serverId);
   });
 
@@ -15800,6 +16220,9 @@ io.on("connection", (socket) => {
       if (socket.data.isTyping) {
         socket.data.isTyping = false;
         emitChatTypingState(socket, previousRoomId, previousServerId);
+      }
+      if (hasOtherSocketInChannel(socket.data.user.id, previousRoomId, previousServerId, socket.id)) {
+        return;
       }
       const disconnectDisplayProfile = getSocketDisplayProfile(socket, previousServerId);
       schedulePendingChatDisconnect({

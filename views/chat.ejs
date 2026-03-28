@@ -240,8 +240,11 @@
                   data-chat-text-color="<%= entry.chat_text_color || '' %>"
                 >
                   <span class="chat-online-content">
+                    <% if (entry.is_afk) { %>
+                      <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
+                    <% } %>
                     <span
-                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %>"
+                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
                       style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
                     ><%= entry.name %></span>
                   </span>
@@ -264,6 +267,7 @@
           data-current-display-name="<%= chatIdentityName %>"
           data-current-user-id="<%= currentUser ? currentUser.id : '' %>"
           data-active-character-id="<%= activeCharacter ? activeCharacter.id : '' %>"
+          data-afk-timeout-minutes="<%= currentUser?.afk_timeout_minutes || 20 %>"
         >
           <% if (chatRoomDescription) { %>
             <section class="chat-room-scene" aria-label="Raumbeschreibung">

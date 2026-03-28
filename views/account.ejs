@@ -81,6 +81,22 @@
       />
     </label>
 
+    <label>
+      AFK nach Minuten
+      <input
+        type="number"
+        name="afk_timeout_minutes"
+        min="5"
+        max="240"
+        step="1"
+        value="<%= formValues.afk_timeout_minutes %>"
+        required
+      />
+    </label>
+    <p class="muted">
+      Nach dieser Zeit ohne Aktivität im Chat gilt dein Charakter automatisch als afk.
+    </p>
+
     <div class="dashboard-server-actions">
       <button class="btn" type="submit">Account speichern</button>
     </div>

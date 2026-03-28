@@ -46,6 +46,12 @@
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
   const activeCharacterId = Number(activeCharacterIdRaw);
+  const afkTimeoutMinutesRaw = Number(chatBox?.dataset?.afkTimeoutMinutes || "");
+  const afkTimeoutMinutes =
+    Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
+      ? afkTimeoutMinutesRaw
+      : 20;
+  const afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   const chatInputHistoryKey = [
     "chat-input-history",
@@ -62,6 +68,9 @@
   let selectedOnlineEntry = null;
   let typingEmitActive = false;
   let typingStopTimer = null;
+  let afkTimer = null;
+  let isCurrentChannelAfk = false;
+  let currentAfkMode = "";
   const typingStateByUserId = new Map();
   const onlineEntriesByUserId = new Map();
   const whisperThreadsByUserId = new Map();
@@ -302,6 +311,20 @@
 
     setTypingStateForUser(userId, Boolean(payload?.is_typing));
   });
+  socket.on("chat:afk-state", (payload) => {
+    if (Number(payload?.user_id) !== currentUserId) {
+      return;
+    }
+
+    isCurrentChannelAfk = Boolean(payload?.active);
+    currentAfkMode = isCurrentChannelAfk ? String(payload?.mode || "") : "";
+    if (isCurrentChannelAfk) {
+      clearAfkTimer();
+      return;
+    }
+
+    scheduleAfkTimer();
+  });
   socket.on("chat:room-state", updateRoomLockState);
 
   try {
@@ -418,10 +441,12 @@
     });
     hasJoinedCurrentChatSession = true;
     lastDisconnectAt = 0;
+    scheduleAfkTimer();
   });
 
   socket.on("disconnect", () => {
     lastDisconnectAt = Date.now();
+    clearAfkTimer();
   });
 
   function appendFormattedChatNodes(
@@ -1163,6 +1188,44 @@
     syncTypingIndicatorForUser(parsedUserId);
   }
 
+  function clearAfkTimer() {
+    if (afkTimer) {
+      window.clearTimeout(afkTimer);
+      afkTimer = null;
+    }
+  }
+
+  function scheduleAfkTimer() {
+    clearAfkTimer();
+    if (document.visibilityState === "hidden") {
+      return;
+    }
+    if (isCurrentChannelAfk) {
+      return;
+    }
+
+    afkTimer = window.setTimeout(() => {
+      afkTimer = null;
+      socket.emit("chat:afk:set", {
+        reason: "",
+        mode: "auto"
+      });
+    }, afkTimeoutMs);
+  }
+
+  function registerChatActivity({ typing = false } = {}) {
+    if (isCurrentChannelAfk && currentAfkMode === "auto") {
+      socket.emit("chat:activity");
+      isCurrentChannelAfk = false;
+      currentAfkMode = "";
+    } else if (typing) {
+      scheduleAfkTimer();
+      return;
+    }
+
+    scheduleAfkTimer();
+  }
+
   function emitTypingState(isTyping) {
     const nextState = Boolean(isTyping);
     if (typingEmitActive === nextState) {
@@ -1233,15 +1296,23 @@
       const label = String(entry?.name || "").trim();
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
+      const isAfk = entry?.is_afk === true;
       const text = label || "Unbekannt";
       const node = document.createElement("button");
       const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
+      const afkClockNode = document.createElement("span");
 
       node.type = "button";
       node.classList.add("chat-online-item", "chat-online-trigger");
       contentNode.className = "chat-online-content";
+      if (isAfk) {
+        contentNode.classList.add("is-afk");
+      }
       textNode.classList.add("chat-online-name");
+      if (isAfk) {
+        textNode.classList.add("is-afk");
+      }
       if (roleStyle === "admin" || roleStyle === "moderator") {
         textNode.classList.add(`role-name-${roleStyle}`);
       }
@@ -1250,7 +1321,8 @@
         onlineEntriesByUserId.set(userId, {
           userId,
           characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
-          name: text
+          name: text,
+          isAfk
         });
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
@@ -1258,8 +1330,14 @@
       node.dataset.name = text;
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
+      afkClockNode.className = "chat-afk-clock";
+      afkClockNode.setAttribute("aria-hidden", "true");
+      afkClockNode.textContent = "\u25F7";
       applyChatTextColor(textNode, chatTextColor);
       textNode.textContent = text;
+      if (isAfk) {
+        contentNode.appendChild(afkClockNode);
+      }
       contentNode.appendChild(textNode);
       node.appendChild(contentNode);
       if (Number.isInteger(userId) && userId > 0) {
@@ -1283,6 +1361,7 @@
     if (!content) return;
 
     stopTypingIndicator();
+    registerChatActivity({ typing: true });
     rememberSentChatMessage(content);
     socket.emit("chat:message", content);
     input.value = "";
@@ -1295,20 +1374,40 @@
       chatInputDraftBuffer = "";
     }
     rememberChatDraft(input.value);
+    registerChatActivity({ typing: true });
     handleTypingInput();
   });
   input.addEventListener("keydown", (event) => {
     if (handleChatHistoryNavigation(event)) {
+      registerChatActivity({ typing: true });
       return;
     }
+    registerChatActivity({ typing: true });
     handleTypingInput();
   });
   input.addEventListener("blur", stopTypingIndicator);
   window.addEventListener("beforeunload", stopTypingIndicator);
+  window.addEventListener("pointerdown", () => {
+    registerChatActivity();
+  });
+  window.addEventListener("keydown", () => {
+    registerChatActivity();
+  });
+  window.addEventListener(
+    "scroll",
+    () => {
+      registerChatActivity();
+    },
+    true
+  );
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       stopTypingIndicator();
+      clearAfkTimer();
+      return;
     }
+
+    scheduleAfkTimer();
   });
 
   if (onlineCharList) {
