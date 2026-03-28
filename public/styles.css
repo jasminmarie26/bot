@@ -1266,17 +1266,16 @@ a:hover {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--link) 58%, transparent);
-  background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--link);
   cursor: pointer;
   user-select: none;
-  box-shadow: 0 14px 28px -24px var(--panel-shadow);
+  box-shadow: none;
   transition:
     transform 120ms ease,
-    filter 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
+    filter 120ms ease;
 }
 
 .topbar-user-menu-toggle:hover,
@@ -1284,9 +1283,7 @@ a:hover {
 .rp-user-menu-toggle:hover,
 .rp-user-menu[open] .rp-user-menu-toggle {
   transform: translateY(-1px);
-  filter: brightness(1.05);
-  background: color-mix(in srgb, var(--panel-bg) 66%, white 34%);
-  border-color: color-mix(in srgb, var(--link) 72%, transparent);
+  filter: brightness(1.06);
 }
 
 .chat-sound-toggle,
@@ -1574,8 +1571,8 @@ a:hover {
 
 .topbar-user-menu-toggle-icon,
 .rp-user-menu-toggle-icon {
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 2.34rem;
+  height: 2.34rem;
   display: inline-block;
   border-radius: 999px;
   font-size: 0;
