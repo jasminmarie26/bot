@@ -319,6 +319,7 @@
     bindColorField("guestbook-surround-color", "#2C2118");
 
     const editorForm = document.getElementById("guestbook-editor-form");
+    const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
 
@@ -363,6 +364,32 @@
       });
 
       schedulePreviewSync(0);
+    }
+
+    if (pageContentField) {
+      pageContentField.addEventListener("keydown", (event) => {
+        if (
+          event.key !== "Enter" ||
+          event.shiftKey ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.isComposing
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const selectionStart = pageContentField.selectionStart ?? pageContentField.value.length;
+        const selectionEnd = pageContentField.selectionEnd ?? pageContentField.value.length;
+        const nextValue =
+          `${pageContentField.value.slice(0, selectionStart)}\n${pageContentField.value.slice(selectionEnd)}`;
+
+        pageContentField.value = nextValue;
+        pageContentField.setSelectionRange(selectionStart + 1, selectionStart + 1);
+        pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
+      });
     }
   })();
 </script>
