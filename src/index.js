@@ -14855,6 +14855,10 @@ function buildRoomPresenceMessage(kind, displayName) {
 function buildSystemChatPayload(content, options = {}) {
   const text = String(content || "").trim();
   if (!text) return null;
+  const systemKind = String(options?.system_kind || "").trim();
+  if (systemKind.toLowerCase() === "presence") {
+    return null;
+  }
 
   const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
     ? normalizeGuestbookColor(options.chat_text_color)
@@ -14864,7 +14868,7 @@ function buildSystemChatPayload(content, options = {}) {
     type: "system",
     content: text,
     chat_text_color: chatTextColor,
-    system_kind: String(options?.system_kind || "").trim(),
+    system_kind: systemKind,
     presence_kind: String(options?.presence_kind || "").trim(),
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
     presence_actor_role_style: String(options?.presence_actor_role_style || "").trim(),
