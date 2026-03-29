@@ -240,6 +240,35 @@
   </div>
 </form>
 
+<div class="gb-editor-inline-extra-row">
+  <button
+    class="btn btn-secondary"
+    type="submit"
+    form="guestbook-editor-form"
+    formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+    formmethod="POST"
+    formtarget="guestbook-preview-<%= character.id %>"
+  >
+    Vorschau
+  </button>
+
+  <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+    <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+    <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
+  </form>
+
+  <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
+    <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+    <button
+      class="btn btn-danger"
+      type="submit"
+      onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
+    >
+      Aktuelle Seite l&ouml;schen
+    </button>
+  </form>
+</div>
+
 <script>
   (() => {
     const censorRadios = Array.from(document.querySelectorAll('input[name="censor_level"]'));

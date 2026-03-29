@@ -1241,16 +1241,19 @@ a:hover {
   font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
   font-weight: 700;
   letter-spacing: 0;
-  background: linear-gradient(90deg, #330075 0%, #7450ff 38%, #4d86ff 68%, #000158 100%) !important;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #9aa8ff !important;
   text-shadow:
-    0 0 0.015em rgba(255, 255, 255, 0.42),
-    0 0 0.18em rgba(122, 176, 255, 0.26);
+    -0.045em 0 0 rgba(51, 0, 117, 0.82),
+    0.045em 0 0 rgba(77, 134, 255, 0.92),
+    0 0 0.18em rgba(122, 176, 255, 0.24);
   box-shadow: none !important;
   border: 0 !important;
+  outline: none !important;
 }
 
 .crescentia-nameplate {
@@ -1287,6 +1290,11 @@ a:hover {
     drop-shadow(0 0 0.08rem rgba(124, 239, 255, 0.34));
   opacity: 0.96;
   transform: translateY(-46%);
+}
+
+.has-crescentia-moons::after,
+.crescentia-nameplate::after {
+  content: none !important;
 }
 
 .nav {
@@ -2800,14 +2808,16 @@ body.page-home-screen .home-hero-actions {
 .chat-message strong.has-crescentia-moons,
 .rp-room-occupant.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
-  background: linear-gradient(90deg, #330075 0%, #7450ff 38%, #4d86ff 68%, #000158 100%) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #9aa8ff !important;
   background-color: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+  outline: none !important;
 }
 
 .oauth-section {
@@ -6610,6 +6620,18 @@ body.page-guestbook-preview::after {
 
 .gb-editor-inline-save-row {
   margin-top: 0.15rem;
+}
+
+.gb-editor-inline-extra-row {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.gb-editor-inline-extra-row .inline-form {
+  margin: 0;
 }
 
 .gb-editor-inline-save {
