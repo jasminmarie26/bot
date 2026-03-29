@@ -1283,10 +1283,10 @@ a:hover {
   font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
   font-size: 0.8em;
   line-height: 1;
-  color: #58c7dc;
+  color: #9aefff;
   pointer-events: none;
-  text-shadow: 0 0 0.08em rgba(88, 199, 220, 0.28);
-  opacity: 0.98;
+  text-shadow: 0 0 0.12em rgba(154, 239, 255, 0.4);
+  opacity: 1;
   transform: translateY(-52%);
 }
 
