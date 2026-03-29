@@ -1283,9 +1283,9 @@ a:hover {
   font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
   font-size: 0.8em;
   line-height: 1;
-  color: #7eeaff;
+  color: #58c7dc;
   pointer-events: none;
-  text-shadow: 0 0 0.08em rgba(124, 239, 255, 0.34);
+  text-shadow: 0 0 0.08em rgba(88, 199, 220, 0.28);
   opacity: 0.98;
   transform: translateY(-52%);
 }
