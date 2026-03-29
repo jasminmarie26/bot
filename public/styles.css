@@ -1145,7 +1145,7 @@ a:hover {
 .chat-message strong.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   padding-inline: 0;
-  margin-inline-end: 1rem;
+  margin-inline-start: 0.96rem;
   overflow: visible;
   text-overflow: clip;
 }
@@ -1213,20 +1213,22 @@ a:hover {
   position: relative;
   display: inline-block;
   padding-inline: 0;
-  margin-inline-end: 1rem;
+  margin-inline-start: 0.96rem;
 }
 
-.rp-header-identity.has-crescentia-moons::after,
-.role-name-admin.has-crescentia-moons::after,
-.staff-name-admin.has-crescentia-moons::after,
-.chat-online-name.has-crescentia-moons::after,
-.chat-message strong.has-crescentia-moons::after,
-.topbar-user-menu-meta > strong.has-crescentia-moons::after,
-.crescentia-nameplate::after {
+.brand.is-character.has-crescentia-moons::before,
+.rp-header-identity.has-crescentia-moons::before,
+.role-name-admin.has-crescentia-moons::before,
+.staff-name-admin.has-crescentia-moons::before,
+.guestbook-preview-name.has-crescentia-moons::before,
+.chat-online-name.has-crescentia-moons::before,
+.chat-message strong.has-crescentia-moons::before,
+.topbar-user-menu-meta > strong.has-crescentia-moons::before,
+.crescentia-nameplate::before {
   content: "";
   position: absolute;
   top: 50%;
-  right: -1rem;
+  left: -0.96rem;
   width: 0.96rem;
   height: 0.52rem;
   background: center / contain no-repeat url("/icons/crescentia-moons.svg");
@@ -2734,6 +2736,26 @@ body.page-home-screen .home-hero-actions {
 .role-name-moderator {
   font-weight: 600;
   color: color-mix(in srgb, var(--accent) 82%, white 18%) !important;
+}
+
+.brand.is-character.has-crescentia-moons,
+.rp-header-identity.has-crescentia-moons,
+.role-name-admin.has-crescentia-moons,
+.staff-name-admin.has-crescentia-moons,
+.role-name-moderator.has-crescentia-moons,
+.staff-name-moderator.has-crescentia-moons,
+.guestbook-preview-name.has-crescentia-moons,
+.chat-online-name.has-crescentia-moons,
+.chat-message strong.has-crescentia-moons,
+.topbar-user-menu-meta > strong.has-crescentia-moons {
+  background: linear-gradient(90deg, #330075 0%, #1f0d88 54%, #000158 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .oauth-section {
