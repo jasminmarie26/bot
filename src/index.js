@@ -16669,22 +16669,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const switchDisplayProfile = getSocketDisplayProfile(socket, serverId);
-      const switchDisplayName =
-        switchDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
-
-      emitSystemChatMessage(
-        roomId,
-        serverId,
-        `${switchDisplayName} hat in den Raum ${targetRoom.name} gewechselt.`,
-        {
-          chat_text_color: "#000000",
-          system_kind: "room-switch",
-          presence_actor_name: switchDisplayName,
-          presence_actor_chat_text_color: switchDisplayProfile?.chat_text_color || "",
-          room_switch_target_name: targetRoom.name
-        }
-      );
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
         url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`,
