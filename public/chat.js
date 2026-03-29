@@ -649,6 +649,19 @@
     return actionText;
   }
 
+  function getLocalOwnMessageTimeLabel() {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(new Date());
+    } catch (_error) {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+  }
+
   function appendMessage(msg) {
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
@@ -661,11 +674,10 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    const createdAtMatch = String(msg?.created_at || "").match(/\b(\d{1,2}):(\d{2})(?::\d{2})?\b/);
-    if (!isSystemMessage && isOwnMessage && showOwnMessageTimestamp && createdAtMatch) {
+    if (!isSystemMessage && isOwnMessage && showOwnMessageTimestamp) {
       const timePrefix = document.createElement("span");
       timePrefix.className = "chat-own-message-time";
-      timePrefix.textContent = `[${createdAtMatch[1].padStart(2, "0")}:${createdAtMatch[2]}] `;
+      timePrefix.textContent = `[${getLocalOwnMessageTimeLabel()}] `;
       line.appendChild(timePrefix);
     }
     if (isSystemMessage) {
