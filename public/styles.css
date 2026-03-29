@@ -8228,6 +8228,38 @@ select:focus {
   border-color: var(--success-edge);
 }
 
+.guestbook-notification-system-body {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.guestbook-notification-system-paragraph,
+.guestbook-notification-birthday-line {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.guestbook-notification-birthday-body {
+  padding: 0.15rem 0;
+}
+
+.guestbook-notification-birthday-decoration {
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+}
+
+.guestbook-notification-birthday-intro {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.guestbook-notification-birthday-signoff {
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--success-edge) 40%, transparent);
+  color: color-mix(in srgb, var(--text) 78%, #f4f0d7 22%);
+}
+
 .rp-board-panel {
   width: min(540px, calc(100vw - 2rem));
 }

@@ -93,40 +93,36 @@ const GUESTBOOK_FONT_OPTIONS = [
   { id: "vintage-fantasy", label: "Vintage Fantasy" }
 ];
 const BIRTHDAY_GREETING_OPENERS = [
-  "Systemnachricht: Herzlichen Glueckwunsch zum Geburtstag, {name}!",
-  "Systemnachricht: Alles Liebe zum Geburtstag, {name}!",
-  "Systemnachricht: Heute feiern wir dich, {name}!",
-  "Systemnachricht: Ein strahlender Geburtstagsgruss fuer dich, {name}!",
-  "Systemnachricht: Geburtstagspost fuer dich, {name}!",
-  "Systemnachricht: Ein grosses Hurra fuer dich, {name}!",
-  "Systemnachricht: Zeit fuer Konfetti und gute Laune, {name}!",
-  "Systemnachricht: Heute gehoert die Buehne dir, {name}!",
-  "Systemnachricht: Ein besonderer Tag fuer einen besonderen Menschen: {name}!",
-  "Systemnachricht: Geburtstagsalarm fuer {name}!"
+  "Herzlichen Glückwunsch zum Geburtstag, {name}!",
+  "Alles Liebe zum Geburtstag, {name}!",
+  "Heute feiern wir dich, {name}!",
+  "Ein strahlender Geburtstagsgruß für dich, {name}!",
+  "Geburtstagspost für dich, {name}!",
+  "Ein großes Hurra für dich, {name}!",
+  "Zeit für Konfetti und gute Laune, {name}!",
+  "Heute gehört die Bühne dir, {name}!",
+  "Ein besonderer Tag für einen besonderen Menschen: {name}!",
+  "Geburtstagsalarm für {name}!"
 ];
 const BIRTHDAY_GREETING_WISHES = [
-  "Wir wuenschen dir Gesundheit, Freude und ganz viele schoene Momente.",
-  "Moege dein neues Lebensjahr voller Licht, Mut und Lieblingsszenen sein.",
-  "Fuer dein neues Lebensjahr schicken wir dir ganz viel Waerme und gute Energie.",
-  "Wir wuenschen dir einen Tag voller Lachen, lieber Worte und kleiner Wunder.",
-  "Moege heute alles ein kleines bisschen heller, leichter und schoener sein.",
-  "Wir wuenschen dir Zeit fuer Herzensmenschen, gute Gedanken und tolle Abenteuer.",
-  "Fuer dein neues Lebensjahr wuenschen wir dir Kraft, Glueck und ganz viel Sonnenschein.",
-  "Moege dein Tag nach Freude klingen und dein neues Jahr nach Zuversicht schmecken.",
-  "Wir wuenschen dir viele Gruende zum Lachen und nur die besten Geschichten.",
-  "Fuer heute und das kommende Jahr schicken wir dir eine Extraportion Freude mit."
+  "Wir wünschen dir Gesundheit, Freude und ganz viele schöne Momente.",
+  "Möge dein neues Lebensjahr voller Licht, Mut und Lieblingsszenen sein.",
+  "Für dein neues Lebensjahr schicken wir dir ganz viel Wärme und gute Energie.",
+  "Wir wünschen dir einen Tag voller Lachen, lieber Worte und kleiner Wunder.",
+  "Möge heute alles ein kleines bisschen heller, leichter und schöner sein.",
+  "Wir wünschen dir Zeit für Herzensmenschen, gute Gedanken und tolle Abenteuer.",
+  "Für dein neues Lebensjahr wünschen wir dir Kraft, Glück und ganz viel Sonnenschein.",
+  "Möge dein Tag nach Freude klingen und dein neues Jahr nach Zuversicht schmecken.",
+  "Wir wünschen dir viele Gründe zum Lachen und nur die besten Geschichten.",
+  "Für heute und das kommende Jahr schicken wir dir eine Extraportion Freude mit."
 ];
 const BIRTHDAY_GREETING_SIGNOFFS = [
-  "Das ganze Heldenhafte Reisen Team denkt heute an dich und drueckt dich ganz fest aus der Ferne.",
-  "Vom ganzen Heldenhafte Reisen Team kommen heute die herzlichsten Geburtstagswuensche direkt zu dir."
+  "Das ganze Heldenhafte Reisen Team denkt heute an dich und drückt dich ganz fest aus der Ferne.",
+  "Vom ganzen Heldenhafte Reisen Team kommen heute die herzlichsten Geburtstagswünsche direkt zu dir."
 ];
-const BIRTHDAY_GREETING_VARIANTS = BIRTHDAY_GREETING_OPENERS.flatMap((opener) =>
-  BIRTHDAY_GREETING_WISHES.flatMap((wish) =>
-    BIRTHDAY_GREETING_SIGNOFFS.map((signoff) => `${opener} ${wish} ${signoff}`)
-  )
-).slice(0, 200);
 const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
-const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgruesse vom Heldenhafte Reisen Team";
+const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
+const BIRTHDAY_NOTIFICATION_DECORATION = "🎉 🎂 ✨";
 const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
   GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
 );
@@ -922,14 +918,141 @@ function isBirthdayToday(rawBirthDate, referenceDate = new Date()) {
   return now.getMonth() + 1 === month && now.getDate() === day;
 }
 
-function buildBirthdayGreetingMessage(username) {
-  const safeName = String(username || "").trim() || "Abenteurer";
-  if (!BIRTHDAY_GREETING_VARIANTS.length) {
-    return `Systemnachricht: Herzlichen Glueckwunsch zum Geburtstag, ${safeName}! Das ganze Heldenhafte Reisen Team wuenscht dir einen wunderschoenen Tag.`;
+function getBirthdayGreetingCharacterForUser(userId, options = {}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
   }
 
-  const randomIndex = crypto.randomInt(0, BIRTHDAY_GREETING_VARIANTS.length);
-  return BIRTHDAY_GREETING_VARIANTS[randomIndex].replace(/\{name\}/g, safeName);
+  const explicitCharacterId = Number(options?.activeCharacterId || options?.preferredCharacterId);
+  if (Number.isInteger(explicitCharacterId) && explicitCharacterId > 0) {
+    const explicitCharacter = getCharacterById(explicitCharacterId);
+    if (explicitCharacter && Number(explicitCharacter.user_id) === parsedUserId) {
+      return explicitCharacter;
+    }
+  }
+
+  const explicitCharacter = options?.activeCharacter;
+  if (explicitCharacter && Number(explicitCharacter.user_id) === parsedUserId && String(explicitCharacter.name || "").trim()) {
+    return explicitCharacter;
+  }
+
+  const sockets = io?.of("/")?.sockets;
+  if (sockets && typeof sockets.values === "function") {
+    for (const socket of sockets.values()) {
+      if (Number(socket?.data?.user?.id) !== parsedUserId) {
+        continue;
+      }
+
+      const socketServerId =
+        getSocketChatServerId(socket) ||
+        getSocketPresenceServerId(socket) ||
+        normalizeServer(options?.serverId || DEFAULT_SERVER_ID);
+      const socketCharacterId = getSocketPreferredCharacterId(socket, socketServerId);
+      const socketCharacter = getPreferredCharacterForUser(parsedUserId, socketServerId, socketCharacterId);
+      if (socketCharacter?.name) {
+        return socketCharacter;
+      }
+    }
+  }
+
+  const normalizedServerId = String(options?.serverId || "").trim()
+    ? normalizeServer(options.serverId)
+    : "";
+  if (normalizedServerId) {
+    const preferredCharacter = getPreferredCharacterForUser(parsedUserId, normalizedServerId, explicitCharacterId);
+    if (preferredCharacter?.name) {
+      return preferredCharacter;
+    }
+  }
+
+  return db
+    .prepare(
+      `SELECT c.*
+       FROM characters c
+       WHERE c.user_id = ?
+       ORDER BY c.updated_at DESC, c.id DESC
+       LIMIT 1`
+    )
+    .get(parsedUserId);
+}
+
+function getBirthdayGreetingRecipientName(userId, options = {}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return "Abenteurer";
+  }
+
+  const character = getBirthdayGreetingCharacterForUser(parsedUserId, options);
+  if (character?.name) {
+    return String(character.name).trim();
+  }
+
+  return String(getAccountUserById(parsedUserId)?.username || "").trim() || "Abenteurer";
+}
+
+function buildBirthdayGreetingContent(name, notificationId = 0) {
+  const safeName = String(name || "").trim() || "Abenteurer";
+  const openerVariants = BIRTHDAY_GREETING_OPENERS.length > 0
+    ? BIRTHDAY_GREETING_OPENERS
+    : ["Herzlichen Glückwunsch zum Geburtstag, {name}!"];
+  const wishVariants = BIRTHDAY_GREETING_WISHES.length > 0
+    ? BIRTHDAY_GREETING_WISHES
+    : ["Wir wünschen dir von Herzen einen wundervollen Geburtstag."];
+  const signoffVariants = BIRTHDAY_GREETING_SIGNOFFS.length > 0
+    ? BIRTHDAY_GREETING_SIGNOFFS
+    : ["Das ganze Heldenhafte Reisen Team denkt heute an dich und drückt dich ganz fest aus der Ferne."];
+  const normalizedNotificationId = Number(notificationId);
+  const variantSeed =
+    Number.isInteger(normalizedNotificationId) && normalizedNotificationId > 0
+      ? normalizedNotificationId - 1
+      : crypto.randomInt(0, openerVariants.length * wishVariants.length * signoffVariants.length);
+  const openerIndex = variantSeed % openerVariants.length;
+  const wishIndex = Math.floor(variantSeed / openerVariants.length) % wishVariants.length;
+  const signoffIndex =
+    Math.floor(variantSeed / (openerVariants.length * wishVariants.length)) % signoffVariants.length;
+  const introTemplate = openerVariants[openerIndex];
+  const intro = introTemplate.replace(/\{name\}/g, safeName);
+  const wish = wishVariants[wishIndex];
+  const signoff = signoffVariants[signoffIndex];
+
+  return {
+    title: BIRTHDAY_NOTIFICATION_TITLE,
+    decoration: BIRTHDAY_NOTIFICATION_DECORATION,
+    intro,
+    wish,
+    signoff
+  };
+}
+
+function buildBirthdayGreetingNotificationPayloadForUser(userId, notificationId, options = {}) {
+  const content = buildBirthdayGreetingContent(
+    getBirthdayGreetingRecipientName(userId, options),
+    notificationId
+  );
+
+  return {
+    id: Number(notificationId) || 0,
+    type: BIRTHDAY_NOTIFICATION_TYPE,
+    title: content.title,
+    message: `${content.intro} ${content.wish} ${content.signoff}`,
+    intro: content.intro,
+    wish: content.wish,
+    signoff: content.signoff,
+    decoration: content.decoration
+  };
+}
+
+function buildBirthdayGreetingPlainTextForUser(userId, options = {}) {
+  const content = buildBirthdayGreetingNotificationPayloadForUser(
+    userId,
+    options?.notificationId || 0,
+    options
+  );
+  return [content.intro, content.wish, content.signoff]
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function getBirthdayNotificationDateKey(referenceDate = new Date()) {
@@ -1004,7 +1127,7 @@ function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new 
     BIRTHDAY_NOTIFICATION_TYPE,
     getBirthdayNotificationDateKey(referenceDate),
     BIRTHDAY_NOTIFICATION_TITLE,
-    buildBirthdayGreetingMessage(accountUser.username)
+    buildBirthdayGreetingPlainTextForUser(parsedUserId)
   );
 }
 
@@ -6878,7 +7001,7 @@ function socketChannelForGuestbookNotifications(userId) {
     : "guestbook-notifications:unknown";
 }
 
-function buildGuestbookNotificationPayloadForUser(userId) {
+function buildGuestbookNotificationPayloadForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return {
@@ -6908,12 +7031,11 @@ function buildGuestbookNotificationPayloadForUser(userId) {
             festplay_server_id: normalizeServer(latestNotification.festplay_server_id)
           }
         : String(latestNotification.notification_type || "").trim() === BIRTHDAY_NOTIFICATION_TYPE
-          ? {
-              id: Number(latestNotification.id),
-              type: BIRTHDAY_NOTIFICATION_TYPE,
-              title: String(latestNotification.title || "").trim(),
-              message: String(latestNotification.message || "").trim()
-            }
+          ? buildBirthdayGreetingNotificationPayloadForUser(
+              parsedUserId,
+              latestNotification.id,
+              options
+            )
         : {
             id: Number(latestNotification.id),
             type: "guestbook_entry",
@@ -7827,6 +7949,11 @@ app.use((req, res, next) => {
   res.locals.topbarOwnedCharacters = req.session.user
     ? getOwnedCharactersForUser(req.session.user.id, topbarPreferredCharacter?.server_id || DEFAULT_SERVER_ID)
     : [];
+  const guestbookNotificationPayload = req.session.user
+    ? buildGuestbookNotificationPayloadForUser(req.session.user.id, {
+        activeCharacter: topbarPreferredCharacter
+      })
+    : { count: 0, latest: null };
   res.locals.adminImpersonation =
     req.session.user && adminImpersonatorUser
       ? {
@@ -7836,12 +7963,8 @@ app.use((req, res, next) => {
           adminUserId: Number(adminImpersonatorUser.id) || null
         }
       : null;
-  res.locals.guestbookNotificationCount = req.session.user
-    ? getUnreadGuestbookNotificationCountForUser(req.session.user.id)
-    : 0;
-  res.locals.latestGuestbookNotification = req.session.user
-    ? getLatestGuestbookNotificationForUser(req.session.user.id, true)
-    : null;
+  res.locals.guestbookNotificationCount = guestbookNotificationPayload.count;
+  res.locals.latestGuestbookNotification = guestbookNotificationPayload.latest;
   res.locals.oauthEnabled = {
     google: GOOGLE_AUTH_ENABLED,
     facebook: FACEBOOK_AUTH_ENABLED
@@ -9346,10 +9469,14 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
 
   if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
     markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
+    const birthdayGreetingText = buildBirthdayGreetingPlainTextForUser(req.session.user.id, {
+      activeCharacter: getPreferredMenuCharacterForUser(req),
+      notificationId: latestNotification.id
+    });
     setFlash(
       req,
       "success",
-      String(latestNotification.message || "").trim() || "Herzlichen Glueckwunsch zum Geburtstag!"
+      birthdayGreetingText || "Herzlichen Glückwunsch zum Geburtstag!"
     );
     return res.redirect(req.get("referer") || "/dashboard");
   }
@@ -16363,11 +16490,13 @@ io.on("connection", (socket) => {
 
     if (socket.data.presenceServerId === nextPresenceServerId) {
       emitUserDisplayProfileToSocket(socket);
+      emitGuestbookNotificationUpdateForUser(socket.data.user.id);
       return;
     }
 
     socket.data.presenceServerId = nextPresenceServerId;
     emitUserDisplayProfileToSocket(socket);
+    emitGuestbookNotificationUpdateForUser(socket.data.user.id);
     emitHomeStatsUpdate();
   });
 
@@ -16581,6 +16710,7 @@ io.on("connection", (socket) => {
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    emitGuestbookNotificationUpdateForUser(socket.data.user.id);
     emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
     rememberRoomLogParticipant(
       nextRoomId,
@@ -16949,6 +17079,7 @@ io.on("connection", (socket) => {
       const nextDisplayName = nextDisplayProfile?.label || String(targetCharacter.name || "").trim() || previousDisplayName;
 
       emitUserDisplayProfileToSocket(socket);
+      emitGuestbookNotificationUpdateForUser(socket.data.user.id);
       emitChatAfkStateToSocket(socket, roomId, serverId);
       rememberRoomLogParticipant(
         roomId,

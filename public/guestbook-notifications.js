@@ -6,7 +6,8 @@
   const notificationHref = "/guestbook/notifications/open";
   const approvalNotificationType = "festplay_approval";
   const birthdayNotificationType = "birthday_greeting";
-  const defaultBirthdayTitle = "Geburtstagsgruesse vom Heldenhafte Reisen Team";
+  const defaultBirthdayTitle = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
+  const defaultBirthdayDecoration = "🎉 🎂 ✨";
   const canUseRealtimeUpdates = typeof io === "function";
   let systemPanelElements = null;
 
@@ -40,17 +41,12 @@
 
     const heading = document.createElement("h3");
     heading.textContent = "Brief";
-
-    const subheading = document.createElement("p");
-    subheading.textContent = "Systemnachricht";
-
     copy.appendChild(heading);
-    copy.appendChild(subheading);
 
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "chat-whisper-close-btn";
-    closeButton.setAttribute("aria-label", "Schliessen");
+    closeButton.setAttribute("aria-label", "Schließen");
     closeButton.textContent = "\u00d7";
 
     head.appendChild(copy);
@@ -66,8 +62,6 @@
     threadHead.className = "chat-whisper-thread-head";
 
     const threadTitle = document.createElement("h4");
-    threadTitle.textContent = "System Administrator";
-
     threadHead.appendChild(threadTitle);
 
     const thread = document.createElement("div");
@@ -107,51 +101,133 @@
 
     systemPanelElements = {
       panel,
+      threadTitle,
       meta,
       body
     };
     return systemPanelElements;
   }
 
-  function buildSystemNotificationCopy(notificationType, festplayName, notificationTitle, notificationMessage) {
+  function buildSystemNotificationCopy(
+    notificationType,
+    festplayName,
+    notificationTitle,
+    notificationMessage,
+    notificationIntro,
+    notificationWish,
+    notificationSignoff,
+    notificationDecoration
+  ) {
     const normalizedType = normalizeNotificationType(notificationType);
     const trimmedFestplayName = String(festplayName || "").trim();
     const trimmedNotificationTitle = String(notificationTitle || "").trim();
     const trimmedNotificationMessage = String(notificationMessage || "").trim();
+    const trimmedNotificationIntro = String(notificationIntro || "").trim();
+    const trimmedNotificationWish = String(notificationWish || "").trim();
+    const trimmedNotificationSignoff = String(notificationSignoff || "").trim();
+    const trimmedNotificationDecoration = String(notificationDecoration || "").trim();
 
     if (normalizedType === approvalNotificationType) {
       return {
+        threadTitle: "System Administrator",
         meta: "Festspiel-Freischaltung",
-        body: trimmedFestplayName
-          ? `Du wurdest fuer ${trimmedFestplayName} freigeschaltet.`
-          : "Du wurdest fuer ein Festspiel freigeschaltet."
+        mode: "plain",
+        message: trimmedFestplayName
+          ? `Du wurdest für ${trimmedFestplayName} freigeschaltet.`
+          : "Du wurdest für ein Festspiel freigeschaltet."
       };
     }
 
     if (normalizedType === birthdayNotificationType) {
       return {
+        threadTitle: "Heldenhafte Reisen Team",
         meta: trimmedNotificationTitle || defaultBirthdayTitle,
-        body: trimmedNotificationMessage || "Herzlichen Glueckwunsch zum Geburtstag!"
+        mode: "birthday",
+        decoration: trimmedNotificationDecoration || defaultBirthdayDecoration,
+        intro: trimmedNotificationIntro || trimmedNotificationMessage || "Herzlichen Glückwunsch zum Geburtstag!",
+        wish: trimmedNotificationWish,
+        signoff: trimmedNotificationSignoff
       };
     }
 
     return {
-      meta: "Systemnachricht",
-      body: trimmedNotificationMessage || ""
+      threadTitle: "System Administrator",
+      meta: "Benachrichtigung",
+      mode: "plain",
+      message: trimmedNotificationMessage || ""
     };
   }
 
-  function openSystemNotificationPanel(notificationType, festplayName, notificationTitle, notificationMessage) {
+  function renderSystemNotificationBody(bodyRoot, panelCopy) {
+    bodyRoot.replaceChildren();
+
+    if (panelCopy.mode === "birthday") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "guestbook-notification-system-body guestbook-notification-birthday-body";
+
+      if (panelCopy.decoration) {
+        const decoration = document.createElement("div");
+        decoration.className = "guestbook-notification-birthday-decoration";
+        decoration.textContent = panelCopy.decoration;
+        wrapper.appendChild(decoration);
+      }
+
+      if (panelCopy.intro) {
+        const intro = document.createElement("p");
+        intro.className = "guestbook-notification-birthday-line guestbook-notification-birthday-intro";
+        intro.textContent = panelCopy.intro;
+        wrapper.appendChild(intro);
+      }
+
+      if (panelCopy.wish) {
+        const wish = document.createElement("p");
+        wish.className = "guestbook-notification-birthday-line";
+        wish.textContent = panelCopy.wish;
+        wrapper.appendChild(wish);
+      }
+
+      if (panelCopy.signoff) {
+        const signoff = document.createElement("p");
+        signoff.className = "guestbook-notification-birthday-line guestbook-notification-birthday-signoff";
+        signoff.textContent = panelCopy.signoff;
+        wrapper.appendChild(signoff);
+      }
+
+      bodyRoot.appendChild(wrapper);
+      return;
+    }
+
+    const message = document.createElement("p");
+    message.className = "guestbook-notification-system-paragraph";
+    message.textContent = panelCopy.message || "";
+    bodyRoot.appendChild(message);
+  }
+
+  function openSystemNotificationPanel(
+    notificationType,
+    festplayName,
+    notificationTitle,
+    notificationMessage,
+    notificationIntro,
+    notificationWish,
+    notificationSignoff,
+    notificationDecoration
+  ) {
     const panelElements = getSystemPanelElements();
     const panelCopy = buildSystemNotificationCopy(
       notificationType,
       festplayName,
       notificationTitle,
-      notificationMessage
+      notificationMessage,
+      notificationIntro,
+      notificationWish,
+      notificationSignoff,
+      notificationDecoration
     );
 
+    panelElements.threadTitle.textContent = panelCopy.threadTitle;
     panelElements.meta.textContent = panelCopy.meta;
-    panelElements.body.textContent = panelCopy.body;
+    renderSystemNotificationBody(panelElements.body, panelCopy);
     panelElements.panel.hidden = false;
   }
 
@@ -199,20 +275,20 @@
 
     if (normalizedType === "festplay_application") {
       if (trimmedFestplayName && trimmedApplicantCharacterName) {
-        return `Neue Bewerbung von ${trimmedApplicantCharacterName} fuer ${trimmedFestplayName}`;
+        return `Neue Bewerbung von ${trimmedApplicantCharacterName} für ${trimmedFestplayName}`;
       }
       if (trimmedFestplayName) {
-        return `Neue Bewerbung fuer ${trimmedFestplayName}`;
+        return `Neue Bewerbung für ${trimmedFestplayName}`;
       }
       return "Neue Festspiel-Bewerbung";
     }
 
     if (normalizedType === approvalNotificationType) {
       if (trimmedFestplayName && trimmedActorName) {
-        return `${trimmedActorName} hat dich fuer ${trimmedFestplayName} freigeschaltet`;
+        return `${trimmedActorName} hat dich für ${trimmedFestplayName} freigeschaltet`;
       }
       if (trimmedFestplayName) {
-        return `Du wurdest fuer ${trimmedFestplayName} freigeschaltet`;
+        return `Du wurdest für ${trimmedFestplayName} freigeschaltet`;
       }
       return "Neue Festspiel-Freischaltung";
     }
@@ -222,8 +298,8 @@
     }
 
     return trimmedCharacterName
-      ? `Neuer Gaestebucheintrag fuer ${trimmedCharacterName}`
-      : "Neuer Gaestebucheintrag";
+      ? `Neuer Gästebucheintrag für ${trimmedCharacterName}`
+      : "Neuer Gästebucheintrag";
   }
 
   function formatBadgeCount(count) {
@@ -240,6 +316,10 @@
     const latestActorName = String(payload?.latest?.actor_name || "").trim();
     const latestTitle = String(payload?.latest?.title || "").trim();
     const latestMessage = String(payload?.latest?.message || "").trim();
+    const latestIntro = String(payload?.latest?.intro || "").trim();
+    const latestWish = String(payload?.latest?.wish || "").trim();
+    const latestSignoff = String(payload?.latest?.signoff || "").trim();
+    const latestDecoration = String(payload?.latest?.decoration || "").trim();
     const hasNotification = count > 0 && latestId > 0 && latestType.length > 0;
     const title = buildNotificationTitle(
       latestType,
@@ -263,6 +343,10 @@
     notificationLink.dataset.notificationActorName = latestActorName;
     notificationLink.dataset.notificationTitle = latestTitle;
     notificationLink.dataset.notificationMessage = latestMessage;
+    notificationLink.dataset.notificationIntro = latestIntro;
+    notificationLink.dataset.notificationWish = latestWish;
+    notificationLink.dataset.notificationSignoff = latestSignoff;
+    notificationLink.dataset.notificationDecoration = latestDecoration;
     notificationLink.classList.toggle(
       "guestbook-notification-link-system",
       hasNotification && isSystemNotificationType(latestType)
@@ -292,7 +376,11 @@
       applicant_character_name: notificationLink.dataset.notificationApplicantCharacterName || "",
       actor_name: notificationLink.dataset.notificationActorName || "",
       title: notificationLink.dataset.notificationTitle || "",
-      message: notificationLink.dataset.notificationMessage || ""
+      message: notificationLink.dataset.notificationMessage || "",
+      intro: notificationLink.dataset.notificationIntro || "",
+      wish: notificationLink.dataset.notificationWish || "",
+      signoff: notificationLink.dataset.notificationSignoff || "",
+      decoration: notificationLink.dataset.notificationDecoration || ""
     }
   };
   applyNotificationPayload(initialPayload);
@@ -314,7 +402,11 @@
       notificationType,
       notificationLink.dataset.notificationFestplayName || "",
       notificationLink.dataset.notificationTitle || "",
-      notificationLink.dataset.notificationMessage || ""
+      notificationLink.dataset.notificationMessage || "",
+      notificationLink.dataset.notificationIntro || "",
+      notificationLink.dataset.notificationWish || "",
+      notificationLink.dataset.notificationSignoff || "",
+      notificationLink.dataset.notificationDecoration || ""
     );
 
     try {

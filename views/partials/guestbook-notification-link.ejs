@@ -26,7 +26,7 @@
           : `Du wurdest fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
         : "Neue Festspiel-Freischaltung"
     : latestNotificationType === "birthday_greeting"
-      ? latestGuestbookNotification?.title || "Geburtstagsgruesse vom Heldenhafte Reisen Team"
+      ? latestGuestbookNotification?.title || "Geburtstagsgrüße vom Heldenhafte Reisen Team"
     : latestGuestbookNotification?.character_name
       ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
       : "Neuer Gaestebucheintrag"; %>
@@ -125,6 +125,10 @@
     data-notification-actor-name="<%= latestGuestbookNotification?.actor_name || "" %>"
     data-notification-title="<%= latestGuestbookNotification?.title || "" %>"
     data-notification-message="<%= latestGuestbookNotification?.message || "" %>"
+    data-notification-intro="<%= latestGuestbookNotification?.intro || "" %>"
+    data-notification-wish="<%= latestGuestbookNotification?.wish || "" %>"
+    data-notification-signoff="<%= latestGuestbookNotification?.signoff || "" %>"
+    data-notification-decoration="<%= latestGuestbookNotification?.decoration || "" %>"
     <%= guestbookNotificationCount > 0 && latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
