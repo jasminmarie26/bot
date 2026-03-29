@@ -33,6 +33,30 @@
 <section class="panel">
   <h2>Kontodaten bearbeiten</h2>
   <form method="POST" action="/account/update" class="form">
+    <% const usernameChangeMonthsLeft = usernameChangeInfo.available_at
+      ? Math.max(
+        0,
+        Math.ceil((usernameChangeInfo.available_at.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.5))
+      )
+      : 0; %>
+    <% if (usernameChangeInfo.is_admin_bypass) { %>
+      <p class="muted">
+        Hinweis: Dein Account-Name ist jederzeit &auml;nderbar.
+      </p>
+    <% } else if (usernameChangeInfo.can_change) { %>
+      <p class="muted">
+        Hinweis: Dein Account-Name ist nur alle 182 Tage &auml;nderbar.
+      </p>
+    <% } else { %>
+      <p class="muted">
+        Hinweis: Dein Account-Name ist nur alle 182 Tage &auml;nderbar. N&auml;chste
+        &Auml;nderung ab <strong><%= usernameChangeInfo.available_at_text %></strong>
+        <% if (usernameChangeMonthsLeft > 0) { %>
+          (noch ca. <%= usernameChangeMonthsLeft %> Monat<%= usernameChangeMonthsLeft === 1 ? "" : "e" %>).
+        <% } %>
+      </p>
+    <% } %>
+
     <label>
       Account-Name
       <input
@@ -43,22 +67,6 @@
         autocomplete="username"
       />
     </label>
-
-    <% if (usernameChangeInfo.is_admin_bypass) { %>
-      <p class="muted">
-        Als Admin kannst du deinen Account-Namen jederzeit &auml;ndern.
-      </p>
-    <% } else if (usernameChangeInfo.can_change) { %>
-      <p class="muted">
-        Du kannst deinen Account-Namen jetzt &auml;ndern. Danach ist die n&auml;chste
-        &Auml;nderung wieder nach 182 Tagen m&ouml;glich.
-      </p>
-    <% } else { %>
-      <p class="muted">
-        Dein n&auml;chster Account-Namenswechsel ist ab
-        <strong><%= usernameChangeInfo.available_at_text %></strong> m&ouml;glich.
-      </p>
-    <% } %>
 
     <label>
       E-Mail
@@ -135,15 +143,5 @@
     <a href="/kontakt" target="_blank" rel="noopener noreferrer">Doppel Accounts Beantragen</a>
   </p>
 </section>
-
-<% if (accountUser?.is_admin || accountUser?.is_moderator) { %>
-  <section class="panel">
-    <h2>Hinweis</h2>
-    <p class="muted">
-      Die 182-Tage-Sperre gilt nur f&uuml;r normale Nutzer. Admins sind davon ausgenommen.
-      E-Mail und Geburtsdatum kannst du jederzeit anpassen.
-    </p>
-  </section>
-<% } %>
 
 <%- include("partials/end") %>
