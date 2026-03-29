@@ -136,6 +136,7 @@
     <label>
       Bild innerhalb des Rahmens
       <span class="gb-editor-helptext">Bild-URL f&uuml;r die Fl&auml;che direkt im G&auml;stebuchrahmen.</span>
+      <span class="gb-editor-helptext">Wird automatisch skaliert, sichtbare Fl&auml;che bis ca. 620px Breite.</span>
       <input
         name="inner_image_url"
         value="<%= settings.inner_image_url || '' %>"
@@ -170,6 +171,7 @@
     <label>
       Bild au&szlig;erhalb des Rahmens
       <span class="gb-editor-helptext">Bild-URL f&uuml;r den Bereich um das G&auml;stebuch herum.</span>
+      <span class="gb-editor-helptext">Wird automatisch als Hintergrund skaliert, keine feste Pixelgr&ouml;&szlig;e n&ouml;tig.</span>
       <input
         name="outer_image_url"
         value="<%= settings.outer_image_url || '' %>"
