@@ -57,6 +57,7 @@
     Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
       ? afkTimeoutMinutesRaw
       : 20;
+  const showChatMessageTimestamps = chatBox?.dataset?.showChatTimestamps === "1";
   const afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   const chatInputHistoryKey = [
@@ -634,7 +635,7 @@
   }
 
   function getMessageTimeLabel(msg) {
-    const rawValue = String(msg?.message_time_iso || "").trim();
+    const rawValue = String(msg?.message_time_iso || msg?.created_at || "").trim();
     if (!rawValue) return "";
 
     const parsedDate = new Date(rawValue);
@@ -664,7 +665,7 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    const messageTimeLabel = !isSystemMessage && Boolean(msg?.show_name_time)
+    const messageTimeLabel = !isSystemMessage && showChatMessageTimestamps
       ? getMessageTimeLabel(msg)
       : "";
     if (messageTimeLabel) {
