@@ -1246,11 +1246,10 @@ a:hover {
   -webkit-background-clip: initial !important;
   background-clip: initial !important;
   -webkit-text-fill-color: currentColor !important;
-  color: #9aa8ff !important;
+  color: #8f9fff !important;
   text-shadow:
-    -0.045em 0 0 rgba(51, 0, 117, 0.82),
-    0.045em 0 0 rgba(77, 134, 255, 0.92),
-    0 0 0.18em rgba(122, 176, 255, 0.24);
+    -0.04em 0 0 rgba(51, 0, 117, 0.78),
+    0.04em 0 0 rgba(77, 134, 255, 0.78);
   box-shadow: none !important;
   border: 0 !important;
   outline: none !important;
@@ -1277,19 +1276,18 @@ a:hover {
 .rp-room-occupant.has-crescentia-moons::before,
 .topbar-user-menu-meta > strong.has-crescentia-moons::before,
 .crescentia-nameplate::before {
-  content: "";
+  content: "\263D";
   position: absolute;
   top: 50%;
-  left: -0.9rem;
-  width: 0.82rem;
-  height: 0.46rem;
-  background: center / contain no-repeat url("/icons/crescentia-moons.svg");
+  left: -0.82rem;
+  font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 0.8em;
+  line-height: 1;
+  color: #7eeaff;
   pointer-events: none;
-  filter:
-    drop-shadow(0 0.03rem 0.08rem rgba(28, 58, 124, 0.22))
-    drop-shadow(0 0 0.08rem rgba(124, 239, 255, 0.34));
-  opacity: 0.96;
-  transform: translateY(-46%);
+  text-shadow: 0 0 0.08em rgba(124, 239, 255, 0.34);
+  opacity: 0.98;
+  transform: translateY(-52%);
 }
 
 .has-crescentia-moons::after,
@@ -2813,11 +2811,37 @@ body.page-home-screen .home-hero-actions {
   -webkit-background-clip: initial !important;
   background-clip: initial !important;
   -webkit-text-fill-color: currentColor !important;
-  color: #9aa8ff !important;
+  color: #8f9fff !important;
   background-color: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   outline: none !important;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .has-crescentia-moons,
+  .crescentia-nameplate,
+  .brand.is-character.has-crescentia-moons,
+  .rp-header-identity.has-crescentia-moons,
+  .role-name-admin.has-crescentia-moons,
+  .staff-name-admin.has-crescentia-moons,
+  .role-name-moderator.has-crescentia-moons,
+  .staff-name-moderator.has-crescentia-moons,
+  .guestbook-preview-name.has-crescentia-moons,
+  .guestbook-author-link strong.has-crescentia-moons,
+  .guestbook-item-authorline > strong.has-crescentia-moons,
+  .chat-online-name.has-crescentia-moons,
+  .chat-message strong.has-crescentia-moons,
+  .rp-room-occupant.has-crescentia-moons,
+  .topbar-user-menu-meta > strong.has-crescentia-moons {
+    background: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+    background-image: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+    text-shadow: 0 0 0.14em rgba(122, 176, 255, 0.18);
+  }
 }
 
 .oauth-section {
@@ -7675,7 +7699,7 @@ select:focus {
   border: 1px solid var(--field-edge);
   border-radius: 9px;
   background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
-  color: var(--text);
+  color: #1a1c20;
   text-decoration: none;
   padding: 0.34rem 0.44rem;
   line-height: 1.25;
@@ -7719,6 +7743,7 @@ select:focus {
 .chat-online-name {
   display: inline-block;
   max-width: 100%;
+  color: #1a1c20;
 }
 
 .chat-online-name.is-afk {
