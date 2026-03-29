@@ -33,12 +33,13 @@
   ].filter(Boolean).join(";");
   const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
   const normalizedGuestbookName = String(character?.name || "").trim().toLowerCase();
+  const isGuestbookNameCrescentia = /^(crescentia|cresentia)$/.test(normalizedGuestbookName);
   const guestbookNameSpecialClass = normalizedGuestbookName === "noctra"
     ? "has-noctra-wings"
-    : (normalizedGuestbookName === "crescentia" ? "has-crescentia-moons" : "");
+    : (isGuestbookNameCrescentia ? "has-crescentia-moons" : "");
   const guestbookNameWrapperClass = normalizedGuestbookName === "noctra"
     ? "noctra-nameplate"
-    : (normalizedGuestbookName === "crescentia" ? "crescentia-nameplate" : "");
+    : (isGuestbookNameCrescentia ? "crescentia-nameplate" : "");
   const guestbookPreviewShellStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
     guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",

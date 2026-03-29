@@ -1128,7 +1128,7 @@ a:hover {
 .staff-name-admin.has-noctra-wings,
 .guestbook-preview-name.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings {
-  padding-inline: 0.9rem;
+  padding-inline: 0.78rem;
 }
 
 .brand.is-character.has-crescentia-moons,
@@ -1154,7 +1154,7 @@ a:hover {
 .noctra-nameplate {
   position: relative;
   display: inline-block;
-  padding-inline: 0.9rem;
+  padding-inline: 0.78rem;
 }
 
 .has-noctra-wings::before,
@@ -1164,43 +1164,45 @@ a:hover {
   content: "";
   position: absolute;
   top: 50%;
-  width: 0.72rem;
-  height: 0.92rem;
+  width: 0.56rem;
+  height: 0.74rem;
   background:
-    radial-gradient(circle at 72% 30%, rgba(255, 161, 182, 0.34), transparent 24%),
-    linear-gradient(180deg, #7f1022 0%, #460813 55%, #170106 100%);
+    radial-gradient(70% 62% at 80% 24%, rgba(255, 183, 200, 0.26), transparent 40%),
+    linear-gradient(180deg, rgba(126, 18, 38, 0.72) 0%, rgba(57, 8, 18, 0.76) 58%, rgba(21, 2, 8, 0.82) 100%);
   box-shadow:
-    0 0.08rem 0.18rem rgba(0, 0, 0, 0.24),
-    0 0 0.14rem rgba(167, 28, 58, 0.26);
+    0 0.04rem 0.12rem rgba(0, 0, 0, 0.18),
+    0 0 0.08rem rgba(146, 23, 49, 0.16);
+  opacity: 0.72;
   pointer-events: none;
 }
 
 .has-noctra-wings::before,
 .noctra-nameplate::before {
-  left: 0.02rem;
-  clip-path: polygon(100% 8%, 78% 18%, 66% 36%, 48% 18%, 26% 32%, 18% 60%, 36% 84%, 60% 100%, 100% 72%);
-  transform: translateY(-51%) rotate(-12deg);
+  left: 0.05rem;
+  clip-path: polygon(100% 10%, 80% 16%, 64% 28%, 50% 18%, 34% 28%, 18% 48%, 28% 72%, 50% 90%, 72% 100%, 100% 74%);
+  transform: translateY(-50%) rotate(-11deg);
   transform-origin: right center;
 }
 
 .has-noctra-wings::after,
 .noctra-nameplate::after {
-  right: 0.02rem;
-  clip-path: polygon(0% 8%, 22% 18%, 34% 36%, 52% 18%, 74% 32%, 82% 60%, 64% 84%, 40% 100%, 0% 72%);
-  transform: translateY(-51%) rotate(12deg);
+  right: 0.05rem;
+  clip-path: polygon(0% 10%, 20% 16%, 36% 28%, 50% 18%, 66% 28%, 82% 48%, 72% 72%, 50% 90%, 28% 100%, 0% 74%);
+  transform: translateY(-50%) rotate(11deg);
   transform-origin: left center;
 }
 
 .has-crescentia-moons,
 .crescentia-nameplate {
-  font-family: "Cinzel", "Cardo", "Palatino Linotype", serif;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  background: linear-gradient(90deg, #330075 0%, #22108d 58%, #000158 100%);
+  font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  background: linear-gradient(90deg, #330075 0%, #1f0d88 54%, #000158 100%) !important;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: transparent !important;
   color: transparent !important;
+  text-shadow: 0 0 0.01em rgba(130, 173, 255, 0.14);
 }
 
 .crescentia-nameplate {
@@ -1216,25 +1218,26 @@ a:hover {
   content: "";
   position: absolute;
   top: 50%;
-  width: 0.52rem;
-  height: 0.78rem;
+  width: 0.64rem;
+  height: 0.9rem;
   border-radius: 50%;
   pointer-events: none;
+  filter: drop-shadow(0 0 0.1rem rgba(134, 247, 255, 0.32));
 }
 
 .has-crescentia-moons::before,
 .crescentia-nameplate::before {
-  left: 0.06rem;
+  left: 0.02rem;
   background:
-    radial-gradient(circle at 18% 50%, transparent 0 43%, #86f7ff 45% 63%, transparent 65%);
+    radial-gradient(circle at 20% 50%, transparent 0 35%, #88f4ff 37% 55%, transparent 58%);
   transform: translateY(-52%);
 }
 
 .has-crescentia-moons::after,
 .crescentia-nameplate::after {
-  right: 0.06rem;
+  right: 0.02rem;
   background:
-    radial-gradient(circle at 82% 50%, transparent 0 43%, #86f7ff 45% 63%, transparent 65%);
+    radial-gradient(circle at 80% 50%, transparent 0 35%, #88f4ff 37% 55%, transparent 58%);
   transform: translateY(-52%);
 }
 

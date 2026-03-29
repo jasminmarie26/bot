@@ -61,7 +61,7 @@
     <script>
       (() => {
         const NOCTRA_PATTERN = /^noctra(?:\b|\s|\[|\()/i;
-        const CRESCENTIA_PATTERN = /^crescentia(?:\b|\s|\[|\()/i;
+        const CRESCENTIA_PATTERN = /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i;
         const TARGET_SELECTOR = [
           ".role-name-admin",
           ".staff-name-admin",
@@ -195,12 +195,13 @@
         ? `brand ${topbarBrandModifier}`
         : "brand"; %>
     <% const normalizedTopbarBrandText = String(topbarBrandText || "").trim().toLowerCase(); %>
+    <% const isTopbarBrandCrescentia = /^(crescentia|cresentia)$/.test(normalizedTopbarBrandText); %>
     <% const topbarBrandSpecialClass = normalizedTopbarBrandText === "noctra"
       ? "has-noctra-wings"
-      : (normalizedTopbarBrandText === "crescentia" ? "has-crescentia-moons" : ""); %>
+      : (isTopbarBrandCrescentia ? "has-crescentia-moons" : ""); %>
     <% const topbarBrandWrapperClass = normalizedTopbarBrandText === "noctra"
       ? "noctra-nameplate"
-      : (normalizedTopbarBrandText === "crescentia" ? "crescentia-nameplate" : ""); %>
+      : (isTopbarBrandCrescentia ? "crescentia-nameplate" : ""); %>
     <% const topbarBrandClassName = topbarBrandSpecialClass
       ? `${topbarBrandClass} ${topbarBrandSpecialClass}`
       : topbarBrandClass; %>
