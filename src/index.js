@@ -13134,6 +13134,14 @@ const CHAT_AFK_REASON_SUFFIXES = [
 const CHAT_AUTOMATIC_AFK_REASONS = CHAT_AFK_REASON_PREFIXES.flatMap((prefix) =>
   CHAT_AFK_REASON_SUFFIXES.map((suffix) => `${prefix} ${suffix}`)
 );
+const CHAT_CHARACTER_SWITCH_SUFFIXES = [
+  "wirbelt einmal durch eine Wolke aus Funken und taucht als %NAME% wieder auf.",
+  "zieht kurz einen schiefen Zauber durch die Luft und steht plÃ¶tzlich als %NAME% da.",
+  "verheddert sich fÃ¼r einen Herzschlag im Plot und landet dann als %NAME% wieder auf den FÃ¼ÃŸen.",
+  "tauscht mit einem frechen Grinsen die Rolle und antwortet ab jetzt als %NAME%.",
+  "blinzelt, knistert einmal magisch und ist im nÃ¤chsten Moment %NAME%.",
+  "verschwindet in einem Puff aus Theaternebel und kehrt als %NAME% zurÃ¼ck."
+];
 
 function normalizePresenceCharacterId(characterId) {
   const parsedCharacterId = Number(characterId);
@@ -13324,6 +13332,14 @@ function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options
   return true;
 }
 
+function buildChatCharacterSwitchSuffix(nextDisplayName) {
+  const safeNextName = String(nextDisplayName || "").trim() || "jemand anderes";
+  const template = CHAT_CHARACTER_SWITCH_SUFFIXES.length
+    ? CHAT_CHARACTER_SWITCH_SUFFIXES[crypto.randomInt(CHAT_CHARACTER_SWITCH_SUFFIXES.length)]
+    : "verwandelt sich mit einem kleinen Funkenschauer in %NAME%.";
+  return template.replace(/%NAME%/g, safeNextName);
+}
+
 function getPreferredCharacterForUser(
   userId,
   serverId = DEFAULT_SERVER_ID,
@@ -13364,6 +13380,35 @@ function getPreferredCharacterForUser(
        LIMIT 1`
     )
     .get(parsedUserId, normalizedServerId);
+}
+
+function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, rawName = "") {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedName = parseInviteCommandArguments(rawName);
+  const lookupKey = normalizeInviteTargetLookupKey(normalizedName);
+  if (!lookupKey) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id,
+              c.user_id,
+              c.name,
+              c.server_id,
+              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+       FROM characters c
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+       WHERE c.user_id = ? AND c.server_id = ?
+       ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedUserId, normalizedServerId)
+    .filter((entry) => normalizeInviteTargetLookupKey(entry?.name) === lookupKey);
 }
 
 function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
@@ -13707,6 +13752,25 @@ function getSocketHeaderDisplayProfile(memberSocket) {
   );
 }
 
+function emitUserDisplayProfileToSocket(memberSocket) {
+  if (!memberSocket) {
+    return;
+  }
+
+  const normalizedServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+    ? normalizeServer(memberSocket.data.serverId)
+    : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.presenceServerId)
+      : DEFAULT_SERVER_ID;
+  const profile = getSocketHeaderDisplayProfile(memberSocket);
+  memberSocket.emit("user:display-profile", {
+    name: profile.label || memberSocket?.data?.user?.display_name || memberSocket?.data?.user?.username || "User",
+    role_style: profile.role_style || "",
+    chat_text_color: profile.chat_text_color || "",
+    character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId)
+  });
+}
+
 function refreshConnectedUserDisplay(userId) {
   const refreshedUser = getUserForSessionById(userId);
   if (!refreshedUser) {
@@ -13726,12 +13790,7 @@ function refreshConnectedUserDisplay(userId) {
       memberSocket.request.session.save(() => {});
     }
 
-    const profile = getSocketHeaderDisplayProfile(memberSocket);
-    memberSocket.emit("user:display-profile", {
-      name: profile.label || sessionUser.display_name || sessionUser.username || "User",
-      role_style: profile.role_style || "",
-      chat_text_color: profile.chat_text_color || ""
-    });
+    emitUserDisplayProfileToSocket(memberSocket);
 
     const roomId =
       Number.isInteger(memberSocket.data?.roomId) && memberSocket.data.roomId > 0
@@ -15099,22 +15158,12 @@ io.on("connection", (socket) => {
     }
 
     if (socket.data.presenceServerId === nextPresenceServerId) {
-      const profile = getSocketHeaderDisplayProfile(socket);
-      socket.emit("user:display-profile", {
-        name: profile.label || socket.data.user?.display_name || socket.data.user?.username || "User",
-        role_style: profile.role_style || "",
-        chat_text_color: profile.chat_text_color || ""
-      });
+      emitUserDisplayProfileToSocket(socket);
       return;
     }
 
     socket.data.presenceServerId = nextPresenceServerId;
-    const profile = getSocketHeaderDisplayProfile(socket);
-    socket.emit("user:display-profile", {
-      name: profile.label || socket.data.user?.display_name || socket.data.user?.username || "User",
-      role_style: profile.role_style || "",
-      chat_text_color: profile.chat_text_color || ""
-    });
+    emitUserDisplayProfileToSocket(socket);
     emitHomeStatsUpdate();
   });
 
@@ -15612,6 +15661,90 @@ io.on("connection", (socket) => {
           created_at: formatChatTimestamp()
         });
       }
+      return;
+    }
+
+    const nickMatch = content.match(/^\/nick(?:\s+([\s\S]+))?$/i);
+    if (nickMatch) {
+      const requestedCharacterName = parseInviteCommandArguments(nickMatch[1] || "");
+      if (!requestedCharacterName) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /nick Name. Namen mit Leerzeichen gehen auch in AnfÃ¼hrungszeichen.',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const matchingCharacters = findOwnedChatCharactersByName(
+        socket.data.user.id,
+        serverId,
+        requestedCharacterName
+      );
+      if (!matchingCharacters.length) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Du hast auf ${getServerLabel(serverId)} keinen eigenen Charakter mit dem Namen ${requestedCharacterName}.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (matchingCharacters.length > 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Den Namen ${requestedCharacterName} gibt es bei deinen eigenen Charakteren mehrfach. Bitte nutze einen eindeutigen Namen.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const targetCharacter = matchingCharacters[0];
+      const currentCharacterId = getSocketPreferredCharacterId(socket, serverId);
+      if (Number(targetCharacter.id) === Number(currentCharacterId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `Du bist bereits als ${targetCharacter.name} unterwegs.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const previousDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const previousDisplayName =
+        previousDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      clearChatAfkState(socket.data.user.id, roomId, serverId, {
+        skipStateEmit: true,
+        skipOnlineRefresh: true
+      }, currentCharacterId);
+
+      socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
+      socket.data.preferredCharacterIds[serverId] = Number(targetCharacter.id);
+      socket.data.activeCharacterId = Number(targetCharacter.id);
+      if (socket.request.session) {
+        socket.request.session.preferred_character_ids = socket.data.preferredCharacterIds;
+        socket.request.session.save(() => {});
+      }
+
+      const nextDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const nextDisplayName = nextDisplayProfile?.label || String(targetCharacter.name || "").trim() || previousDisplayName;
+
+      emitUserDisplayProfileToSocket(socket);
+      emitChatAfkStateToSocket(socket, roomId, serverId);
+      rememberRoomLogParticipant(roomId, serverId, socket.data.user, nextDisplayName);
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        buildChatCharacterSwitchSuffix(nextDisplayName),
+        {
+          system_kind: "actor-message",
+          presence_actor_name: previousDisplayName,
+          presence_actor_role_style: previousDisplayProfile?.role_style || "",
+          presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || ""
+        }
+      );
+      emitOnlineCharacters(roomId, serverId);
       return;
     }
 

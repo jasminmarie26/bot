@@ -45,13 +45,8 @@
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
-  const activeCharacterId = Number(activeCharacterIdRaw);
-  const currentPresenceKey =
-    Number.isInteger(activeCharacterId) && activeCharacterId > 0
-      ? `character:${activeCharacterId}`
-      : Number.isInteger(currentUserId) && currentUserId > 0
-        ? `user:${currentUserId}`
-        : "guest";
+  let currentActiveCharacterId = Number(activeCharacterIdRaw);
+  let currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
   const afkTimeoutMinutesRaw = Number(chatBox?.dataset?.afkTimeoutMinutes || "");
   const afkTimeoutMinutes =
     Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
@@ -69,12 +64,6 @@
   const chatInputDraftKey = [
     "chat-input-draft",
     Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
-    serverId,
-    hasRoom ? `room-${roomId}` : "room-none"
-  ].join(":");
-  const chatAfkStateKey = [
-    "chat-afk-state",
-    currentPresenceKey,
     serverId,
     hasRoom ? `room-${roomId}` : "room-none"
   ].join(":");
@@ -138,6 +127,59 @@
       window.sessionStorage.removeItem(key);
     } catch (_error) {
       // Ignore unavailable storage.
+    }
+  }
+
+  function getOwnPresenceKey(characterId = currentActiveCharacterId) {
+    const parsedCharacterId = Number(characterId);
+    if (Number.isInteger(parsedCharacterId) && parsedCharacterId > 0) {
+      return `character:${parsedCharacterId}`;
+    }
+
+    if (Number.isInteger(currentUserId) && currentUserId > 0) {
+      return `user:${currentUserId}`;
+    }
+
+    return "guest";
+  }
+
+  function getChatAfkStateKey(presenceKey = currentPresenceKey) {
+    return [
+      "chat-afk-state",
+      String(presenceKey || "").trim() || "guest",
+      serverId,
+      hasRoom ? `room-${roomId}` : "room-none"
+    ].join(":");
+  }
+
+  function updateCurrentPresenceIdentity(payload) {
+    if (!payload || !Object.prototype.hasOwnProperty.call(payload, "character_id")) {
+      return;
+    }
+
+    const previousPresenceKey = currentPresenceKey;
+    const previousAfkStateKey = getChatAfkStateKey(previousPresenceKey);
+    const parsedCharacterId = Number(payload?.character_id);
+    currentActiveCharacterId =
+      Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+        ? parsedCharacterId
+        : null;
+    currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
+
+    if (chatBox) {
+      chatBox.dataset.activeCharacterId =
+        Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
+          ? String(currentActiveCharacterId)
+          : "";
+    }
+
+    if (previousPresenceKey !== currentPresenceKey) {
+      setTypingStateForUser(previousPresenceKey, false);
+      removeSessionStorage(previousAfkStateKey);
+      isCurrentChannelAfk = false;
+      currentAfkMode = "";
+      clearStoredAfkState();
+      scheduleAfkTimer();
     }
   }
 
@@ -207,7 +249,7 @@
   }
 
   function getStoredAfkState() {
-    const rawValue = readSessionStorage(chatAfkStateKey);
+    const rawValue = readSessionStorage(getChatAfkStateKey());
     if (!rawValue) {
       return null;
     }
@@ -229,7 +271,7 @@
 
   function rememberAfkState(mode, reason) {
     writeSessionStorage(
-      chatAfkStateKey,
+      getChatAfkStateKey(),
       JSON.stringify({
         mode: String(mode || "").trim().toLowerCase() === "auto" ? "auto" : "manual",
         reason: String(reason || "").trim().slice(0, 180)
@@ -238,7 +280,7 @@
   }
 
   function clearStoredAfkState() {
-    removeSessionStorage(chatAfkStateKey);
+    removeSessionStorage(getChatAfkStateKey());
   }
 
   function rememberSentChatMessage(value) {
@@ -334,6 +376,7 @@
   }
 
   function updateHeaderIdentity(payload) {
+    updateCurrentPresenceIdentity(payload);
     if (!headerIdentity) return;
     const nextName = String(payload?.name || "").trim();
     const nextColor = normalizeChatTextColor(payload?.chat_text_color);
@@ -500,7 +543,10 @@
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
-      characterId: Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null,
+      characterId:
+        Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
+          ? currentActiveCharacterId
+          : null,
       isReconnect: hasJoinedCurrentChatSession,
       reconnectAgeMs:
         hasJoinedCurrentChatSession && lastDisconnectAt > 0
