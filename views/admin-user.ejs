@@ -52,6 +52,7 @@
     <span>Charaktere: <%= targetUser.character_count %></span>
     <span>Letzter Login: <%= targetUser.last_login_at || "-" %></span>
     <span>Letzte IP: <%= targetUser.last_login_ip || "-" %></span>
+    <span>Doppelaccounts: <%= Number(targetUser.duplicate_accounts_allowed) === 1 ? "freigeschaltet" : "gesperrt" %></span>
     <small>Erstellt: <%= targetUser.created_at %></small>
   </div>
 </section>
@@ -147,6 +148,16 @@
         <% } else { %>
           <input type="hidden" name="action" value="promote" />
           <button class="btn btn-secondary" type="submit">Zu Moderator machen</button>
+        <% } %>
+      </form>
+
+      <form method="POST" action="/admin/users/<%= targetUser.id %>/toggle-duplicate-accounts" class="inline-form">
+        <% if (Number(targetUser.duplicate_accounts_allowed) === 1) { %>
+          <input type="hidden" name="action" value="disable" />
+          <button class="btn btn-secondary" type="submit">Doppelaccounts sperren</button>
+        <% } else { %>
+          <input type="hidden" name="action" value="enable" />
+          <button class="btn btn-secondary" type="submit">Doppelaccounts freischalten</button>
         <% } %>
       </form>
 

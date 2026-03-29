@@ -37,9 +37,11 @@ db.exec(`
     facebook_id TEXT DEFAULT '',
     last_login_ip TEXT DEFAULT '',
     last_login_at TEXT DEFAULT '',
+    registration_ip TEXT DEFAULT '',
     username_changed_at TEXT DEFAULT '',
     afk_timeout_minutes INTEGER NOT NULL DEFAULT 20,
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
+    duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -533,6 +535,10 @@ if (!userColumns.includes("last_login_at")) {
   db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT DEFAULT ''");
 }
 
+if (!userColumns.includes("registration_ip")) {
+  db.exec("ALTER TABLE users ADD COLUMN registration_ip TEXT DEFAULT ''");
+}
+
 if (!userColumns.includes("username_changed_at")) {
   db.exec("ALTER TABLE users ADD COLUMN username_changed_at TEXT DEFAULT ''");
 }
@@ -543,6 +549,10 @@ if (!userColumns.includes("afk_timeout_minutes")) {
 
 if (!userColumns.includes("show_own_chat_time")) {
   db.exec("ALTER TABLE users ADD COLUMN show_own_chat_time INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!userColumns.includes("duplicate_accounts_allowed")) {
+  db.exec("ALTER TABLE users ADD COLUMN duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0");
 }
 
 if (!characterColumns.includes("festplay_id")) {
@@ -912,6 +922,10 @@ db.prepare("UPDATE users SET facebook_id = '' WHERE facebook_id IS NULL").run();
 db.prepare("UPDATE users SET last_login_ip = '' WHERE last_login_ip IS NULL").run();
 db.prepare("UPDATE users SET last_login_at = '' WHERE last_login_at IS NULL").run();
 db.prepare(
+  "UPDATE users SET registration_ip = COALESCE(NULLIF(last_login_ip, ''), '') WHERE registration_ip IS NULL OR registration_ip = ''"
+).run();
+db.prepare("UPDATE users SET duplicate_accounts_allowed = 0 WHERE duplicate_accounts_allowed IS NULL").run();
+db.prepare(
   "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
 ).run();
 db.prepare(
@@ -940,6 +954,7 @@ db.prepare(
     WHERE COALESCE(festplay_id, 0) > 0
       AND COALESCE(is_festplay_chat, 0) = 0`
 ).run();
+db.exec("CREATE INDEX IF NOT EXISTS idx_users_registration_ip ON users(registration_ip)");
 db.prepare(
   `UPDATE chat_rooms
       SET is_festplay_chat = 0,

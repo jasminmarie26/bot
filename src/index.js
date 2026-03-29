@@ -1034,6 +1034,40 @@ function getRequestIp(req) {
   return String(req.ip || req.socket?.remoteAddress || "").trim().slice(0, 120);
 }
 
+const DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE =
+  'Doppelaccounts sind nur nach Freigabe durch einen Admin erlaubt. Bitte nutze im bestehenden Account in den Einstellungen den Link "Doppel Accounts Beantragen".';
+
+function getDuplicateAccountRegistrationStatus(ip) {
+  const normalizedIp = String(ip || "").trim().slice(0, 120);
+  if (!normalizedIp) {
+    return {
+      ip: "",
+      existingAccountCount: 0,
+      hasApproval: false,
+      isBlocked: false
+    };
+  }
+
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS existing_account_count,
+              MAX(COALESCE(duplicate_accounts_allowed, 0)) AS has_approval
+       FROM users
+       WHERE registration_ip = ?`
+    )
+    .get(normalizedIp);
+
+  const existingAccountCount = Number(row?.existing_account_count || 0);
+  const hasApproval = Number(row?.has_approval || 0) === 1;
+
+  return {
+    ip: normalizedIp,
+    existingAccountCount,
+    hasApproval,
+    isBlocked: existingAccountCount > 0 && !hasApproval
+  };
+}
+
 function touchUserLoginMetadata(userId, req) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return;
@@ -2329,7 +2363,7 @@ function getProfileEmail(profile) {
   return normalizeEmail(emailEntry?.value || "");
 }
 
-function findOrCreateOAuthUser(provider, profile) {
+function findOrCreateOAuthUser(provider, profile, requestIp = "") {
   const providerId = String(profile?.id || "").trim();
   if (!providerId) {
     throw new Error("OAuth profile without provider id");
@@ -2394,12 +2428,20 @@ function findOrCreateOAuthUser(provider, profile) {
 
   const googleId = provider === "google" ? providerId : "";
   const facebookId = provider === "facebook" ? providerId : "";
+  const duplicateAccountStatus = getDuplicateAccountRegistrationStatus(requestIp);
+
+  if (duplicateAccountStatus.isBlocked) {
+    const error = new Error("Duplicate accounts require admin approval");
+    error.code = "DUPLICATE_ACCOUNT_IP_BLOCKED";
+    error.ip = duplicateAccountStatus.ip;
+    throw error;
+  }
 
   const info = db
     .prepare(
       `INSERT INTO users
-       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id, username_changed_at)
-       VALUES (?, ?, ?, 0, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id, registration_ip, username_changed_at)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
     )
     .run(
       username,
@@ -2408,7 +2450,8 @@ function findOrCreateOAuthUser(provider, profile) {
       DEFAULT_THEME,
       email,
       googleId,
-      facebookId
+      facebookId,
+      duplicateAccountStatus.ip
     );
 
   getAccountNumberByUserId(info.lastInsertRowid);
@@ -7673,6 +7716,7 @@ app.post("/register", async (req, res) => {
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const birthDate = normalizeBirthDate(rawBirthDate);
   const password = req.body.password || "";
+  const requestIp = getRequestIp(req);
   const submittedToken = String(req.body.form_token || "").trim();
   const honeypotValue = String(req.body.website || "").trim();
   const values = { username, email, birth_date: rawBirthDate };
@@ -7724,7 +7768,7 @@ app.post("/register", async (req, res) => {
 
   if (isDisposableEmailDomain(email)) {
     logRegistrationGuardEvent({
-      ip: getRequestIp(req),
+      ip: requestIp,
       username,
       email,
       outcome: "blocked",
@@ -7765,6 +7809,22 @@ app.post("/register", async (req, res) => {
     });
   }
 
+  const duplicateAccountStatus = getDuplicateAccountRegistrationStatus(requestIp);
+  if (duplicateAccountStatus.isBlocked) {
+    logRegistrationGuardEvent({
+      ip: duplicateAccountStatus.ip,
+      username,
+      email,
+      outcome: "blocked",
+      reason: "duplicate-account-ip-blocked"
+    });
+    return renderRegisterPage(req, res, {
+      status: 403,
+      error: DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE,
+      values
+    });
+  }
+
   if (!EMAIL_VERIFICATION_MAIL_ENABLED) {
     return renderRegisterPage(req, res, {
       status: 503,
@@ -7775,7 +7835,7 @@ app.post("/register", async (req, res) => {
   }
 
   logRegistrationGuardEvent({
-    ip: getRequestIp(req),
+    ip: requestIp,
     username,
     email,
     outcome: "attempt",
@@ -7795,8 +7855,8 @@ app.post("/register", async (req, res) => {
     const info = db
       .prepare(
         `INSERT INTO users
-         (username, password_hash, is_admin, theme, email, birth_date, email_verified, email_verification_token, last_login_ip, last_login_at, username_changed_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+         (username, password_hash, is_admin, theme, email, birth_date, email_verified, email_verification_token, last_login_ip, last_login_at, registration_ip, username_changed_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP)`
       )
       .run(
         username,
@@ -7806,7 +7866,8 @@ app.post("/register", async (req, res) => {
         email,
         birthDate,
         verificationToken,
-        getRequestIp(req)
+        requestIp,
+        requestIp
       );
     createdUserId = info.lastInsertRowid;
     accountNumber = getAccountNumberByUserId(createdUserId);
@@ -8105,7 +8166,7 @@ app.get("/auth/google/callback", (req, res, next) => {
       }
 
       try {
-        req.session.user = findOrCreateOAuthUser("google", profile);
+        req.session.user = findOrCreateOAuthUser("google", profile, getRequestIp(req));
         req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
         touchUserLoginMetadata(req.session.user.id, req);
         const accountUser = getAccountUserById(req.session.user.id);
@@ -8131,6 +8192,15 @@ app.get("/auth/google/callback", (req, res, next) => {
             reason: "oauth-disposable-email-domain"
           });
           setFlash(req, "error", "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.");
+        } else if (oauthError?.code === "DUPLICATE_ACCOUNT_IP_BLOCKED") {
+          logRegistrationGuardEvent({
+            ip: String(oauthError.ip || getRequestIp(req)).trim(),
+            username: String(profile?.displayName || "").trim(),
+            email: getProfileEmail(profile),
+            outcome: "blocked",
+            reason: "oauth-duplicate-account-ip-blocked"
+          });
+          setFlash(req, "error", DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE);
         } else {
           setFlash(req, "error", "Google Login konnte nicht verarbeitet werden.");
         }
@@ -8168,7 +8238,7 @@ app.get("/auth/facebook/callback", (req, res, next) => {
       }
 
       try {
-        req.session.user = findOrCreateOAuthUser("facebook", profile);
+        req.session.user = findOrCreateOAuthUser("facebook", profile, getRequestIp(req));
         req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
         touchUserLoginMetadata(req.session.user.id, req);
         const accountUser = getAccountUserById(req.session.user.id);
@@ -8194,6 +8264,15 @@ app.get("/auth/facebook/callback", (req, res, next) => {
             reason: "oauth-disposable-email-domain"
           });
           setFlash(req, "error", "Wegwerf-E-Mail-Adressen sind für die Registrierung nicht erlaubt.");
+        } else if (oauthError?.code === "DUPLICATE_ACCOUNT_IP_BLOCKED") {
+          logRegistrationGuardEvent({
+            ip: String(oauthError.ip || getRequestIp(req)).trim(),
+            username: String(profile?.displayName || "").trim(),
+            email: getProfileEmail(profile),
+            outcome: "blocked",
+            reason: "oauth-duplicate-account-ip-blocked"
+          });
+          setFlash(req, "error", DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE);
         } else {
           setFlash(req, "error", "Facebook Login konnte nicht verarbeitet werden.");
         }
@@ -12825,10 +12904,14 @@ function getAdminUsersOverview() {
   const loginAtExpr = userColumns.has("last_login_at")
     ? "u.last_login_at"
     : "'' AS last_login_at";
+  const duplicateAccountsAllowedExpr = userColumns.has("duplicate_accounts_allowed")
+    ? "u.duplicate_accounts_allowed"
+    : "0 AS duplicate_accounts_allowed";
 
   return db
     .prepare(
       `SELECT u.id, u.username, ${emailExpr}, ${birthDateExpr}, ${loginIpExpr}, ${loginAtExpr},
+              ${duplicateAccountsAllowedExpr},
               u.is_admin, u.is_moderator, u.admin_display_name, u.moderator_display_name, u.created_at,
               ${accountNumberExpr},
               COUNT(c.id) AS character_count
@@ -13193,6 +13276,44 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
   }
 
   return res.redirect("/admin");
+});
+
+app.post("/admin/users/:id/toggle-duplicate-accounts", requireAuth, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungÃ¼ltig.");
+    return res.redirect("/admin");
+  }
+
+  const targetUser = db
+    .prepare(
+      `SELECT id, username, registration_ip, duplicate_accounts_allowed
+       FROM users
+       WHERE id = ?`
+    )
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  const action = req.body.action === "disable" ? "disable" : "enable";
+  const nextValue = action === "enable" ? 1 : 0;
+
+  if (nextValue === 1 && !String(targetUser.registration_ip || "").trim()) {
+    setFlash(req, "error", "FÃ¼r diesen Account ist keine Registrierungs-IP gespeichert.");
+    return res.redirect(`/admin/users/${targetId}`);
+  }
+
+  db.prepare("UPDATE users SET duplicate_accounts_allowed = ? WHERE id = ?").run(nextValue, targetId);
+
+  if (nextValue === 1) {
+    setFlash(req, "success", `Doppelaccounts sind fÃ¼r ${targetUser.username} jetzt freigeschaltet.`);
+  } else {
+    setFlash(req, "success", `Doppelaccounts sind fÃ¼r ${targetUser.username} jetzt gesperrt.`);
+  }
+
+  return res.redirect(`/admin/users/${targetId}`);
 });
 
 app.post("/admin/users/:id/update-basic", requireAuth, requireAdmin, (req, res) => {
