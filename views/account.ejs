@@ -123,6 +123,20 @@
     const checkbox = document.getElementById("chat-show-own-message-time");
     const storageKey = "chat-show-own-message-time";
     if (!checkbox) return;
+    const legacyHintCandidates = Array.from(
+      checkbox.closest("form")?.querySelectorAll("p.muted") || []
+    );
+
+    legacyHintCandidates.forEach((node) => {
+      const text = String(node.textContent || "").trim();
+      if (
+        text.includes("Beispiel:") ||
+        text.includes("[11:30]") ||
+        text.includes("Name: Blabla")
+      ) {
+        node.remove();
+      }
+    });
 
     try {
       checkbox.checked = window.localStorage.getItem(storageKey) === "1";
