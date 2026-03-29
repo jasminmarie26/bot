@@ -5344,6 +5344,10 @@ function normalizeBbcodeInput(rawContent, maxLength) {
   return normalizeBbcodeMarkup(String(rawContent || "").slice(0, maxLength)).trim();
 }
 
+function normalizeGuestbookPageContentInput(rawContent, maxLength) {
+  return normalizeBbcodeMarkup(String(rawContent || "").slice(0, maxLength)).replace(/\r\n?/g, "\n");
+}
+
 function getCharacterByExactName(name) {
   const normalizedName = String(name || "").trim();
   if (!normalizedName) return null;
@@ -5528,7 +5532,7 @@ function normalizeGuestbookOpacity(input, fallback = 100) {
 }
 
 function getGuestbookEditorPayload(body, existingSettings = null) {
-  const pageContent = normalizeBbcodeInput(body.page_content, 12000);
+  const pageContent = normalizeGuestbookPageContentInput(body.page_content, 12000);
   const safeBody = body || {};
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
   const existingInnerImageUrl = String(existingSettings?.inner_image_url || "").trim().slice(0, 500);
