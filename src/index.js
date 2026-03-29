@@ -1548,6 +1548,9 @@ function renderAccountPage(req, res, options = {}) {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
       birth_date: options.values?.birth_date ?? accountUser.birth_date ?? "",
+      auto_afk_enabled:
+        options.values?.auto_afk_enabled ??
+        normalizeAutoAfkEnabled(accountUser.auto_afk_enabled),
       afk_timeout_minutes:
         options.values?.afk_timeout_minutes ??
         normalizeAfkTimeoutMinutes(accountUser.afk_timeout_minutes),
@@ -2447,6 +2450,18 @@ const DEFAULT_AFK_TIMEOUT_MINUTES = 20;
 const MIN_AFK_TIMEOUT_MINUTES = 5;
 const MAX_AFK_TIMEOUT_MINUTES = 240;
 
+function normalizeAutoAfkEnabled(value, fallback = true) {
+  if (value === true || value === 1 || value === "1") {
+    return true;
+  }
+
+  if (value === false || value === 0 || value === "0") {
+    return false;
+  }
+
+  return fallback !== false;
+}
+
 function parseAfkTimeoutMinutes(value) {
   const parsedValue = Number(value);
   if (!Number.isInteger(parsedValue)) {
@@ -2618,6 +2633,7 @@ function toSessionUser(user) {
     display_chat_text_color: displayProfile.chat_text_color || "",
     theme: normalizeTheme(user.theme),
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(user?.afk_timeout_minutes),
+    auto_afk_enabled: normalizeAutoAfkEnabled(user?.auto_afk_enabled),
     show_own_chat_time: Number(user?.show_own_chat_time) === 1,
     account_number: getAccountNumberByUserId(user.id)
   };
@@ -2635,7 +2651,7 @@ function getUserForSessionById(userId) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
-              afk_timeout_minutes, show_own_chat_time
+              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time
        , admin_character_id, moderator_character_id
        FROM users
        WHERE id = ?`
@@ -2647,7 +2663,7 @@ function getUserForSessionByUsername(username) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
-              afk_timeout_minutes, show_own_chat_time
+              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time
        , admin_character_id, moderator_character_id
        FROM users
        WHERE lower(username) = lower(?)
@@ -2659,7 +2675,7 @@ function getUserForSessionByUsername(username) {
 function getAccountUserById(userId) {
   return db
     .prepare(
-      `SELECT id, username, email, birth_date, afk_timeout_minutes, show_own_chat_time,
+      `SELECT id, username, email, birth_date, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
               room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at
        FROM users
        WHERE id = ?`
@@ -9150,6 +9166,7 @@ app.post("/account/update", requireAuth, (req, res) => {
   const username = String(req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
+  const autoAfkEnabled = String(req.body.auto_afk_enabled || "").trim() === "1";
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
@@ -9166,6 +9183,7 @@ app.post("/account/update", requireAuth, (req, res) => {
         username,
         email,
         birth_date: rawBirthDate,
+        auto_afk_enabled: autoAfkEnabled,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
         room_log_email_enabled: roomLogEmailEnabled,
         show_own_chat_time: showOwnChatTime
@@ -9216,6 +9234,7 @@ app.post("/account/update", requireAuth, (req, res) => {
          email = ?,
          birth_date = ?,
          afk_timeout_minutes = ?,
+         auto_afk_enabled = ?,
          room_log_email_enabled = ?,
          show_own_chat_time = ?,
          username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
@@ -9225,6 +9244,7 @@ app.post("/account/update", requireAuth, (req, res) => {
     email,
     birthDate,
     afkTimeoutMinutes,
+    autoAfkEnabled ? 1 : 0,
     roomLogEmailEnabled ? 1 : 0,
     showOwnChatTime ? 1 : 0,
     usernameChanged ? 1 : 0,

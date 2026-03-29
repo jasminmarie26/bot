@@ -47,6 +47,7 @@
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
   let currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
+  const autoAfkEnabled = chatBox?.dataset?.autoAfkEnabled !== "0";
   const afkTimeoutMinutesRaw = Number(chatBox?.dataset?.afkTimeoutMinutes || "");
   const afkTimeoutMinutes =
     Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
@@ -437,6 +438,15 @@
       return;
     }
 
+    if (payload?.active && String(payload?.mode || "").trim().toLowerCase() === "auto" && !autoAfkEnabled) {
+      clearStoredAfkState();
+      socket.emit("chat:activity");
+      isCurrentChannelAfk = false;
+      currentAfkMode = "";
+      scheduleAfkTimer();
+      return;
+    }
+
     isCurrentChannelAfk = Boolean(payload?.active);
     currentAfkMode = isCurrentChannelAfk ? String(payload?.mode || "") : "";
     if (isCurrentChannelAfk) {
@@ -601,7 +611,7 @@
           : null
     });
     const storedAfkState = getStoredAfkState();
-    if (storedAfkState) {
+    if (storedAfkState && (storedAfkState.mode !== "auto" || autoAfkEnabled)) {
       isCurrentChannelAfk = true;
       currentAfkMode = storedAfkState.mode;
       clearAfkTimer();
@@ -610,10 +620,12 @@
         mode: storedAfkState.mode,
         silent: true
       });
+    } else if (storedAfkState?.mode === "auto") {
+      clearStoredAfkState();
     }
     hasJoinedCurrentChatSession = true;
     lastDisconnectAt = 0;
-    if (!storedAfkState) {
+    if (!storedAfkState || (storedAfkState.mode === "auto" && !autoAfkEnabled)) {
       scheduleAfkTimer();
     }
   });
@@ -1434,6 +1446,9 @@
 
   function scheduleAfkTimer() {
     clearAfkTimer();
+    if (!autoAfkEnabled) {
+      return;
+    }
     if (document.visibilityState === "hidden") {
       return;
     }
@@ -1632,21 +1647,6 @@
     notifyImmediateChatLeave();
   });
   window.addEventListener("pagehide", notifyImmediateChatLeave);
-  window.addEventListener("pointerdown", () => {
-    registerChatActivity();
-  });
-  window.addEventListener("keydown", () => {
-    registerChatActivity();
-  });
-  window.addEventListener("wheel", () => {
-    registerChatActivity();
-  }, { passive: true });
-  window.addEventListener("touchstart", () => {
-    registerChatActivity();
-  }, { passive: true });
-  window.addEventListener("touchmove", () => {
-    registerChatActivity();
-  }, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       stopTypingIndicator();
@@ -1715,6 +1715,7 @@
       return false;
     }
 
+    registerChatActivity({ typing: true });
     socket.emit("chat:whisper", {
       targetUserId,
       content
@@ -1742,7 +1743,11 @@
   }
 
   if (whisperInput) {
+    whisperInput.addEventListener("input", () => {
+      registerChatActivity({ typing: true });
+    });
     whisperInput.addEventListener("keydown", (event) => {
+      registerChatActivity({ typing: true });
       if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
         return;
       }

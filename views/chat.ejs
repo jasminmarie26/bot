@@ -280,6 +280,7 @@
           data-current-user-id="<%= currentUser ? currentUser.id : '' %>"
           data-active-character-id="<%= activeCharacter ? activeCharacter.id : '' %>"
           data-afk-timeout-minutes="<%= currentUser?.afk_timeout_minutes || 20 %>"
+          data-auto-afk-enabled="<%= currentUser?.auto_afk_enabled === false ? '0' : '1' %>"
           data-show-chat-timestamps="<%= currentUser?.show_own_chat_time ? '1' : '0' %>"
         >
           <% if (chatRoomDescription) { %>

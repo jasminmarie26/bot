@@ -40,6 +40,7 @@ db.exec(`
     registration_ip TEXT DEFAULT '',
     username_changed_at TEXT DEFAULT '',
     afk_timeout_minutes INTEGER NOT NULL DEFAULT 20,
+    auto_afk_enabled INTEGER NOT NULL DEFAULT 1,
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
     room_log_email_enabled INTEGER NOT NULL DEFAULT 1,
     duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
@@ -585,6 +586,10 @@ if (!userColumns.includes("username_changed_at")) {
 
 if (!userColumns.includes("afk_timeout_minutes")) {
   db.exec("ALTER TABLE users ADD COLUMN afk_timeout_minutes INTEGER NOT NULL DEFAULT 20");
+}
+
+if (!userColumns.includes("auto_afk_enabled")) {
+  db.exec("ALTER TABLE users ADD COLUMN auto_afk_enabled INTEGER NOT NULL DEFAULT 1");
 }
 
 if (!userColumns.includes("show_own_chat_time")) {

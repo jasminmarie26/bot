@@ -102,7 +102,21 @@
       />
     </label>
     <p class="muted">
-      Nach dieser Zeit ohne Aktivität im Chat gilt dein Charakter automatisch als afk.
+      Gezählt wird nur Schreibaktivität im Chat oder beim Flüstern. Reine Klicks setzen den Timer nicht zurück.
+    </p>
+
+    <label class="checkbox">
+      <input
+        id="account-auto-afk-enabled"
+        name="auto_afk_enabled"
+        type="checkbox"
+        value="1"
+        <%= formValues.auto_afk_enabled ? "checked" : "" %>
+      />
+      <span>Auto-AFK im Chat aktivieren</span>
+    </label>
+    <p class="muted">
+      Wenn diese Option aktiv ist, gehst du nach der eingestellten Zeit ohne Schreibaktivit&auml;t automatisch afk.
     </p>
 
     <label class="checkbox">
