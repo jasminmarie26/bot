@@ -1112,7 +1112,7 @@ a:hover {
 .guestbook-preview-name.has-noctra-horns,
 .topbar-user-menu-meta > strong.has-noctra-horns {
   position: relative;
-  padding-top: 0.7rem;
+  padding-inline: 0.65rem;
   overflow: visible;
   text-overflow: clip;
 }
@@ -1126,7 +1126,7 @@ a:hover {
 .noctra-nameplate {
   position: relative;
   display: inline-block;
-  padding-top: 0.7rem;
+  padding-inline: 0.65rem;
 }
 
 .has-noctra-horns::before,
@@ -1135,9 +1135,9 @@ a:hover {
 .noctra-nameplate::after {
   content: "";
   position: absolute;
-  top: 0.02rem;
-  width: 0.68rem;
-  height: 0.96rem;
+  top: 50%;
+  width: 0.48rem;
+  height: 0.72rem;
   background: linear-gradient(180deg, #ba263c 0%, #67111f 52%, #240308 100%);
   box-shadow: 0 0.08rem 0.18rem rgba(0, 0, 0, 0.24);
   pointer-events: none;
@@ -1145,17 +1145,17 @@ a:hover {
 
 .has-noctra-horns::before,
 .noctra-nameplate::before {
-  left: 0.1rem;
+  left: 0.04rem;
   clip-path: polygon(52% 0%, 100% 100%, 60% 82%, 24% 100%, 0% 100%, 27% 54%);
-  transform: rotate(-12deg);
+  transform: translateY(-54%) rotate(-24deg);
   transform-origin: bottom center;
 }
 
 .has-noctra-horns::after,
 .noctra-nameplate::after {
-  right: 0.1rem;
+  right: 0.04rem;
   clip-path: polygon(48% 0%, 100% 54%, 76% 100%, 40% 82%, 0% 100%, 0% 100%);
-  transform: rotate(12deg);
+  transform: translateY(-54%) rotate(24deg);
   transform-origin: bottom center;
 }
 
