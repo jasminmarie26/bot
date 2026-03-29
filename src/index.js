@@ -462,8 +462,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
-const SESSION_MAX_AGE_MS = 1000 * 60 * 31;
-const STAFF_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+const SESSION_MAX_AGE_MS = 1000 * 60 * 60;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -1133,10 +1132,6 @@ function renderLoginPage(req, res, options = {}) {
 }
 
 function getSessionMaxAgeForUser(user) {
-  if (user?.is_admin || user?.is_moderator) {
-    return STAFF_SESSION_MAX_AGE_MS;
-  }
-
   return SESSION_MAX_AGE_MS;
 }
 

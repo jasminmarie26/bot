@@ -3,7 +3,7 @@
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
     <script src="/rp-board.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
-    <% if (currentUser && (currentUser.is_admin || currentUser.is_moderator)) { %>
+    <% if (currentUser) { %>
       <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
   </body>
