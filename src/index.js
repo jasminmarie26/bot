@@ -6915,6 +6915,41 @@ function getLatestFestplayApplicationNotificationForUser(userId, unreadOnly = tr
     .get(parsedUserId);
 }
 
+function getFestplayApprovalNotificationsForUser(userId, unreadOnly = false, limit = 25) {
+  const parsedUserId = Number(userId);
+  const parsedLimit = Math.max(1, Math.min(100, Number(limit) || 25));
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT fan.id,
+              'festplay_approval' AS notification_type,
+              fan.user_id,
+              fan.festplay_id,
+              fan.festplay_application_id,
+              fan.actor_name,
+              fan.is_read,
+              fan.created_at,
+              fa.applicant_character_id,
+              applicant.name AS applicant_character_name,
+              f.name AS festplay_name,
+              f.creator_character_id,
+              f.server_id AS festplay_server_id
+       FROM festplay_application_notifications fan
+       JOIN festplay_applications fa ON fa.id = fan.festplay_application_id
+       JOIN festplays f ON f.id = fan.festplay_id
+       JOIN characters applicant ON applicant.id = fa.applicant_character_id
+       WHERE fan.user_id = ?
+         AND COALESCE(fan.notification_kind, 'application') = 'approved'
+         ${unreadOnly ? "AND fan.is_read = 0" : ""}
+       ORDER BY fan.created_at DESC, fan.id DESC
+       LIMIT ?`
+    )
+    .all(parsedUserId, parsedLimit);
+}
+
 function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -6940,21 +6975,69 @@ function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
     .get(parsedUserId);
 }
 
+function getSystemNotificationsForUser(userId, unreadOnly = false, limit = 25) {
+  const parsedUserId = Number(userId);
+  const parsedLimit = Math.max(1, Math.min(100, Number(limit) || 25));
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT sn.id,
+              sn.user_id,
+              sn.notification_type,
+              sn.notification_key,
+              sn.title,
+              sn.message,
+              sn.is_read,
+              sn.created_at
+       FROM system_notifications sn
+       WHERE sn.user_id = ?
+         ${unreadOnly ? "AND sn.is_read = 0" : ""}
+       ORDER BY sn.created_at DESC, sn.id DESC
+       LIMIT ?`
+    )
+    .all(parsedUserId, parsedLimit);
+}
+
+function compareNotificationRecency(left, right) {
+  const leftCreatedAt = String(left?.created_at || "");
+  const rightCreatedAt = String(right?.created_at || "");
+  if (leftCreatedAt !== rightCreatedAt) {
+    return rightCreatedAt.localeCompare(leftCreatedAt);
+  }
+
+  return Number(right?.id || 0) - Number(left?.id || 0);
+}
+
 function pickLatestNotification(notifications = []) {
   const entries = Array.isArray(notifications) ? notifications.filter(Boolean) : [];
   if (!entries.length) {
     return null;
   }
 
-  return entries.sort((left, right) => {
-    const leftCreatedAt = String(left?.created_at || "");
-    const rightCreatedAt = String(right?.created_at || "");
-    if (leftCreatedAt !== rightCreatedAt) {
-      return rightCreatedAt.localeCompare(leftCreatedAt);
-    }
+  return entries.sort(compareNotificationRecency)[0];
+}
 
-    return Number(right?.id || 0) - Number(left?.id || 0);
-  })[0];
+function getSystemInboxNotificationsForUser(userId, options = {}) {
+  const parsedUserId = Number(userId);
+  const unreadOnly = options?.unreadOnly === true;
+  const parsedLimit = Math.max(1, Math.min(100, Number(options?.limit) || 25));
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return [
+    ...getSystemNotificationsForUser(parsedUserId, unreadOnly, parsedLimit),
+    ...getFestplayApprovalNotificationsForUser(parsedUserId, unreadOnly, parsedLimit)
+  ]
+    .sort(compareNotificationRecency)
+    .slice(0, parsedLimit);
+}
+
+function getLatestSystemInboxNotificationForUser(userId, unreadOnly = false) {
+  return getSystemInboxNotificationsForUser(userId, { unreadOnly, limit: 1 })[0] || null;
 }
 
 function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
@@ -6994,11 +7077,72 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
   ]);
 }
 
+function getLatestVisibleGuestbookNotificationForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  return getUnreadGuestbookNotificationCountForUser(parsedUserId) > 0
+    ? getLatestGuestbookNotificationForUser(parsedUserId, true)
+    : getLatestSystemInboxNotificationForUser(parsedUserId, false);
+}
+
 function socketChannelForGuestbookNotifications(userId) {
   const parsedUserId = Number(userId);
   return Number.isInteger(parsedUserId) && parsedUserId > 0
     ? `guestbook-notifications:${parsedUserId}`
     : "guestbook-notifications:unknown";
+}
+
+function buildNotificationPayloadEntryForUser(notification, userId, options = {}) {
+  if (!notification || typeof notification !== "object") {
+    return null;
+  }
+
+  const normalizedType = String(notification.notification_type || "").trim();
+  if (normalizedType === "festplay_application" || normalizedType === "festplay_approval") {
+    return {
+      id: Number(notification.id),
+      type: normalizedType,
+      festplay_id: Number(notification.festplay_id),
+      festplay_application_id: Number(notification.festplay_application_id),
+      festplay_name: String(notification.festplay_name || "").trim(),
+      applicant_character_name: String(notification.applicant_character_name || "").trim(),
+      actor_name: String(notification.actor_name || "").trim(),
+      festplay_server_id: normalizeServer(notification.festplay_server_id),
+      is_read: Number(notification.is_read) === 1,
+      created_at: String(notification.created_at || "").trim()
+    };
+  }
+
+  if (normalizedType === BIRTHDAY_NOTIFICATION_TYPE) {
+    return {
+      ...buildBirthdayGreetingNotificationPayloadForUser(
+        Number(userId),
+        notification.id,
+        options
+      ),
+      is_read: Number(notification.is_read) === 1,
+      created_at: String(notification.created_at || "").trim()
+    };
+  }
+
+  if (normalizedType === "guestbook_entry") {
+    return {
+      id: Number(notification.id),
+      type: "guestbook_entry",
+      character_id: Number(notification.character_id),
+      guestbook_entry_id: Number(notification.guestbook_entry_id),
+      guestbook_page_id: Number(notification.guestbook_page_id),
+      author_name: String(notification.author_name || "").trim(),
+      character_name: String(notification.character_name || "").trim(),
+      is_read: Number(notification.is_read) === 1,
+      created_at: String(notification.created_at || "").trim()
+    };
+  }
+
+  return null;
 }
 
 function buildGuestbookNotificationPayloadForUser(userId, options = {}) {
@@ -7011,42 +7155,28 @@ function buildGuestbookNotificationPayloadForUser(userId, options = {}) {
   }
 
   const count = getUnreadGuestbookNotificationCountForUser(parsedUserId);
-  const latestNotification = count > 0 ? getLatestGuestbookNotificationForUser(parsedUserId, true) : null;
+  const latestNotification = count > 0
+    ? getLatestGuestbookNotificationForUser(parsedUserId, true)
+    : getLatestSystemInboxNotificationForUser(parsedUserId, false);
 
   return {
     count,
-    latest: latestNotification
-      ? (
-        String(latestNotification.notification_type || "").trim() === "festplay_application" ||
-        String(latestNotification.notification_type || "").trim() === "festplay_approval"
-      )
-        ? {
-            id: Number(latestNotification.id),
-            type: String(latestNotification.notification_type || "").trim(),
-            festplay_id: Number(latestNotification.festplay_id),
-            festplay_application_id: Number(latestNotification.festplay_application_id),
-            festplay_name: String(latestNotification.festplay_name || "").trim(),
-            applicant_character_name: String(latestNotification.applicant_character_name || "").trim(),
-            actor_name: String(latestNotification.actor_name || "").trim(),
-            festplay_server_id: normalizeServer(latestNotification.festplay_server_id)
-          }
-        : String(latestNotification.notification_type || "").trim() === BIRTHDAY_NOTIFICATION_TYPE
-          ? buildBirthdayGreetingNotificationPayloadForUser(
-              parsedUserId,
-              latestNotification.id,
-              options
-            )
-        : {
-            id: Number(latestNotification.id),
-            type: "guestbook_entry",
-            character_id: Number(latestNotification.character_id),
-            guestbook_entry_id: Number(latestNotification.guestbook_entry_id),
-            guestbook_page_id: Number(latestNotification.guestbook_page_id),
-            author_name: String(latestNotification.author_name || "").trim(),
-            character_name: String(latestNotification.character_name || "").trim()
-          }
-      : null
+    latest: buildNotificationPayloadEntryForUser(latestNotification, parsedUserId, options)
   };
+}
+
+function buildSystemInboxListForUser(userId, options = {}) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return getSystemInboxNotificationsForUser(parsedUserId, {
+    unreadOnly: false,
+    limit: options?.limit || 30
+  })
+    .map((notification) => buildNotificationPayloadEntryForUser(notification, parsedUserId, options))
+    .filter(Boolean);
 }
 
 function emitGuestbookNotificationUpdateForUser(userId) {
@@ -7084,6 +7214,33 @@ function markGuestbookNotificationAsRead(notificationId, userId) {
   }
 }
 
+function markAllSystemInboxNotificationsAsReadForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const systemResult = db.prepare(
+    `UPDATE system_notifications
+     SET is_read = 1
+     WHERE user_id = ? AND is_read = 0`
+  ).run(parsedUserId);
+  const approvalResult = db.prepare(
+    `UPDATE festplay_application_notifications
+     SET is_read = 1
+     WHERE user_id = ?
+       AND COALESCE(notification_kind, 'application') = 'approved'
+       AND is_read = 0`
+  ).run(parsedUserId);
+
+  const hasChanges = Number(systemResult.changes || 0) > 0 || Number(approvalResult.changes || 0) > 0;
+  if (hasChanges) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+  }
+
+  return hasChanges;
+}
+
 function markSystemNotificationAsRead(notificationId, userId) {
   const parsedNotificationId = Number(notificationId);
   const parsedUserId = Number(userId);
@@ -7105,6 +7262,42 @@ function markSystemNotificationAsRead(notificationId, userId) {
   if (result.changes > 0) {
     emitGuestbookNotificationUpdateForUser(parsedUserId);
   }
+}
+
+function deleteSystemInboxNotification(notificationId, userId, notificationType) {
+  const parsedNotificationId = Number(notificationId);
+  const parsedUserId = Number(userId);
+  const normalizedType = String(notificationType || "").trim().toLowerCase();
+  if (
+    !Number.isInteger(parsedNotificationId) ||
+    parsedNotificationId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return false;
+  }
+
+  let result = { changes: 0 };
+  if (normalizedType === BIRTHDAY_NOTIFICATION_TYPE) {
+    result = db.prepare(
+      `DELETE FROM system_notifications
+       WHERE id = ? AND user_id = ? AND notification_type = ?`
+    ).run(parsedNotificationId, parsedUserId, BIRTHDAY_NOTIFICATION_TYPE);
+  } else if (normalizedType === "festplay_approval") {
+    result = db.prepare(
+      `DELETE FROM festplay_application_notifications
+       WHERE id = ?
+         AND user_id = ?
+         AND COALESCE(notification_kind, 'application') = 'approved'`
+    ).run(parsedNotificationId, parsedUserId);
+  }
+
+  if (Number(result.changes || 0) > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+    return true;
+  }
+
+  return false;
 }
 
 function markFestplayApplicationNotificationAsRead(notificationId, userId) {
@@ -9403,8 +9596,25 @@ app.post("/rp-board/entries/:entryId/delete", requireAuth, (req, res) => {
   );
 });
 
+app.get("/guestbook/notifications/system", requireAuth, (req, res) => {
+  const activeCharacter = getPreferredMenuCharacterForUser(req);
+  if (String(req.query.mark_read || "").trim() === "1") {
+    markAllSystemInboxNotificationsAsReadForUser(req.session.user.id);
+  }
+
+  return res.json({
+    ok: true,
+    notifications: buildSystemInboxListForUser(req.session.user.id, {
+      activeCharacter
+    }),
+    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id, {
+      activeCharacter
+    })
+  });
+});
+
 app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
-  const latestNotification = getLatestGuestbookNotificationForUser(req.session.user.id, true);
+  const latestNotification = getLatestVisibleGuestbookNotificationForUser(req.session.user.id);
   const notificationType = String(latestNotification?.notification_type || "").trim();
 
   if (!latestNotification) {
@@ -9534,6 +9744,30 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
   return res.json({
     ok: true,
     payload: buildGuestbookNotificationPayloadForUser(req.session.user.id)
+  });
+});
+
+app.post("/guestbook/notifications/:notificationId/delete", requireAuth, (req, res) => {
+  const notificationId = Number(req.params.notificationId);
+  const notificationType = String(req.body.type || "").trim().toLowerCase();
+
+  if (!Number.isInteger(notificationId) || notificationId < 1) {
+    return res.status(404).json({ ok: false });
+  }
+
+  if (!deleteSystemInboxNotification(notificationId, req.session.user.id, notificationType)) {
+    return res.status(404).json({ ok: false });
+  }
+
+  const activeCharacter = getPreferredMenuCharacterForUser(req);
+  return res.json({
+    ok: true,
+    notifications: buildSystemInboxListForUser(req.session.user.id, {
+      activeCharacter
+    }),
+    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id, {
+      activeCharacter
+    })
   });
 });
 

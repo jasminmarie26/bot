@@ -8233,6 +8233,50 @@ select:focus {
   gap: 0.8rem;
 }
 
+.guestbook-notification-letter-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.guestbook-notification-letter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.guestbook-notification-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid color-mix(in srgb, var(--danger, #c96d6d) 70%, var(--panel-edge) 30%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 76%, rgba(201, 109, 109, 0.22) 24%);
+  color: color-mix(in srgb, var(--text) 78%, #ffd7d7 22%);
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.guestbook-notification-delete-btn:hover,
+.guestbook-notification-delete-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--danger, #c96d6d) 86%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 62%, rgba(201, 109, 109, 0.38) 38%);
+  transform: translateY(-1px);
+}
+
+.guestbook-notification-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
+
+.guestbook-notification-letter-read {
+  opacity: 0.82;
+}
+
 .guestbook-notification-system-paragraph,
 .guestbook-notification-birthday-line {
   margin: 0;
@@ -8258,6 +8302,13 @@ select:focus {
   padding-top: 0.75rem;
   border-top: 1px solid color-mix(in srgb, var(--success-edge) 40%, transparent);
   color: color-mix(in srgb, var(--text) 78%, #f4f0d7 22%);
+}
+
+.guestbook-notification-empty-state {
+  margin: 0;
+  padding: 0.8rem 0.25rem;
+  text-align: center;
+  color: var(--muted);
 }
 
 .rp-board-panel {
