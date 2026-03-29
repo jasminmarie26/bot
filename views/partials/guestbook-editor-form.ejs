@@ -347,10 +347,18 @@
     bindColorField("guestbook-background-color", "#3E3935");
     bindColorField("guestbook-surround-color", "#2C2118");
 
+    const initialPageContent = <%- JSON.stringify(String(activePage.content || ""))
+      .replace(/<\//g, "<\\/")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029") %>;
     const editorForm = document.getElementById("guestbook-editor-form");
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
+
+    if (pageContentField) {
+      pageContentField.value = initialPageContent;
+    }
 
     const syncPreviewDraft = () => {
       if (!editorForm || !previewSyncUrl) {
