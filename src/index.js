@@ -930,7 +930,15 @@ function addUtcCalendarMonths(value, months) {
   );
 }
 
-function getCharacterRenameAvailability(character) {
+function getCharacterRenameAvailability(character, actorUser = null) {
+  if (actorUser?.is_admin) {
+    return {
+      can_change: true,
+      available_at: null,
+      available_at_text: ""
+    };
+  }
+
   const lastChangedAt = parseSqliteDateTime(character?.name_changed_at);
   if (!lastChangedAt) {
     return {
@@ -11228,7 +11236,7 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
     });
   }
 
-  const renameAvailability = getCharacterRenameAvailability(character);
+  const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
   const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(
     req.query.guestbook_page_id || req.query.page_id
   );
@@ -11258,7 +11266,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     });
   }
 
-  const renameAvailability = getCharacterRenameAvailability(character);
+  const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
   const payload = normalizeCharacterInput(req.body);
   const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(req.body.guestbook_page_id);
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
