@@ -12492,7 +12492,7 @@ app.get("/chat", requireAuth, (req, res) => {
   });
 });
 
-app.post("/chat/disconnect-now", requireAuth, (req, res) => {
+app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
   const requestedSocketId = String(req.body.socketId || "").trim();
   if (!requestedSocketId) {
     return res.sendStatus(204);
@@ -12530,7 +12530,8 @@ app.post("/chat/disconnect-now", requireAuth, (req, res) => {
   );
 
   memberSocket.data.immediateDisconnectHandled = true;
-  memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+  await Promise.resolve(memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId)));
+  memberSocket.disconnect(true);
   memberSocket.data.roomId = null;
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
@@ -14915,7 +14916,7 @@ function emitRoomListRefresh(serverId = DEFAULT_SERVER_ID) {
 const pendingRoomDeletionTimers = new Map();
 const pendingRoomInvites = new Map();
 const pendingChatDisconnects = new Map();
-const CHAT_RECONNECT_GRACE_MS = 25000;
+const CHAT_RECONNECT_GRACE_MS = 1000;
 
 function getPendingChatDisconnectKey(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
   const normalizedServerId = normalizeServer(serverId);
