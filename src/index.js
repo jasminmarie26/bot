@@ -5043,16 +5043,16 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      category: "Serveruebergreifend",
-      teaser: "Locker reden, planen und serveruebergreifend ankommen."
+      category: "OFFPLAY",
+      teaser: "Locker reden, planen und ankommen."
     }
   ],
   erp: [
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      category: "Serveruebergreifend",
-      teaser: "Locker reden, planen und serveruebergreifend ankommen."
+      category: "OFFPLAY",
+      teaser: "Locker reden, planen und ankommen."
     }
   ]
 });
