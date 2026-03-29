@@ -78,10 +78,6 @@
       nameNode.classList.add("is-afk");
     }
     nameNode.textContent = displayName;
-    if (chatTextColor && !roleStyle) {
-      nameNode.style.color = chatTextColor;
-    }
-
     function appendOccupantContent(target) {
       if (isAfk) {
         const icon = document.createElement("span");

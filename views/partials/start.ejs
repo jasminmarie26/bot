@@ -84,6 +84,10 @@
           }
 
           targets.forEach((node) => {
+            if (node.classList?.contains("rp-room-occupant")) {
+              node.classList.remove("has-noctra-wings", "has-crescentia-moons");
+              return;
+            }
             const label = String(node.textContent || "").trim();
             node.classList.toggle("has-noctra-wings", NOCTRA_PATTERN.test(label));
             node.classList.toggle("has-crescentia-moons", CRESCENTIA_PATTERN.test(label));
