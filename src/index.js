@@ -494,6 +494,9 @@ function getAcmeChallengeRoots() {
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60;
+const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
+let cachedLoginStats = null;
+let cachedLoginStatsExpiresAt = 0;
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -514,6 +517,14 @@ const sessionMiddleware = session({
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
 app.use(express.urlencoded({ extended: false }));
+app.get("/healthz", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({
+    ok: true,
+    uptime_seconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
 for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
   app.use(
     "/.well-known/acme-challenge",
@@ -537,7 +548,11 @@ function setFlash(req, type, text) {
 function getActiveSessionUserIds() {
   let sessionsDb;
   try {
-    sessionsDb = new Database(sessionsDbPath, { fileMustExist: true, readonly: true });
+    sessionsDb = new Database(sessionsDbPath, {
+      fileMustExist: true,
+      readonly: true,
+      timeout: 1000
+    });
   } catch (error) {
     return [];
   }
@@ -767,7 +782,7 @@ function getOnlineUserCountForServers(serverIds) {
   return getOnlineUserIdsForServers(serverIds).size;
 }
 
-function getLoginStats() {
+function buildLoginStats() {
   const activeUserIds = getActiveSessionUserIds();
   const accountCount =
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
@@ -806,6 +821,17 @@ function getLoginStats() {
     moderatorOnlineCount: staffStats.moderatorOnlineCount,
     moderatorOnlineNames: staffStats.moderatorOnlineNames
   };
+}
+
+function getLoginStats() {
+  const now = Date.now();
+  if (cachedLoginStats && now < cachedLoginStatsExpiresAt) {
+    return cachedLoginStats;
+  }
+
+  cachedLoginStats = buildLoginStats();
+  cachedLoginStatsExpiresAt = now + LOGIN_STATS_CACHE_TTL_MS;
+  return cachedLoginStats;
 }
 
 function emitHomeStatsUpdate() {
