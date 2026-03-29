@@ -41,6 +41,7 @@ db.exec(`
     username_changed_at TEXT DEFAULT '',
     afk_timeout_minutes INTEGER NOT NULL DEFAULT 20,
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
+    room_log_email_enabled INTEGER NOT NULL DEFAULT 1,
     duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
@@ -321,9 +322,36 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS chat_log_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    character_id INTEGER NOT NULL DEFAULT 0,
+    character_name TEXT NOT NULL DEFAULT '',
+    room_id INTEGER NOT NULL DEFAULT 0,
+    room_label TEXT NOT NULL DEFAULT '',
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    started_at TEXT NOT NULL DEFAULT '',
+    ended_at TEXT NOT NULL DEFAULT '',
+    end_reason_text TEXT NOT NULL DEFAULT '',
+    participant_names_json TEXT NOT NULL DEFAULT '[]',
+    entry_count INTEGER NOT NULL DEFAULT 0,
+    log_text TEXT NOT NULL DEFAULT '',
+    entries_json TEXT NOT NULL DEFAULT '[]',
+    email_enabled INTEGER NOT NULL DEFAULT 1,
+    email_sent INTEGER NOT NULL DEFAULT 0,
+    email_delivery_mode TEXT NOT NULL DEFAULT '',
+    email_error TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_character_backups_user_id
     ON character_backups(user_id, restored_at, deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_chat_log_backups_user_character
+    ON chat_log_backups(user_id, character_id, ended_at, id);
+  CREATE INDEX IF NOT EXISTS idx_chat_log_backups_user_created_at
+    ON chat_log_backups(user_id, created_at, id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user
@@ -549,6 +577,10 @@ if (!userColumns.includes("afk_timeout_minutes")) {
 
 if (!userColumns.includes("show_own_chat_time")) {
   db.exec("ALTER TABLE users ADD COLUMN show_own_chat_time INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!userColumns.includes("room_log_email_enabled")) {
+  db.exec("ALTER TABLE users ADD COLUMN room_log_email_enabled INTEGER NOT NULL DEFAULT 1");
 }
 
 if (!userColumns.includes("duplicate_accounts_allowed")) {
@@ -924,6 +956,7 @@ db.prepare("UPDATE users SET last_login_at = '' WHERE last_login_at IS NULL").ru
 db.prepare(
   "UPDATE users SET registration_ip = COALESCE(NULLIF(last_login_ip, ''), '') WHERE registration_ip IS NULL OR registration_ip = ''"
 ).run();
+db.prepare("UPDATE users SET room_log_email_enabled = 1 WHERE room_log_email_enabled IS NULL").run();
 db.prepare("UPDATE users SET duplicate_accounts_allowed = 0 WHERE duplicate_accounts_allowed IS NULL").run();
 db.prepare(
   "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"

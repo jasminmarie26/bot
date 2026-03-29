@@ -7,6 +7,17 @@
   </div>
 </section>
 
+<nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
+    href="/character-backups"
+  >Charaktere</a>
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
+    href="/character-backups/logs"
+  >Logs</a>
+</nav>
+
 <section class="dashboard-block">
   <details class="dashboard-festplay-overview dashboard-character-overview" open>
     <summary class="dashboard-festplay-overview-header">

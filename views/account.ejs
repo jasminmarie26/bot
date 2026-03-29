@@ -99,6 +99,20 @@
 
     <label class="checkbox">
       <input
+        id="account-room-log-email-enabled"
+        name="room_log_email_enabled"
+        type="checkbox"
+        value="1"
+        <%= formValues.room_log_email_enabled ? "checked" : "" %>
+      />
+      <span>Logs f&uuml;r alle deine Charaktere zus&auml;tzlich per E-Mail senden</span>
+    </label>
+    <p class="muted">
+      Log-Backups werden immer gespeichert. Wenn diese Option aktiv ist, bekommst du sie zus&auml;tzlich per E-Mail.
+    </p>
+
+    <label class="checkbox">
+      <input
         id="chat-show-own-message-time"
         name="show_own_chat_time"
         type="checkbox"

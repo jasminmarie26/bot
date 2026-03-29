@@ -1216,6 +1216,9 @@ function renderAccountPage(req, res, options = {}) {
       afk_timeout_minutes:
         options.values?.afk_timeout_minutes ??
         normalizeAfkTimeoutMinutes(accountUser.afk_timeout_minutes),
+      room_log_email_enabled:
+        options.values?.room_log_email_enabled ??
+        (Number(accountUser.room_log_email_enabled) !== 0),
       show_own_chat_time:
         options.values?.show_own_chat_time ??
         (Number(accountUser.show_own_chat_time) === 1)
@@ -2322,7 +2325,7 @@ function getAccountUserById(userId) {
   return db
     .prepare(
       `SELECT id, username, email, birth_date, afk_timeout_minutes, show_own_chat_time,
-              is_admin, created_at, username_changed_at
+              room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at
        FROM users
        WHERE id = ?`
     )
@@ -2586,6 +2589,151 @@ function getCharacterBackupsForUser(userId) {
         ORDER BY deleted_at DESC, id DESC`
     )
     .all(parsedUserId);
+}
+
+function parseStoredJsonArray(rawValue) {
+  const prepared = String(rawValue || "").trim();
+  if (!prepared) return [];
+
+  try {
+    const parsed = JSON.parse(prepared);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+const insertChatLogBackupStatement = db.prepare(
+  `INSERT INTO chat_log_backups (
+     user_id,
+     character_id,
+     character_name,
+     room_id,
+     room_label,
+     server_id,
+     started_at,
+     ended_at,
+     end_reason_text,
+     participant_names_json,
+     entry_count,
+     log_text,
+     entries_json,
+     email_enabled,
+     email_sent,
+     email_delivery_mode,
+     email_error
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+);
+
+function saveChatLogBackupForUser(payload = {}) {
+  const userId = Number(payload.userId);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return false;
+  }
+
+  const characterId = Number(payload.characterId);
+  const normalizedCharacterId = Number.isInteger(characterId) && characterId > 0 ? characterId : 0;
+  const characterName = String(payload.characterName || "").trim() || "Unbekannt";
+  const roomId = Number(payload.roomId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : 0;
+  const participantNames = Array.from(
+    new Set((Array.isArray(payload.participantNames) ? payload.participantNames : [])
+      .map((entry) => String(entry || "").trim())
+      .filter(Boolean))
+  );
+  const entries = Array.isArray(payload.entries) ? payload.entries : [];
+
+  insertChatLogBackupStatement.run(
+    userId,
+    normalizedCharacterId,
+    characterName,
+    normalizedRoomId,
+    String(payload.roomLabel || "").trim(),
+    normalizeServer(payload.serverId),
+    String(payload.startedAt || "").trim(),
+    String(payload.endedAt || "").trim(),
+    String(payload.endReasonText || "").trim(),
+    JSON.stringify(participantNames),
+    entries.length,
+    String(payload.logText || "").trim(),
+    JSON.stringify(entries),
+    payload.emailEnabled ? 1 : 0,
+    payload.emailSent ? 1 : 0,
+    String(payload.emailDeliveryMode || "").trim(),
+    String(payload.emailError || "").trim()
+  );
+
+  return true;
+}
+
+function getChatLogBackupCharactersForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+
+  return db
+    .prepare(
+      `SELECT character_id,
+              character_name,
+              server_id,
+              COUNT(*) AS log_count,
+              MAX(COALESCE(NULLIF(ended_at, ''), created_at)) AS last_log_at
+         FROM chat_log_backups
+        WHERE user_id = ?
+        GROUP BY character_id, character_name, server_id
+        ORDER BY last_log_at DESC, lower(character_name) ASC`
+    )
+    .all(parsedUserId);
+}
+
+function getChatLogBackupsForUserCharacter(userId, characterId, options = {}) {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 0) return [];
+
+  const clauses = ["user_id = ?", "character_id = ?"];
+  const values = [parsedUserId, parsedCharacterId];
+  const requestedCharacterName = String(options.characterName || "").trim();
+  const requestedServerId = String(options.serverId || "").trim();
+
+  if (parsedCharacterId === 0 && requestedCharacterName) {
+    clauses.push("character_name = ?");
+    values.push(requestedCharacterName);
+  }
+
+  if (parsedCharacterId === 0 && requestedServerId) {
+    clauses.push("server_id = ?");
+    values.push(normalizeServer(requestedServerId));
+  }
+
+  return db
+    .prepare(
+      `SELECT id,
+              character_id,
+              character_name,
+              room_id,
+              room_label,
+              server_id,
+              started_at,
+              ended_at,
+              end_reason_text,
+              participant_names_json,
+              entry_count,
+              log_text,
+              email_enabled,
+              email_sent,
+              email_delivery_mode,
+              email_error,
+              created_at
+         FROM chat_log_backups
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY COALESCE(NULLIF(ended_at, ''), created_at) DESC, id DESC`
+    )
+    .all(...values)
+    .map((row) => ({
+      ...row,
+      participant_names: parseStoredJsonArray(row.participant_names_json)
+    }));
 }
 
 function parseCharacterBackupSnapshot(rawValue) {
@@ -8357,6 +8505,7 @@ app.post("/account/update", requireAuth, (req, res) => {
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
+  const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
   const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
@@ -8372,6 +8521,7 @@ app.post("/account/update", requireAuth, (req, res) => {
         email,
         birth_date: rawBirthDate,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
+        room_log_email_enabled: roomLogEmailEnabled,
         show_own_chat_time: showOwnChatTime
       }
     });
@@ -8420,6 +8570,7 @@ app.post("/account/update", requireAuth, (req, res) => {
          email = ?,
          birth_date = ?,
          afk_timeout_minutes = ?,
+         room_log_email_enabled = ?,
          show_own_chat_time = ?,
          username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
      WHERE id = ?`
@@ -8428,6 +8579,7 @@ app.post("/account/update", requireAuth, (req, res) => {
     email,
     birthDate,
     afkTimeoutMinutes,
+    roomLogEmailEnabled ? 1 : 0,
     showOwnChatTime ? 1 : 0,
     usernameChanged ? 1 : 0,
     currentUserId
@@ -8598,7 +8750,59 @@ app.get("/character-backups", requireAuth, (req, res) => {
 
   return res.render("character-backups", {
     title: "Gelöschte Charaktere",
+    activeTab: "characters",
     characterBackups
+  });
+});
+
+app.get("/character-backups/logs", requireAuth, (req, res) => {
+  const logCharacters = getChatLogBackupCharactersForUser(req.session.user.id).map((entry) => ({
+    ...entry,
+    server_label: getServerLabel(entry.server_id),
+    last_log_at_label: formatGermanDateTime(entry.last_log_at)
+  }));
+
+  return res.render("character-backup-logs", {
+    title: "Log-Backups",
+    activeTab: "logs",
+    logCharacters
+  });
+});
+
+app.get("/character-backups/logs/:characterId", requireAuth, (req, res) => {
+  const characterId = Number(req.params.characterId);
+  if (!Number.isInteger(characterId) || characterId < 0) {
+    return res.status(404).render("404", { title: "Nicht gefunden" });
+  }
+
+  const requestedCharacterName = String(req.query.name || "").trim();
+  const requestedServerId = String(req.query.server_id || "").trim();
+  const characterLogs = getChatLogBackupsForUserCharacter(req.session.user.id, characterId, {
+    characterName: requestedCharacterName,
+    serverId: requestedServerId
+  }).map((entry) => ({
+    ...entry,
+    server_label: getServerLabel(entry.server_id),
+    started_at_label: formatGermanDateTime(entry.started_at || entry.created_at),
+    ended_at_label: formatGermanDateTime(entry.ended_at || entry.created_at)
+  }));
+
+  if (!characterLogs.length) {
+    setFlash(req, "error", "FÃ¼r diesen Charakter wurden keine Log-Backups gefunden.");
+    return res.redirect("/character-backups/logs");
+  }
+
+  return res.render("character-backup-log-detail", {
+    title: `Logs: ${characterLogs[0].character_name}`,
+    activeTab: "logs",
+    characterLogGroup: {
+      character_id: characterId,
+      character_name: characterLogs[0].character_name,
+      server_id: characterLogs[0].server_id,
+      server_label: characterLogs[0].server_label,
+      log_count: characterLogs.length
+    },
+    characterLogs
   });
 });
 
@@ -14786,7 +14990,7 @@ function getRoomLogRecipients(userIds) {
   const placeholders = parsedIds.map(() => "?").join(", ");
   return db
     .prepare(
-      `SELECT id, username, email
+      `SELECT id, username, email, room_log_email_enabled
        FROM users
        WHERE id IN (${placeholders})`
     )
@@ -14813,17 +15017,41 @@ function canManageRoomLog(user, room = null) {
   return canBypassRoomLock(user, room);
 }
 
-function rememberRoomLogParticipant(roomId, serverId, user, displayName = "") {
+function upsertRoomLogParticipant(roomLog, userId, displayName = "", characterId = null) {
+  if (!roomLog) return;
+  if (!Number.isInteger(userId) || userId < 1) return;
+
+  const existingParticipant = roomLog.participants.get(userId);
+  const safeDisplayName =
+    String(displayName || existingParticipant?.displayName || `User ${userId}`).trim() ||
+    existingParticipant?.displayName ||
+    `User ${userId}`;
+  const parsedCharacterId = Number(characterId);
+  const normalizedCharacterId =
+    Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+      ? parsedCharacterId
+      : Number(existingParticipant?.characterId) || 0;
+
+  roomLog.participants.set(userId, {
+    userId,
+    displayName: safeDisplayName,
+    characterId: normalizedCharacterId
+  });
+}
+
+function rememberRoomLogParticipant(roomId, serverId, user, displayName = "", characterId = null) {
   const roomLog = getActiveRoomLog(roomId, serverId);
   if (!roomLog) return;
 
   const userId = Number(user?.id);
   if (!Number.isInteger(userId) || userId < 1) return;
 
-  const safeDisplayName = String(displayName || user?.display_name || user?.username || `User ${userId}`).trim() ||
-    `User ${userId}`;
-
-  roomLog.participants.set(userId, safeDisplayName);
+  upsertRoomLogParticipant(
+    roomLog,
+    userId,
+    displayName || user?.display_name || user?.username || `User ${userId}`,
+    characterId
+  );
 }
 
 function appendMessageToActiveRoomLog(roomId, serverId, entry) {
@@ -14847,7 +15075,7 @@ function appendMessageToActiveRoomLog(roomId, serverId, entry) {
 
   const userId = Number(entry?.user_id);
   if (type !== "system" && Number.isInteger(userId) && userId > 0) {
-    roomLog.participants.set(userId, username || `User ${userId}`);
+    upsertRoomLogParticipant(roomLog, userId, username || `User ${userId}`, entry?.character_id);
   }
 }
 
@@ -14876,7 +15104,8 @@ function startRoomLog(roomId, serverId, room, startedBySocket) {
       roomId,
       serverId,
       memberSocket?.data?.user,
-      getSocketDisplayProfile(memberSocket, socketServerId).label
+      getSocketDisplayProfile(memberSocket, socketServerId).label,
+      getSocketPreferredCharacterId(memberSocket, socketServerId)
     );
   });
 
@@ -14895,7 +15124,7 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
     return false;
   }
 
-  if (!getVerificationMailer() || getActiveRoomLog(normalizedRoomId, normalizedServerId)) {
+  if (getActiveRoomLog(normalizedRoomId, normalizedServerId)) {
     return false;
   }
 
@@ -14920,8 +15149,11 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   if (!roomLog) {
     return {
       hadLog: false,
+      backupSavedCount: 0,
       deliveredCount: 0,
+      emailDisabledCount: 0,
       missingEmailCount: 0,
+      mailerUnavailableCount: 0,
       failedCount: 0,
       participantCount: 0
     };
@@ -14930,6 +15162,9 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   activeRoomLogs.delete(key);
 
   const recipientRows = getRoomLogRecipients(Array.from(roomLog.participants.keys()));
+  const recipientMap = new Map(
+    recipientRows.map((recipient) => [Number(recipient.id), recipient])
+  );
   const endedAt = formatChatTimestamp();
   const endReason = String(options.reason || "").trim().toLowerCase();
   const endReasonText =
@@ -14940,54 +15175,105 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
     .map((entry) => formatRoomLogLine(entry))
     .filter(Boolean)
     .join("\n");
-  const participantNames = Array.from(new Set(Array.from(roomLog.participants.values()).filter(Boolean)))
+  const participantEntries = Array.from(roomLog.participants.values())
+    .filter((entry) => entry && Number.isInteger(Number(entry.userId)) && Number(entry.userId) > 0);
+  const participantNames = Array.from(
+    new Set(participantEntries.map((entry) => String(entry.displayName || "").trim()).filter(Boolean))
+  )
     .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const mailerConfigured = Boolean(getVerificationMailer());
+  let backupSavedCount = 0;
   let deliveredCount = 0;
+  let emailDisabledCount = 0;
   let missingEmailCount = 0;
+  let mailerUnavailableCount = 0;
   let failedCount = 0;
   let fullAttachmentCount = 0;
   let pdfOnlyCount = 0;
   let plainOnlyCount = 0;
   let lastErrorSummary = "";
 
-  for (const recipient of recipientRows) {
-    const email = normalizeEmail(recipient?.email || "");
-    if (!email) {
-      missingEmailCount += 1;
+  for (const participant of participantEntries) {
+    const recipient = recipientMap.get(Number(participant.userId));
+    if (!recipient) {
       continue;
     }
 
-    try {
-      const deliveryResult = await sendRoomLogEmail({
-        email,
-        username: recipient.username,
+    const emailEnabled = Number(recipient.room_log_email_enabled) !== 0;
+    const email = normalizeEmail(recipient?.email || "");
+    let emailSent = false;
+    let emailDeliveryMode = "";
+    let emailError = "";
+
+    if (!emailEnabled) {
+      emailDisabledCount += 1;
+    } else if (!email) {
+      missingEmailCount += 1;
+    } else if (!mailerConfigured) {
+      mailerUnavailableCount += 1;
+      emailError = "Der Mailversand ist aktuell nicht eingerichtet.";
+    } else {
+      try {
+        const deliveryResult = await sendRoomLogEmail({
+          email,
+          username: recipient.username,
+          roomLabel: roomLog.roomLabel,
+          startedAt: roomLog.startedAt,
+          endedAt,
+          endReasonText,
+          participantNames,
+          logText,
+          entries: roomLog.messages
+        });
+        emailSent = true;
+        emailDeliveryMode = String(deliveryResult?.deliveryMode || "").trim();
+        deliveredCount += 1;
+        if (emailDeliveryMode === "pdf-docx") {
+          fullAttachmentCount += 1;
+        } else if (emailDeliveryMode === "pdf") {
+          pdfOnlyCount += 1;
+        } else {
+          plainOnlyCount += 1;
+        }
+      } catch (error) {
+        failedCount += 1;
+        emailError = summarizeMailError(error);
+        lastErrorSummary = emailError;
+        console.error("Konnte Log nicht per E-Mail senden:", error);
+      }
+    }
+
+    if (
+      saveChatLogBackupForUser({
+        userId: participant.userId,
+        characterId: participant.characterId,
+        characterName: participant.displayName || recipient.username,
+        roomId: roomLog.roomId,
         roomLabel: roomLog.roomLabel,
+        serverId: roomLog.serverId,
         startedAt: roomLog.startedAt,
         endedAt,
         endReasonText,
         participantNames,
         logText,
-        entries: roomLog.messages
-      });
-      deliveredCount += 1;
-      if (deliveryResult?.deliveryMode === "pdf-docx") {
-        fullAttachmentCount += 1;
-      } else if (deliveryResult?.deliveryMode === "pdf") {
-        pdfOnlyCount += 1;
-      } else {
-        plainOnlyCount += 1;
-      }
-    } catch (error) {
-      failedCount += 1;
-      lastErrorSummary = summarizeMailError(error);
-    console.error("Konnte Log nicht per E-Mail senden:", error);
+        entries: roomLog.messages,
+        emailEnabled,
+        emailSent,
+        emailDeliveryMode,
+        emailError
+      })
+    ) {
+      backupSavedCount += 1;
     }
   }
 
   return {
     hadLog: true,
+    backupSavedCount,
     deliveredCount,
+    emailDisabledCount,
     missingEmailCount,
+    mailerUnavailableCount,
     failedCount,
     fullAttachmentCount,
     pdfOnlyCount,
@@ -15985,7 +16271,13 @@ io.on("connection", (socket) => {
     socket.data.presenceServerId = nextServerId;
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
-    rememberRoomLogParticipant(nextRoomId, nextServerId, socket.data.user, nextDisplayName);
+    rememberRoomLogParticipant(
+      nextRoomId,
+      nextServerId,
+      socket.data.user,
+      nextDisplayName,
+      getSocketPreferredCharacterId(socket, nextServerId)
+    );
     if (!isSameChannel) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
       if (!shouldSuppressReconnectPresence && !hasOtherPresenceInNextChannel) {
@@ -16347,7 +16639,13 @@ io.on("connection", (socket) => {
 
       emitUserDisplayProfileToSocket(socket);
       emitChatAfkStateToSocket(socket, roomId, serverId);
-      rememberRoomLogParticipant(roomId, serverId, socket.data.user, nextDisplayName);
+      rememberRoomLogParticipant(
+        roomId,
+        serverId,
+        socket.data.user,
+        nextDisplayName,
+        getSocketPreferredCharacterId(socket, serverId)
+      );
       emitSystemChatMessage(
         roomId,
         serverId,
@@ -16410,15 +16708,6 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (!getVerificationMailer()) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: "Log kann nicht gestartet werden, weil der E-Mail-Versand nicht eingerichtet ist.",
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
       if (getActiveRoomLog(roomId, serverId)) {
         socket.emit("chat:message", {
           type: "system",
@@ -16460,49 +16749,64 @@ io.on("connection", (socket) => {
 
       if (!finalizeResult.hadLog) {
         resultMessage = "Es war kein aktives Log mehr vorhanden.";
-      } else if (finalizeResult.deliveredCount > 0 && finalizeResult.failedCount === 0) {
-        resultMessage = `Log wurde per E-Mail an ${finalizeResult.deliveredCount} Person(en) gesendet.`;
-        if (finalizeResult.pdfOnlyCount > 0 || finalizeResult.plainOnlyCount > 0) {
-          const fallbackParts = [];
-          if (finalizeResult.pdfOnlyCount > 0) {
-            fallbackParts.push(`${finalizeResult.pdfOnlyCount}x nur als PDF`);
-          }
-          if (finalizeResult.plainOnlyCount > 0) {
-            fallbackParts.push(`${finalizeResult.plainOnlyCount}x ohne Anhang`);
-          }
-          resultMessage += ` Fallback aktiv: ${fallbackParts.join(", ")}.`;
-        }
-        if (finalizeResult.missingEmailCount > 0) {
-          resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
-        }
-      } else if (finalizeResult.deliveredCount > 0) {
-        resultMessage =
-          `Log wurde an ${finalizeResult.deliveredCount} Person(en) gesendet, ` +
-          `${finalizeResult.failedCount} Versand(e) sind fehlgeschlagen.`;
-        if (finalizeResult.pdfOnlyCount > 0 || finalizeResult.plainOnlyCount > 0) {
-          const fallbackParts = [];
-          if (finalizeResult.pdfOnlyCount > 0) {
-            fallbackParts.push(`${finalizeResult.pdfOnlyCount}x nur als PDF`);
-          }
-          if (finalizeResult.plainOnlyCount > 0) {
-            fallbackParts.push(`${finalizeResult.plainOnlyCount}x ohne Anhang`);
-          }
-          resultMessage += ` Fallback aktiv: ${fallbackParts.join(", ")}.`;
-        }
-        if (finalizeResult.missingEmailCount > 0) {
-          resultMessage += ` ${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`;
-        }
-      } else if (finalizeResult.missingEmailCount > 0 && finalizeResult.failedCount === 0) {
-        resultMessage =
-          "Es wurde keine E-Mail verschickt, weil keine beteiligte Person eine hinterlegte E-Mail-Adresse hat.";
-      } else if (finalizeResult.failedCount > 0) {
-        resultMessage =
-          "Der Log-Versand ist fehlgeschlagen. Bitte prüfe die Server-Logs und die Mail-Konfiguration.";
-        if (finalizeResult.lastErrorSummary) {
-          resultMessage += ` Ursache: ${finalizeResult.lastErrorSummary}`;
-        }
       } else {
-        resultMessage = "Es gab keine passenden Empfänger für den Log-Versand.";
+        const resultParts = [];
+        if (finalizeResult.backupSavedCount > 0) {
+          resultParts.push(
+            `Log wurde als Backup für ${finalizeResult.backupSavedCount} Person(en) gespeichert.`
+          );
+        }
+
+        if (finalizeResult.deliveredCount > 0 && finalizeResult.failedCount === 0) {
+          resultParts.push(`Per E-Mail ging es an ${finalizeResult.deliveredCount} Person(en).`);
+        } else if (finalizeResult.deliveredCount > 0) {
+          resultParts.push(
+            `Per E-Mail ging es an ${finalizeResult.deliveredCount} Person(en), ${finalizeResult.failedCount} Versand(e) sind fehlgeschlagen.`
+          );
+        }
+
+        if (finalizeResult.pdfOnlyCount > 0 || finalizeResult.plainOnlyCount > 0) {
+          const fallbackParts = [];
+          if (finalizeResult.pdfOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.pdfOnlyCount}x nur als PDF`);
+          }
+          if (finalizeResult.plainOnlyCount > 0) {
+            fallbackParts.push(`${finalizeResult.plainOnlyCount}x ohne Anhang`);
+          }
+          resultParts.push(`Fallback aktiv: ${fallbackParts.join(", ")}.`);
+        }
+
+        if (finalizeResult.emailDisabledCount > 0) {
+          resultParts.push(
+            `${finalizeResult.emailDisabledCount} Beteiligte haben E-Mail-Logs im Account deaktiviert.`
+          );
+        }
+
+        if (finalizeResult.missingEmailCount > 0) {
+          resultParts.push(
+            `${finalizeResult.missingEmailCount} Beteiligte hatten keine hinterlegte E-Mail-Adresse.`
+          );
+        }
+
+        if (finalizeResult.mailerUnavailableCount > 0) {
+          resultParts.push(
+            `${finalizeResult.mailerUnavailableCount} E-Mail(s) konnten nicht versendet werden, weil der Mailversand nicht eingerichtet ist.`
+          );
+        }
+
+        if (finalizeResult.failedCount > 0) {
+          resultParts.push(
+            "Ein Teil des Log-Versands ist fehlgeschlagen. Bitte prüfe die Mail-Konfiguration."
+          );
+        }
+
+        if (finalizeResult.lastErrorSummary) {
+          resultParts.push(`Ursache: ${finalizeResult.lastErrorSummary}`);
+        }
+
+        resultMessage = resultParts.length
+          ? resultParts.join(" ")
+          : "Das Log wurde beendet.";
       }
 
       socket.emit("chat:message", {

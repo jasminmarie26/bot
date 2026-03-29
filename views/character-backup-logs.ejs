@@ -1,0 +1,58 @@
+<%- include("partials/start") %>
+
+<section class="header-line dashboard-page-header">
+  <div>
+    <h1>Log-Backups</h1>
+    <p class="muted">Hier findest du gespeicherte Logs nach Charakter sortiert.</p>
+  </div>
+</section>
+
+<nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
+    href="/character-backups"
+  >Charaktere</a>
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
+    href="/character-backups/logs"
+  >Logs</a>
+</nav>
+
+<section class="dashboard-block">
+  <details class="dashboard-festplay-overview dashboard-character-overview" open>
+    <summary class="dashboard-festplay-overview-header">
+      <div class="dashboard-festplay-overview-title">
+        <h3>Logs nach Charakter</h3>
+        <span class="dashboard-festplay-count">(<%= Array.isArray(logCharacters) ? logCharacters.length : 0 %>)</span>
+      </div>
+      <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="dashboard-server-panel dashboard-character-overview-body">
+      <% if (!logCharacters || !logCharacters.length) { %>
+        <p class="muted">Noch keine Log-Backups vorhanden.</p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% logCharacters.forEach((entry) => { %>
+            <article class="character-mini-card">
+              <a
+                class="character-mini-item character-log-link"
+                href="/character-backups/logs/<%= entry.character_id %>?name=<%= encodeURIComponent(entry.character_name || '') %>&server_id=<%= encodeURIComponent(entry.server_id || '') %>"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span class="character-mini-name"><%= entry.character_name %></span>
+                <span class="character-log-meta"><%= entry.server_label %> · <%= entry.log_count %> Log<%= Number(entry.log_count) === 1 ? "" : "s" %></span>
+                <% if (entry.last_log_at_label) { %>
+                  <span class="character-log-meta">Zuletzt: <%= entry.last_log_at_label %></span>
+                <% } %>
+              </a>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </details>
+</section>
+
+<%- include("partials/end") %>
