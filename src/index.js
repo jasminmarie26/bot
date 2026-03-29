@@ -2141,6 +2141,35 @@ function getUserStaffBaseName(user) {
   return "";
 }
 
+function getPublicAdminCharacterName() {
+  const adminUser =
+    db
+      .prepare(
+        `SELECT id,
+                username,
+                is_admin,
+                is_moderator,
+                admin_character_id,
+                moderator_character_id,
+                account_number
+           FROM users
+          WHERE is_admin = 1
+          ORDER BY
+            CASE
+              WHEN trim(COALESCE(account_number, '')) GLOB '[0-9]*'
+                AND trim(COALESCE(account_number, '')) != ''
+              THEN CAST(account_number AS INTEGER)
+              ELSE 2147483647
+            END ASC,
+            id ASC
+          LIMIT 1`
+      )
+      .get() || null;
+
+  const adminCharacterName = String(getUserRoleCharacter(adminUser, "admin")?.name || "").trim();
+  return adminCharacterName || "Administration";
+}
+
 function getUserDisplayProfile(user, activeCharacter = null) {
   const fallbackName = String(user?.username || "").trim() || "User";
   const activeCharacterId = Number(activeCharacter?.id);
@@ -7322,6 +7351,7 @@ app.get("/impressum", (req, res) => {
   return res.render("impressum", {
     title: "Impressum",
     legalMeta: getLegalMeta(),
+    adminContactName: getPublicAdminCharacterName(),
     pageClass: "page-legal"
   });
 });
@@ -7338,6 +7368,7 @@ app.get("/community-regeln", (req, res) => {
   return res.render("verhaltensregeln", {
     title: "Community-Regeln",
     legalMeta: getLegalMeta(),
+    adminContactName: getPublicAdminCharacterName(),
     pageClass: "page-legal"
   });
 });
@@ -9539,7 +9570,8 @@ app.get("/help", (req, res) => {
     title: "Hilfe",
     helpTopics: HELP_TOPICS,
     helpTopic: null,
-    helpBbcodeExamples: decorateHelpBbcodeExamples()
+    helpBbcodeExamples: decorateHelpBbcodeExamples(),
+    adminContactName: getPublicAdminCharacterName()
   });
 });
 
@@ -9555,7 +9587,8 @@ app.get("/help/:slug", (req, res) => {
     title: `Hilfe: ${helpTopic.title}`,
     helpTopics: HELP_TOPICS,
     helpTopic,
-    helpBbcodeExamples: decorateHelpBbcodeExamples()
+    helpBbcodeExamples: decorateHelpBbcodeExamples(),
+    adminContactName: getPublicAdminCharacterName()
   });
 });
 
