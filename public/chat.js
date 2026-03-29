@@ -108,10 +108,7 @@
 
   function formatRoleDisplayName(rawName, roleStyle = "") {
     const label = String(rawName || "").trim();
-    if (String(roleStyle || "").trim().toLowerCase() === "moderator") {
-      return label.replace(/\s*\(M\)\s*$/i, "").trim();
-    }
-    return label;
+    return label.replace(/\s*\(M\)\s*$/i, "").trim();
   }
 
   function applySpecialNameDecor(node, rawName) {

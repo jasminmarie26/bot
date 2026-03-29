@@ -4,9 +4,7 @@
 <% const chatAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : "User"); %>
 <% const formatChatRoleName = (value, roleStyle = "") => {
   const label = String(value || "").trim();
-  return String(roleStyle || "").trim().toLowerCase() === "moderator"
-    ? label.replace(/\s*\(M\)\s*$/i, "").trim()
-    : label;
+  return label.replace(/\s*\(M\)\s*$/i, "").trim();
 }; %>
 <% const getChatSpecialNameClass = (value) => {
   const label = String(value || "").trim();

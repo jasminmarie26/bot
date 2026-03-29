@@ -64,7 +64,7 @@
   }
 
   function createOccupantNode(entry) {
-    const displayName = String(entry?.name || "").trim() || "Unbekannt";
+    const displayName = String(entry?.name || "").replace(/\s*\(M\)\s*$/i, "").trim() || "Unbekannt";
     const characterId = Number(entry?.character_id);
     const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
     const roleStyle = String(entry?.role_style || "").trim().toLowerCase();

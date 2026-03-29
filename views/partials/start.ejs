@@ -207,9 +207,7 @@
     <% const topbarBrandWrapperClass = normalizedTopbarBrandText === "noctra"
       ? "noctra-nameplate"
       : (isTopbarBrandCrescentia ? "crescentia-nameplate" : ""); %>
-    <% const topbarBrandClassName = topbarBrandSpecialClass
-      ? `${topbarBrandClass} ${topbarBrandSpecialClass}`
-      : topbarBrandClass; %>
+    <% const topbarBrandClassName = topbarBrandClass; %>
     <% const topbarRoleplayAreaHref =
       menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
         ? `/dashboard/areas/${menuCharacter.server_id}`
@@ -341,7 +339,11 @@
             <% if (currentUser) { %>
               <% if (topbarGuestbookModeActive) { %>
                 <a class="<%= `${topbarBrandClassName} brand-in-nav` %>" href="<%= topbarBrandTarget %>">
-                  <span class="<%= topbarBrandWrapperClass %>"><%= topbarBrandText %></span>
+                  <% if (topbarBrandWrapperClass) { %>
+                    <span class="<%= topbarBrandWrapperClass %>"><%= topbarBrandText %></span>
+                  <% } else { %>
+                    <%= topbarBrandText %>
+                  <% } %>
                 </a>
               <% } %>
               <%- include("guestbook-notification-link") %>

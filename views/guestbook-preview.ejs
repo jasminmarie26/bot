@@ -55,8 +55,12 @@
   <header class="guestbook-preview-header">
     <div class="guestbook-preview-header-row">
       <div class="guestbook-preview-brandline">
-        <span class="guestbook-preview-name<%= guestbookNameSpecialClass ? ` ${guestbookNameSpecialClass}` : '' %>">
-          <span class="<%= guestbookNameWrapperClass %>"><%= character.name %></span>
+        <span class="guestbook-preview-name">
+          <% if (guestbookNameWrapperClass) { %>
+            <span class="<%= guestbookNameWrapperClass %>"><%= character.name %></span>
+          <% } else { %>
+            <%= character.name %>
+          <% } %>
         </span>
         <span class="guestbook-preview-separator">-</span>
         <span class="guestbook-preview-label">G&auml;stebuch-Vorschau</span>
