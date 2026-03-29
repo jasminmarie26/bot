@@ -92,6 +92,39 @@ const GUESTBOOK_FONT_OPTIONS = [
   { id: "magie", label: "Magie Script" },
   { id: "vintage-fantasy", label: "Vintage Fantasy" }
 ];
+const BIRTHDAY_GREETING_OPENERS = [
+  "Systemnachricht: Herzlichen Glueckwunsch zum Geburtstag, {name}!",
+  "Systemnachricht: Alles Liebe zum Geburtstag, {name}!",
+  "Systemnachricht: Heute feiern wir dich, {name}!",
+  "Systemnachricht: Ein strahlender Geburtstagsgruss fuer dich, {name}!",
+  "Systemnachricht: Geburtstagspost fuer dich, {name}!",
+  "Systemnachricht: Ein grosses Hurra fuer dich, {name}!",
+  "Systemnachricht: Zeit fuer Konfetti und gute Laune, {name}!",
+  "Systemnachricht: Heute gehoert die Buehne dir, {name}!",
+  "Systemnachricht: Ein besonderer Tag fuer einen besonderen Menschen: {name}!",
+  "Systemnachricht: Geburtstagsalarm fuer {name}!"
+];
+const BIRTHDAY_GREETING_WISHES = [
+  "Wir wuenschen dir Gesundheit, Freude und ganz viele schoene Momente.",
+  "Moege dein neues Lebensjahr voller Licht, Mut und Lieblingsszenen sein.",
+  "Fuer dein neues Lebensjahr schicken wir dir ganz viel Waerme und gute Energie.",
+  "Wir wuenschen dir einen Tag voller Lachen, lieber Worte und kleiner Wunder.",
+  "Moege heute alles ein kleines bisschen heller, leichter und schoener sein.",
+  "Wir wuenschen dir Zeit fuer Herzensmenschen, gute Gedanken und tolle Abenteuer.",
+  "Fuer dein neues Lebensjahr wuenschen wir dir Kraft, Glueck und ganz viel Sonnenschein.",
+  "Moege dein Tag nach Freude klingen und dein neues Jahr nach Zuversicht schmecken.",
+  "Wir wuenschen dir viele Gruende zum Lachen und nur die besten Geschichten.",
+  "Fuer heute und das kommende Jahr schicken wir dir eine Extraportion Freude mit."
+];
+const BIRTHDAY_GREETING_SIGNOFFS = [
+  "Das ganze Heldenhafte Reisen Team denkt heute an dich und drueckt dich ganz fest aus der Ferne.",
+  "Vom ganzen Heldenhafte Reisen Team kommen heute die herzlichsten Geburtstagswuensche direkt zu dir."
+];
+const BIRTHDAY_GREETING_VARIANTS = BIRTHDAY_GREETING_OPENERS.flatMap((opener) =>
+  BIRTHDAY_GREETING_WISHES.flatMap((wish) =>
+    BIRTHDAY_GREETING_SIGNOFFS.map((signoff) => `${opener} ${wish} ${signoff}`)
+  )
+).slice(0, 200);
 const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
   GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
 );
@@ -869,6 +902,78 @@ function getAgeFromBirthDate(rawBirthDate, referenceDate = new Date()) {
   }
 
   return age >= 0 ? age : null;
+}
+
+function isBirthdayToday(rawBirthDate, referenceDate = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
+  if (!match) return false;
+
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(month) || !Number.isInteger(day)) {
+    return false;
+  }
+
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  return now.getMonth() + 1 === month && now.getDate() === day;
+}
+
+function buildBirthdayGreetingFlashText(username) {
+  const safeName = String(username || "").trim() || "Abenteurer";
+  if (!BIRTHDAY_GREETING_VARIANTS.length) {
+    return `Systemnachricht: Herzlichen Glueckwunsch zum Geburtstag, ${safeName}! Das ganze Heldenhafte Reisen Team wuenscht dir einen wunderschoenen Tag.`;
+  }
+
+  const randomIndex = crypto.randomInt(0, BIRTHDAY_GREETING_VARIANTS.length);
+  return BIRTHDAY_GREETING_VARIANTS[randomIndex].replace(/\{name\}/g, safeName);
+}
+
+function getBirthdayFlashDateKey(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildBirthdayFlashState(userId, fallbackText = "Erfolgreich eingeloggt.", referenceDate = new Date()) {
+  const accountUser = getAccountUserById(userId);
+  if (!accountUser || !isBirthdayToday(accountUser.birth_date, referenceDate)) {
+    return {
+      isBirthday: false,
+      text: fallbackText,
+      dateKey: getBirthdayFlashDateKey(referenceDate)
+    };
+  }
+
+  return {
+    isBirthday: true,
+    text: buildBirthdayGreetingFlashText(accountUser.username),
+    dateKey: getBirthdayFlashDateKey(referenceDate)
+  };
+}
+
+function setPostLoginFlash(req, userId, fallbackText = "Erfolgreich eingeloggt.") {
+  const birthdayFlashState = buildBirthdayFlashState(userId, fallbackText);
+  if (birthdayFlashState.isBirthday) {
+    req.session.birthday_flash_last_seen_date = birthdayFlashState.dateKey;
+  }
+  setFlash(req, "success", birthdayFlashState.text);
+}
+
+function getPendingBirthdayFlashText(userId, lastSeenDateKey = "", referenceDate = new Date()) {
+  const birthdayFlashState = buildBirthdayFlashState(userId, "", referenceDate);
+  if (!birthdayFlashState.isBirthday) {
+    return "";
+  }
+
+  return String(lastSeenDateKey || "").trim() === birthdayFlashState.dateKey
+    ? ""
+    : birthdayFlashState.text;
 }
 
 function getUsernameChangeAvailability(user) {
@@ -7647,6 +7752,20 @@ app.use((req, res, next) => {
     setThemeCookie(res, res.locals.activeTheme);
   }
 
+  if (!req.session.flash && req.session.user?.id) {
+    const pendingBirthdayFlashText = getPendingBirthdayFlashText(
+      req.session.user.id,
+      req.session.birthday_flash_last_seen_date
+    );
+    if (pendingBirthdayFlashText) {
+      req.session.flash = {
+        type: "success",
+        text: pendingBirthdayFlashText
+      };
+      req.session.birthday_flash_last_seen_date = getBirthdayFlashDateKey();
+    }
+  }
+
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   delete req.session.flash;
@@ -8152,7 +8271,7 @@ app.post("/login", (req, res) => {
   touchUserLoginMetadata(user.id, req);
   req.session.user = toSessionUser(user);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
-  setFlash(req, "success", "Erfolgreich eingeloggt.");
+  setPostLoginFlash(req, user.id, "Erfolgreich eingeloggt.");
   return res.redirect("/dashboard");
 });
 
@@ -8349,7 +8468,7 @@ app.get("/auth/google/callback", (req, res, next) => {
         delete req.session.oauth_birth_date_required;
         delete req.session.oauth_birth_date_provider;
         delete req.session.oauth_birth_date_redirect;
-        setFlash(req, "success", "Mit Google eingeloggt.");
+        setPostLoginFlash(req, req.session.user.id, "Mit Google eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
         console.error(oauthError);
@@ -8421,7 +8540,7 @@ app.get("/auth/facebook/callback", (req, res, next) => {
         delete req.session.oauth_birth_date_required;
         delete req.session.oauth_birth_date_provider;
         delete req.session.oauth_birth_date_redirect;
-        setFlash(req, "success", "Mit Facebook eingeloggt.");
+        setPostLoginFlash(req, req.session.user.id, "Mit Facebook eingeloggt.");
         return res.redirect("/dashboard");
       } catch (oauthError) {
         console.error(oauthError);
@@ -8489,7 +8608,7 @@ app.post("/auth/complete-profile", requireAuth, (req, res) => {
   delete req.session.oauth_birth_date_provider;
   const nextUrl = String(req.session.oauth_birth_date_redirect || "/dashboard").trim() || "/dashboard";
   delete req.session.oauth_birth_date_redirect;
-  setFlash(req, "success", "Geburtsdatum gespeichert. Du kannst jetzt weitermachen.");
+  setPostLoginFlash(req, req.session.user.id, "Geburtsdatum gespeichert. Du kannst jetzt weitermachen.");
   return res.redirect(nextUrl);
 });
 
