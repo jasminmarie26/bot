@@ -127,6 +127,10 @@
       typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
         ? `brand ${topbarBrandModifier}`
         : "brand"; %>
+    <% const topbarBrandHasNoctraHorns = String(topbarBrandText || "").trim().toLowerCase() === "noctra"; %>
+    <% const topbarBrandClassName = topbarBrandHasNoctraHorns
+      ? `${topbarBrandClass} has-noctra-horns`
+      : topbarBrandClass; %>
     <% const topbarRoleplayAreaHref =
       menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
         ? `/dashboard/areas/${menuCharacter.server_id}`
@@ -257,7 +261,9 @@
             <% } %>
             <% if (currentUser) { %>
               <% if (topbarGuestbookModeActive) { %>
-                <a class="<%= `${topbarBrandClass} brand-in-nav` %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
+                <a class="<%= `${topbarBrandClassName} brand-in-nav` %>" href="<%= topbarBrandTarget %>">
+                  <span class="<%= topbarBrandHasNoctraHorns ? 'noctra-nameplate' : '' %>"><%= topbarBrandText %></span>
+                </a>
               <% } %>
               <%- include("guestbook-notification-link") %>
               <details class="topbar-user-menu">

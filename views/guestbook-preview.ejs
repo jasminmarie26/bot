@@ -32,6 +32,7 @@
     `--gb-inner-image-position:${innerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
   const effectiveGuestbookSurroundColor = guestbookSettings?.surround_color || guestbookSettings?.background_color || "";
+  const guestbookNameHasNoctraHorns = String(character?.name || "").trim().toLowerCase() === "noctra";
   const guestbookPreviewShellStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
     guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",
@@ -47,7 +48,9 @@
   <header class="guestbook-preview-header">
     <div class="guestbook-preview-header-row">
       <div class="guestbook-preview-brandline">
-        <span class="guestbook-preview-name"><%= character.name %></span>
+        <span class="guestbook-preview-name<%= guestbookNameHasNoctraHorns ? ' has-noctra-horns' : '' %>">
+          <span class="<%= guestbookNameHasNoctraHorns ? 'noctra-nameplate' : '' %>"><%= character.name %></span>
+        </span>
         <span class="guestbook-preview-separator">-</span>
         <span class="guestbook-preview-label">G&auml;stebuch-Vorschau</span>
       </div>
