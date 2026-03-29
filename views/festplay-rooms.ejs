@@ -28,7 +28,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Festspiel-Raumliste Navigation">
-      <a href="/dashboard/areas/<%= character.server_id %>">Serverliste</a>
+      <a href="/dashboard/areas/<%= character.server_id %>" target="_blank" rel="noopener noreferrer">Serverliste</a>
       <% if (festplayRoomIsOwner) { %>
         <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
       <% } %>
@@ -118,7 +118,7 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
-          <a href="/dashboard">Serverliste</a>
+          <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
           <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
           <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Meine Festplays</a>
