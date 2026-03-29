@@ -1638,13 +1638,15 @@
   window.addEventListener("keydown", () => {
     registerChatActivity();
   });
-  window.addEventListener(
-    "scroll",
-    () => {
-      registerChatActivity();
-    },
-    true
-  );
+  window.addEventListener("wheel", () => {
+    registerChatActivity();
+  }, { passive: true });
+  window.addEventListener("touchstart", () => {
+    registerChatActivity();
+  }, { passive: true });
+  window.addEventListener("touchmove", () => {
+    registerChatActivity();
+  }, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       stopTypingIndicator();
