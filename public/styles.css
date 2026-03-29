@@ -1126,15 +1126,14 @@ a:hover {
   text-overflow: clip;
 }
 
-.brand.is-character.has-noctra-wings,
 .rp-header-identity.has-noctra-wings,
 .role-name-admin.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
-.guestbook-preview-name.has-noctra-wings,
 .chat-online-name.has-noctra-wings,
 .chat-message strong.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings {
-  padding-inline: 0.78rem;
+  padding-inline-start: 0;
+  padding-inline-end: 1.08rem;
 }
 
 .brand.is-character.has-crescentia-moons,
@@ -1150,6 +1149,7 @@ a:hover {
   text-overflow: clip;
 }
 
+.rp-header-identity.has-noctra-wings,
 .role-name-admin.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
 .chat-online-name.has-noctra-wings,
@@ -1166,42 +1166,30 @@ a:hover {
 .noctra-nameplate {
   position: relative;
   display: inline-block;
-  padding-inline: 0.78rem;
+  padding-inline-start: 0;
+  padding-inline-end: 1.08rem;
 }
 
-.has-noctra-wings::before,
-.has-noctra-wings::after,
-.noctra-nameplate::before,
+.rp-header-identity.has-noctra-wings::after,
+.role-name-admin.has-noctra-wings::after,
+.staff-name-admin.has-noctra-wings::after,
+.chat-online-name.has-noctra-wings::after,
+.chat-message strong.has-noctra-wings::after,
+.topbar-user-menu-meta > strong.has-noctra-wings::after,
 .noctra-nameplate::after {
   content: "";
   position: absolute;
   top: 50%;
-  width: 0.56rem;
-  height: 0.74rem;
-  background:
-    radial-gradient(70% 62% at 80% 24%, rgba(255, 183, 200, 0.26), transparent 40%),
-    linear-gradient(180deg, rgba(126, 18, 38, 0.72) 0%, rgba(57, 8, 18, 0.76) 58%, rgba(21, 2, 8, 0.82) 100%);
-  box-shadow:
-    0 0.04rem 0.12rem rgba(0, 0, 0, 0.18),
-    0 0 0.08rem rgba(146, 23, 49, 0.16);
-  opacity: 0.72;
+  right: 0;
+  width: 0.88rem;
+  height: 0.52rem;
+  background: center / contain no-repeat url("/icons/noctra-wings.svg");
+  filter:
+    drop-shadow(0 0.03rem 0.08rem rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 0.06rem rgba(146, 23, 49, 0.2));
+  opacity: 0.9;
   pointer-events: none;
-}
-
-.has-noctra-wings::before,
-.noctra-nameplate::before {
-  left: 0.05rem;
-  clip-path: polygon(100% 10%, 80% 16%, 64% 28%, 50% 18%, 34% 28%, 18% 48%, 28% 72%, 50% 90%, 72% 100%, 100% 74%);
-  transform: translateY(-50%) rotate(-11deg);
-  transform-origin: right center;
-}
-
-.has-noctra-wings::after,
-.noctra-nameplate::after {
-  right: 0.05rem;
-  clip-path: polygon(0% 10%, 20% 16%, 36% 28%, 50% 18%, 66% 28%, 82% 48%, 72% 72%, 50% 90%, 28% 100%, 0% 74%);
-  transform: translateY(-50%) rotate(11deg);
-  transform-origin: left center;
+  transform: translateY(-45%);
 }
 
 .has-crescentia-moons,

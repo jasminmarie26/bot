@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 36" aria-hidden="true">
+  <defs>
+    <linearGradient id="noctraWingFill" x1="42" y1="4" x2="42" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d81d37" />
+      <stop offset="1" stop-color="#891125" />
+    </linearGradient>
+  </defs>
+  <path
+    fill="url(#noctraWingFill)"
+    d="M33.2 18.1C26 10.9 18.2 7.4 6.2 5.4c5.4 4 10.1 8.3 12.9 12.6-4.4 1.4-8 4.4-10.8 8.7 7.4-2.1 13.3-1.7 17.7.2 3 1.4 5.4 3.4 6.8 5.3 1-4.5 1.1-9 .4-14.1Z"
+  />
+  <path
+    fill="url(#noctraWingFill)"
+    d="M50.8 18.1C58 10.9 65.8 7.4 77.8 5.4c-5.4 4-10.1 8.3-12.9 12.6 4.4 1.4 8 4.4 10.8 8.7-7.4-2.1-13.3-1.7-17.7.2-3 1.4-5.4 3.4-6.8 5.3-1-4.5-1.1-9-.4-14.1Z"
+  />
+</svg>
