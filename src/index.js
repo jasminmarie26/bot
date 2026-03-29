@@ -1017,6 +1017,30 @@ function getBirthdayGreetingRecipientName(userId, options = {}) {
   return String(getAccountUserById(parsedUserId)?.username || "").trim() || "Abenteurer";
 }
 
+function splitBirthdayGreetingMessageSections(rawMessage) {
+  const normalizedMessage = String(rawMessage || "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+  if (!normalizedMessage) {
+    return null;
+  }
+
+  const sections = normalizedMessage
+    .split(/\n{2,}/)
+    .map((section) => String(section || "").trim())
+    .filter(Boolean);
+  if (!sections.length) {
+    return null;
+  }
+
+  return {
+    intro: sections[0] || "",
+    wish: sections[1] || "",
+    signoff: sections.slice(2).join("\n\n"),
+    message: normalizedMessage
+  };
+}
+
 function buildBirthdayGreetingContent(name, notificationId = 0) {
   const safeName = String(name || "").trim() || "Abenteurer";
   const openerVariants = BIRTHDAY_GREETING_OPENERS.length > 0
@@ -1052,6 +1076,24 @@ function buildBirthdayGreetingContent(name, notificationId = 0) {
 }
 
 function buildBirthdayGreetingNotificationPayloadForUser(userId, notificationId, options = {}) {
+  const storedTitle = String(options?.notificationTitle || "").trim();
+  const storedMessage = String(options?.notificationMessage || "").trim();
+  const storedDecoration = String(options?.notificationDecoration || "").trim();
+  const storedSections = splitBirthdayGreetingMessageSections(storedMessage);
+
+  if (storedSections) {
+    return {
+      id: Number(notificationId) || 0,
+      type: BIRTHDAY_NOTIFICATION_TYPE,
+      title: storedTitle || BIRTHDAY_NOTIFICATION_TITLE,
+      message: storedSections.message,
+      intro: storedSections.intro || storedSections.message,
+      wish: storedSections.wish,
+      signoff: storedSections.signoff,
+      decoration: storedDecoration || BIRTHDAY_NOTIFICATION_DECORATION
+    };
+  }
+
   const content = buildBirthdayGreetingContent(
     getBirthdayGreetingRecipientName(userId, options),
     notificationId
@@ -1137,7 +1179,7 @@ function createSystemNotification(userId, notificationType, notificationKey, tit
   return false;
 }
 
-function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new Date()) {
+function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new Date(), options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return false;
@@ -1153,12 +1195,14 @@ function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new 
     BIRTHDAY_NOTIFICATION_TYPE,
     getBirthdayNotificationDateKey(referenceDate),
     BIRTHDAY_NOTIFICATION_TITLE,
-    buildBirthdayGreetingPlainTextForUser(parsedUserId)
+    buildBirthdayGreetingPlainTextForUser(parsedUserId, options)
   );
 }
 
 function setPostLoginFlash(req, userId, fallbackText = "Erfolgreich eingeloggt.") {
-  createBirthdayGreetingNotificationIfNeeded(userId);
+  createBirthdayGreetingNotificationIfNeeded(userId, new Date(), {
+    activeCharacter: getPreferredMenuCharacterForUser(req)
+  });
   setFlash(req, "success", fallbackText);
 }
 
@@ -6994,6 +7038,7 @@ function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
               sn.created_at
        FROM system_notifications sn
        WHERE sn.user_id = ?
+         AND trim(COALESCE(sn.message, '')) != ''
          ${unreadOnly ? "AND sn.is_read = 0" : ""}
        ORDER BY sn.created_at DESC, sn.id DESC
        LIMIT 1`
@@ -7020,6 +7065,7 @@ function getSystemNotificationsForUser(userId, unreadOnly = false, limit = 25) {
               sn.created_at
        FROM system_notifications sn
        WHERE sn.user_id = ?
+         AND trim(COALESCE(sn.message, '')) != ''
          ${unreadOnly ? "AND sn.is_read = 0" : ""}
        ORDER BY sn.created_at DESC, sn.id DESC
        LIMIT ?`
@@ -7147,7 +7193,11 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
       ...buildBirthdayGreetingNotificationPayloadForUser(
         Number(userId),
         notification.id,
-        options
+        {
+          ...options,
+          notificationTitle: notification.title,
+          notificationMessage: notification.message
+        }
       ),
       is_read: Number(notification.is_read) === 1,
       created_at: String(notification.created_at || "").trim()
@@ -7306,8 +7356,13 @@ function deleteSystemInboxNotification(notificationId, userId, notificationType)
   let result = { changes: 0 };
   if (normalizedType === BIRTHDAY_NOTIFICATION_TYPE) {
     result = db.prepare(
-      `DELETE FROM system_notifications
-       WHERE id = ? AND user_id = ? AND notification_type = ?`
+      `UPDATE system_notifications
+       SET is_read = 1,
+           title = '',
+           message = ''
+       WHERE id = ?
+         AND user_id = ?
+         AND notification_type = ?`
     ).run(parsedNotificationId, parsedUserId, BIRTHDAY_NOTIFICATION_TYPE);
   } else if (normalizedType === "festplay_approval") {
     result = db.prepare(
@@ -8157,7 +8212,9 @@ app.use((req, res, next) => {
   }
 
   if (req.session.user?.id) {
-    createBirthdayGreetingNotificationIfNeeded(req.session.user.id);
+    createBirthdayGreetingNotificationIfNeeded(req.session.user.id, new Date(), {
+      activeCharacter: getPreferredMenuCharacterForUser(req)
+    });
   }
 
   res.locals.currentUser = req.session.user || null;
@@ -9707,7 +9764,9 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
     const birthdayGreetingText = buildBirthdayGreetingPlainTextForUser(req.session.user.id, {
       activeCharacter: getPreferredMenuCharacterForUser(req),
-      notificationId: latestNotification.id
+      notificationId: latestNotification.id,
+      notificationTitle: latestNotification.title,
+      notificationMessage: latestNotification.message
     });
     setFlash(
       req,
@@ -16892,6 +16951,9 @@ io.on("connection", (socket) => {
     );
     const nextCharacterId = preferredCharacter?.id || null;
     const nextPresenceKey = getPresenceIdentityKey(socket.data.user.id, nextCharacterId);
+    const shouldClearPreviousAfkState = Boolean(previousServerId) &&
+      (!isSameChannel || Number(previousCharacterId) !== Number(nextCharacterId)) &&
+      !hasOtherPresenceInPreviousChannel;
     const recoveredDisconnect = clearPendingChatDisconnect(
       socket.data.user.id,
       nextRoomId,
@@ -16928,12 +16990,14 @@ io.on("connection", (socket) => {
 
     if (previousServerId) {
       socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
-      if (!isSameChannel) {
+      if (shouldClearPreviousAfkState) {
         clearChatAfkState(socket.data.user.id, previousRoomId, previousServerId, {
           skipStateEmit: true,
           skipOnlineRefresh: true
         }, previousCharacterId);
+      }
 
+      if (!isSameChannel) {
         if (!shouldSkipPreviousDisconnectPresence && !hasOtherPresenceInPreviousChannel) {
           const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
           emitSystemChatMessage(
@@ -17321,11 +17385,20 @@ io.on("connection", (socket) => {
       const previousDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const previousDisplayName =
         previousDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+      const hasOtherPresenceAsCurrentCharacter = hasOtherSocketInChannel(
+        socket.data.user.id,
+        roomId,
+        serverId,
+        socket.id,
+        currentCharacterId
+      );
 
-      clearChatAfkState(socket.data.user.id, roomId, serverId, {
-        skipStateEmit: true,
-        skipOnlineRefresh: true
-      }, currentCharacterId);
+      if (!hasOtherPresenceAsCurrentCharacter) {
+        clearChatAfkState(socket.data.user.id, roomId, serverId, {
+          skipStateEmit: true,
+          skipOnlineRefresh: true
+        }, currentCharacterId);
+      }
 
       socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
       socket.data.preferredCharacterIds[serverId] = Number(targetCharacter.id);
