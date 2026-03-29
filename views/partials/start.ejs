@@ -58,6 +58,71 @@
         }
       })();
     </script>
+    <script>
+      (() => {
+        const NOCTRA_PATTERN = /^noctra(?:\b|\s|\[|\()/i;
+        const TARGET_SELECTOR = [
+          ".role-name-admin",
+          ".staff-name-admin",
+          ".rp-header-identity",
+          ".topbar-user-menu-meta > strong"
+        ].join(", ");
+
+        const syncNoctraHorns = (root = document) => {
+          const targets = [];
+          if (root instanceof Element && root.matches(TARGET_SELECTOR)) {
+            targets.push(root);
+          }
+          if (root?.querySelectorAll) {
+            targets.push(...root.querySelectorAll(TARGET_SELECTOR));
+          }
+
+          targets.forEach((node) => {
+            const label = String(node.textContent || "").trim();
+            node.classList.toggle("has-noctra-horns", NOCTRA_PATTERN.test(label));
+          });
+        };
+
+        const boot = () => {
+          syncNoctraHorns(document);
+
+          if (!document.body || typeof MutationObserver !== "function") {
+            return;
+          }
+
+          const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+              if (mutation.type === "characterData") {
+                syncNoctraHorns(mutation.target?.parentElement || document);
+                return;
+              }
+
+              mutation.addedNodes.forEach((node) => {
+                if (node instanceof Element) {
+                  syncNoctraHorns(node);
+                }
+              });
+
+              if (mutation.target instanceof Element) {
+                syncNoctraHorns(mutation.target);
+              }
+            });
+          });
+
+          observer.observe(document.body, {
+            subtree: true,
+            childList: true,
+            characterData: true
+          });
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot, { once: true });
+        } else {
+          boot();
+        }
+      })();
+    </script>
     <% const includeRealtimeAssets = typeof enableRealtime !== "undefined" ? Boolean(enableRealtime) : true; %>
     <% if (includeRealtimeAssets) { %>
       <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>

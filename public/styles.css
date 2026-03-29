@@ -1105,9 +1105,22 @@ a:hover {
   text-overflow: ellipsis;
 }
 
-.brand.is-character.has-noctra-horns {
+.brand.is-character.has-noctra-horns,
+.rp-header-identity.has-noctra-horns,
+.role-name-admin.has-noctra-horns,
+.staff-name-admin.has-noctra-horns,
+.guestbook-preview-name.has-noctra-horns,
+.topbar-user-menu-meta > strong.has-noctra-horns {
+  position: relative;
+  padding-top: 0.7rem;
   overflow: visible;
   text-overflow: clip;
+}
+
+.role-name-admin.has-noctra-horns,
+.staff-name-admin.has-noctra-horns,
+.topbar-user-menu-meta > strong.has-noctra-horns {
+  display: inline-block;
 }
 
 .noctra-nameplate {
@@ -1116,6 +1129,8 @@ a:hover {
   padding-top: 0.7rem;
 }
 
+.has-noctra-horns::before,
+.has-noctra-horns::after,
 .noctra-nameplate::before,
 .noctra-nameplate::after {
   content: "";
@@ -1128,6 +1143,7 @@ a:hover {
   pointer-events: none;
 }
 
+.has-noctra-horns::before,
 .noctra-nameplate::before {
   left: 0.1rem;
   clip-path: polygon(52% 0%, 100% 100%, 60% 82%, 24% 100%, 0% 100%, 27% 54%);
@@ -1135,6 +1151,7 @@ a:hover {
   transform-origin: bottom center;
 }
 
+.has-noctra-horns::after,
 .noctra-nameplate::after {
   right: 0.1rem;
   clip-path: polygon(48% 0%, 100% 54%, 76% 100%, 40% 82%, 0% 100%, 0% 100%);
