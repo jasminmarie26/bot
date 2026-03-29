@@ -14856,9 +14856,6 @@ function buildSystemChatPayload(content, options = {}) {
   const text = String(content || "").trim();
   if (!text) return null;
   const systemKind = String(options?.system_kind || "").trim();
-  if (systemKind.toLowerCase() === "presence") {
-    return null;
-  }
 
   const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
     ? normalizeGuestbookColor(options.chat_text_color)
@@ -15077,7 +15074,78 @@ function emitRoomListRefresh(serverId = DEFAULT_SERVER_ID) {
 const pendingRoomDeletionTimers = new Map();
 const pendingRoomInvites = new Map();
 const pendingChatDisconnects = new Map();
-const CHAT_RECONNECT_GRACE_MS = 1000;
+const CHAT_RECONNECT_GRACE_MS = 12000;
+const CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY = "lobby";
+const pruneExpiredChatReconnectSuppressionsStatement = db.prepare(
+  "DELETE FROM chat_reconnect_suppressions WHERE expires_at <= ?"
+);
+const upsertChatReconnectSuppressionStatement = db.prepare(`
+  INSERT INTO chat_reconnect_suppressions (presence_key, room_key, server_id, expires_at)
+  VALUES (?, ?, ?, ?)
+  ON CONFLICT(presence_key, room_key, server_id)
+  DO UPDATE SET expires_at = excluded.expires_at
+`);
+const selectChatReconnectSuppressionStatement = db.prepare(`
+  SELECT expires_at
+    FROM chat_reconnect_suppressions
+   WHERE presence_key = ?
+     AND room_key = ?
+     AND server_id = ?
+   LIMIT 1
+`);
+const deleteChatReconnectSuppressionStatement = db.prepare(`
+  DELETE FROM chat_reconnect_suppressions
+   WHERE presence_key = ?
+     AND room_key = ?
+     AND server_id = ?
+`);
+
+function getChatReconnectSuppressionRoomKey(roomId) {
+  return Number.isInteger(roomId) && roomId > 0
+    ? String(roomId)
+    : CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY;
+}
+
+function setChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT_SERVER_ID, durationMs = CHAT_RECONNECT_GRACE_MS) {
+  const normalizedPresenceKey = String(presenceKey || "").trim();
+  if (!normalizedPresenceKey) {
+    return;
+  }
+
+  const now = Date.now();
+  const normalizedServerId = normalizeServer(serverId);
+  pruneExpiredChatReconnectSuppressionsStatement.run(now);
+  upsertChatReconnectSuppressionStatement.run(
+    normalizedPresenceKey,
+    getChatReconnectSuppressionRoomKey(roomId),
+    normalizedServerId,
+    now + Math.max(0, Number(durationMs) || 0)
+  );
+}
+
+function consumeChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT_SERVER_ID) {
+  const normalizedPresenceKey = String(presenceKey || "").trim();
+  if (!normalizedPresenceKey) {
+    return false;
+  }
+
+  const now = Date.now();
+  const normalizedServerId = normalizeServer(serverId);
+  const roomKey = getChatReconnectSuppressionRoomKey(roomId);
+  pruneExpiredChatReconnectSuppressionsStatement.run(now);
+  const row = selectChatReconnectSuppressionStatement.get(
+    normalizedPresenceKey,
+    roomKey,
+    normalizedServerId
+  );
+  if (!row || Number(row.expires_at) <= now) {
+    deleteChatReconnectSuppressionStatement.run(normalizedPresenceKey, roomKey, normalizedServerId);
+    return false;
+  }
+
+  deleteChatReconnectSuppressionStatement.run(normalizedPresenceKey, roomKey, normalizedServerId);
+  return true;
+}
 
 function getPendingChatDisconnectKey(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
   const normalizedServerId = normalizeServer(serverId);
@@ -15120,7 +15188,13 @@ function finalizeChatDisconnectEntry(entry) {
     skipOnlineRefresh: true
   }, entry.characterId);
 
-  if (!entry.skipPresence) {
+  const shouldSuppressReconnectPresence = consumeChatReconnectSuppression(
+    entry.presenceKey,
+    entry.roomId,
+    entry.serverId
+  );
+
+  if (!entry.skipPresence && !shouldSuppressReconnectPresence) {
     const disconnectPresenceMessage = buildRoomPresenceMessage(
       "leave",
       entry.displayName || `User ${entry.userId}`
@@ -15525,18 +15599,24 @@ io.on("connection", (socket) => {
       preferredCharacterId
     );
     const nextCharacterId = preferredCharacter?.id || null;
+    const nextPresenceKey = getPresenceIdentityKey(socket.data.user.id, nextCharacterId);
     const recoveredDisconnect = clearPendingChatDisconnect(
       socket.data.user.id,
       nextRoomId,
       nextServerId,
       nextCharacterId
     );
-    const shouldSuppressReconnectPresence =
+    const shouldMarkReconnectSuppression =
       isReconnectJoin &&
       (Boolean(recoveredDisconnect) ||
         (Number.isFinite(reconnectAgeMs) &&
           reconnectAgeMs >= 0 &&
           reconnectAgeMs <= CHAT_RECONNECT_GRACE_MS));
+    if (shouldMarkReconnectSuppression && nextPresenceKey) {
+      setChatReconnectSuppression(nextPresenceKey, nextRoomId, nextServerId);
+    }
+    const shouldSuppressReconnectPresence =
+      shouldMarkReconnectSuppression;
     const hasOtherPresenceInNextChannel = hasOtherSocketInChannel(
       socket.data.user.id,
       nextRoomId,
@@ -16669,6 +16749,22 @@ io.on("connection", (socket) => {
         return;
       }
 
+      const switchDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      const switchDisplayName =
+        switchDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+
+      emitSystemChatMessage(
+        roomId,
+        serverId,
+        `${switchDisplayName} hat in den Raum ${targetRoom.name} gewechselt.`,
+        {
+          chat_text_color: "#000000",
+          system_kind: "room-switch",
+          presence_actor_name: switchDisplayName,
+          presence_actor_chat_text_color: switchDisplayProfile?.chat_text_color || "",
+          room_switch_target_name: targetRoom.name
+        }
+      );
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
         url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`,

@@ -262,6 +262,14 @@ db.exec(`
     FOREIGN KEY (granted_by_user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS chat_reconnect_suppressions (
+    presence_key TEXT NOT NULL,
+    room_key TEXT NOT NULL DEFAULT 'lobby',
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    expires_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (presence_key, room_key, server_id)
+  );
+
   CREATE TABLE IF NOT EXISTS site_updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     author_id INTEGER NOT NULL,
@@ -794,6 +802,7 @@ db.exec(
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_chat_reconnect_suppressions_expires_at ON chat_reconnect_suppressions(expires_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_rp_board_entries_context_created ON rp_board_entries(server_id, festplay_id, created_at, id)");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_rp_board_reads_user_context ON rp_board_reads(user_id, server_id, festplay_id)");
 db.exec(
