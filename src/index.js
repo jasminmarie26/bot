@@ -5043,7 +5043,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      category: "OFFPLAY",
+      category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
   ],
@@ -5051,7 +5051,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
-      category: "OFFPLAY",
+      category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
   ]
