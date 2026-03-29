@@ -1519,7 +1519,8 @@ a:hover {
   color: color-mix(in srgb, var(--link) 88%, white 12%);
 }
 
-.guestbook-notification-link {
+.guestbook-notification-link,
+.character-notes-link {
   position: relative;
   width: 2.02rem;
   height: 2.02rem;
@@ -1534,15 +1535,27 @@ a:hover {
   transition: filter 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease;
   flex: 0 0 auto;
   text-decoration: none;
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .guestbook-notification-link:hover,
-.guestbook-notification-link:focus-visible {
+.guestbook-notification-link:focus-visible,
+.character-notes-link:hover,
+.character-notes-link:focus-visible {
   text-decoration: none;
   filter: brightness(1.04);
   background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
   border-color: color-mix(in srgb, var(--link) 36%, var(--field-edge) 64%);
   color: color-mix(in srgb, var(--link) 86%, white 14%);
+}
+
+.character-notes-link.is-open {
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
+  color: color-mix(in srgb, var(--link) 88%, white 12%);
 }
 
 .guestbook-notification-link-system {
@@ -1558,14 +1571,16 @@ a:hover {
   background: color-mix(in srgb, var(--panel-bg) 74%, #b8efc2 26%);
 }
 
-.guestbook-notification-icon {
+.guestbook-notification-icon,
+.character-notes-link-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
 }
 
-.guestbook-notification-icon svg {
+.guestbook-notification-icon svg,
+.character-notes-link-icon svg {
   width: 1rem;
   height: 1rem;
   display: block;
@@ -1573,7 +1588,9 @@ a:hover {
 }
 
 .guestbook-notification-icon svg path,
-.guestbook-notification-icon svg rect {
+.guestbook-notification-icon svg rect,
+.character-notes-link-icon svg path,
+.character-notes-link-icon svg rect {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -1582,6 +1599,12 @@ a:hover {
 }
 
 .guestbook-notification-icon .guestbook-envelope-fill {
+  fill: currentColor;
+  opacity: 0.14;
+  stroke: none;
+}
+
+.character-notes-link-icon .character-notes-paper-fill {
   fill: currentColor;
   opacity: 0.14;
   stroke: none;
@@ -4098,6 +4121,7 @@ body.page-home-screen .home-hero-actions {
 }
 
 .rp-topline .guestbook-notification-link,
+.rp-topline .character-notes-link,
 .rp-topline .rp-board-toggle,
 .rp-topline .chat-whisper-toggle,
 .rp-topline .chat-sound-toggle {
@@ -7896,6 +7920,57 @@ select:focus {
   gap: 0.8rem;
   align-items: start;
   min-height: 0;
+}
+
+.character-notes-panel {
+  width: min(430px, calc(100vw - 2rem));
+}
+
+.character-notes-panel-card {
+  display: block;
+}
+
+.character-notes-form {
+  display: grid;
+  gap: 0.78rem;
+}
+
+.character-notes-field {
+  display: grid;
+  gap: 0.36rem;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.character-notes-field span {
+  font-weight: 600;
+}
+
+.character-notes-field select,
+.character-notes-field textarea {
+  width: 100%;
+}
+
+.character-notes-field textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.character-notes-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.character-notes-status {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.character-notes-status.is-error {
+  color: var(--danger);
 }
 
 .chat-whisper-list-wrap,

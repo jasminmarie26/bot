@@ -1,20 +1,111 @@
 <% if (currentUser) { %>
+  <% const noteCharacters = Array.isArray(topbarOwnedCharacters) ? topbarOwnedCharacters : []; %>
+  <% const selectedNoteCharacterCandidateIds = [
+    typeof selectedCharacterNotesCharacterId !== "undefined" ? Number(selectedCharacterNotesCharacterId) : null,
+    typeof activeCharacter !== "undefined" ? Number(activeCharacter?.id) : null,
+    typeof menuCharacter !== "undefined" ? Number(menuCharacter?.id) : null,
+    typeof topbarCharacter !== "undefined" ? Number(topbarCharacter?.id) : null,
+    typeof character !== "undefined" ? Number(character?.id) : null
+  ].filter((value) => Number.isInteger(value) && value > 0); %>
+  <% const selectedNoteCharacterId = selectedNoteCharacterCandidateIds.find((candidateId) =>
+    noteCharacters.some((entry) => Number(entry.id) === candidateId)
+  ) || Number(noteCharacters[0]?.id || 0); %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
   <% const guestbookNotificationTitle = latestGuestbookNotification?.type === "festplay_application"
     ? latestGuestbookNotification?.festplay_name
       ? latestGuestbookNotification?.applicant_character_name
-        ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} für ${latestGuestbookNotification.festplay_name}`
-        : `Neue Bewerbung für ${latestGuestbookNotification.festplay_name}`
+        ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} fuer ${latestGuestbookNotification.festplay_name}`
+        : `Neue Bewerbung fuer ${latestGuestbookNotification.festplay_name}`
       : "Neue Festspiel-Bewerbung"
     : latestGuestbookNotification?.type === "festplay_approval"
       ? latestGuestbookNotification?.festplay_name
         ? latestGuestbookNotification?.actor_name
-          ? `${latestGuestbookNotification.actor_name} hat dich für ${latestGuestbookNotification.festplay_name} freigeschaltet`
-          : `Du wurdest für ${latestGuestbookNotification.festplay_name} freigeschaltet`
+          ? `${latestGuestbookNotification.actor_name} hat dich fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
+          : `Du wurdest fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
         : "Neue Festspiel-Freischaltung"
     : latestGuestbookNotification?.character_name
-      ? `Neuer Gästebucheintrag für ${latestGuestbookNotification.character_name}`
-      : "Neuer Gästebucheintrag"; %>
+      ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
+      : "Neuer Gaestebucheintrag"; %>
+  <% if (noteCharacters.length > 0) { %>
+    <button
+      type="button"
+      class="character-notes-link"
+      aria-label="Charakternotizen oeffnen"
+      title="Charakternotizen"
+      aria-haspopup="dialog"
+      aria-controls="character-notes-panel"
+      aria-expanded="false"
+      data-character-notes-toggle
+      data-character-notes-selected-character-id="<%= selectedNoteCharacterId || '' %>"
+    >
+      <span class="character-notes-link-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path class="character-notes-paper-fill" d="M7 3.35h8.85l3.15 3.2v12.1A2.35 2.35 0 0 1 16.65 21H7.35A2.35 2.35 0 0 1 5 18.65V5.7A2.35 2.35 0 0 1 7 3.35Z" />
+          <path d="M15.85 3.35v3.2h3.15" />
+          <path d="M8.2 9.15h7.6" />
+          <path d="M8.2 12.15h7.6" />
+          <path d="M8.2 15.15h5.1" />
+          <path d="M7 3.35h8.85l3.15 3.2v12.1A2.35 2.35 0 0 1 16.65 21H7.35A2.35 2.35 0 0 1 5 18.65V5.7A2.35 2.35 0 0 1 7 3.35Z" />
+        </svg>
+      </span>
+    </button>
+
+    <div
+      id="character-notes-panel"
+      class="chat-whisper-panel character-notes-panel"
+      data-character-notes-panel
+      hidden
+    >
+      <div class="chat-whisper-panel-card character-notes-panel-card">
+        <header class="chat-whisper-panel-head">
+          <div class="chat-whisper-panel-copy">
+            <h3>Notizblatt</h3>
+            <p>Private Charakternotizen, nur fuer dich sichtbar.</p>
+          </div>
+          <button
+            type="button"
+            class="chat-whisper-close-btn"
+            aria-label="Schliessen"
+            data-character-notes-close
+          >
+            &times;
+          </button>
+        </header>
+
+        <form class="character-notes-form" data-character-notes-form>
+          <label class="character-notes-field">
+            <span>Charakter</span>
+            <select data-character-notes-select>
+              <% noteCharacters.forEach((entry) => { %>
+                <% const noteServerLabel = entry.server_id === "erp" ? "ERP" : "FREE-RP"; %>
+                <option
+                  value="<%= entry.id %>"
+                  <%= Number(entry.id) === Number(selectedNoteCharacterId) ? "selected" : "" %>
+                >
+                  <%= entry.name %> (<%= noteServerLabel %>)
+                </option>
+              <% }) %>
+            </select>
+          </label>
+
+          <label class="character-notes-field">
+            <span>Notizen</span>
+            <textarea
+              rows="9"
+              maxlength="4000"
+              placeholder="Hier kannst du dir private Notizen zu deinem Charakter aufschreiben."
+              data-character-notes-input
+            ></textarea>
+          </label>
+
+          <div class="character-notes-actions">
+            <p class="muted character-notes-status" data-character-notes-status>Waehle einen Charakter aus.</p>
+            <button type="submit" class="btn" data-character-notes-save>Speichern</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <% } %>
   <a
     class="guestbook-notification-link<%= latestGuestbookNotification?.type === 'festplay_approval' ? ' guestbook-notification-link-system' : '' %>"
     href="/guestbook/notifications/open"

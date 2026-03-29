@@ -5866,6 +5866,88 @@ function getOwnedCharactersForUser(userId, preferredServerId = DEFAULT_SERVER_ID
     .all(userId, normalizedPreferredServerId);
 }
 
+const getOwnedCharacterForUserStatement = db.prepare(
+  `SELECT id, user_id, name, server_id
+   FROM characters
+   WHERE id = ?
+     AND user_id = ?
+   LIMIT 1`
+);
+const getCharacterPrivateNoteForUserStatement = db.prepare(
+  `SELECT content, updated_at
+   FROM character_private_notes
+   WHERE character_id = ?
+     AND user_id = ?
+   LIMIT 1`
+);
+const upsertCharacterPrivateNoteForUserStatement = db.prepare(`
+  INSERT INTO character_private_notes (character_id, user_id, content, updated_at)
+  VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+  ON CONFLICT(character_id)
+  DO UPDATE SET
+    user_id = excluded.user_id,
+    content = excluded.content,
+    updated_at = CURRENT_TIMESTAMP
+`);
+const deleteCharacterPrivateNoteForUserStatement = db.prepare(
+  `DELETE FROM character_private_notes
+   WHERE character_id = ?
+     AND user_id = ?`
+);
+
+function normalizeCharacterPrivateNoteInput(input, maxLength = 4000) {
+  return String(input || "")
+    .replace(/\r\n?/g, "\n")
+    .slice(0, maxLength);
+}
+
+function getOwnedCharacterForUser(userId, characterId) {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return null;
+  }
+
+  return getOwnedCharacterForUserStatement.get(parsedCharacterId, parsedUserId) || null;
+}
+
+function getCharacterPrivateNoteForUser(userId, characterId) {
+  const character = getOwnedCharacterForUser(userId, characterId);
+  if (!character) {
+    return null;
+  }
+
+  const row = getCharacterPrivateNoteForUserStatement.get(character.id, Number(userId));
+  return {
+    character,
+    content: String(row?.content || ""),
+    updated_at: String(row?.updated_at || "").trim()
+  };
+}
+
+function saveCharacterPrivateNoteForUser(userId, characterId, rawContent) {
+  const character = getOwnedCharacterForUser(userId, characterId);
+  if (!character) {
+    return null;
+  }
+
+  const normalizedContent = normalizeCharacterPrivateNoteInput(rawContent);
+  if (normalizedContent.trim()) {
+    upsertCharacterPrivateNoteForUserStatement.run(
+      character.id,
+      Number(userId),
+      normalizedContent
+    );
+  } else {
+    deleteCharacterPrivateNoteForUserStatement.run(character.id, Number(userId));
+  }
+
+  return getCharacterPrivateNoteForUser(userId, character.id);
+}
+
 function getPreferredMenuCharacterForUser(req) {
   const currentUserId = Number(req.session?.user?.id);
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
@@ -7271,6 +7353,10 @@ app.use((req, res, next) => {
   res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
   res.locals.currentUserDisplayRoleStyle = req.session.user?.display_role_style || "";
+  const topbarPreferredCharacter = req.session.user ? getPreferredMenuCharacterForUser(req) : null;
+  res.locals.topbarOwnedCharacters = req.session.user
+    ? getOwnedCharactersForUser(req.session.user.id, topbarPreferredCharacter?.server_id || DEFAULT_SERVER_ID)
+    : [];
   res.locals.adminImpersonation =
     req.session.user && adminImpersonatorUser
       ? {
@@ -7320,6 +7406,52 @@ app.use((req, res, next) => {
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   delete req.session.flash;
   next();
+});
+
+app.get("/character-notes/:characterId", requireAuth, (req, res) => {
+  const userId = Number(req.session?.user?.id);
+  const characterId = Number(req.params.characterId);
+  const noteState = getCharacterPrivateNoteForUser(userId, characterId);
+
+  if (!noteState?.character) {
+    return res.status(404).json({
+      error: "not_found"
+    });
+  }
+
+  return res.json({
+    character: {
+      id: noteState.character.id,
+      name: noteState.character.name,
+      server_id: noteState.character.server_id
+    },
+    content: noteState.content,
+    updated_at: noteState.updated_at
+  });
+});
+
+app.post("/character-notes/:characterId", requireAuth, (req, res) => {
+  const userId = Number(req.session?.user?.id);
+  const characterId = Number(req.params.characterId);
+  const noteState = saveCharacterPrivateNoteForUser(userId, characterId, req.body?.content);
+
+  if (!noteState?.character) {
+    return res.status(404).json({
+      error: "not_found"
+    });
+  }
+
+  return res.json({
+    ok: true,
+    message: noteState.content.trim() ? "Notiz gespeichert." : "Notiz geleert.",
+    character: {
+      id: noteState.character.id,
+      name: noteState.character.name,
+      server_id: noteState.character.server_id
+    },
+    content: noteState.content,
+    updated_at: noteState.updated_at
+  });
 });
 
 app.get("/media/guestbook-image", async (req, res) => {

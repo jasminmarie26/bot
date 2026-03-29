@@ -262,6 +262,15 @@ db.exec(`
     FOREIGN KEY (granted_by_user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS character_private_notes (
+    character_id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS chat_reconnect_suppressions (
     presence_key TEXT NOT NULL,
     room_key TEXT NOT NULL DEFAULT 'lobby',
@@ -802,6 +811,7 @@ db.exec(
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_messages_server_id ON chat_messages(server_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_character_private_notes_user_id ON character_private_notes(user_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_reconnect_suppressions_expires_at ON chat_reconnect_suppressions(expires_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_rp_board_entries_context_created ON rp_board_entries(server_id, festplay_id, created_at, id)");
 db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_rp_board_reads_user_context ON rp_board_reads(user_id, server_id, festplay_id)");
