@@ -64,9 +64,14 @@
         const CRESCENTIA_PATTERN = /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i;
         const TARGET_SELECTOR = [
           ".role-name-admin",
+          ".role-name-moderator",
           ".staff-name-admin",
+          ".staff-name-moderator",
           ".rp-header-identity",
-          ".topbar-user-menu-meta > strong"
+          ".topbar-user-menu-meta > strong",
+          ".guestbook-author-link strong",
+          ".guestbook-item-authorline > strong",
+          ".rp-room-occupant"
         ].join(", ");
 
         const syncSpecialNameDecor = (root = document) => {
@@ -177,7 +182,7 @@
       Number(currentUser.moderator_character_id) === Number(menuCharacter.id)
     ); %>
     <% const activeMenuIdentityName = menuCharacter
-      ? (menuCharacterIsModerator ? `${menuCharacter.name} (M)` : menuCharacter.name)
+      ? menuCharacter.name
       : displayIdentityName; %>
     <% const activeMenuIdentityRoleStyle = menuCharacter
       ? (menuCharacterIsAdmin ? "admin" : (menuCharacterIsModerator ? "moderator" : ""))

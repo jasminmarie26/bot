@@ -2196,7 +2196,7 @@ function getUserDisplayProfile(user, activeCharacter = null) {
       (user?.is_moderator === 1 || user?.is_moderator === true)
     ) {
       return {
-        label: `${activeCharacterName} (M)`,
+        label: activeCharacterName,
         role_style: "moderator",
         chat_text_color: activeCharacterChatTextColor
       };
@@ -2217,7 +2217,7 @@ function getUserDisplayProfile(user, activeCharacter = null) {
   const moderatorCharacter = getUserRoleCharacter(user, "moderator");
   if (moderatorCharacter?.name) {
     return {
-      label: `${String(moderatorCharacter.name).trim()} (M)`,
+      label: String(moderatorCharacter.name).trim(),
       role_style: "moderator",
       chat_text_color: normalizeGuestbookColor(moderatorCharacter.chat_text_color)
     };
@@ -9495,7 +9495,7 @@ app.get("/members", requireAuth, (req, res) => {
         server_id: normalizeServer(user.moderator_character_server_id),
         server_label: getServerLabel(user.moderator_character_server_id),
         visibility_label: "Rollencharakter",
-        role_label: "Moderator (M)",
+        role_label: "Moderator",
         role_style: "moderator"
       });
     }

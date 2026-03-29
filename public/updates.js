@@ -324,7 +324,7 @@
       : [];
     const entries = [
       ...adminNames.map((name) => ({ role: "admin", label: `${name} (A)` })),
-      ...moderatorNames.map((name) => ({ role: "moderator", label: `${name} (M)` }))
+      ...moderatorNames.map((name) => ({ role: "moderator", label: String(name || "").trim() }))
     ];
     const namesElement = getOrCreateStaffNamesElement();
     const emptyElement = getOrCreateStaffEmptyElement();

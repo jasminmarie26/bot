@@ -1108,18 +1108,28 @@ a:hover {
 .brand.is-character.has-noctra-wings,
 .rp-header-identity.has-noctra-wings,
 .role-name-admin.has-noctra-wings,
+.role-name-moderator.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
+.staff-name-moderator.has-noctra-wings,
 .guestbook-preview-name.has-noctra-wings,
+.guestbook-author-link strong.has-noctra-wings,
+.guestbook-item-authorline > strong.has-noctra-wings,
 .chat-online-name.has-noctra-wings,
 .chat-message strong.has-noctra-wings,
+.rp-room-occupant.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings,
 .brand.is-character.has-crescentia-moons,
 .rp-header-identity.has-crescentia-moons,
 .role-name-admin.has-crescentia-moons,
+.role-name-moderator.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
+.staff-name-moderator.has-crescentia-moons,
 .guestbook-preview-name.has-crescentia-moons,
+.guestbook-author-link strong.has-crescentia-moons,
+.guestbook-item-authorline > strong.has-crescentia-moons,
 .chat-online-name.has-crescentia-moons,
 .chat-message strong.has-crescentia-moons,
+.rp-room-occupant.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   position: relative;
   overflow: visible;
@@ -1128,9 +1138,14 @@ a:hover {
 
 .rp-header-identity.has-noctra-wings,
 .role-name-admin.has-noctra-wings,
+.role-name-moderator.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
+.staff-name-moderator.has-noctra-wings,
+.guestbook-author-link strong.has-noctra-wings,
+.guestbook-item-authorline > strong.has-noctra-wings,
 .chat-online-name.has-noctra-wings,
 .chat-message strong.has-noctra-wings,
+.rp-room-occupant.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings {
   padding-inline: 0;
   margin-inline-start: 1rem;
@@ -1139,30 +1154,52 @@ a:hover {
 .brand.is-character.has-crescentia-moons,
 .rp-header-identity.has-crescentia-moons,
 .role-name-admin.has-crescentia-moons,
+.role-name-moderator.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
+.staff-name-moderator.has-crescentia-moons,
 .guestbook-preview-name.has-crescentia-moons,
+.guestbook-author-link strong.has-crescentia-moons,
+.guestbook-item-authorline > strong.has-crescentia-moons,
 .chat-online-name.has-crescentia-moons,
 .chat-message strong.has-crescentia-moons,
+.rp-room-occupant.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   padding-inline: 0;
-  margin-inline-start: 0.96rem;
+  margin-inline-start: 0.9rem;
   overflow: visible;
   text-overflow: clip;
 }
 
 .rp-header-identity.has-noctra-wings,
 .role-name-admin.has-noctra-wings,
+.role-name-moderator.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
+.staff-name-moderator.has-noctra-wings,
+.guestbook-author-link strong.has-noctra-wings,
+.guestbook-item-authorline > strong.has-noctra-wings,
 .chat-online-name.has-noctra-wings,
 .chat-message strong.has-noctra-wings,
+.rp-room-occupant.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings,
 .role-name-admin.has-crescentia-moons,
+.role-name-moderator.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
+.staff-name-moderator.has-crescentia-moons,
 .rp-header-identity.has-crescentia-moons,
+.guestbook-author-link strong.has-crescentia-moons,
+.guestbook-item-authorline > strong.has-crescentia-moons,
 .chat-online-name.has-crescentia-moons,
 .chat-message strong.has-crescentia-moons,
+.rp-room-occupant.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   display: inline-block;
+}
+
+.has-noctra-wings,
+.noctra-nameplate {
+  font-family: "Pirata One", "Cinzel Decorative", "Palatino Linotype", serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .noctra-nameplate {
@@ -1174,9 +1211,14 @@ a:hover {
 
 .rp-header-identity.has-noctra-wings::before,
 .role-name-admin.has-noctra-wings::before,
+.role-name-moderator.has-noctra-wings::before,
 .staff-name-admin.has-noctra-wings::before,
+.staff-name-moderator.has-noctra-wings::before,
+.guestbook-author-link strong.has-noctra-wings::before,
+.guestbook-item-authorline > strong.has-noctra-wings::before,
 .chat-online-name.has-noctra-wings::before,
 .chat-message strong.has-noctra-wings::before,
+.rp-room-occupant.has-noctra-wings::before,
 .topbar-user-menu-meta > strong.has-noctra-wings::before,
 .noctra-nameplate::before {
   content: "";
@@ -1197,14 +1239,16 @@ a:hover {
 .has-crescentia-moons,
 .crescentia-nameplate {
   font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0;
-  background: linear-gradient(90deg, #330075 0%, #1f0d88 54%, #000158 100%) !important;
+  background: linear-gradient(90deg, #330075 0%, #7450ff 38%, #4d86ff 68%, #000158 100%) !important;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent !important;
   color: transparent !important;
-  text-shadow: 0 0 0.01em rgba(130, 173, 255, 0.14);
+  text-shadow:
+    0 0 0.015em rgba(255, 255, 255, 0.42),
+    0 0 0.18em rgba(122, 176, 255, 0.26);
   box-shadow: none !important;
   border: 0 !important;
 }
@@ -1213,30 +1257,35 @@ a:hover {
   position: relative;
   display: inline-block;
   padding-inline: 0;
-  margin-inline-start: 0.96rem;
+  margin-inline-start: 0.9rem;
 }
 
 .brand.is-character.has-crescentia-moons::before,
 .rp-header-identity.has-crescentia-moons::before,
 .role-name-admin.has-crescentia-moons::before,
+.role-name-moderator.has-crescentia-moons::before,
 .staff-name-admin.has-crescentia-moons::before,
+.staff-name-moderator.has-crescentia-moons::before,
 .guestbook-preview-name.has-crescentia-moons::before,
+.guestbook-author-link strong.has-crescentia-moons::before,
+.guestbook-item-authorline > strong.has-crescentia-moons::before,
 .chat-online-name.has-crescentia-moons::before,
 .chat-message strong.has-crescentia-moons::before,
+.rp-room-occupant.has-crescentia-moons::before,
 .topbar-user-menu-meta > strong.has-crescentia-moons::before,
 .crescentia-nameplate::before {
   content: "";
   position: absolute;
   top: 50%;
-  left: -0.96rem;
-  width: 0.96rem;
-  height: 0.52rem;
+  left: -0.9rem;
+  width: 0.82rem;
+  height: 0.46rem;
   background: center / contain no-repeat url("/icons/crescentia-moons.svg");
   pointer-events: none;
   filter:
-    drop-shadow(0 0.03rem 0.08rem rgba(28, 58, 124, 0.18))
-    drop-shadow(0 0 0.06rem rgba(124, 239, 255, 0.28));
-  opacity: 0.94;
+    drop-shadow(0 0.03rem 0.08rem rgba(28, 58, 124, 0.22))
+    drop-shadow(0 0 0.08rem rgba(124, 239, 255, 0.34));
+  opacity: 0.96;
   transform: translateY(-46%);
 }
 
@@ -2745,10 +2794,13 @@ body.page-home-screen .home-hero-actions {
 .role-name-moderator.has-crescentia-moons,
 .staff-name-moderator.has-crescentia-moons,
 .guestbook-preview-name.has-crescentia-moons,
+.guestbook-author-link strong.has-crescentia-moons,
+.guestbook-item-authorline > strong.has-crescentia-moons,
 .chat-online-name.has-crescentia-moons,
 .chat-message strong.has-crescentia-moons,
+.rp-room-occupant.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
-  background: linear-gradient(90deg, #330075 0%, #1f0d88 54%, #000158 100%) !important;
+  background: linear-gradient(90deg, #330075 0%, #7450ff 38%, #4d86ff 68%, #000158 100%) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
