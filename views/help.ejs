@@ -26,110 +26,113 @@
         </div>
       </div>
 
-      <a class="help-topic-link" href="/help">Zur Themenübersicht</a>
+      <a class="help-topic-link" href="/help">Zur Themen&uuml;bersicht</a>
     </section>
 
     <% if (helpTopic.slug === "bereich-charaktere") { %>
       <section class="panel help-section">
-        <h2>Bereich & Charaktere</h2>
-        <p>Hier geht es um Serverwahl, Charaktere und die normale Bereichsübersicht.</p>
+        <h2>Bereich &amp; Charaktere</h2>
+        <p>Hier geht es um Serverliste, Account, Mitgliederliste und deine Charaktere.</p>
 
         <ul class="help-list">
-          <li>In der Serverliste öffnest du deinen Bereich über <code>Rollenspiel - Free</code> oder <code>Rollenspiel - Erotik</code>.</li>
-          <li>Neue Charaktere legst du dort über <code>+ Charakter</code> an.</li>
-          <li>Danach kannst du Räume, Chat, Gästebuch und Festspiele nutzen.</li>
-          <li>Die Bereichsseite zeigt deine Charaktere und Festspiele getrennt an.</li>
+          <li>In der <code>Serverliste</code> wechselst du zwischen <code>FREE-RP</code> und <code>ERP</code>.</li>
+          <li>Neue Charaktere legst du dort &uuml;ber <code>+ Charakter</code> an.</li>
+          <li>Die Bereichsseite trennt deine freien Charaktere und deine Festspiele pro Server.</li>
+          <li>&Uuml;ber <code>Mitglieder</code> &ouml;ffnest du die Mitgliederliste in einem neuen Tab und springst direkt ins passende G&auml;stebuch.</li>
+          <li><code>Live Updates</code> &ouml;ffnen die Neuigkeiten-Seite in einem neuen Tab. Die neuesten Eintr&auml;ge stehen oben.</li>
+          <li><code>Backup</code> erscheint nur in der Server&uuml;bersicht und f&uuml;hrt zu deinen gel&ouml;schten Charakteren.</li>
+          <li>Im Benutzermen&uuml; &ouml;ffnet <code>Account</code> die Kontoseite in einem neuen Tab.</li>
         </ul>
 
         <ul class="help-list">
-          <li>Neben jedem eigenen Charakter sitzt der Export-Button für den Gästebuch-Code per E-Mail.</li>
+          <li>Im Account bearbeitest du Account-Name, E-Mail, Geburtsdatum und die AFK-Zeit.</li>
+          <li>Dort kannst du auch einstellen, ob vor deinen eigenen Chat-Nachrichten lokal eine Uhrzeit angezeigt wird.</li>
+          <li>Diese Uhrzeit nutzt die Zeitzone des jeweiligen Ger&auml;ts und ist nur f&uuml;r dich selbst sichtbar.</li>
+        </ul>
+
+        <ul class="help-list">
+          <li>Neben jedem eigenen Charakter sitzt der Export-Button f&uuml;r den G&auml;stebuch-Code per E-Mail.</li>
           <li>Der Haken neben <code>+</code> verschickt die Codes aller dort sichtbaren eigenen Charaktere gesammelt.</li>
-          <li>Der Versand enthält den Gästebuch-Code direkt sowie zusätzlich als PDF- und Word-Datei.</li>
-          <li>Dabei werden keine Gästebucheinträge mitgeschickt, nur der eigentliche Gästebuch-Code.</li>
+          <li>Der Versand enth&auml;lt den G&auml;stebuch-Code direkt sowie zus&auml;tzlich als PDF- und Word-Datei.</li>
+          <li>Dabei werden keine G&auml;stebucheintr&auml;ge mitgeschickt, nur der eigentliche G&auml;stebuch-Code.</li>
         </ul>
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "raeume-chat") { %>
       <section class="panel help-section">
-        <h2>Räume & Chat</h2>
-        <p>Hier findest du alles zu Raumliste, eigenen Räumen, Flüstern und Chatbefehlen.</p>
+        <h2>R&auml;ume &amp; Chat</h2>
+        <p>Hier findest du alles zu Raumliste, Chat, Fl&uuml;stern und Chatbefehlen.</p>
 
         <ul class="help-list">
           <li>Die Raumliste findest du auf der Charakterseite.</li>
           <li><code>Gemeinsamer Treffpunkt</code> ist der feste Standardraum des Bereichs.</li>
-          <li>Ein Schloss bedeutet: Raum ist abgeschlossen.</li>
-          <li>Eigene Räume legst du über <code>Raum erstellen/editieren</code> an.</li>
-          <li>Eigene Räume werden live aktualisiert und lassen sich in ihrer Reihenfolge verschieben.</li>
-          <li>Private eigene Räume sehen andere erst, wenn du sie betrittst.</li>
-        </ul>
-
-        <ul class="help-list">
-          <li>Klick auf einen Namen im Chat öffnet das kleine Menü.</li>
-          <li><code>Flüstern</code> öffnet rechts das Flüsterfenster.</li>
-          <li>Pfeil hoch und runter holt alte eigene Eingaben im Chat zurück.</li>
-          <li>Doppel-Chat ist auch mit dem eigenen Chara und mit anderen Charas desselben Accounts m&ouml;glich.</li>
-          <li>Im Account stellst du ein, nach wie vielen Minuten dein Charakter automatisch als afk gilt.</li>
-          <li><code>/afk Nachricht</code> setzt dich afk. Ohne Text erscheint ein zufälliger Grund.</li>
+          <li>Ein Schloss bedeutet, dass ein Raum abgeschlossen ist.</li>
+          <li>Eigene R&auml;ume erstellst du direkt in der Raumliste oder &uuml;ber <code>Raum erstellen/editieren</code> im Men&uuml;.</li>
+          <li>Im Chat &ouml;ffnet ein Klick auf einen Online-Namen das kleine Aktionsmen&uuml;.</li>
+          <li>Dar&uuml;ber kommst du direkt ins G&auml;stebuch oder ins Fl&uuml;stern.</li>
+          <li>Fl&uuml;sterverl&auml;ufe bleiben in diesem Raum erhalten, bis du ihn verl&auml;sst.</li>
+          <li>Im Fl&uuml;stern sendet <code>Enter</code> sofort ab, mit <code>Shift+Enter</code> machst du eine neue Zeile.</li>
+          <li>Mit Pfeil hoch und runter holst du &auml;ltere eigene Eingaben im normalen Chat zur&uuml;ck.</li>
+          <li><code>/afk Nachricht</code> setzt dich afk. Ohne Text erscheint ein zuf&auml;lliger Grund.</li>
           <li>Afk-Namen werden mit einer kleinen Uhr markiert.</li>
-          <li><code>/roll 1w20</code>, <code>/roll 1w10</code> oder ähnliche Würfe sind für alle im Raum sichtbar, auch im offenen Treffpunkt.</li>
-          <li>Beim Würfeln bleibt der Name in der eingestellten Farbe sichtbar.</li>
         </ul>
 
         <ul class="help-list">
-          <li><code>/fl Name Nachricht</code> = flüstern</li>
-          <li><code>/rw Raumname "Beschreibung"</code> = Raum wechseln</li>
-          <li><code>/s</code> = eigenen Raum schließen oder öffnen</li>
-          <li><code>/i Name</code> = einladen</li>
-          <li><code>/rr Name</code> und <code>/rrw Name</code> = Rechte geben oder nehmen</li>
-          <li><code>/werfen Name</code> = Person aus dem Raum werfen</li>
-          <li><code>/log</code> startet ein Log, <code>/logoff</code> beendet es und verschickt es per E-Mail</li>
-          <li><code>*Text*</code> = kursiv, <code>"Text"</code> = fett, <code>/me</code> = Emote</li>
+          <li><code>/fl Name Nachricht</code> = fl&uuml;stern. Namen mit Leerzeichen gehen auch in Anf&uuml;hrungszeichen.</li>
+          <li><code>/rw Raumname "Beschreibung"</code> = Raum wechseln oder neu anlegen. Die Beschreibung ist optional.</li>
+          <li><code>/s</code> = eigenen Raum schlie&szlig;en oder &ouml;ffnen.</li>
+          <li><code>/i Name</code> = Person einladen.</li>
+          <li><code>/rr Name</code> und <code>/rrw Name</code> = Raumrechte geben oder nehmen.</li>
+          <li><code>/werfen Name</code> = Person aus dem Raum werfen.</li>
+          <li><code>/log</code> startet ein Log, <code>/logoff</code> beendet es und verschickt es per E-Mail.</li>
+          <li><code>/roll 1w20</code>, <code>/roll 1w10</code> oder <code>/roll 2w6+3</code> w&uuml;rfeln f&uuml;r den ganzen Raum sichtbar.</li>
+          <li><code>*Text*</code> = kursiv, <code>"Text"</code> = fett, <code>/me Text</code> = Emote.</li>
         </ul>
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "festspiele-rp-aushang") { %>
       <section class="panel help-section">
-        <h2>Festspiele & RP-Aushang</h2>
-        <p>Festspiele und RP-Aushang gehören zusammen, bleiben aber getrennte Funktionen.</p>
+        <h2>Festspiele &amp; RP-Aushang</h2>
+        <p>Festspiele und RP-Aushang geh&ouml;ren zusammen, bleiben aber getrennte Funktionen.</p>
 
         <ul class="help-list">
           <li>Es gibt <code>Eigene Festplays</code> und <code>Andere Festplays</code>.</li>
-          <li>Öffentliche Festspiele findest du oben über <code>Festspiele</code>.</li>
-          <li>Im Tab <code>Allgemein</code> bearbeitest du Name, Beschreibung und Sichtbarkeit des gewählten Festspiels.</li>
-          <li>Im Tab <code>Räume</code> legst du Festspiel-Räume an, sortierst sie und bearbeitest sie über <code>Räume bearbeiten</code> in einem neuen Tab.</li>
-          <li>Im Tab <code>Bewerbungen & Spieler</code> verwaltest du Bewerbungen, Rechte und Spieler.</li>
-          <li>Bewerber können offene Bewerbungen selbst wieder zurückziehen.</li>
-          <li>Nach Freischaltung kommt die Nachricht über den Brief als grüner System-Brief vom <code>System Administrator</code>.</li>
+          <li>&Ouml;ffentliche Festspiele findest du oben &uuml;ber <code>Festspiele</code>.</li>
+          <li>Im Detailbereich gibt es die Tabs <code>Allgemein</code>, <code>R&auml;ume</code> und bei eigenen Festspielen <code>Bewerbungen &amp; Spieler</code>.</li>
+          <li>Im Tab <code>Allgemein</code> bearbeitest du Name, Beschreibung und Sichtbarkeit des gew&auml;hlten Festspiels.</li>
+          <li>Im Tab <code>R&auml;ume</code> legst du Festspiel-R&auml;ume an, bearbeitest sie und kannst ihre Reihenfolge per Ziehen &auml;ndern.</li>
+          <li>Die separate Seite <code>Festspiel-R&auml;ume</code> zeigt nur die R&auml;ume des gew&auml;hlten Festspiels.</li>
+          <li>Im Tab <code>Bewerbungen &amp; Spieler</code> schaltest du Bewerbungen frei, vergibst Rechte und verwaltest Mitspieler.</li>
+          <li>Bewerber k&ouml;nnen offene Bewerbungen selbst wieder zur&uuml;ckziehen.</li>
+          <li>Nach Freischaltung kommt die Nachricht &uuml;ber den Brief als gr&uuml;ner System-Brief.</li>
         </ul>
 
         <ul class="help-list">
-          <li>Der Link <code>RP-Aushang</code> sitzt im Header und öffnet eine eigene Seite in einem neuen Tab.</li>
-          <li>Der Aushang ist serverweit sichtbar.</li>
-          <li><code>FREE-RP</code> und die dazugehörigen Festspiele teilen sich denselben Aushang.</li>
-          <li><code>ERP</code> hat einen eigenen getrennten Aushang.</li>
-          <li>Neue Einträge erscheinen dort live untereinander.</li>
-          <li>Die Zahl am Link zählt neue Einträge live, bis du den Aushang öffnest.</li>
-          <li>Eigene Einträge kannst du wieder löschen.</li>
+          <li>Der Link <code>RP-Aushang</code> sitzt im Header und &ouml;ffnet eine eigene Seite in einem neuen Tab.</li>
+          <li>Der RP-Aushang ist eine allgemeine RP-Suche f&uuml;r den aktuellen Server und keine Festspielsuche.</li>
+          <li><code>FREE-RP</code> und <code>ERP</code> haben getrennte Aush&auml;nge.</li>
+          <li>Eigene Eintr&auml;ge kannst du sp&auml;ter wieder l&ouml;schen.</li>
+          <li>Die Zahl am Link zeigt neue Eintr&auml;ge live an, bis du den Aushang &ouml;ffnest.</li>
         </ul>
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "gaestebuch-design-bbcode") { %>
       <section class="panel help-section">
-        <h2>Gästebuch, Design & BBCode</h2>
-        <p>Hier geht es um Gästebuch, Vorschau, Design und BBCode.</p>
+        <h2>G&auml;stebuch, Design &amp; BBCode</h2>
+        <p>Hier geht es um G&auml;stebuch, Vorschau, Design und BBCode.</p>
 
         <ul class="help-list">
-          <li><code>Charakter editieren</code> öffnet die Gästebuch-Bearbeitung.</li>
-          <li>Die Vorschau zeigt das Gästebuch so, wie es später für andere aussieht.</li>
-          <li>Wenn die Vorschau offen ist, übernimmt ein Neuladen auch den aktuellen Entwurfsstand.</li>
-          <li>Farben, Design und Hintergründe werden pro Seite einzeln gespeichert.</li>
+          <li><code>Charakter editieren</code> &ouml;ffnet die G&auml;stebuch-Bearbeitung.</li>
+          <li>Die Vorschau zeigt das G&auml;stebuch so, wie es sp&auml;ter f&uuml;r andere aussieht.</li>
+          <li>Wenn die Vorschau offen ist, &uuml;bernimmt ein Neuladen auch den aktuellen Entwurfsstand.</li>
+          <li>Farben, Design und Hintergr&uuml;nde werden pro Seite einzeln gespeichert.</li>
           <li>Nur die vorgefertigten Designs haben Verlauf. Eigene Farbwerte bleiben ohne Verlauf.</li>
-          <li>Bilder innerhalb und außerhalb des Rahmens funktionieren über Bild-URL und Transparenz.</li>
-          <li>Private Einträge sehen nur du, der Besitzer und Admins.</li>
-          <li>Das Briefsymbol zeigt neue Gästebuch- oder Systemnachrichten. Grüne Briefe stehen für Systemnachrichten.</li>
+          <li>Bilder innerhalb und au&szlig;erhalb des Rahmens funktionieren &uuml;ber Bild-URL und Transparenz.</li>
+          <li>Private Eintr&auml;ge sehen nur du, der Besitzer und Admins.</li>
+          <li>Das Briefsymbol zeigt neue G&auml;stebuch-, System- und Festspielnachrichten.</li>
         </ul>
 
         <div class="help-example-grid">
@@ -143,36 +146,37 @@
             </article>
           <% }) %>
         </div>
-
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "backup") { %>
       <section class="panel help-section">
         <h2>Backup</h2>
-        <p>Hier findest du gelöschte Charaktere zur Wiederherstellung.</p>
+        <p>Hier findest du gel&ouml;schte Charaktere zur Wiederherstellung.</p>
 
         <ul class="help-list">
-          <li>Den Link <code>Backup</code> findest du nur im Bereich mit Charakterauswahl vor <code>Live Updates</code>.</li>
-          <li>Er öffnet eine eigene Seite in einem neuen Tab.</li>
-          <li>Dort werden nur gelöschte Charaktere angezeigt.</li>
+          <li>Den Link <code>Backup</code> findest du nur in der Server&uuml;bersicht vor <code>Live Updates</code>.</li>
+          <li>Er &ouml;ffnet eine eigene Seite in einem neuen Tab.</li>
+          <li>Dort werden nur gel&ouml;schte Charaktere angezeigt.</li>
           <li>Mit dem Button vor dem <code>X</code> stellst du den Charakter wieder her.</li>
-          <li>Dabei kommen Gästebuch, Farben, Seiten und Gästebucheinträge zurück.</li>
-          <li>Beim Löschen eines Charakters wird ein Festspiel nicht automatisch gelöscht. Es bleibt bestehen, bis es ausdrücklich selbst gelöscht wird.</li>
-          <li>Mit dem <code>X</code> löschst du das Backup endgültig.</li>
+          <li>Dabei kommen G&auml;stebuch, Farben und G&auml;stebucheintr&auml;ge zur&uuml;ck.</li>
+          <li>Beim L&ouml;schen eines Charakters wird ein Festspiel nicht automatisch gel&ouml;scht. Es bleibt bestehen, bis es ausdr&uuml;cklich selbst gel&ouml;scht wird.</li>
+          <li>Mit dem <code>X</code> l&ouml;schst du das Backup endg&uuml;ltig.</li>
         </ul>
       </section>
     <% } %>
 
     <% if (helpTopic.slug === "staff-sicherheit") { %>
       <section class="panel help-section">
-        <h2>Staff & Sicherheit</h2>
-        <p>Hier geht es um sichtbare Staff-Namen.</p>
+        <h2>Staff &amp; Sicherheit</h2>
+        <p>Hier geht es um sichtbare Staff-Namen und besondere Staff-Funktionen.</p>
 
         <ul class="help-list">
-          <li>Admins und Moderatoren wählen ihren sichtbaren Rollennamen über einen Charakter.</li>
-          <li>Dafür setzt du im Charakter <code>Als Admin-Charakter</code> oder <code>Als Moderator-Charakter</code> und speicherst.</li>
-          <li>Admins sind farbig sichtbar, Moderatoren tragen <code>(M)</code>.</li>
+          <li>Admins und Moderatoren w&auml;hlen ihren sichtbaren Rollennamen &uuml;ber einen Charakter.</li>
+          <li>Daf&uuml;r setzt du beim Charakter <code>Als Admin-Charakter verwenden</code> oder <code>Als Moderator-Charakter verwenden</code> und speicherst.</li>
+          <li>Der gew&auml;hlte Rollencharakter wird auf der Startseite, im Men&uuml;, in der Mitgliederliste und im Chat verwendet.</li>
+          <li>Admins erscheinen farbig sichtbar, Moderatoren tragen <code>(M)</code>.</li>
+          <li>Admins und Moderatoren k&ouml;nnen Live Updates direkt auf der Live-Updates-Seite erstellen, bearbeiten und l&ouml;schen.</li>
         </ul>
       </section>
     <% } %>

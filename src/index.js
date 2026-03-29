@@ -2025,14 +2025,40 @@ function getAccountNumberByUserId(userId) {
     return currentAccountNumber;
   }
 
-  const existingAccountRow = db.prepare("SELECT id FROM users WHERE account_number = ?");
-  let nextAccountNumber = "";
-  do {
-    nextAccountNumber = String(10000000 + crypto.randomInt(90000000));
-  } while (existingAccountRow.get(nextAccountNumber));
+  const usedAccountNumbers = new Set(
+    db
+      .prepare(
+        `SELECT account_number
+           FROM users
+          WHERE account_number IS NOT NULL
+            AND trim(account_number) != ''`
+      )
+      .all()
+      .map((row) => {
+        const normalized = String(row?.account_number || "").trim();
+        if (!/^\d+$/.test(normalized)) {
+          return null;
+        }
 
-  db.prepare("UPDATE users SET account_number = ? WHERE id = ?").run(nextAccountNumber, parsedUserId);
-  return nextAccountNumber;
+        const parsedAccountNumber = Number(normalized);
+        return Number.isSafeInteger(parsedAccountNumber) && parsedAccountNumber > 0
+          ? parsedAccountNumber
+          : null;
+      })
+      .filter((value) => value !== null)
+  );
+
+  let nextAccountNumber = 1;
+  while (usedAccountNumbers.has(nextAccountNumber)) {
+    nextAccountNumber += 1;
+  }
+
+  const nextAccountNumberText = String(nextAccountNumber);
+  db.prepare("UPDATE users SET account_number = ? WHERE id = ?").run(
+    nextAccountNumberText,
+    parsedUserId
+  );
+  return nextAccountNumberText;
 }
 
 function normalizeStaffDisplayName(value) {
