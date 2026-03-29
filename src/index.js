@@ -13136,11 +13136,11 @@ const CHAT_AUTOMATIC_AFK_REASONS = CHAT_AFK_REASON_PREFIXES.flatMap((prefix) =>
 );
 const CHAT_CHARACTER_SWITCH_SUFFIXES = [
   "wirbelt einmal durch eine Wolke aus Funken und taucht als %NAME% wieder auf.",
-  "zieht kurz einen schiefen Zauber durch die Luft und steht ploetzlich als %NAME% da.",
-  "verheddert sich fuer einen Herzschlag im Plot und landet dann als %NAME% wieder auf den Fuessen.",
+  "zieht kurz einen schiefen Zauber durch die Luft und steht plötzlich als %NAME% da.",
+  "verheddert sich für einen Herzschlag im Plot und landet dann als %NAME% wieder auf den Füßen.",
   "tauscht mit einem frechen Grinsen die Rolle und antwortet ab jetzt als %NAME%.",
-  "blinzelt, knistert einmal magisch und ist im naechsten Moment %NAME%.",
-  "verschwindet in einem Puff aus Theaternebel und kehrt als %NAME% zurueck."
+  "blinzelt, knistert einmal magisch und ist im nächsten Moment %NAME%.",
+  "verschwindet in einem Puff aus Theaternebel und kehrt als %NAME% zurück."
 ];
 
 function normalizePresenceCharacterId(characterId) {
