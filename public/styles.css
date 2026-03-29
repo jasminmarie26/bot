@@ -1110,12 +1110,16 @@ a:hover {
 .role-name-admin.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
 .guestbook-preview-name.has-noctra-wings,
+.chat-online-name.has-noctra-wings,
+.chat-message strong.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings,
 .brand.is-character.has-crescentia-moons,
 .rp-header-identity.has-crescentia-moons,
 .role-name-admin.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
 .guestbook-preview-name.has-crescentia-moons,
+.chat-online-name.has-crescentia-moons,
+.chat-message strong.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   position: relative;
   overflow: visible;
@@ -1127,6 +1131,8 @@ a:hover {
 .role-name-admin.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
 .guestbook-preview-name.has-noctra-wings,
+.chat-online-name.has-noctra-wings,
+.chat-message strong.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings {
   padding-inline: 0.78rem;
 }
@@ -1136,6 +1142,8 @@ a:hover {
 .role-name-admin.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
 .guestbook-preview-name.has-crescentia-moons,
+.chat-online-name.has-crescentia-moons,
+.chat-message strong.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   padding-inline: 0.8rem;
   overflow: visible;
@@ -1144,9 +1152,13 @@ a:hover {
 
 .role-name-admin.has-noctra-wings,
 .staff-name-admin.has-noctra-wings,
+.chat-online-name.has-noctra-wings,
+.chat-message strong.has-noctra-wings,
 .topbar-user-menu-meta > strong.has-noctra-wings,
 .role-name-admin.has-crescentia-moons,
 .staff-name-admin.has-crescentia-moons,
+.chat-online-name.has-crescentia-moons,
+.chat-message strong.has-crescentia-moons,
 .topbar-user-menu-meta > strong.has-crescentia-moons {
   display: inline-block;
 }

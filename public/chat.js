@@ -106,6 +106,21 @@
   let soundEnabled = true;
   if (!chatBox || !form || !input) return;
 
+  function formatRoleDisplayName(rawName, roleStyle = "") {
+    const label = String(rawName || "").trim();
+    if (String(roleStyle || "").trim().toLowerCase() === "moderator") {
+      return label.replace(/\s*\(M\)\s*$/i, "").trim();
+    }
+    return label;
+  }
+
+  function applySpecialNameDecor(node, rawName) {
+    if (!node) return;
+    const label = String(rawName || node.textContent || "").trim();
+    node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
+    node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
+  }
+
   function readSessionStorage(key) {
     try {
       return window.sessionStorage.getItem(key);
@@ -766,10 +781,12 @@
       const roomSwitchTargetName = String(msg?.room_switch_target_name || "").trim();
       if (systemKind === "presence" && presenceActorName && presenceSuffix) {
         const strong = document.createElement("strong");
-        strong.textContent = presenceActorName;
+        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
+        strong.textContent = displayActorName;
         if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
           strong.classList.add(`role-name-${presenceActorRoleStyle}`);
         }
+        applySpecialNameDecor(strong, displayActorName);
         body.textContent = ` ${presenceSuffix}`;
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.style.color = "#000000";
@@ -782,30 +799,36 @@
         }
       } else if (systemKind === "dice-roll" && presenceActorName && content) {
         const strong = document.createElement("strong");
-        strong.textContent = presenceActorName;
+        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
+        strong.textContent = displayActorName;
         if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
           strong.classList.add(`role-name-${presenceActorRoleStyle}`);
         }
+        applySpecialNameDecor(strong, displayActorName);
         body.textContent = ` ${content}`;
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.style.color = "#000000";
         line.appendChild(strong);
       } else if (systemKind === "room-switch" && presenceActorName && roomSwitchTargetName) {
         const strong = document.createElement("strong");
-        strong.textContent = presenceActorName;
+        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
+        strong.textContent = displayActorName;
         if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
           strong.classList.add(`role-name-${presenceActorRoleStyle}`);
         }
+        applySpecialNameDecor(strong, displayActorName);
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.textContent = ` hat in den Raum ${roomSwitchTargetName} gewechselt.`;
         body.style.color = "#000000";
         line.appendChild(strong);
       } else if (systemKind === "actor-message" && presenceActorName && content) {
         const strong = document.createElement("strong");
-        strong.textContent = presenceActorName;
+        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
+        strong.textContent = displayActorName;
         if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
           strong.classList.add(`role-name-${presenceActorRoleStyle}`);
         }
+        applySpecialNameDecor(strong, displayActorName);
         applyChatTextColor(strong, presenceActorChatTextColor);
         body.textContent = ` ${content}`;
         body.style.color = "#000000";
@@ -817,10 +840,12 @@
       const emote = document.createElement("em");
       const actor = document.createElement("span");
       const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
+      const displayName = formatRoleDisplayName(msg?.username, roleStyle);
       if (roleStyle === "admin" || roleStyle === "moderator") {
         actor.classList.add(`role-name-${roleStyle}`);
       }
-      actor.textContent = String(msg?.username || "").trim() || "Unbekannt";
+      actor.textContent = displayName || "Unbekannt";
+      applySpecialNameDecor(actor, displayName);
       applyChatTextColor(actor, chatTextColor);
       applyChatTextColor(emote, chatTextColor);
       emote.appendChild(actor);
@@ -835,10 +860,12 @@
     } else {
       const strong = document.createElement("strong");
       const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
+      const displayName = formatRoleDisplayName(msg?.username, roleStyle);
       if (roleStyle === "admin" || roleStyle === "moderator") {
         strong.classList.add(`role-name-${roleStyle}`);
       }
-      strong.textContent = `${msg.username}:`;
+      strong.textContent = `${displayName}:`;
+      applySpecialNameDecor(strong, displayName);
       applyChatTextColor(strong, chatTextColor);
       applyChatTextColor(body, chatTextColor);
       line.appendChild(strong);
@@ -1511,7 +1538,7 @@
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
       const isAfk = entry?.is_afk === true;
-      const text = label || "Unbekannt";
+      const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
       const node = document.createElement("button");
       const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
@@ -1536,21 +1563,22 @@
           presenceKey,
           userId,
           characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
-          name: text,
+          name: displayName,
           isAfk
         });
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
       node.dataset.presenceKey = presenceKey;
-      node.dataset.name = text;
+      node.dataset.name = displayName;
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
       afkClockNode.className = "chat-afk-clock";
       afkClockNode.setAttribute("aria-hidden", "true");
       afkClockNode.textContent = "\u25F7";
       applyChatTextColor(textNode, chatTextColor);
-      textNode.textContent = text;
+      textNode.textContent = displayName;
+      applySpecialNameDecor(textNode, displayName);
       if (isAfk) {
         contentNode.appendChild(afkClockNode);
       }

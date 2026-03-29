@@ -2,6 +2,18 @@
 
 <% const chatDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
 <% const chatAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : "User"); %>
+<% const formatChatRoleName = (value, roleStyle = "") => {
+  const label = String(value || "").trim();
+  return String(roleStyle || "").trim().toLowerCase() === "moderator"
+    ? label.replace(/\s*\(M\)\s*$/i, "").trim()
+    : label;
+}; %>
+<% const getChatSpecialNameClass = (value) => {
+  const label = String(value || "").trim();
+  if (/^noctra(?:\b|\s|\[|\()/i.test(label)) return "has-noctra-wings";
+  if (/^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label)) return "has-crescentia-moons";
+  return "";
+}; %>
 <% const chatIdentityRoleStyle = activeCharacter && currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(activeCharacter.id)
   ? "admin"
   : activeCharacter && currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(activeCharacter.id)
@@ -230,12 +242,14 @@
           <div id="online-char-list" class="chat-online-list">
             <% if (onlineCharacters && onlineCharacters.length) { %>
               <% onlineCharacters.forEach((entry) => { %>
+                <% const onlineEntryDisplayName = formatChatRoleName(entry.name, entry.role_style); %>
+                <% const onlineEntrySpecialClass = getChatSpecialNameClass(onlineEntryDisplayName); %>
                 <button
                   class="chat-online-item chat-online-trigger"
                   type="button"
                   data-user-id="<%= entry.user_id %>"
                   data-character-id="<%= entry.character_id || '' %>"
-                  data-name="<%= entry.name %>"
+                  data-name="<%= onlineEntryDisplayName %>"
                   data-role-style="<%= entry.role_style || '' %>"
                   data-chat-text-color="<%= entry.chat_text_color || '' %>"
                 >
@@ -244,9 +258,9 @@
                       <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
                     <% } %>
                     <span
-                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
+                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= onlineEntrySpecialClass ? ` ${onlineEntrySpecialClass}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
                       style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
-                    ><%= entry.name %></span>
+                    ><%= onlineEntryDisplayName %></span>
                   </span>
                 </button>
               <% }) %>
@@ -279,19 +293,26 @@
             <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">
               <% if (msg.type === "system") { %>
                 <% if (msg.system_kind === "dice-roll" && msg.presence_actor_name) { %>
+                  <% const systemActorDisplayName = formatChatRoleName(msg.presence_actor_name, msg.presence_actor_role_style); %>
+                  <% const systemActorSpecialClass = getChatSpecialNameClass(systemActorDisplayName); %>
                   <p>
-                    <strong style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"><%= msg.presence_actor_name %></strong>
+                    <strong
+                      class="<%= systemActorSpecialClass %>"
+                      style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"
+                    ><%= systemActorDisplayName %></strong>
                     <span> <%= msg.content %></span>
                   </p>
                 <% } else { %>
                   <p><span><%= msg.content %></span></p>
                 <% } %>
               <% } else { %>
+                <% const chatMessageDisplayName = formatChatRoleName(msg.username, msg.role_style); %>
+                <% const chatMessageSpecialClass = getChatSpecialNameClass(chatMessageDisplayName); %>
                 <p>
                   <strong
-                    class="<%= msg.role_style ? `role-name-${msg.role_style}` : "" %>"
+                    class="<%= msg.role_style ? `role-name-${msg.role_style}` : "" %><%= chatMessageSpecialClass ? ` ${chatMessageSpecialClass}` : "" %>"
                     style="<%= msg.chat_text_color ? `color:${msg.chat_text_color};` : "" %>"
-                  ><%= msg.username %>:</strong>
+                  ><%= chatMessageDisplayName %>:</strong>
                   <span style="<%= msg.chat_text_color ? `color:${msg.chat_text_color};` : "" %>"><%= msg.content %></span>
                 </p>
               <% } %>
