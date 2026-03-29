@@ -1612,19 +1612,25 @@ a:hover {
 
 .guestbook-notification-badge {
   position: absolute;
-  top: -0.18rem;
-  right: -0.12rem;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.22rem;
+  top: -0.24rem;
+  right: -0.18rem;
+  min-width: 1.18rem;
+  height: 1.18rem;
+  padding: 0 0.3rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-text);
-  font-size: 0.64rem;
-  font-weight: 700;
+  border: 1px solid color-mix(in srgb, white 78%, var(--panel-bg) 22%);
+  color: #fff8f0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+  z-index: 1;
   box-shadow: 0 10px 18px -14px var(--panel-shadow);
 }
 
@@ -8226,6 +8232,18 @@ select:focus {
 .guestbook-notification-approval-shell,
 .guestbook-notification-approval-message {
   border-color: var(--success-edge);
+}
+
+#guestbook-notification-panel {
+  width: min(920px, calc(100vw - 2rem));
+}
+
+#guestbook-notification-panel .guestbook-notification-approval-shell {
+  max-height: min(56vh, 520px);
+}
+
+#guestbook-notification-panel .whisper-thread {
+  max-height: min(48vh, 460px);
 }
 
 .guestbook-notification-system-body {
