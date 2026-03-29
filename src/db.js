@@ -275,7 +275,8 @@ db.exec(`
     id INTEGER PRIMARY KEY CHECK (id = 1),
     hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
     hero_body TEXT NOT NULL DEFAULT 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.',
-    updates_title TEXT NOT NULL DEFAULT 'Live Updates'
+    updates_title TEXT NOT NULL DEFAULT 'Live Updates',
+    account_number_migration_version INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS registration_guard_events (
@@ -745,6 +746,12 @@ if (!siteHomeSettingsColumns.includes("updates_title")) {
   db.exec("ALTER TABLE site_home_settings ADD COLUMN updates_title TEXT NOT NULL DEFAULT 'Live Updates'");
 }
 
+if (!siteHomeSettingsColumns.includes("account_number_migration_version")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN account_number_migration_version INTEGER NOT NULL DEFAULT 0"
+  );
+}
+
 if (!siteUpdateColumns.includes("updated_at")) {
   db.exec("ALTER TABLE site_updates ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''");
 }
@@ -1024,18 +1031,50 @@ db.prepare(
 ).run();
 
 function generateUniqueAccountNumber() {
-  const existingUser = db.prepare("SELECT id FROM users WHERE account_number = ?");
-  let candidate = "";
+  const usedAccountNumbers = new Set(
+    db
+      .prepare(
+        `SELECT account_number
+           FROM users
+          WHERE account_number IS NOT NULL
+            AND trim(account_number) != ''`
+      )
+      .all()
+      .map((row) => {
+        const normalized = String(row?.account_number || "").trim();
+        if (!/^\d+$/.test(normalized)) {
+          return null;
+        }
 
-  do {
-    candidate = String(10000000 + crypto.randomInt(90000000));
-  } while (existingUser.get(candidate));
+        const parsedAccountNumber = Number(normalized);
+        return Number.isSafeInteger(parsedAccountNumber) && parsedAccountNumber > 0
+          ? parsedAccountNumber
+          : null;
+      })
+      .filter((value) => value !== null)
+  );
 
-  return candidate;
+  let candidate = 1;
+  while (usedAccountNumbers.has(candidate)) {
+    candidate += 1;
+  }
+
+  return String(candidate);
 }
 
 const usersMissingAccountNumbers = db
-  .prepare("SELECT id FROM users WHERE account_number IS NULL OR trim(account_number) = ''")
+  .prepare(
+    `SELECT id
+       FROM users
+      WHERE account_number IS NULL OR trim(account_number) = ''
+      ORDER BY CASE
+        WHEN is_admin = 1 THEN 0
+        WHEN is_moderator = 1 AND email_verified = 1 THEN 1
+        WHEN is_moderator = 1 THEN 2
+        ELSE 3
+      END,
+      id ASC`
+  )
   .all();
 
 if (usersMissingAccountNumbers.length > 0) {
@@ -1048,6 +1087,52 @@ if (usersMissingAccountNumbers.length > 0) {
 
   fillMissingAccountNumbers(usersMissingAccountNumbers);
 }
+
+function normalizeLegacyAccountNumbers() {
+  const migrationState = db
+    .prepare(
+      `SELECT account_number_migration_version
+         FROM site_home_settings
+        WHERE id = 1`
+    )
+    .get();
+
+  if (Number(migrationState?.account_number_migration_version || 0) >= 1) {
+    return;
+  }
+
+  const users = db
+    .prepare(
+      `SELECT id
+         FROM users
+        ORDER BY CASE
+          WHEN is_admin = 1 THEN 0
+          WHEN is_moderator = 1 AND email_verified = 1 THEN 1
+          WHEN is_moderator = 1 THEN 2
+          ELSE 3
+        END,
+        id ASC`
+    )
+    .all();
+
+  const updateAccountNumber = db.prepare("UPDATE users SET account_number = ? WHERE id = ?");
+  const markMigrationDone = db.prepare(
+    `UPDATE site_home_settings
+        SET account_number_migration_version = 1
+      WHERE id = 1`
+  );
+
+  const applyMigration = db.transaction((rows) => {
+    rows.forEach((row, index) => {
+      updateAccountNumber.run(String(index + 1), row.id);
+    });
+    markMigrationDone.run();
+  });
+
+  applyMigration(users);
+}
+
+normalizeLegacyAccountNumbers();
 
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_number_unique
