@@ -194,6 +194,18 @@ db.exec(`
     FOREIGN KEY (festplay_application_id) REFERENCES festplay_applications(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS system_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    notification_type TEXT NOT NULL DEFAULT '',
+    notification_key TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS rp_board_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id TEXT NOT NULL DEFAULT 'free-rp',
@@ -849,6 +861,12 @@ db.exec(
 );
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_festplay_application_notifications_user_application ON festplay_application_notifications(user_id, festplay_application_id)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_system_notifications_user_read ON system_notifications(user_id, is_read, created_at)"
+);
+db.exec(
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_system_notifications_user_type_key ON system_notifications(user_id, notification_type, notification_key)"
 );
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");

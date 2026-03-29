@@ -5,16 +5,23 @@
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
   const approvalNotificationType = "festplay_approval";
+  const birthdayNotificationType = "birthday_greeting";
+  const defaultBirthdayTitle = "Geburtstagsgruesse vom Heldenhafte Reisen Team";
   const canUseRealtimeUpdates = typeof io === "function";
-  let approvalPanelElements = null;
+  let systemPanelElements = null;
 
-  function isSystemNotificationType(notificationType) {
-    return String(notificationType || "").trim().toLowerCase() === approvalNotificationType;
+  function normalizeNotificationType(notificationType) {
+    return String(notificationType || "").trim().toLowerCase();
   }
 
-  function getApprovalPanelElements() {
-    if (approvalPanelElements) {
-      return approvalPanelElements;
+  function isSystemNotificationType(notificationType) {
+    const normalizedType = normalizeNotificationType(notificationType);
+    return normalizedType === approvalNotificationType || normalizedType === birthdayNotificationType;
+  }
+
+  function getSystemPanelElements() {
+    if (systemPanelElements) {
+      return systemPanelElements;
     }
 
     const panel = document.createElement("div");
@@ -71,7 +78,6 @@
 
     const meta = document.createElement("div");
     meta.className = "whisper-thread-meta";
-    meta.textContent = "Festspiel-Freischaltung";
 
     const body = document.createElement("div");
     body.className = "whisper-thread-body";
@@ -99,23 +105,57 @@
       }
     });
 
-    approvalPanelElements = {
+    systemPanelElements = {
       panel,
+      meta,
       body
     };
-    return approvalPanelElements;
+    return systemPanelElements;
   }
 
-  function openApprovalPanel(festplayName) {
-    const panelElements = getApprovalPanelElements();
+  function buildSystemNotificationCopy(notificationType, festplayName, notificationTitle, notificationMessage) {
+    const normalizedType = normalizeNotificationType(notificationType);
     const trimmedFestplayName = String(festplayName || "").trim();
-    panelElements.body.textContent = trimmedFestplayName
-      ? `Du wurdest f\u00fcr ${trimmedFestplayName} freigeschaltet.`
-      : "Du wurdest f\u00fcr ein Festspiel freigeschaltet.";
+    const trimmedNotificationTitle = String(notificationTitle || "").trim();
+    const trimmedNotificationMessage = String(notificationMessage || "").trim();
+
+    if (normalizedType === approvalNotificationType) {
+      return {
+        meta: "Festspiel-Freischaltung",
+        body: trimmedFestplayName
+          ? `Du wurdest fuer ${trimmedFestplayName} freigeschaltet.`
+          : "Du wurdest fuer ein Festspiel freigeschaltet."
+      };
+    }
+
+    if (normalizedType === birthdayNotificationType) {
+      return {
+        meta: trimmedNotificationTitle || defaultBirthdayTitle,
+        body: trimmedNotificationMessage || "Herzlichen Glueckwunsch zum Geburtstag!"
+      };
+    }
+
+    return {
+      meta: "Systemnachricht",
+      body: trimmedNotificationMessage || ""
+    };
+  }
+
+  function openSystemNotificationPanel(notificationType, festplayName, notificationTitle, notificationMessage) {
+    const panelElements = getSystemPanelElements();
+    const panelCopy = buildSystemNotificationCopy(
+      notificationType,
+      festplayName,
+      notificationTitle,
+      notificationMessage
+    );
+
+    panelElements.meta.textContent = panelCopy.meta;
+    panelElements.body.textContent = panelCopy.body;
     panelElements.panel.hidden = false;
   }
 
-  async function dismissApprovalNotification(notificationId) {
+  async function dismissSystemNotification(notificationId, notificationType) {
     const parsedNotificationId = Number(notificationId);
     if (!Number.isInteger(parsedNotificationId) || parsedNotificationId < 1) {
       return;
@@ -128,7 +168,7 @@
         "X-Requested-With": "XMLHttpRequest"
       },
       body: new URLSearchParams({
-        type: approvalNotificationType
+        type: normalizeNotificationType(notificationType)
       }).toString()
     });
 
@@ -147,37 +187,43 @@
     characterName,
     festplayName,
     applicantCharacterName,
-    actorName
+    actorName,
+    notificationTitle
   ) {
-    const normalizedType = String(notificationType || "").trim().toLowerCase();
+    const normalizedType = normalizeNotificationType(notificationType);
     const trimmedCharacterName = String(characterName || "").trim();
     const trimmedFestplayName = String(festplayName || "").trim();
     const trimmedApplicantCharacterName = String(applicantCharacterName || "").trim();
     const trimmedActorName = String(actorName || "").trim();
+    const trimmedNotificationTitle = String(notificationTitle || "").trim();
 
     if (normalizedType === "festplay_application") {
       if (trimmedFestplayName && trimmedApplicantCharacterName) {
-        return `Neue Bewerbung von ${trimmedApplicantCharacterName} für ${trimmedFestplayName}`;
+        return `Neue Bewerbung von ${trimmedApplicantCharacterName} fuer ${trimmedFestplayName}`;
       }
       if (trimmedFestplayName) {
-        return `Neue Bewerbung für ${trimmedFestplayName}`;
+        return `Neue Bewerbung fuer ${trimmedFestplayName}`;
       }
       return "Neue Festspiel-Bewerbung";
     }
 
-    if (normalizedType === "festplay_approval") {
+    if (normalizedType === approvalNotificationType) {
       if (trimmedFestplayName && trimmedActorName) {
-        return `${trimmedActorName} hat dich für ${trimmedFestplayName} freigeschaltet`;
+        return `${trimmedActorName} hat dich fuer ${trimmedFestplayName} freigeschaltet`;
       }
       if (trimmedFestplayName) {
-        return `Du wurdest für ${trimmedFestplayName} freigeschaltet`;
+        return `Du wurdest fuer ${trimmedFestplayName} freigeschaltet`;
       }
       return "Neue Festspiel-Freischaltung";
     }
 
+    if (normalizedType === birthdayNotificationType) {
+      return trimmedNotificationTitle || defaultBirthdayTitle;
+    }
+
     return trimmedCharacterName
-      ? `Neuer Gästebucheintrag für ${trimmedCharacterName}`
-      : "Neuer Gästebucheintrag";
+      ? `Neuer Gaestebucheintrag fuer ${trimmedCharacterName}`
+      : "Neuer Gaestebucheintrag";
   }
 
   function formatBadgeCount(count) {
@@ -187,18 +233,21 @@
   function applyNotificationPayload(payload) {
     const count = Number(payload?.count || 0);
     const latestId = Number(payload?.latest?.id || 0);
-    const latestType = String(payload?.latest?.type || "").trim();
+    const latestType = normalizeNotificationType(payload?.latest?.type || "");
     const latestCharacterName = String(payload?.latest?.character_name || "").trim();
     const latestFestplayName = String(payload?.latest?.festplay_name || "").trim();
     const latestApplicantCharacterName = String(payload?.latest?.applicant_character_name || "").trim();
     const latestActorName = String(payload?.latest?.actor_name || "").trim();
-    const hasNotification = count > 0;
+    const latestTitle = String(payload?.latest?.title || "").trim();
+    const latestMessage = String(payload?.latest?.message || "").trim();
+    const hasNotification = count > 0 && latestId > 0 && latestType.length > 0;
     const title = buildNotificationTitle(
       latestType,
       latestCharacterName,
       latestFestplayName,
       latestApplicantCharacterName,
-      latestActorName
+      latestActorName,
+      latestTitle
     );
 
     notificationLink.href = notificationHref;
@@ -212,7 +261,12 @@
     notificationLink.dataset.notificationFestplayName = latestFestplayName;
     notificationLink.dataset.notificationApplicantCharacterName = latestApplicantCharacterName;
     notificationLink.dataset.notificationActorName = latestActorName;
-    notificationLink.classList.toggle("guestbook-notification-link-system", hasNotification && isSystemNotificationType(latestType));
+    notificationLink.dataset.notificationTitle = latestTitle;
+    notificationLink.dataset.notificationMessage = latestMessage;
+    notificationLink.classList.toggle(
+      "guestbook-notification-link-system",
+      hasNotification && isSystemNotificationType(latestType)
+    );
 
     if (!hasNotification) {
       notificationLink.hidden = true;
@@ -236,7 +290,9 @@
       character_name: notificationLink.dataset.notificationCharacterName || "",
       festplay_name: notificationLink.dataset.notificationFestplayName || "",
       applicant_character_name: notificationLink.dataset.notificationApplicantCharacterName || "",
-      actor_name: notificationLink.dataset.notificationActorName || ""
+      actor_name: notificationLink.dataset.notificationActorName || "",
+      title: notificationLink.dataset.notificationTitle || "",
+      message: notificationLink.dataset.notificationMessage || ""
     }
   };
   applyNotificationPayload(initialPayload);
@@ -248,16 +304,21 @@
       return;
     }
 
-    const notificationType = String(notificationLink.dataset.notificationType || "").trim().toLowerCase();
-    if (notificationType !== approvalNotificationType) {
+    const notificationType = normalizeNotificationType(notificationLink.dataset.notificationType || "");
+    if (!isSystemNotificationType(notificationType)) {
       return;
     }
 
     event.preventDefault();
-    openApprovalPanel(notificationLink.dataset.notificationFestplayName || "");
+    openSystemNotificationPanel(
+      notificationType,
+      notificationLink.dataset.notificationFestplayName || "",
+      notificationLink.dataset.notificationTitle || "",
+      notificationLink.dataset.notificationMessage || ""
+    );
 
     try {
-      await dismissApprovalNotification(notificationLink.dataset.notificationId);
+      await dismissSystemNotification(notificationLink.dataset.notificationId, notificationType);
     } catch (_error) {
       // Keep the visible brief even if the dismiss request fails.
     }

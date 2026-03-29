@@ -125,6 +125,8 @@ const BIRTHDAY_GREETING_VARIANTS = BIRTHDAY_GREETING_OPENERS.flatMap((opener) =>
     BIRTHDAY_GREETING_SIGNOFFS.map((signoff) => `${opener} ${wish} ${signoff}`)
   )
 ).slice(0, 200);
+const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
+const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgruesse vom Heldenhafte Reisen Team";
 const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
   GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
 );
@@ -920,7 +922,7 @@ function isBirthdayToday(rawBirthDate, referenceDate = new Date()) {
   return now.getMonth() + 1 === month && now.getDate() === day;
 }
 
-function buildBirthdayGreetingFlashText(username) {
+function buildBirthdayGreetingMessage(username) {
   const safeName = String(username || "").trim() || "Abenteurer";
   if (!BIRTHDAY_GREETING_VARIANTS.length) {
     return `Systemnachricht: Herzlichen Glueckwunsch zum Geburtstag, ${safeName}! Das ganze Heldenhafte Reisen Team wuenscht dir einen wunderschoenen Tag.`;
@@ -930,7 +932,7 @@ function buildBirthdayGreetingFlashText(username) {
   return BIRTHDAY_GREETING_VARIANTS[randomIndex].replace(/\{name\}/g, safeName);
 }
 
-function getBirthdayFlashDateKey(referenceDate = new Date()) {
+function getBirthdayNotificationDateKey(referenceDate = new Date()) {
   const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
     ? referenceDate
     : new Date();
@@ -940,40 +942,75 @@ function getBirthdayFlashDateKey(referenceDate = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function buildBirthdayFlashState(userId, fallbackText = "Erfolgreich eingeloggt.", referenceDate = new Date()) {
-  const accountUser = getAccountUserById(userId);
-  if (!accountUser || !isBirthdayToday(accountUser.birth_date, referenceDate)) {
-    return {
-      isBirthday: false,
-      text: fallbackText,
-      dateKey: getBirthdayFlashDateKey(referenceDate)
-    };
+function createSystemNotification(userId, notificationType, notificationKey, title, message) {
+  const parsedUserId = Number(userId);
+  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
+  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
+  const normalizedTitle = String(title || "").trim().slice(0, 160);
+  const normalizedMessage = String(message || "").trim().slice(0, 4000);
+
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !normalizedNotificationType ||
+    !normalizedNotificationKey ||
+    !normalizedTitle ||
+    !normalizedMessage
+  ) {
+    return false;
   }
 
-  return {
-    isBirthday: true,
-    text: buildBirthdayGreetingFlashText(accountUser.username),
-    dateKey: getBirthdayFlashDateKey(referenceDate)
-  };
+  const result = db.prepare(
+    `INSERT INTO system_notifications (
+       user_id,
+       notification_type,
+       notification_key,
+       title,
+       message,
+       is_read,
+       created_at
+     )
+     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
+     ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
+  ).run(
+    parsedUserId,
+    normalizedNotificationType,
+    normalizedNotificationKey,
+    normalizedTitle,
+    normalizedMessage
+  );
+
+  if (result.changes > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+    return true;
+  }
+
+  return false;
+}
+
+function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new Date()) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const accountUser = getAccountUserById(parsedUserId);
+  if (!accountUser || !isBirthdayToday(accountUser.birth_date, referenceDate)) {
+    return false;
+  }
+
+  return createSystemNotification(
+    parsedUserId,
+    BIRTHDAY_NOTIFICATION_TYPE,
+    getBirthdayNotificationDateKey(referenceDate),
+    BIRTHDAY_NOTIFICATION_TITLE,
+    buildBirthdayGreetingMessage(accountUser.username)
+  );
 }
 
 function setPostLoginFlash(req, userId, fallbackText = "Erfolgreich eingeloggt.") {
-  const birthdayFlashState = buildBirthdayFlashState(userId, fallbackText);
-  if (birthdayFlashState.isBirthday) {
-    req.session.birthday_flash_last_seen_date = birthdayFlashState.dateKey;
-  }
-  setFlash(req, "success", birthdayFlashState.text);
-}
-
-function getPendingBirthdayFlashText(userId, lastSeenDateKey = "", referenceDate = new Date()) {
-  const birthdayFlashState = buildBirthdayFlashState(userId, "", referenceDate);
-  if (!birthdayFlashState.isBirthday) {
-    return "";
-  }
-
-  return String(lastSeenDateKey || "").trim() === birthdayFlashState.dateKey
-    ? ""
-    : birthdayFlashState.text;
+  createBirthdayGreetingNotificationIfNeeded(userId);
+  setFlash(req, "success", fallbackText);
 }
 
 function getUsernameChangeAvailability(user) {
@@ -6678,6 +6715,23 @@ function getUnreadFestplayApplicationNotificationCountForUser(userId) {
   );
 }
 
+function getUnreadSystemNotificationCountForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return 0;
+  }
+
+  return Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM system_notifications
+         WHERE user_id = ? AND is_read = 0`
+      )
+      .get(parsedUserId)?.count || 0
+  );
+}
+
 function getUnreadGuestbookNotificationCountForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -6694,7 +6748,11 @@ function getUnreadGuestbookNotificationCountForUser(userId) {
       .get(parsedUserId)?.count || 0
   );
 
-  return guestbookCount + getUnreadFestplayApplicationNotificationCountForUser(parsedUserId);
+  return (
+    guestbookCount +
+    getUnreadFestplayApplicationNotificationCountForUser(parsedUserId) +
+    getUnreadSystemNotificationCountForUser(parsedUserId)
+  );
 }
 
 function getLatestFestplayApplicationNotificationForUser(userId, unreadOnly = true) {
@@ -6734,6 +6792,48 @@ function getLatestFestplayApplicationNotificationForUser(userId, unreadOnly = tr
     .get(parsedUserId);
 }
 
+function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT sn.id,
+              sn.user_id,
+              sn.notification_type,
+              sn.notification_key,
+              sn.title,
+              sn.message,
+              sn.is_read,
+              sn.created_at
+       FROM system_notifications sn
+       WHERE sn.user_id = ?
+         ${unreadOnly ? "AND sn.is_read = 0" : ""}
+       ORDER BY sn.created_at DESC, sn.id DESC
+       LIMIT 1`
+    )
+    .get(parsedUserId);
+}
+
+function pickLatestNotification(notifications = []) {
+  const entries = Array.isArray(notifications) ? notifications.filter(Boolean) : [];
+  if (!entries.length) {
+    return null;
+  }
+
+  return entries.sort((left, right) => {
+    const leftCreatedAt = String(left?.created_at || "");
+    const rightCreatedAt = String(right?.created_at || "");
+    if (leftCreatedAt !== rightCreatedAt) {
+      return rightCreatedAt.localeCompare(leftCreatedAt);
+    }
+
+    return Number(right?.id || 0) - Number(left?.id || 0);
+  })[0];
+}
+
 function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -6758,31 +6858,17 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
        WHERE gn.user_id = ?
          ${unreadOnly ? "AND gn.is_read = 0" : ""}
        ORDER BY gn.created_at DESC, gn.id DESC
-       LIMIT 1`
+      LIMIT 1`
     )
     .get(parsedUserId);
   const festplayNotification = getLatestFestplayApplicationNotificationForUser(parsedUserId, unreadOnly);
+  const systemNotification = getLatestSystemNotificationForUser(parsedUserId, unreadOnly);
 
-  if (!guestbookNotification) {
-    return festplayNotification;
-  }
-
-  if (!festplayNotification) {
-    return guestbookNotification;
-  }
-
-  const guestbookCreatedAt = String(guestbookNotification.created_at || "");
-  const festplayCreatedAt = String(festplayNotification.created_at || "");
-  if (festplayCreatedAt > guestbookCreatedAt) {
-    return festplayNotification;
-  }
-  if (guestbookCreatedAt > festplayCreatedAt) {
-    return guestbookNotification;
-  }
-
-  return Number(festplayNotification.id) > Number(guestbookNotification.id)
-    ? festplayNotification
-    : guestbookNotification;
+  return pickLatestNotification([
+    guestbookNotification,
+    festplayNotification,
+    systemNotification
+  ]);
 }
 
 function socketChannelForGuestbookNotifications(userId) {
@@ -6821,6 +6907,13 @@ function buildGuestbookNotificationPayloadForUser(userId) {
             actor_name: String(latestNotification.actor_name || "").trim(),
             festplay_server_id: normalizeServer(latestNotification.festplay_server_id)
           }
+        : String(latestNotification.notification_type || "").trim() === BIRTHDAY_NOTIFICATION_TYPE
+          ? {
+              id: Number(latestNotification.id),
+              type: BIRTHDAY_NOTIFICATION_TYPE,
+              title: String(latestNotification.title || "").trim(),
+              message: String(latestNotification.message || "").trim()
+            }
         : {
             id: Number(latestNotification.id),
             type: "guestbook_entry",
@@ -6860,6 +6953,29 @@ function markGuestbookNotificationAsRead(notificationId, userId) {
 
   const result = db.prepare(
     `UPDATE guestbook_notifications
+     SET is_read = 1
+     WHERE id = ? AND user_id = ?`
+  ).run(parsedNotificationId, parsedUserId);
+
+  if (result.changes > 0) {
+    emitGuestbookNotificationUpdateForUser(parsedUserId);
+  }
+}
+
+function markSystemNotificationAsRead(notificationId, userId) {
+  const parsedNotificationId = Number(notificationId);
+  const parsedUserId = Number(userId);
+  if (
+    !Number.isInteger(parsedNotificationId) ||
+    parsedNotificationId < 1 ||
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1
+  ) {
+    return;
+  }
+
+  const result = db.prepare(
+    `UPDATE system_notifications
      SET is_read = 1
      WHERE id = ? AND user_id = ?`
   ).run(parsedNotificationId, parsedUserId);
@@ -7699,6 +7815,10 @@ app.use((req, res, next) => {
     res.setHeader("Expires", "0");
   }
 
+  if (req.session.user?.id) {
+    createBirthdayGreetingNotificationIfNeeded(req.session.user.id);
+  }
+
   res.locals.currentUser = req.session.user || null;
   res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
@@ -7750,20 +7870,6 @@ app.use((req, res, next) => {
 
   if (cookieTheme !== res.locals.activeTheme) {
     setThemeCookie(res, res.locals.activeTheme);
-  }
-
-  if (!req.session.flash && req.session.user?.id) {
-    const pendingBirthdayFlashText = getPendingBirthdayFlashText(
-      req.session.user.id,
-      req.session.birthday_flash_last_seen_date
-    );
-    if (pendingBirthdayFlashText) {
-      req.session.flash = {
-        type: "success",
-        text: pendingBirthdayFlashText
-      };
-      req.session.birthday_flash_last_seen_date = getBirthdayFlashDateKey();
-    }
   }
 
   res.locals.flash = req.session.flash || null;
@@ -9176,6 +9282,7 @@ app.post("/rp-board/entries/:entryId/delete", requireAuth, (req, res) => {
 
 app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   const latestNotification = getLatestGuestbookNotificationForUser(req.session.user.id, true);
+  const notificationType = String(latestNotification?.notification_type || "").trim();
 
   if (!latestNotification) {
     setFlash(req, "error", "Du hast gerade keine neuen Benachrichtigungen.");
@@ -9183,12 +9290,12 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   }
 
   if (
-    String(latestNotification.notification_type || "").trim() === "festplay_application" ||
-    String(latestNotification.notification_type || "").trim() === "festplay_approval"
+    notificationType === "festplay_application" ||
+    notificationType === "festplay_approval"
   ) {
     markFestplayApplicationNotificationAsRead(latestNotification.id, req.session.user.id);
 
-    if (String(latestNotification.notification_type || "").trim() === "festplay_approval") {
+    if (notificationType === "festplay_approval") {
       const festplayName = String(latestNotification.festplay_name || "").trim();
       setFlash(
         req,
@@ -9237,6 +9344,16 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     );
   }
 
+  if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
+    setFlash(
+      req,
+      "success",
+      String(latestNotification.message || "").trim() || "Herzlichen Glueckwunsch zum Geburtstag!"
+    );
+    return res.redirect(req.get("referer") || "/dashboard");
+  }
+
   markGuestbookNotificationAsRead(latestNotification.id, req.session.user.id);
 
   const targetCharacterId = Number(latestNotification.character_id);
@@ -9281,6 +9398,8 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
 
   if (notificationType === "festplay_application" || notificationType === "festplay_approval") {
     markFestplayApplicationNotificationAsRead(notificationId, req.session.user.id);
+  } else if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
+    markSystemNotificationAsRead(notificationId, req.session.user.id);
   } else {
     markGuestbookNotificationAsRead(notificationId, req.session.user.id);
   }

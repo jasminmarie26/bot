@@ -11,18 +11,22 @@
     noteCharacters.some((entry) => Number(entry.id) === candidateId)
   ) || Number(noteCharacters[0]?.id || 0); %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
-  <% const guestbookNotificationTitle = latestGuestbookNotification?.type === "festplay_application"
+  <% const latestNotificationType = latestGuestbookNotification?.type || latestGuestbookNotification?.notification_type || "guestbook_entry"; %>
+  <% const isSystemNotification = latestNotificationType === "festplay_approval" || latestNotificationType === "birthday_greeting"; %>
+  <% const guestbookNotificationTitle = latestNotificationType === "festplay_application"
     ? latestGuestbookNotification?.festplay_name
       ? latestGuestbookNotification?.applicant_character_name
         ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} fuer ${latestGuestbookNotification.festplay_name}`
         : `Neue Bewerbung fuer ${latestGuestbookNotification.festplay_name}`
       : "Neue Festspiel-Bewerbung"
-    : latestGuestbookNotification?.type === "festplay_approval"
+    : latestNotificationType === "festplay_approval"
       ? latestGuestbookNotification?.festplay_name
         ? latestGuestbookNotification?.actor_name
           ? `${latestGuestbookNotification.actor_name} hat dich fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
           : `Du wurdest fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
         : "Neue Festspiel-Freischaltung"
+    : latestNotificationType === "birthday_greeting"
+      ? latestGuestbookNotification?.title || "Geburtstagsgruesse vom Heldenhafte Reisen Team"
     : latestGuestbookNotification?.character_name
       ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
       : "Neuer Gaestebucheintrag"; %>
@@ -107,18 +111,20 @@
     </div>
   <% } %>
   <a
-    class="guestbook-notification-link<%= latestGuestbookNotification?.type === 'festplay_approval' ? ' guestbook-notification-link-system' : '' %>"
+    class="guestbook-notification-link<%= isSystemNotification ? ' guestbook-notification-link-system' : '' %>"
     href="/guestbook/notifications/open"
     aria-label="<%= guestbookNotificationTitle %>"
     title="<%= guestbookNotificationTitle %>"
     data-guestbook-notification-root
     data-notification-count="<%= guestbookNotificationCount || 0 %>"
     data-notification-id="<%= latestGuestbookNotification?.id || 0 %>"
-    data-notification-type="<%= latestGuestbookNotification?.type || "guestbook_entry" %>"
+    data-notification-type="<%= latestNotificationType %>"
     data-notification-character-name="<%= latestGuestbookNotification?.character_name || "" %>"
     data-notification-festplay-name="<%= latestGuestbookNotification?.festplay_name || "" %>"
     data-notification-applicant-character-name="<%= latestGuestbookNotification?.applicant_character_name || "" %>"
     data-notification-actor-name="<%= latestGuestbookNotification?.actor_name || "" %>"
+    data-notification-title="<%= latestGuestbookNotification?.title || "" %>"
+    data-notification-message="<%= latestGuestbookNotification?.message || "" %>"
     <%= guestbookNotificationCount > 0 && latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
