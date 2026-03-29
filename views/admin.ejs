@@ -31,6 +31,28 @@
   <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
 </section>
 
+<section class="panel">
+  <h2>Als Benutzer testen</h2>
+  <p class="muted">
+    Admins k&ouml;nnen sich hier testweise mit einem anderen Benutzernamen anmelden,
+    ohne dessen Passwort zu brauchen.
+  </p>
+  <form method="POST" action="/admin/impersonate" class="admin-inline-form">
+    <label>
+      Benutzername
+      <input
+        name="username"
+        type="text"
+        maxlength="24"
+        autocomplete="off"
+        placeholder="Benutzername eingeben"
+        required
+      />
+    </label>
+    <button class="btn" type="submit">Testmodus starten</button>
+  </form>
+</section>
+
 <% if (suspiciousUsers && suspiciousUsers.length) { %>
   <section class="panel">
     <h2>Verdächtige Accounts</h2>

@@ -482,4 +482,14 @@
           <%= flash.text %>
         </div>
       <% } %>
-
+      <% if (adminImpersonation?.active) { %>
+        <div class="flash flash-error">
+          Testmodus aktiv: Du bist gerade als <strong><%= currentUserAccountName %></strong> unterwegs.
+          Admin im Hintergrund: <strong><%= adminImpersonation.adminUsername %></strong>.
+          <div class="dashboard-server-actions" style="margin-top: 0.65rem;">
+            <form method="POST" action="/admin/impersonation/stop" class="inline-form">
+              <button class="btn btn-secondary" type="submit">Zur&uuml;ck zum Admin</button>
+            </form>
+          </div>
+        </div>
+      <% } %>

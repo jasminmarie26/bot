@@ -21,6 +21,12 @@
       <p class="muted">Account #<%= targetUser.account_number %></p>
     </div>
     <div class="dashboard-server-actions">
+      <% if (currentUser?.is_admin && Number(targetUser.id) !== Number(currentUser.id)) { %>
+        <form method="POST" action="/admin/impersonate" class="inline-form">
+          <input type="hidden" name="username" value="<%= targetUser.username %>" />
+          <button class="btn" type="submit">Als diesen User testen</button>
+        </form>
+      <% } %>
       <a class="btn btn-secondary" href="<%= panelHomePath %>">Zur&uuml;ck zum <%= panelHomeLabel %></a>
     </div>
   </div>

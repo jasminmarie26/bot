@@ -2251,6 +2251,14 @@ function toSessionUser(user) {
   };
 }
 
+function clearAdminImpersonationSession(session) {
+  if (!session || typeof session !== "object") {
+    return;
+  }
+
+  delete session.admin_impersonator_user_id;
+}
+
 function getUserForSessionById(userId) {
   return db
     .prepare(
@@ -2261,6 +2269,19 @@ function getUserForSessionById(userId) {
        WHERE id = ?`
     )
     .get(userId);
+}
+
+function getUserForSessionByUsername(username) {
+  return db
+    .prepare(
+      `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
+              afk_timeout_minutes, show_own_chat_time
+       , admin_character_id, moderator_character_id
+       FROM users
+       WHERE lower(username) = lower(?)
+       LIMIT 1`
+    )
+    .get(username);
 }
 
 function getAccountUserById(userId) {
@@ -7189,6 +7210,7 @@ function isOAuthBirthDateCompletionRequired(req) {
 
 app.use((req, res, next) => {
   const cookieTheme = getThemeCookie(req);
+  let adminImpersonatorUser = null;
 
   if (req.session.guest_theme) {
     req.session.guest_theme = normalizeTheme(req.session.guest_theme);
@@ -7198,11 +7220,31 @@ app.use((req, res, next) => {
     req.session.preferred_character_ids
   );
 
+  if (req.session.admin_impersonator_user_id) {
+    adminImpersonatorUser = getUserForSessionById(req.session.admin_impersonator_user_id);
+
+    if (!adminImpersonatorUser || adminImpersonatorUser.is_admin !== 1) {
+      clearAdminImpersonationSession(req.session);
+      req.session.user = null;
+      adminImpersonatorUser = null;
+      setFlash(req, "error", "Der Admin-Testmodus wurde beendet.");
+    }
+  }
+
   if (req.session.user) {
     const user = getUserForSessionById(req.session.user.id);
 
     if (user) {
       req.session.user = toSessionUser(user);
+    } else if (adminImpersonatorUser) {
+      req.session.user = toSessionUser(adminImpersonatorUser);
+      clearAdminImpersonationSession(req.session);
+      adminImpersonatorUser = null;
+      setFlash(
+        req,
+        "error",
+        "Der getestete Benutzer existiert nicht mehr. Du bist wieder im Admin-Account."
+      );
     } else {
       req.session.user = null;
     }
@@ -7229,6 +7271,15 @@ app.use((req, res, next) => {
   res.locals.currentUserAccountName = req.session.user?.username || "";
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
   res.locals.currentUserDisplayRoleStyle = req.session.user?.display_role_style || "";
+  res.locals.adminImpersonation =
+    req.session.user && adminImpersonatorUser
+      ? {
+          active: true,
+          adminUsername: adminImpersonatorUser.username,
+          adminDisplayName: getUserDefaultDisplayName(adminImpersonatorUser),
+          adminUserId: Number(adminImpersonatorUser.id) || null
+        }
+      : null;
   res.locals.guestbookNotificationCount = req.session.user
     ? getUnreadGuestbookNotificationCountForUser(req.session.user.id)
     : 0;
@@ -12778,10 +12829,71 @@ function renderStaffUserDetails(req, res) {
 
 app.get("/admin", requireAuth, requireAdmin, renderStaffOverview);
 
+app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
+  const username = String(req.body.username || "").trim().slice(0, 24);
+  if (!username) {
+    setFlash(req, "error", "Bitte gib einen Benutzernamen ein.");
+    return res.redirect("/admin");
+  }
+
+  const originalAdminId = Number(req.session.admin_impersonator_user_id || req.session.user?.id);
+  const originalAdmin = getUserForSessionById(originalAdminId);
+  if (!originalAdmin || originalAdmin.is_admin !== 1) {
+    clearAdminImpersonationSession(req.session);
+    req.session.user = null;
+    setFlash(req, "error", "Der Admin-Account konnte nicht mehr gepr\u00fcft werden.");
+    return res.redirect("/login");
+  }
+
+  const targetUser = getUserForSessionByUsername(username);
+  if (!targetUser) {
+    setFlash(req, "error", "Dieser Benutzer wurde nicht gefunden.");
+    return res.redirect("/admin");
+  }
+
+  if (Number(targetUser.id) === Number(originalAdmin.id)) {
+    setFlash(req, "error", "Das ist dein eigener Admin-Account.");
+    return res.redirect("/admin");
+  }
+
+  if (Number(targetUser.id) === Number(req.session.user?.id)) {
+    setFlash(req, "error", "Diesen Benutzer testest du bereits.");
+    return res.redirect("/dashboard");
+  }
+
+  req.session.admin_impersonator_user_id = Number(originalAdmin.id);
+  req.session.user = toSessionUser(targetUser);
+  req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
+  setFlash(req, "success", `${originalAdmin.username} testet jetzt ${targetUser.username}.`);
+  return res.redirect("/dashboard");
+});
+
 app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
 
 app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
 app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
+
+app.post("/admin/impersonation/stop", requireAuth, (req, res) => {
+  const adminUserId = Number(req.session.admin_impersonator_user_id);
+  if (!Number.isInteger(adminUserId) || adminUserId < 1) {
+    setFlash(req, "error", "Es ist kein Admin-Testmodus aktiv.");
+    return res.redirect("/dashboard");
+  }
+
+  const adminUser = getUserForSessionById(adminUserId);
+  if (!adminUser || adminUser.is_admin !== 1) {
+    clearAdminImpersonationSession(req.session);
+    req.session.user = null;
+    setFlash(req, "error", "Der Admin-Account konnte nicht wiederhergestellt werden.");
+    return res.redirect("/login");
+  }
+
+  clearAdminImpersonationSession(req.session);
+  req.session.user = toSessionUser(adminUser);
+  req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
+  setFlash(req, "success", `Du bist wieder als ${adminUser.username} eingeloggt.`);
+  return res.redirect("/admin");
+});
 
 app.post("/admin/festplays", requireAuth, requireAdmin, (req, res) => {
   const name = (req.body.name || "").trim().slice(0, 80);
