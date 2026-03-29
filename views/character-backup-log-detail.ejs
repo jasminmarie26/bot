@@ -43,6 +43,23 @@
           </summary>
 
           <div class="backup-log-entry-body">
+            <div class="backup-log-actions">
+              <form
+                method="POST"
+                action="/character-backups/logs/<%= entry.id %>/delete"
+                class="character-mini-delete-form"
+                onsubmit="return confirm('Log-Backup wirklich löschen?')"
+              >
+                <button
+                  type="submit"
+                  class="character-mini-delete-btn"
+                  aria-label="Log-Backup löschen"
+                  title="Log-Backup löschen"
+                >
+                  X
+                </button>
+              </form>
+            </div>
             <p class="backup-log-meta-line">
               <strong>Zeitraum:</strong>
               <span><%= entry.started_at_label %> bis <%= entry.ended_at_label || entry.started_at_label %></span>

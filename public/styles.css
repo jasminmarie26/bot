@@ -7207,6 +7207,12 @@ body.page-guestbook-preview::after {
   border-top: 1px solid color-mix(in srgb, var(--panel-edge) 62%, transparent);
 }
 
+.backup-log-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.7rem;
+}
+
 .backup-log-meta-line {
   margin: 0 0 0.45rem;
   display: flex;

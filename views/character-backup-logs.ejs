@@ -37,7 +37,7 @@
             <article class="character-mini-card">
               <a
                 class="character-mini-item character-log-link"
-                href="/character-backups/logs/<%= entry.character_id %>?name=<%= encodeURIComponent(entry.character_name || '') %>&server_id=<%= encodeURIComponent(entry.server_id || '') %>"
+                href="<%= entry.detail_href %>"
                 target="_blank"
                 rel="noopener noreferrer"
               >

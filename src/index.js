@@ -2685,6 +2685,28 @@ function getChatLogBackupCharactersForUser(userId) {
     .all(parsedUserId);
 }
 
+function buildChatLogBackupDetailTarget(characterId, characterName = "", serverId = "") {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 0) {
+    return "/character-backups/logs";
+  }
+
+  const searchParams = new URLSearchParams();
+  if (parsedCharacterId === 0) {
+    const normalizedCharacterName = String(characterName || "").trim();
+    const normalizedServerId = String(serverId || "").trim();
+    if (normalizedCharacterName) {
+      searchParams.set("name", normalizedCharacterName);
+    }
+    if (normalizedServerId) {
+      searchParams.set("server_id", normalizeServer(normalizedServerId));
+    }
+  }
+
+  const query = searchParams.toString();
+  return `/character-backups/logs/${parsedCharacterId}${query ? `?${query}` : ""}`;
+}
+
 function getChatLogBackupsForUserCharacter(userId, characterId, options = {}) {
   const parsedUserId = Number(userId);
   const parsedCharacterId = Number(characterId);
@@ -8758,6 +8780,7 @@ app.get("/character-backups", requireAuth, (req, res) => {
 app.get("/character-backups/logs", requireAuth, (req, res) => {
   const logCharacters = getChatLogBackupCharactersForUser(req.session.user.id).map((entry) => ({
     ...entry,
+    detail_href: buildChatLogBackupDetailTarget(entry.character_id, entry.character_name, entry.server_id),
     server_label: getServerLabel(entry.server_id),
     last_log_at_label: formatGermanDateTime(entry.last_log_at)
   }));
@@ -8804,6 +8827,56 @@ app.get("/character-backups/logs/:characterId", requireAuth, (req, res) => {
     },
     characterLogs
   });
+});
+
+app.post("/character-backups/logs/:logId/delete", requireAuth, (req, res) => {
+  const logId = Number(req.params.logId);
+  if (!Number.isInteger(logId) || logId < 1) {
+    setFlash(req, "error", "Log-Backup wurde nicht gefunden.");
+    return res.redirect("/character-backups/logs");
+  }
+
+  const existingLog = db
+    .prepare(
+      `SELECT id, character_id, character_name, server_id
+         FROM chat_log_backups
+        WHERE id = ?
+          AND user_id = ?`
+    )
+    .get(logId, req.session.user.id);
+
+  if (!existingLog) {
+    setFlash(req, "error", "Log-Backup wurde nicht gefunden.");
+    return res.redirect("/character-backups/logs");
+  }
+
+  db.prepare(
+    `DELETE FROM chat_log_backups
+      WHERE id = ?
+        AND user_id = ?`
+  ).run(logId, req.session.user.id);
+
+  const remainingLogs = getChatLogBackupsForUserCharacter(
+    req.session.user.id,
+    existingLog.character_id,
+    {
+      characterName: existingLog.character_name,
+      serverId: existingLog.server_id
+    }
+  );
+
+  setFlash(req, "success", "Log-Backup wurde geloescht.");
+  if (remainingLogs.length > 0) {
+    return res.redirect(
+      buildChatLogBackupDetailTarget(
+        existingLog.character_id,
+        existingLog.character_name,
+        existingLog.server_id
+      )
+    );
+  }
+
+  return res.redirect("/character-backups/logs");
 });
 
 app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {
