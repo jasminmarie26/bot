@@ -61,6 +61,7 @@
     <script>
       (() => {
         const NOCTRA_PATTERN = /^noctra(?:\b|\s|\[|\()/i;
+        const CRESCENTIA_PATTERN = /^crescentia(?:\b|\s|\[|\()/i;
         const TARGET_SELECTOR = [
           ".role-name-admin",
           ".staff-name-admin",
@@ -68,7 +69,7 @@
           ".topbar-user-menu-meta > strong"
         ].join(", ");
 
-        const syncNoctraHorns = (root = document) => {
+        const syncSpecialNameDecor = (root = document) => {
           const targets = [];
           if (root instanceof Element && root.matches(TARGET_SELECTOR)) {
             targets.push(root);
@@ -79,12 +80,13 @@
 
           targets.forEach((node) => {
             const label = String(node.textContent || "").trim();
-            node.classList.toggle("has-noctra-horns", NOCTRA_PATTERN.test(label));
+            node.classList.toggle("has-noctra-wings", NOCTRA_PATTERN.test(label));
+            node.classList.toggle("has-crescentia-moons", CRESCENTIA_PATTERN.test(label));
           });
         };
 
         const boot = () => {
-          syncNoctraHorns(document);
+          syncSpecialNameDecor(document);
 
           if (!document.body || typeof MutationObserver !== "function") {
             return;
@@ -93,18 +95,18 @@
           const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
               if (mutation.type === "characterData") {
-                syncNoctraHorns(mutation.target?.parentElement || document);
+                syncSpecialNameDecor(mutation.target?.parentElement || document);
                 return;
               }
 
               mutation.addedNodes.forEach((node) => {
                 if (node instanceof Element) {
-                  syncNoctraHorns(node);
+                  syncSpecialNameDecor(node);
                 }
               });
 
               if (mutation.target instanceof Element) {
-                syncNoctraHorns(mutation.target);
+                syncSpecialNameDecor(mutation.target);
               }
             });
           });
@@ -192,9 +194,15 @@
       typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
         ? `brand ${topbarBrandModifier}`
         : "brand"; %>
-    <% const topbarBrandHasNoctraHorns = String(topbarBrandText || "").trim().toLowerCase() === "noctra"; %>
-    <% const topbarBrandClassName = topbarBrandHasNoctraHorns
-      ? `${topbarBrandClass} has-noctra-horns`
+    <% const normalizedTopbarBrandText = String(topbarBrandText || "").trim().toLowerCase(); %>
+    <% const topbarBrandSpecialClass = normalizedTopbarBrandText === "noctra"
+      ? "has-noctra-wings"
+      : (normalizedTopbarBrandText === "crescentia" ? "has-crescentia-moons" : ""); %>
+    <% const topbarBrandWrapperClass = normalizedTopbarBrandText === "noctra"
+      ? "noctra-nameplate"
+      : (normalizedTopbarBrandText === "crescentia" ? "crescentia-nameplate" : ""); %>
+    <% const topbarBrandClassName = topbarBrandSpecialClass
+      ? `${topbarBrandClass} ${topbarBrandSpecialClass}`
       : topbarBrandClass; %>
     <% const topbarRoleplayAreaHref =
       menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
@@ -327,7 +335,7 @@
             <% if (currentUser) { %>
               <% if (topbarGuestbookModeActive) { %>
                 <a class="<%= `${topbarBrandClassName} brand-in-nav` %>" href="<%= topbarBrandTarget %>">
-                  <span class="<%= topbarBrandHasNoctraHorns ? 'noctra-nameplate' : '' %>"><%= topbarBrandText %></span>
+                  <span class="<%= topbarBrandWrapperClass %>"><%= topbarBrandText %></span>
                 </a>
               <% } %>
               <%- include("guestbook-notification-link") %>

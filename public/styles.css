@@ -1105,58 +1105,137 @@ a:hover {
   text-overflow: ellipsis;
 }
 
-.brand.is-character.has-noctra-horns,
-.rp-header-identity.has-noctra-horns,
-.role-name-admin.has-noctra-horns,
-.staff-name-admin.has-noctra-horns,
-.guestbook-preview-name.has-noctra-horns,
-.topbar-user-menu-meta > strong.has-noctra-horns {
+.brand.is-character.has-noctra-wings,
+.rp-header-identity.has-noctra-wings,
+.role-name-admin.has-noctra-wings,
+.staff-name-admin.has-noctra-wings,
+.guestbook-preview-name.has-noctra-wings,
+.topbar-user-menu-meta > strong.has-noctra-wings,
+.brand.is-character.has-crescentia-moons,
+.rp-header-identity.has-crescentia-moons,
+.role-name-admin.has-crescentia-moons,
+.staff-name-admin.has-crescentia-moons,
+.guestbook-preview-name.has-crescentia-moons,
+.topbar-user-menu-meta > strong.has-crescentia-moons {
   position: relative;
-  padding-inline: 0.65rem;
   overflow: visible;
   text-overflow: clip;
 }
 
-.role-name-admin.has-noctra-horns,
-.staff-name-admin.has-noctra-horns,
-.topbar-user-menu-meta > strong.has-noctra-horns {
+.brand.is-character.has-noctra-wings,
+.rp-header-identity.has-noctra-wings,
+.role-name-admin.has-noctra-wings,
+.staff-name-admin.has-noctra-wings,
+.guestbook-preview-name.has-noctra-wings,
+.topbar-user-menu-meta > strong.has-noctra-wings {
+  padding-inline: 0.9rem;
+}
+
+.brand.is-character.has-crescentia-moons,
+.rp-header-identity.has-crescentia-moons,
+.role-name-admin.has-crescentia-moons,
+.staff-name-admin.has-crescentia-moons,
+.guestbook-preview-name.has-crescentia-moons,
+.topbar-user-menu-meta > strong.has-crescentia-moons {
+  padding-inline: 0.8rem;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.role-name-admin.has-noctra-wings,
+.staff-name-admin.has-noctra-wings,
+.topbar-user-menu-meta > strong.has-noctra-wings,
+.role-name-admin.has-crescentia-moons,
+.staff-name-admin.has-crescentia-moons,
+.topbar-user-menu-meta > strong.has-crescentia-moons {
   display: inline-block;
 }
 
 .noctra-nameplate {
   position: relative;
   display: inline-block;
-  padding-inline: 0.65rem;
+  padding-inline: 0.9rem;
 }
 
-.has-noctra-horns::before,
-.has-noctra-horns::after,
+.has-noctra-wings::before,
+.has-noctra-wings::after,
 .noctra-nameplate::before,
 .noctra-nameplate::after {
   content: "";
   position: absolute;
   top: 50%;
-  width: 0.48rem;
-  height: 0.72rem;
-  background: linear-gradient(180deg, #ba263c 0%, #67111f 52%, #240308 100%);
-  box-shadow: 0 0.08rem 0.18rem rgba(0, 0, 0, 0.24);
+  width: 0.72rem;
+  height: 0.92rem;
+  background:
+    radial-gradient(circle at 72% 30%, rgba(255, 161, 182, 0.34), transparent 24%),
+    linear-gradient(180deg, #7f1022 0%, #460813 55%, #170106 100%);
+  box-shadow:
+    0 0.08rem 0.18rem rgba(0, 0, 0, 0.24),
+    0 0 0.14rem rgba(167, 28, 58, 0.26);
   pointer-events: none;
 }
 
-.has-noctra-horns::before,
+.has-noctra-wings::before,
 .noctra-nameplate::before {
-  left: 0.04rem;
-  clip-path: polygon(52% 0%, 100% 100%, 60% 82%, 24% 100%, 0% 100%, 27% 54%);
-  transform: translateY(-54%) rotate(-24deg);
-  transform-origin: bottom center;
+  left: 0.02rem;
+  clip-path: polygon(100% 8%, 78% 18%, 66% 36%, 48% 18%, 26% 32%, 18% 60%, 36% 84%, 60% 100%, 100% 72%);
+  transform: translateY(-51%) rotate(-12deg);
+  transform-origin: right center;
 }
 
-.has-noctra-horns::after,
+.has-noctra-wings::after,
 .noctra-nameplate::after {
-  right: 0.04rem;
-  clip-path: polygon(48% 0%, 100% 54%, 76% 100%, 40% 82%, 0% 100%, 0% 100%);
-  transform: translateY(-54%) rotate(24deg);
-  transform-origin: bottom center;
+  right: 0.02rem;
+  clip-path: polygon(0% 8%, 22% 18%, 34% 36%, 52% 18%, 74% 32%, 82% 60%, 64% 84%, 40% 100%, 0% 72%);
+  transform: translateY(-51%) rotate(12deg);
+  transform-origin: left center;
+}
+
+.has-crescentia-moons,
+.crescentia-nameplate {
+  font-family: "Cinzel", "Cardo", "Palatino Linotype", serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, #330075 0%, #22108d 58%, #000158 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+
+.crescentia-nameplate {
+  position: relative;
+  display: inline-block;
+  padding-inline: 0.8rem;
+}
+
+.has-crescentia-moons::before,
+.has-crescentia-moons::after,
+.crescentia-nameplate::before,
+.crescentia-nameplate::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 0.52rem;
+  height: 0.78rem;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.has-crescentia-moons::before,
+.crescentia-nameplate::before {
+  left: 0.06rem;
+  background:
+    radial-gradient(circle at 18% 50%, transparent 0 43%, #86f7ff 45% 63%, transparent 65%);
+  transform: translateY(-52%);
+}
+
+.has-crescentia-moons::after,
+.crescentia-nameplate::after {
+  right: 0.06rem;
+  background:
+    radial-gradient(circle at 82% 50%, transparent 0 43%, #86f7ff 45% 63%, transparent 65%);
+  transform: translateY(-52%);
 }
 
 .nav {
@@ -6205,7 +6284,8 @@ body.page-guestbook-preview::after {
   color: #4a4a4a;
 }
 
-.guestbook-preview-name.has-noctra-horns {
+.guestbook-preview-name.has-noctra-wings,
+.guestbook-preview-name.has-crescentia-moons {
   overflow: visible;
 }
 
