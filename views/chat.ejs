@@ -39,7 +39,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
-      <a href="<%= chatRoomListHref %>">Raumliste</a>
+      <a href="<%= chatRoomListHref %>" target="_blank" rel="noopener noreferrer">Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
