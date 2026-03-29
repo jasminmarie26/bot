@@ -12492,6 +12492,63 @@ app.get("/chat", requireAuth, (req, res) => {
   });
 });
 
+app.post("/chat/disconnect-now", requireAuth, (req, res) => {
+  const requestedSocketId = String(req.body.socketId || "").trim();
+  if (!requestedSocketId) {
+    return res.sendStatus(204);
+  }
+
+  const memberSocket = io.sockets.sockets.get(requestedSocketId);
+  if (!memberSocket || Number(memberSocket.data?.user?.id) !== Number(req.session.user?.id)) {
+    return res.sendStatus(204);
+  }
+
+  const previousRoomId =
+    Number.isInteger(memberSocket.data?.roomId) && memberSocket.data.roomId > 0
+      ? memberSocket.data.roomId
+      : null;
+  const previousServerId = ALLOWED_SERVER_IDS.has(String(memberSocket.data?.serverId || "").trim().toLowerCase())
+    ? normalizeServer(memberSocket.data.serverId)
+    : null;
+  if (!previousServerId) {
+    return res.sendStatus(204);
+  }
+
+  const previousCharacterId = getSocketPreferredCharacterId(memberSocket, previousServerId);
+  const disconnectDisplayProfile = getSocketDisplayProfile(memberSocket, previousServerId);
+
+  if (memberSocket.data.isTyping) {
+    memberSocket.data.isTyping = false;
+    emitChatTypingState(memberSocket, previousRoomId, previousServerId);
+  }
+
+  clearPendingChatDisconnect(
+    memberSocket.data.user.id,
+    previousRoomId,
+    previousServerId,
+    previousCharacterId
+  );
+
+  memberSocket.data.immediateDisconnectHandled = true;
+  memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+  memberSocket.data.roomId = null;
+  memberSocket.data.serverId = null;
+  memberSocket.data.presenceServerId = null;
+
+  finalizeChatDisconnectEntry({
+    userId: memberSocket.data.user.id,
+    characterId: previousCharacterId,
+    presenceKey: getPresenceIdentityKey(memberSocket.data.user.id, previousCharacterId),
+    roomId: previousRoomId,
+    serverId: previousServerId,
+    displayName: disconnectDisplayProfile.label || `User ${memberSocket.data.user?.id || "?"}`,
+    chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
+    skipPresence: memberSocket.data.skipDisconnectPresence === true
+  });
+  maybeRemoveEmptyRoom(previousRoomId);
+  return res.sendStatus(204);
+});
+
 function getAdminUsersOverview() {
   const userColumns = getUsersTableColumnSet();
   const emailExpr = userColumns.has("email") ? "u.email" : "'' AS email";
@@ -14883,6 +14940,51 @@ function clearPendingChatDisconnect(userId, roomId, serverId = DEFAULT_SERVER_ID
   return entry;
 }
 
+function finalizeChatDisconnectEntry(entry) {
+  if (!entry?.presenceKey) {
+    return false;
+  }
+
+  if (
+    getPresenceSocketsInChannel(entry.roomId, entry.serverId, {
+      key: entry.presenceKey
+    }).length > 0
+  ) {
+    return false;
+  }
+
+  clearChatAfkState(entry.userId, entry.roomId, entry.serverId, {
+    skipStateEmit: true,
+    skipOnlineRefresh: true
+  }, entry.characterId);
+
+  if (!entry.skipPresence) {
+    const disconnectPresenceMessage = buildRoomPresenceMessage(
+      "leave",
+      entry.displayName || `User ${entry.userId}`
+    );
+    emitSystemChatMessage(
+      entry.roomId,
+      entry.serverId,
+      disconnectPresenceMessage.text,
+      {
+        chat_text_color: "#000000",
+        system_kind: "presence",
+        presence_kind: disconnectPresenceMessage.kind,
+        presence_actor_name: disconnectPresenceMessage.actorName,
+        presence_actor_chat_text_color: entry.chatTextColor,
+        presence_suffix: disconnectPresenceMessage.suffix
+      }
+    );
+  }
+
+  emitOnlineCharacters(entry.roomId, entry.serverId);
+  void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId);
+  scheduleRoomDeletion(entry.roomId);
+  emitHomeStatsUpdate();
+  return true;
+}
+
 function schedulePendingChatDisconnect({
   userId,
   roomId,
@@ -14916,44 +15018,7 @@ function schedulePendingChatDisconnect({
 
   entry.timer = setTimeout(() => {
     pendingChatDisconnects.delete(key);
-
-    if (
-      getPresenceSocketsInChannel(entry.roomId, entry.serverId, {
-        key: entry.presenceKey
-      }).length > 0
-    ) {
-      return;
-    }
-
-    clearChatAfkState(entry.userId, entry.roomId, entry.serverId, {
-      skipStateEmit: true,
-      skipOnlineRefresh: true
-    }, entry.characterId);
-
-    if (!entry.skipPresence) {
-      const disconnectPresenceMessage = buildRoomPresenceMessage(
-        "leave",
-        entry.displayName || `User ${entry.userId}`
-      );
-      emitSystemChatMessage(
-        entry.roomId,
-        entry.serverId,
-        disconnectPresenceMessage.text,
-        {
-          chat_text_color: "#000000",
-          system_kind: "presence",
-          presence_kind: disconnectPresenceMessage.kind,
-          presence_actor_name: disconnectPresenceMessage.actorName,
-          presence_actor_chat_text_color: entry.chatTextColor,
-          presence_suffix: disconnectPresenceMessage.suffix
-        }
-      );
-    }
-
-    emitOnlineCharacters(entry.roomId, entry.serverId);
-    void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId);
-    scheduleRoomDeletion(entry.roomId);
-    emitHomeStatsUpdate();
+    finalizeChatDisconnectEntry(entry);
   }, CHAT_RECONNECT_GRACE_MS);
 
   pendingChatDisconnects.set(key, entry);
@@ -16606,6 +16671,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    if (socket.data.immediateDisconnectHandled === true) {
+      return;
+    }
+
     const previousRoomId =
       Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
         ? socket.data.roomId

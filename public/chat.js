@@ -538,8 +538,43 @@
   updateSoundToggle();
   let hasJoinedCurrentChatSession = false;
   let lastDisconnectAt = 0;
+  let immediateChatLeaveSent = false;
+
+  function notifyImmediateChatLeave() {
+    if (immediateChatLeaveSent || !socket?.id) {
+      return;
+    }
+
+    immediateChatLeaveSent = true;
+    const payload = new URLSearchParams();
+    payload.set("socketId", socket.id);
+
+    if (typeof window.navigator.sendBeacon === "function") {
+      try {
+        window.navigator.sendBeacon("/chat/disconnect-now", payload);
+        return;
+      } catch (_error) {
+        // Fall back to keepalive fetch below.
+      }
+    }
+
+    try {
+      window.fetch("/chat/disconnect-now", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: payload.toString(),
+        credentials: "same-origin",
+        keepalive: true
+      }).catch(() => {});
+    } catch (_error) {
+      // Ignore unload transport failures.
+    }
+  }
 
   socket.on("connect", () => {
+    immediateChatLeaveSent = false;
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
@@ -1567,7 +1602,11 @@
     handleTypingInput();
   });
   input.addEventListener("blur", stopTypingIndicator);
-  window.addEventListener("beforeunload", stopTypingIndicator);
+  window.addEventListener("beforeunload", () => {
+    stopTypingIndicator();
+    notifyImmediateChatLeave();
+  });
+  window.addEventListener("pagehide", notifyImmediateChatLeave);
   window.addEventListener("pointerdown", () => {
     registerChatActivity();
   });
