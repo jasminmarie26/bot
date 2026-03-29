@@ -98,7 +98,13 @@
     </p>
 
     <label class="checkbox">
-      <input id="chat-show-own-message-time" type="checkbox" />
+      <input
+        id="chat-show-own-message-time"
+        name="show_own_chat_time"
+        type="checkbox"
+        value="1"
+        <%= formValues.show_own_chat_time ? "checked" : "" %>
+      />
       <span>Eigene Chat-Nachrichten mit Uhrzeit vor dem Namen anzeigen</span>
     </label>
 
@@ -117,41 +123,5 @@
     </p>
   </section>
 <% } %>
-
-<script>
-  (() => {
-    const checkbox = document.getElementById("chat-show-own-message-time");
-    const storageKey = "chat-show-own-message-time";
-    if (!checkbox) return;
-    const legacyHintCandidates = Array.from(
-      checkbox.closest("form")?.querySelectorAll("p.muted") || []
-    );
-
-    legacyHintCandidates.forEach((node) => {
-      const text = String(node.textContent || "").trim();
-      if (
-        text.includes("Beispiel:") ||
-        text.includes("[11:30]") ||
-        text.includes("Name: Blabla")
-      ) {
-        node.remove();
-      }
-    });
-
-    try {
-      checkbox.checked = window.localStorage.getItem(storageKey) === "1";
-    } catch (_error) {
-      checkbox.checked = false;
-    }
-
-    checkbox.addEventListener("change", () => {
-      try {
-        window.localStorage.setItem(storageKey, checkbox.checked ? "1" : "0");
-      } catch (_error) {
-        // Ignore unavailable localStorage; the setting remains local-only when possible.
-      }
-    });
-  })();
-</script>
 
 <%- include("partials/end") %>

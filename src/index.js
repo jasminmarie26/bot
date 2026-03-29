@@ -2209,6 +2209,7 @@ function toSessionUser(user) {
     display_chat_text_color: displayProfile.chat_text_color || "",
     theme: normalizeTheme(user.theme),
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(user?.afk_timeout_minutes),
+    show_own_chat_time: Number(user?.show_own_chat_time) === 1,
     account_number: getAccountNumberByUserId(user.id)
   };
 }
@@ -2217,7 +2218,7 @@ function getUserForSessionById(userId) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
-              afk_timeout_minutes
+              afk_timeout_minutes, show_own_chat_time
        , admin_character_id, moderator_character_id
        FROM users
        WHERE id = ?`
@@ -2228,7 +2229,8 @@ function getUserForSessionById(userId) {
 function getAccountUserById(userId) {
   return db
     .prepare(
-      `SELECT id, username, email, birth_date, afk_timeout_minutes, is_admin, created_at, username_changed_at
+      `SELECT id, username, email, birth_date, afk_timeout_minutes, show_own_chat_time,
+              is_admin, created_at, username_changed_at
        FROM users
        WHERE id = ?`
     )
@@ -8018,6 +8020,7 @@ app.post("/account/update", requireAuth, (req, res) => {
   const email = normalizeEmail(req.body.email || "");
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
+  const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
   const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
   const usernameChanged = username !== accountUser.username;
@@ -8031,7 +8034,8 @@ app.post("/account/update", requireAuth, (req, res) => {
         username,
         email,
         birth_date: rawBirthDate,
-        afk_timeout_minutes: rawAfkTimeoutMinutes
+        afk_timeout_minutes: rawAfkTimeoutMinutes,
+        show_own_chat_time: showOwnChatTime
       }
     });
 
@@ -8079,9 +8083,18 @@ app.post("/account/update", requireAuth, (req, res) => {
          email = ?,
          birth_date = ?,
          afk_timeout_minutes = ?,
+         show_own_chat_time = ?,
          username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
      WHERE id = ?`
-  ).run(username, email, birthDate, afkTimeoutMinutes, usernameChanged ? 1 : 0, currentUserId);
+  ).run(
+    username,
+    email,
+    birthDate,
+    afkTimeoutMinutes,
+    showOwnChatTime ? 1 : 0,
+    usernameChanged ? 1 : 0,
+    currentUserId
+  );
 
   const refreshedSessionUser = refreshConnectedUserDisplay(currentUserId);
   if (refreshedSessionUser) {
@@ -16322,6 +16335,8 @@ io.on("connection", (socket) => {
 
     const displayProfile = getSocketDisplayProfile(socket, serverId);
     const createdAt = formatChatTimestamp();
+    const messageTimeIso = new Date().toISOString();
+    const showNameTime = socket.data.user?.show_own_chat_time === true;
     appendMessageToActiveRoomLog(roomId, serverId, {
       type: "chat",
       user_id: socket.data.user.id,
@@ -16329,7 +16344,9 @@ io.on("connection", (socket) => {
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
       content,
-      created_at: createdAt
+      created_at: createdAt,
+      message_time_iso: messageTimeIso,
+      show_name_time: showNameTime ? 1 : 0
     });
 
     io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
@@ -16339,7 +16356,9 @@ io.on("connection", (socket) => {
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
       content,
-      created_at: createdAt
+      created_at: createdAt,
+      message_time_iso: messageTimeIso,
+      show_name_time: showNameTime
     });
   });
 

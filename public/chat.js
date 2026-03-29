@@ -92,7 +92,6 @@
   let activeWhisperThreadUserId = null;
   let whisperSequence = 0;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
-  const ownMessageTimestampPreferenceKey = "chat-show-own-message-time";
   const chatInputHistoryLimit = 50;
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
@@ -115,8 +114,6 @@
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   let notificationAudioContext = null;
   let soundEnabled = true;
-  let showOwnMessageTimestamp = false;
-
   if (!chatBox || !form || !input) return;
 
   function readSessionStorage(key) {
@@ -403,13 +400,6 @@
     soundEnabled = true;
   }
 
-  try {
-    showOwnMessageTimestamp =
-      window.localStorage.getItem(ownMessageTimestampPreferenceKey) === "1";
-  } catch (_error) {
-    showOwnMessageTimestamp = false;
-  }
-
   function getNotificationAudioContext() {
     if (!AudioContextCtor) return null;
     if (!notificationAudioContext) {
@@ -501,12 +491,6 @@
   window.addEventListener("keydown", unlockNotificationAudio, { once: true });
   window.addEventListener("touchstart", unlockNotificationAudio, { once: true });
   window.addEventListener("click", unlockNotificationAudio, { once: true });
-  window.addEventListener("storage", (event) => {
-    if (event.key !== ownMessageTimestampPreferenceKey) {
-      return;
-    }
-    showOwnMessageTimestamp = event.newValue === "1";
-  });
   updateSoundToggle();
   let hasJoinedCurrentChatSession = false;
   let lastDisconnectAt = 0;
@@ -649,23 +633,29 @@
     return actionText;
   }
 
-  function getLocalOwnMessageTimeLabel() {
+  function getMessageTimeLabel(msg) {
+    const rawValue = String(msg?.message_time_iso || "").trim();
+    if (!rawValue) return "";
+
+    const parsedDate = new Date(rawValue);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "";
+    }
+
     try {
       return new Intl.DateTimeFormat(undefined, {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false
-      }).format(new Date());
+      }).format(parsedDate);
     } catch (_error) {
-      const now = new Date();
-      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      return `${String(parsedDate.getHours()).padStart(2, "0")}:${String(parsedDate.getMinutes()).padStart(2, "0")}`;
     }
   }
 
   function appendMessage(msg) {
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
-    const isOwnMessage = Number(msg?.user_id) === currentUserId;
     const emoteActionText = !isSystemMessage
       ? getEmoteActionText(msg?.content, msg?.username)
       : "";
@@ -674,10 +664,13 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    if (!isSystemMessage && isOwnMessage && showOwnMessageTimestamp) {
+    const messageTimeLabel = !isSystemMessage && Boolean(msg?.show_name_time)
+      ? getMessageTimeLabel(msg)
+      : "";
+    if (messageTimeLabel) {
       const timePrefix = document.createElement("span");
       timePrefix.className = "chat-own-message-time";
-      timePrefix.textContent = `[${getLocalOwnMessageTimeLabel()}] `;
+      timePrefix.textContent = `[${messageTimeLabel}] `;
       line.appendChild(timePrefix);
     }
     if (isSystemMessage) {
