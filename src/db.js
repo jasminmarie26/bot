@@ -1229,6 +1229,47 @@ function normalizeLegacyAccountNumbers() {
 
 normalizeLegacyAccountNumbers();
 
+function ensureOneTimeSiteUpdateAnnouncement() {
+  const announcementContent =
+    "\u2728 Kleine Aufraeumrunde: Im Gaestebuch-/Design-Bereich und im Account ist jetzt einiges in Tabellen sortiert und dadurch aufgeraeumter und uebersichtlicher geworden, damit man schneller findet, was man sucht \uD83D\uDCCB\uD83D\uDC8C";
+  const existingAnnouncement = db
+    .prepare("SELECT id FROM site_updates WHERE trim(content) = ? LIMIT 1")
+    .get(announcementContent);
+  if (existingAnnouncement) {
+    return;
+  }
+
+  const adminUser = db
+    .prepare(
+      `SELECT id, username
+         FROM users
+        WHERE is_admin = 1
+        ORDER BY CASE
+          WHEN trim(COALESCE(account_number, '')) GLOB '[0-9]*'
+            AND trim(COALESCE(account_number, '')) != ''
+          THEN CAST(account_number AS INTEGER)
+          ELSE 2147483647
+        END ASC,
+        id ASC
+        LIMIT 1`
+    )
+    .get();
+  if (!adminUser) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO site_updates (author_id, author_name, content, updated_at)
+     VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
+  ).run(
+    adminUser.id,
+    String(adminUser.username || "").trim() || "Administration",
+    announcementContent
+  );
+}
+
+ensureOneTimeSiteUpdateAnnouncement();
+
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_number_unique
   ON users(account_number)
