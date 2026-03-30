@@ -4008,6 +4008,48 @@ body.page-home-screen .home-hero-actions {
   font-size: 0.9rem;
 }
 
+.account-layout {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.account-layout h2,
+.account-layout .muted {
+  margin: 0;
+}
+
+.account-overview-table td:first-child,
+.account-settings-table td:first-child {
+  width: 24%;
+}
+
+.account-settings-table td:nth-child(2) {
+  width: 31%;
+}
+
+.account-table-field {
+  display: block;
+}
+
+.account-table-field input {
+  width: 100%;
+}
+
+.account-table-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.account-table-checkbox span {
+  line-height: 1.3;
+}
+
+.account-settings-actions {
+  margin-top: 0.15rem;
+}
+
 .admin-user-forms {
   display: grid;
   gap: 0.65rem;
