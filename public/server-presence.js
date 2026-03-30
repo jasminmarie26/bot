@@ -195,7 +195,7 @@
     if (watchMode === "count-only") {
       const countState = document.createElement("span");
       countState.className = "muted";
-      countState.textContent = `User: ${Array.isArray(entries) ? entries.length : 0}`;
+      countState.textContent = `User Online: ${Array.isArray(entries) ? entries.length : 0}`;
       target.appendChild(countState);
       scheduleOwnedRoomRowSeparators();
       return;
