@@ -13526,10 +13526,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
 
   const nextRoomNameKey = toRoomNameKey(roomName);
   const currentRoomNameKey = toRoomNameKey(room.name);
-  const ignoreConflictForCuratedRoom =
-    isCuratedPublicRoom(room, character.server_id) &&
-    nextRoomNameKey === currentRoomNameKey;
-  const conflictingRoom = ignoreConflictForCuratedRoom
+  const conflictingRoom = nextRoomNameKey === currentRoomNameKey
     ? null
     : findOwnedRoomByNameKey(
         req.session.user.id,
