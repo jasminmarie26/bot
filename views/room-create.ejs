@@ -158,10 +158,12 @@
                     <rect x="6.35" y="10.02" width="11.3" height="9.28" rx="2.15" ry="2.15"/>
                     <path d="M12 13.15v2.8"/>
                   </svg></span>
-                  <span class="rp-room-inline-name"><%= room.name %></span>
-                  <% if (room.description) { %>
-                    <span class="rp-room-inline-teaser"> - [<%= room.description %>]</span>
-                  <% } %>
+                  <span class="rp-room-manage-text">
+                    <span class="rp-room-inline-name"><%= room.name %></span>
+                    <% if (room.description) { %>
+                      <span class="rp-room-manage-description"><%= room.description %></span>
+                    <% } %>
+                  </span>
                 </a>
                 <form
                   method="POST"
@@ -189,7 +191,7 @@
           <div class="rp-room-editor-title-wrap">
             <strong class="rp-room-editor-title"><%= selectedRoom.name %></strong>
             <% if (selectedRoom.description) { %>
-              <span class="rp-room-inline-teaser"> - [<%= selectedRoom.description %>]</span>
+              <span class="rp-room-editor-subtitle"><%= selectedRoom.description %></span>
             <% } %>
           </div>
           <a

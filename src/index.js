@@ -5241,11 +5241,18 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
 
   const dedupedRooms = [];
   const seenRooms = new Map();
+  const curatedRoomKeys = new Set(
+    getCuratedPublicRoomDefinitionsForServer(normalizedServerId)
+      .map((definition) => String(definition?.key || "").trim().toLowerCase() || toRoomNameKey(definition?.name || ""))
+      .filter(Boolean)
+  );
 
   rooms.forEach((room) => {
-    const roomNameKey = String(room?.name_key || "").trim().toLowerCase() || toRoomNameKey(room?.name || "");
+    const roomNameKey = toRoomNameKey(room?.name || "") || String(room?.name_key || "").trim().toLowerCase();
     const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
-    const dedupeKey = `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
+    const dedupeKey = curatedRoomKeys.has(roomNameKey)
+      ? `${normalizeServer(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
+      : `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
     const existingIndex = seenRooms.get(dedupeKey);
 
     if (existingIndex == null) {
@@ -5255,7 +5262,13 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
     }
 
     const existingRoom = dedupedRooms[existingIndex];
-    if (!existingRoom?.is_public_room && room.is_public_room) {
+    const shouldReplaceExistingRoom =
+      (!existingRoom?.is_public_room && room.is_public_room) ||
+      (Boolean(existingRoom?.is_public_room) === Boolean(room.is_public_room) &&
+        Number(room?.id) > 0 &&
+        (!Number(existingRoom?.id) || Number(room.id) < Number(existingRoom.id)));
+
+    if (shouldReplaceExistingRoom) {
       dedupedRooms[existingIndex] = room;
     }
   });
