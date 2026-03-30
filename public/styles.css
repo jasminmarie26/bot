@@ -3467,6 +3467,13 @@ body.page-home-screen .home-hero-actions {
     width: auto;
     white-space: normal;
   }
+
+  .admin-settings-table td:last-child,
+  .admin-suspicious-table td:last-child,
+  .admin-user-table td:last-child,
+  .staff-overview-table td:last-child {
+    white-space: normal;
+  }
 }
 
 .dashboard-server-list {
@@ -4048,6 +4055,60 @@ body.page-home-screen .home-hero-actions {
 
 .account-settings-actions {
   margin-top: 0.15rem;
+}
+
+.admin-overview-table td:first-child,
+.staff-overview-table td:first-child {
+  width: 22%;
+}
+
+.admin-settings-table td:first-child {
+  width: 18%;
+}
+
+.admin-settings-table td:nth-child(2) {
+  width: 34%;
+}
+
+.admin-suspicious-table td:first-child,
+.admin-user-table td:first-child {
+  width: 22%;
+}
+
+.admin-user-table td:nth-child(4) {
+  width: 16%;
+}
+
+.admin-settings-table td:last-child,
+.admin-suspicious-table td:last-child,
+.admin-user-table td:last-child,
+.staff-overview-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.admin-table-subline {
+  display: grid;
+  gap: 0.16rem;
+  margin-top: 0.22rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.admin-table-badges,
+.admin-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.admin-user-row[hidden] {
+  display: none;
+}
+
+.admin-overview-note {
+  margin-top: 0.1rem;
 }
 
 .admin-user-forms {

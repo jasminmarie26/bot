@@ -1277,6 +1277,47 @@ function ensureOneTimeSiteUpdateAnnouncement() {
 
 ensureOneTimeSiteUpdateAnnouncement();
 
+function ensureChatUpdateAnnouncement() {
+  const announcementContent =
+    "\uD83D\uDCAC Im Chat gibt es jetzt keine feste Zeichenbegrenzung mehr. Au\u00dferdem wurde die Hilfe mit richtigen Umlauten und klareren Hinweisen weiter aufger\u00e4umt \u2728";
+  const existingAnnouncement = db
+    .prepare("SELECT id FROM site_updates WHERE trim(content) = ? ORDER BY id DESC LIMIT 1")
+    .get(announcementContent);
+  if (existingAnnouncement) {
+    return;
+  }
+
+  const adminUser = db
+    .prepare(
+      `SELECT id, username
+         FROM users
+        WHERE is_admin = 1
+        ORDER BY CASE
+          WHEN trim(COALESCE(account_number, '')) GLOB '[0-9]*'
+            AND trim(COALESCE(account_number, '')) != ''
+          THEN CAST(account_number AS INTEGER)
+          ELSE 2147483647
+        END ASC,
+        id ASC
+        LIMIT 1`
+    )
+    .get();
+  if (!adminUser) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO site_updates (author_id, author_name, content, updated_at)
+     VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
+  ).run(
+    adminUser.id,
+    String(adminUser.username || "").trim() || "Administration",
+    announcementContent
+  );
+}
+
+ensureChatUpdateAnnouncement();
+
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_number_unique
   ON users(account_number)

@@ -6,99 +6,157 @@
       sensitivity: "base"
     })
   );
-  const groupedUsers = sortedUsers.reduce((groups, user) => {
-    const firstChar = String(user.username || "").trim().charAt(0).toUpperCase();
-    const letter = /[A-ZÄÖÜ]/i.test(firstChar) ? firstChar : "#";
-    if (!groups[letter]) {
-      groups[letter] = [];
-    }
-    groups[letter].push(user);
-    return groups;
-  }, {});
-  const userLetters = Object.keys(groupedUsers).sort((a, b) =>
-    a.localeCompare(b, "de", { sensitivity: "base" })
-  );
   const overviewTitle = panelTitle || "Adminbereich";
   const detailBasePath = userDetailsBasePath || "/admin/users";
   const allowUserDeletion =
     typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
 %>
 
-<section class="panel">
-  <h1><%= overviewTitle %></h1>
-  <p class="muted">Accounts gesamt: <strong><%= accountCount %></strong></p>
-  <p class="muted">Aktuelle Admins: <strong><%= adminCount %></strong></p>
-  <p class="muted">Aktuelle Moderatoren: <strong><%= moderatorCount %></strong></p>
+<section class="panel account-layout">
+  <div class="header-line">
+    <div>
+      <h1><%= overviewTitle %></h1>
+      <p class="muted">Hier ist alles gesammelt und als Tabelle aufger&auml;umt.</p>
+    </div>
+  </div>
+
+  <div class="help-table-wrap">
+    <table class="help-table admin-overview-table">
+      <thead>
+        <tr>
+          <th>Bereich</th>
+          <th>Wert</th>
+          <th>Hinweis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Accounts gesamt</td>
+          <td><strong><%= accountCount %></strong></td>
+          <td>Alle aktuell registrierten Konten auf der Plattform.</td>
+        </tr>
+        <tr>
+          <td>Admins</td>
+          <td><strong><%= adminCount %></strong></td>
+          <td>Benutzer mit vollem Zugriff auf Verwaltung, Rollen und Einstellungen.</td>
+        </tr>
+        <tr>
+          <td>Moderatoren</td>
+          <td><strong><%= moderatorCount %></strong></td>
+          <td>Benutzer mit Moderationsrechten ohne kompletten Adminzugriff.</td>
+        </tr>
+        <tr>
+          <td>Verd&auml;chtige Accounts</td>
+          <td><strong><%= suspiciousUsers?.length || 0 %></strong></td>
+          <td>Auff&auml;llige Konten mit schneller Pr&uuml;fung und Direktzugriff.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
-<section class="panel">
+<section class="panel account-layout">
   <h2>Als Benutzer testen</h2>
-  <p class="muted">
-    Admins k&ouml;nnen sich hier testweise mit einem anderen Benutzernamen anmelden,
-    ohne dessen Passwort zu brauchen.
-  </p>
-  <form method="POST" action="/admin/impersonate" class="admin-inline-form">
-    <label>
-      Benutzername
-      <input
-        name="username"
-        type="text"
-        maxlength="24"
-        autocomplete="off"
-        placeholder="Benutzername eingeben"
-        required
-      />
-    </label>
-    <button class="btn" type="submit">Testmodus starten</button>
+  <p class="muted">Der Testmodus startet direkt aus der Tabelle.</p>
+
+  <form method="POST" action="/admin/impersonate" class="form admin-settings-form">
+    <div class="help-table-wrap">
+      <table class="help-table admin-settings-table">
+        <thead>
+          <tr>
+            <th>Funktion</th>
+            <th>Eingabe</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Testmodus</td>
+            <td>
+              <label class="account-table-field">
+                <input
+                  name="username"
+                  type="text"
+                  maxlength="24"
+                  autocomplete="off"
+                  placeholder="Benutzername eingeben"
+                  required
+                />
+              </label>
+            </td>
+            <td>
+              <button class="btn" type="submit">Testmodus starten</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </form>
 </section>
 
 <% if (suspiciousUsers && suspiciousUsers.length) { %>
-  <section class="panel">
-    <h2>Verdächtige Accounts</h2>
-    <p class="muted">
-      Hier siehst du auffällige Accounts gesammelt, damit du sie schnell prüfen oder
-      löschen kannst.
-    </p>
+  <section class="panel account-layout">
+    <h2>Verd&auml;chtige Accounts</h2>
+    <p class="muted">Auff&auml;llige Konten mit schnellem Direktzugriff.</p>
 
-    <div class="list">
-      <% suspiciousUsers.forEach((user) => { %>
-        <article class="list-item admin-user-card suspicious-user-card">
-          <div class="admin-user-meta">
-            <strong><%= user.username %></strong>
-            <span>E-Mail: <%= user.email || "-" %></span>
-            <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
-            <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
-            <span>Gründe: <%= user.suspicion_reasons.join(", ") %></span>
-          </div>
-          <div class="dashboard-server-actions">
-            <a
-              class="btn btn-secondary"
-              href="<%= `${detailBasePath}/${user.id}` %>"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Prüfen
-            </a>
-            <% if (allowUserDeletion && user.id !== currentUser.id) { %>
-              <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                <button class="btn btn-danger" type="submit">Löschen</button>
-              </form>
-            <% } %>
-          </div>
-        </article>
-      <% }) %>
+    <div class="help-table-wrap">
+      <table class="help-table admin-suspicious-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Daten</th>
+            <th>Gr&uuml;nde</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% suspiciousUsers.forEach((user) => { %>
+            <tr>
+              <td>
+                <strong><%= user.username %></strong>
+                <div class="admin-table-subline">
+                  <span>#<%= user.account_number %></span>
+                  <span>IP: <%= user.last_login_ip || "-" %></span>
+                </div>
+              </td>
+              <td>
+                <div class="admin-table-subline">
+                  <span>E-Mail: <%= user.email || "-" %></span>
+                  <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
+                </div>
+              </td>
+              <td><%= user.suspicion_reasons.join(", ") %></td>
+              <td>
+                <div class="admin-table-actions">
+                  <a
+                    class="btn btn-secondary"
+                    href="<%= `${detailBasePath}/${user.id}` %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Pr&uuml;fen
+                  </a>
+                  <% if (allowUserDeletion && user.id !== currentUser.id) { %>
+                    <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
+                      <button class="btn btn-danger" type="submit">L&ouml;schen</button>
+                    </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
     </div>
   </section>
 <% } %>
 
-<section class="panel">
+<section class="panel account-layout">
   <div class="header-line">
     <div>
       <h2>Benutzerverwaltung</h2>
       <p class="muted">
-        Klicke auf einen Namen. Die Details öffnen sich in einem neuen Tab, dort
-        findest du unten auch die Charaktere und Gästebücher.
+        Die Details &ouml;ffnen sich in einem neuen Tab. Dort findest du unten auch Charaktere und G&auml;steb&uuml;cher.
       </p>
     </div>
   </div>
@@ -114,75 +172,87 @@
         autocomplete="off"
       />
     </label>
-
-    <% if (userLetters.length) { %>
-      <nav class="admin-letter-bar" aria-label="Benutzer nach Buchstaben">
-        <% userLetters.forEach((letter) => { %>
-          <a class="admin-letter-link" href="#admin-letter-<%= encodeURIComponent(letter) %>"><%= letter %></a>
-        <% }) %>
-      </nav>
-    <% } %>
   </div>
 
   <% if (!sortedUsers.length) { %>
     <p class="muted">Noch keine Benutzer vorhanden.</p>
   <% } else { %>
-    <div class="admin-user-groups">
-      <% userLetters.forEach((letter) => { %>
-        <section
-          id="admin-letter-<%= encodeURIComponent(letter) %>"
-          class="admin-letter-group"
-          data-letter-group
-        >
-          <div class="admin-letter-heading">
-            <h3><%= letter %></h3>
-            <span><%= groupedUsers[letter].length %> Benutzer</span>
-          </div>
-
-          <div class="admin-name-grid">
-            <% groupedUsers[letter].forEach((user) => { %>
-              <%
-                const searchValues = [
-                  user.username,
-                  user.email,
-                  user.birth_date,
-                  user.last_login_ip,
-                  user.created_at
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-              %>
-              <a
-                class="admin-user-link"
-                href="<%= `${detailBasePath}/${user.id}` %>"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-user-link
-                data-search="<%= searchValues %>"
-              >
-                <span class="admin-user-link-top">
-                  <span class="admin-user-link-name"><%= user.username %></span>
-                  <span class="admin-user-link-meta">#<%= user.account_number %></span>
-                </span>
-                <span class="admin-user-link-details">
-                  <span>E-Mail: <%= user.email || "-" %></span>
-                  <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
-                </span>
-                <span class="admin-user-link-badges">
+    <div class="help-table-wrap">
+      <table class="help-table admin-user-table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>E-Mail</th>
+            <th>Geburtsdatum</th>
+            <th>Rollen</th>
+            <th>Status</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% sortedUsers.forEach((user) => { %>
+            <%
+              const searchValues = [
+                user.username,
+                user.email,
+                user.birth_date,
+                user.last_login_ip,
+                user.created_at,
+                user.account_number
+              ]
+                .filter(Boolean)
+                .join(" ");
+            %>
+            <tr class="admin-user-row" data-user-row data-search="<%= searchValues %>">
+              <td>
+                <strong><%= user.username %></strong>
+                <div class="admin-table-subline">
+                  <span>#<%= user.account_number %></span>
+                  <span>Erstellt: <%= user.created_at || "-" %></span>
+                </div>
+              </td>
+              <td><%= user.email || "-" %></td>
+              <td><%= user.birth_date || "-" %></td>
+              <td>
+                <div class="admin-table-badges">
                   <% if (user.is_admin) { %>
                     <span class="admin-role-badge is-admin">Admin</span>
-                  <% } else if (user.is_moderator) { %>
+                  <% } %>
+                  <% if (user.is_moderator) { %>
                     <span class="admin-role-badge is-moderator">Moderator</span>
                   <% } %>
-                  <% if (user.is_suspicious) { %>
-                    <span class="admin-role-badge is-suspicious">Verdächtig</span>
+                  <% if (!user.is_admin && !user.is_moderator) { %>
+                    <span class="admin-role-badge">User</span>
                   <% } %>
-                </span>
-              </a>
-            <% }) %>
-          </div>
-        </section>
-      <% }) %>
+                </div>
+              </td>
+              <td>
+                <div class="admin-table-subline">
+                  <span><%= user.is_suspicious ? "Verd&auml;chtig" : "Unauff&auml;llig" %></span>
+                  <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
+                </div>
+              </td>
+              <td>
+                <div class="admin-table-actions">
+                  <a
+                    class="btn btn-secondary"
+                    href="<%= `${detailBasePath}/${user.id}` %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Details
+                  </a>
+                  <% if (allowUserDeletion && user.id !== currentUser.id) { %>
+                    <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
+                      <button class="btn btn-danger" type="submit">L&ouml;schen</button>
+                    </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
     </div>
   <% } %>
 </section>
@@ -192,10 +262,10 @@
     const normalizeSearchValue = (value) =>
       String(value || "")
         .toLowerCase()
-        .replace(/ä/g, "ae")
-        .replace(/ö/g, "oe")
-        .replace(/ü/g, "ue")
-        .replace(/ß/g, "ss")
+        .replace(/\u00E4/g, "ae")
+        .replace(/\u00F6/g, "oe")
+        .replace(/\u00FC/g, "ue")
+        .replace(/\u00DF/g, "ss")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
@@ -203,22 +273,14 @@
       const searchInput = document.getElementById("admin-user-search");
       if (!searchInput) return;
 
-      const userLinks = Array.from(document.querySelectorAll("[data-user-link]"));
-      const letterGroups = Array.from(document.querySelectorAll("[data-letter-group]"));
+      const userRows = Array.from(document.querySelectorAll("[data-user-row]"));
 
       const applyFilter = () => {
         const query = normalizeSearchValue(searchInput.value);
 
-        userLinks.forEach((link) => {
-          const haystack = normalizeSearchValue(link.getAttribute("data-search"));
-          link.hidden = Boolean(query) && !haystack.includes(query);
-        });
-
-        letterGroups.forEach((group) => {
-          const hasVisibleLinks = Array.from(group.querySelectorAll("[data-user-link]")).some(
-            (link) => !link.hidden
-          );
-          group.hidden = !hasVisibleLinks;
+        userRows.forEach((row) => {
+          const haystack = normalizeSearchValue(row.getAttribute("data-search"));
+          row.hidden = Boolean(query) && !haystack.includes(query);
         });
       };
 
