@@ -5581,7 +5581,7 @@ function parseWhisperCommandArguments(rawArgs) {
   if (quotedMatch) {
     return {
       targetName: normalizeInviteTargetName(quotedMatch[1]),
-      message: String(quotedMatch[2] || "").trim().slice(0, 500)
+      message: String(quotedMatch[2] || "").trim()
     };
   }
 
@@ -5589,7 +5589,7 @@ function parseWhisperCommandArguments(rawArgs) {
   if (singleQuotedMatch) {
     return {
       targetName: normalizeInviteTargetName(singleQuotedMatch[1]),
-      message: String(singleQuotedMatch[2] || "").trim().slice(0, 500)
+      message: String(singleQuotedMatch[2] || "").trim()
     };
   }
 
@@ -5597,7 +5597,7 @@ function parseWhisperCommandArguments(rawArgs) {
   if (plainMatch) {
     return {
       targetName: normalizeInviteTargetName(plainMatch[1]),
-      message: String(plainMatch[2] || "").trim().slice(0, 500)
+      message: String(plainMatch[2] || "").trim()
     };
   }
 
@@ -8019,16 +8019,32 @@ function decorateSiteUpdate(siteUpdate) {
 
   return {
     ...siteUpdate,
+    author_name: getSiteUpdateAuthorName(siteUpdate),
     display_timestamp: normalizeSiteUpdateDisplayTimestamp(revisionBase),
     revision_token: revisionToken,
     content_html: renderGuestbookBbcode(siteUpdate.content || "")
   };
 }
 
+function getSiteUpdateAuthorName(siteUpdate) {
+  const fallbackName = String(siteUpdate?.author_name || "").trim() || "Administration";
+  const authorId = Number(siteUpdate?.author_id);
+  if (!Number.isInteger(authorId) || authorId < 1) {
+    return fallbackName;
+  }
+
+  const authorUser = getUserForSessionById(authorId);
+  if (!authorUser) {
+    return fallbackName;
+  }
+
+  return String(getUserDisplayProfile(authorUser).label || "").trim() || fallbackName;
+}
+
 function getSiteUpdateById(updateId) {
   const siteUpdate = db
     .prepare(
-      `SELECT id, author_name, content, created_at, updated_at
+      `SELECT id, author_id, author_name, content, created_at, updated_at
        FROM site_updates
        WHERE id = ?`
     )
@@ -8045,7 +8061,7 @@ function getRecentSiteUpdates(limit = 10) {
 
   return db
     .prepare(
-      `SELECT id, author_name, content, created_at, updated_at
+      `SELECT id, author_id, author_name, content, created_at, updated_at
        FROM site_updates
        ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC
        LIMIT ?`
@@ -8057,7 +8073,7 @@ function getRecentSiteUpdates(limit = 10) {
 function getAllSiteUpdates() {
   return db
     .prepare(
-      `SELECT id, author_name, content, created_at, updated_at
+      `SELECT id, author_id, author_name, content, created_at, updated_at
        FROM site_updates
        ORDER BY COALESCE(NULLIF(updated_at, ''), created_at) DESC, id DESC`
     )
@@ -9919,7 +9935,7 @@ app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
       `INSERT INTO site_updates (author_id, author_name, content, updated_at)
        VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
     )
-    .run(req.session.user.id, req.session.user.username, content);
+    .run(req.session.user.id, req.session.user.display_name || req.session.user.username, content);
 
   const saved = getSiteUpdateById(info.lastInsertRowid);
 
@@ -15192,7 +15208,7 @@ function findWhisperTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_
 }
 
 function emitWhisperBetweenUsers(senderSocket, targetUserId, content, serverId = DEFAULT_SERVER_ID, roomId = null) {
-  const normalizedContent = String(content || "").trim().slice(0, 500);
+  const normalizedContent = String(content || "").trim();
   const parsedTargetUserId = Number(targetUserId);
   if (
     !senderSocket?.data?.user ||
@@ -17293,7 +17309,7 @@ io.on("connection", (socket) => {
       emitChatTypingState(socket, roomId, serverId);
     }
 
-    const content = rawMessage.trim().slice(0, 500);
+    const content = rawMessage.trim();
     if (!content) return;
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
     const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
@@ -18256,7 +18272,7 @@ io.on("connection", (socket) => {
     if (!payload || typeof payload !== "object") return;
 
     const targetUserId = Number(payload.targetUserId);
-    const content = String(payload.content || "").trim().slice(0, 500);
+    const content = String(payload.content || "").trim();
     if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
       return;
     }

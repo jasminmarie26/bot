@@ -8815,6 +8815,12 @@ select:focus {
   white-space: pre-wrap;
 }
 
+.chat-box .chat-message strong,
+.chat-box .chat-message span {
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .chat-own-message-time {
   color: var(--muted);
   font-weight: 600;

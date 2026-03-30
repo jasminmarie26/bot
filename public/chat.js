@@ -302,7 +302,7 @@
       }
 
       return parsed
-        .map((entry) => String(entry || "").trim().slice(0, 500))
+        .map((entry) => String(entry || "").trim())
         .filter(Boolean)
         .slice(-chatInputHistoryLimit);
     } catch (_error) {
@@ -319,11 +319,11 @@
   }
 
   function getStoredChatDraft() {
-    return String(readSessionStorage(chatInputDraftKey) || "").slice(0, 500);
+    return String(readSessionStorage(chatInputDraftKey) || "");
   }
 
   function rememberChatDraft(value) {
-    const nextValue = String(value || "").slice(0, 500);
+    const nextValue = String(value || "");
     if (!nextValue.trim()) {
       return;
     }
@@ -371,7 +371,7 @@
   }
 
   function rememberSentChatMessage(value) {
-    const nextValue = String(value || "").trim().slice(0, 500);
+    const nextValue = String(value || "").trim();
     if (!nextValue) {
       return;
     }
@@ -403,7 +403,7 @@
   }
 
   function applyChatInputValue(value) {
-    const nextValue = String(value || "").slice(0, 500);
+    const nextValue = String(value || "");
     input.value = nextValue;
     if (typeof input.setSelectionRange === "function") {
       input.setSelectionRange(nextValue.length, nextValue.length);
