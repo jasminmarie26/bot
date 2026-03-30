@@ -47,14 +47,15 @@
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
   let currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
-  const autoAfkEnabled = chatBox?.dataset?.autoAfkEnabled !== "0";
-  const afkTimeoutMinutesRaw = Number(chatBox?.dataset?.afkTimeoutMinutes || "");
-  const afkTimeoutMinutes =
-    Number.isInteger(afkTimeoutMinutesRaw) && afkTimeoutMinutesRaw >= 5 && afkTimeoutMinutesRaw <= 240
-      ? afkTimeoutMinutesRaw
-      : 20;
+  function parseClientAfkTimeoutMinutes(value) {
+    const parsedValue = Number(value);
+    return Number.isInteger(parsedValue) && parsedValue >= 5 && parsedValue <= 240 ? parsedValue : 20;
+  }
+
+  let autoAfkEnabled = chatBox?.dataset?.autoAfkEnabled !== "0";
+  let afkTimeoutMinutes = parseClientAfkTimeoutMinutes(chatBox?.dataset?.afkTimeoutMinutes || "");
   const showChatMessageTimestamps = chatBox?.dataset?.showChatTimestamps === "1";
-  const afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
+  let afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   const chatInputHistoryKey = [
     "chat-input-history",
@@ -464,6 +465,7 @@
 
   function updateHeaderIdentity(payload) {
     updateCurrentPresenceIdentity(payload);
+    applyAfkPreferences(payload);
     if (!headerIdentity) return;
     const nextName = String(payload?.name || "").trim();
     const nextColor = normalizeChatTextColor(payload?.chat_text_color);
@@ -476,6 +478,44 @@
     if (chatBox) {
       chatBox.dataset.currentDisplayName = nextName;
     }
+  }
+
+  function applyAfkPreferences(payload) {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    const hasAutoAfkEnabled = Object.prototype.hasOwnProperty.call(payload, "auto_afk_enabled");
+    const hasAfkTimeoutMinutes = Object.prototype.hasOwnProperty.call(payload, "afk_timeout_minutes");
+    if (!hasAutoAfkEnabled && !hasAfkTimeoutMinutes) {
+      return;
+    }
+
+    autoAfkEnabled = hasAutoAfkEnabled
+      ? payload.auto_afk_enabled === true || payload.auto_afk_enabled === 1 || payload.auto_afk_enabled === "1"
+      : autoAfkEnabled;
+    afkTimeoutMinutes = hasAfkTimeoutMinutes
+      ? parseClientAfkTimeoutMinutes(payload.afk_timeout_minutes)
+      : afkTimeoutMinutes;
+    afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
+
+    if (chatBox) {
+      chatBox.dataset.autoAfkEnabled = autoAfkEnabled ? "1" : "0";
+      chatBox.dataset.afkTimeoutMinutes = String(afkTimeoutMinutes);
+    }
+
+    if (!autoAfkEnabled) {
+      clearAfkTimer();
+      if (isCurrentChannelAfk && currentAfkMode === "auto") {
+        socket.emit("chat:activity");
+        isCurrentChannelAfk = false;
+        currentAfkMode = "";
+        clearStoredAfkState();
+      }
+      return;
+    }
+
+    scheduleAfkTimer();
   }
 
   let renderedChatMessages = [];

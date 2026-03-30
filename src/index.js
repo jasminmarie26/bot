@@ -15597,7 +15597,9 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     name: profile.label || memberSocket?.data?.user?.display_name || memberSocket?.data?.user?.username || "User",
     role_style: profile.role_style || "",
     chat_text_color: profile.chat_text_color || "",
-    character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId)
+    character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId),
+    auto_afk_enabled: normalizeAutoAfkEnabled(memberSocket?.data?.user?.auto_afk_enabled),
+    afk_timeout_minutes: normalizeAfkTimeoutMinutes(memberSocket?.data?.user?.afk_timeout_minutes)
   });
 }
 
