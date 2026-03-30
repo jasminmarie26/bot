@@ -98,6 +98,7 @@
   const typingIdleDelayMs = 1400;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   let notificationAudioContext = null;
+  let notificationAudioUnlockListenersBound = false;
   let entrySoundEnabled = true;
   let messageSoundEnabled = true;
   let isSoundPanelOpen = false;
@@ -655,18 +656,66 @@
     if (!AudioContextCtor) return null;
     if (!notificationAudioContext) {
       notificationAudioContext = new AudioContextCtor();
+      if (typeof notificationAudioContext.addEventListener === "function") {
+        notificationAudioContext.addEventListener("statechange", syncNotificationAudioUnlockState);
+      }
     }
     return notificationAudioContext;
   }
 
+  function removeNotificationAudioUnlockListeners() {
+    if (!notificationAudioUnlockListenersBound) {
+      return;
+    }
+
+    window.removeEventListener("pointerdown", unlockNotificationAudio);
+    window.removeEventListener("keydown", unlockNotificationAudio);
+    window.removeEventListener("touchstart", unlockNotificationAudio);
+    window.removeEventListener("click", unlockNotificationAudio);
+    notificationAudioUnlockListenersBound = false;
+  }
+
+  function bindNotificationAudioUnlockListeners() {
+    if (notificationAudioUnlockListenersBound) {
+      return;
+    }
+
+    window.addEventListener("pointerdown", unlockNotificationAudio);
+    window.addEventListener("keydown", unlockNotificationAudio);
+    window.addEventListener("touchstart", unlockNotificationAudio);
+    window.addEventListener("click", unlockNotificationAudio);
+    notificationAudioUnlockListenersBound = true;
+  }
+
+  function syncNotificationAudioUnlockState() {
+    const context = notificationAudioContext;
+    if (!context) {
+      return;
+    }
+
+    if (context.state === "running") {
+      removeNotificationAudioUnlockListeners();
+      return;
+    }
+
+    bindNotificationAudioUnlockListeners();
+  }
+
   async function unlockNotificationAudio() {
     const context = getNotificationAudioContext();
-    if (!context || context.state !== "suspended") return;
+    if (!context) return;
+    if (context.state === "running") {
+      syncNotificationAudioUnlockState();
+      return;
+    }
+
     try {
       await context.resume();
     } catch (_error) {
-      // Ignore resume failures; the user can still keep the toggle enabled.
+      // Ignore resume failures for now and keep listening for the next real user gesture.
     }
+
+    syncNotificationAudioUnlockState();
   }
 
   function isAnySoundEnabled() {
@@ -841,10 +890,7 @@
     });
   }
 
-  window.addEventListener("pointerdown", unlockNotificationAudio, { once: true });
-  window.addEventListener("keydown", unlockNotificationAudio, { once: true });
-  window.addEventListener("touchstart", unlockNotificationAudio, { once: true });
-  window.addEventListener("click", unlockNotificationAudio, { once: true });
+  bindNotificationAudioUnlockListeners();
   updateSoundToggle();
   let hasJoinedCurrentChatSession = false;
   let lastDisconnectAt = 0;
