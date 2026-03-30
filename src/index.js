@@ -5840,8 +5840,8 @@ const CURATED_PUBLIC_ROOM_DEFINITIONS = Object.freeze({
       key: "zum-silbermond-krug",
       section: "Fantasy Räume",
       name: "Zum Silbermond-Krug",
-      teaser: "Taverne für Begegnungen bei Met, Musik und Geschichten.",
-      description: "Eine warme Taverne mit knisterndem Kamin, dunklem Holz und genug Raum für Reisende, Magier, Söldner und nächtliche Gestalten."
+      teaser: "[b]Wirt: Edric Mühlenbrand[/b]\nEin ruhiger Wirt mit warmer Stimme, der Gäste mit Met, Eintopf und einem offenen Ohr begrüßt.",
+      description: "Warme Taverne für Reisende, Met und Geschichten."
     }
   ],
   erp: []
@@ -8003,7 +8003,7 @@ function resolveCuratedPublicRoomAnchor(serverId) {
   const normalizedServerId = normalizeServer(serverId);
   const anchor = db
     .prepare(
-      `SELECT c.id AS character_id, c.user_id AS user_id
+      `SELECT c.id AS character_id, c.user_id AS user_id, COALESCE(u.is_admin, 0) AS is_admin
          FROM characters c
          JOIN users u ON u.id = c.user_id
         WHERE c.server_id = ?
@@ -8023,7 +8023,8 @@ function resolveCuratedPublicRoomAnchor(serverId) {
 
   return {
     characterId: Number(anchor?.character_id) || null,
-    userId: Number(anchor?.user_id) || null
+    userId: Number(anchor?.user_id) || null,
+    isAdmin: Number(anchor?.is_admin) === 1
   };
 }
 
@@ -8049,7 +8050,7 @@ function ensureCuratedPublicRooms() {
             description = ?,
             teaser = ?,
             is_public_room = 1,
-            is_saved_room = 0,
+            is_saved_room = ?,
             is_locked = 0,
             sort_order = ?
       WHERE id = ?`
@@ -8068,7 +8069,7 @@ function ensureCuratedPublicRooms() {
        is_locked,
        sort_order
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 0, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 0, ?)`
   );
 
   Object.entries(CURATED_PUBLIC_ROOM_DEFINITIONS).forEach(([serverId, definitions]) => {
@@ -8080,6 +8081,7 @@ function ensureCuratedPublicRooms() {
     if (!Number.isInteger(anchor.characterId) || anchor.characterId < 1 || !Number.isInteger(anchor.userId) || anchor.userId < 1) {
       return;
     }
+    const savedState = anchor.isAdmin ? 1 : 0;
 
     definitions.forEach((definition, index) => {
       const normalizedName = normalizeRoomName(definition.name);
@@ -8101,6 +8103,7 @@ function ensureCuratedPublicRooms() {
           nameKey,
           normalizedDescription,
           normalizedTeaser,
+          savedState,
           sortOrder,
           existingRoom.id
         );
@@ -8115,6 +8118,7 @@ function ensureCuratedPublicRooms() {
         normalizedDescription,
         normalizedTeaser,
         normalizeServer(serverId),
+        savedState,
         sortOrder
       );
     });

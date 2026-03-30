@@ -411,25 +411,7 @@
                   data-room-watch-room="<%= room.id %>"
                   data-room-watch-server="<%= character.server_id %>"
                 >
-                  <% if (activeUsers.length) { %>
-                    <% activeUsers.forEach((entry, index) => { %>
-                      <% if (entry.character_id) { %>
-                        <a
-                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                          href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistRoleName(entry.name) %></a>
-                      <% } else { %>
-                        <span
-                          class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistRoleName(entry.name) %></span>
-                      <% } %>
-                      <% if (index < activeUsers.length - 1) { %>
-                        <span class="rp-room-occupant-separator">, </span>
-                      <% } %>
-                    <% }) %>
-                  <% } else { %>
-                    <span class="muted">Gerade niemand dort.</span>
-                  <% } %>
+                  <span class="muted"><%= activeUsers.length %> Spieler Online</span>
                 </div>
               </div>
             <% }) %>
