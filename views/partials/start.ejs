@@ -134,7 +134,9 @@
         }
       })();
     </script>
-    <% const includeRealtimeAssets = typeof enableRealtime !== "undefined" ? Boolean(enableRealtime) : true; %>
+    <% const includeRealtimeAssets =
+      (typeof currentUser !== "undefined" && Boolean(currentUser)) ||
+      (typeof enableRealtime !== "undefined" ? Boolean(enableRealtime) : true); %>
     <% if (includeRealtimeAssets) { %>
       <script src="/socket.io/socket.io.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
