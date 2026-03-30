@@ -79,6 +79,7 @@
   let activeServerInstanceId = "";
   let serverInstanceReloadPending = false;
   const isChatPage = document.body?.classList?.contains("page-chat") === true;
+  let serverInstanceNoticeElement = null;
 
   if (
     !list &&
@@ -109,6 +110,44 @@
     } catch (_error) {
       // Ignore storage failures and keep the live badge best-effort only.
     }
+  }
+
+  function showServerReloadNotice() {
+    if (!(document.body instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!serverInstanceNoticeElement) {
+      const notice = document.createElement("div");
+      notice.setAttribute("role", "status");
+      notice.setAttribute("aria-live", "polite");
+      notice.textContent = "Neue Version wird geladen...";
+      notice.style.position = "fixed";
+      notice.style.left = "50%";
+      notice.style.top = "18px";
+      notice.style.transform = "translateX(-50%)";
+      notice.style.zIndex = "99999";
+      notice.style.padding = "0.85rem 1.15rem";
+      notice.style.borderRadius = "999px";
+      notice.style.background = "rgba(12, 18, 28, 0.94)";
+      notice.style.color = "#f8fafc";
+      notice.style.boxShadow = "0 18px 40px rgba(15, 23, 42, 0.35)";
+      notice.style.fontSize = "0.95rem";
+      notice.style.fontWeight = "700";
+      notice.style.letterSpacing = "0.01em";
+      notice.style.opacity = "0";
+      notice.style.transition = "opacity 160ms ease";
+      document.body.appendChild(notice);
+      serverInstanceNoticeElement = notice;
+      window.requestAnimationFrame(() => {
+        if (serverInstanceNoticeElement) {
+          serverInstanceNoticeElement.style.opacity = "1";
+        }
+      });
+      return;
+    }
+
+    serverInstanceNoticeElement.style.opacity = "1";
   }
 
   function handleServerInstance(payload) {
@@ -148,7 +187,8 @@
       if (!serverInstanceReloadPending) {
         return;
       }
-      applyReload();
+      showServerReloadNotice();
+      window.setTimeout(applyReload, 850);
     };
 
     if (typeof window.fetch !== "function") {
