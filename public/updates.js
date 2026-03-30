@@ -188,7 +188,7 @@
         return;
       }
       showServerReloadNotice();
-      window.setTimeout(applyReload, 850);
+      window.setTimeout(applyReload, 5000);
     };
 
     if (typeof window.fetch !== "function") {
