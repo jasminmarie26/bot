@@ -1231,11 +1231,18 @@ normalizeLegacyAccountNumbers();
 
 function ensureOneTimeSiteUpdateAnnouncement() {
   const announcementContent =
+    "\u2728 Kleine Aufr\u00e4umrunde: Im G\u00e4stebuch-/Design-Bereich und im Account ist jetzt einiges in Tabellen sortiert und dadurch aufger\u00e4umter und \u00fcbersichtlicher geworden, damit man schneller findet, was man sucht \uD83D\uDCCB\uD83D\uDC8C";
+  const legacyAnnouncementContent =
     "\u2728 Kleine Aufraeumrunde: Im Gaestebuch-/Design-Bereich und im Account ist jetzt einiges in Tabellen sortiert und dadurch aufgeraeumter und uebersichtlicher geworden, damit man schneller findet, was man sucht \uD83D\uDCCB\uD83D\uDC8C";
   const existingAnnouncement = db
-    .prepare("SELECT id FROM site_updates WHERE trim(content) = ? LIMIT 1")
-    .get(announcementContent);
+    .prepare("SELECT id, content FROM site_updates WHERE trim(content) IN (?, ?) ORDER BY id DESC LIMIT 1")
+    .get(announcementContent, legacyAnnouncementContent);
   if (existingAnnouncement) {
+    if (String(existingAnnouncement.content || "").trim() !== announcementContent) {
+      db.prepare(
+        "UPDATE site_updates SET content = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE id = ?"
+      ).run(announcementContent, existingAnnouncement.id);
+    }
     return;
   }
 
