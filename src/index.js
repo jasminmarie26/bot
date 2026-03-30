@@ -16827,6 +16827,12 @@ function pruneEmptyRooms() {
 }
 
 io.on("connection", (socket) => {
+  const emitServerInstanceToSocket = () => {
+    socket.emit("app:server-instance", {
+      instanceId: STATIC_ASSET_VERSION
+    });
+  };
+
   socket.data.roomId = null;
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
@@ -16834,9 +16840,7 @@ io.on("connection", (socket) => {
   socket.data.rpBoardChannels = new Set();
   socket.data.isTyping = false;
 
-  socket.emit("app:server-instance", {
-    instanceId: STATIC_ASSET_VERSION
-  });
+  emitServerInstanceToSocket();
   socket.emit("site:stats:update", getLoginStats());
 
   if (socket.data.user?.id) {
@@ -16871,6 +16875,10 @@ io.on("connection", (socket) => {
     emitUserDisplayProfileToSocket(socket);
     emitGuestbookNotificationUpdateForUser(socket.data.user.id);
     emitHomeStatsUpdate();
+  });
+
+  socket.on("app:server-instance:request", () => {
+    emitServerInstanceToSocket();
   });
 
   socket.on("room:watch", (payload) => {

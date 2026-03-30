@@ -1114,6 +1114,7 @@
   socket.on("app:server-instance", handleServerInstance);
 
   socket.on("connect", () => {
+    socket.emit("app:server-instance:request");
     refreshLiveUpdatesState({
       force: true,
       markSeenIfVisible: Boolean(liveUpdatesPageRoot && document.visibilityState !== "hidden")
