@@ -1301,4 +1301,47 @@ function ensureBellSoundSettingsLiveUpdate() {
 
 ensureBellSoundSettingsLiveUpdate();
 
+const FANTASY_TAVERN_LIVE_UPDATE_TEXT =
+  "Die Taverne Zum Silbermond-Krug ist jetzt unter Fantasy Räume zu finden.";
+
+function ensureFantasyTavernLiveUpdate() {
+  const existingEntry = db
+    .prepare(
+      `SELECT id
+         FROM site_updates
+        WHERE content = ?
+        LIMIT 1`
+    )
+    .get(FANTASY_TAVERN_LIVE_UPDATE_TEXT);
+
+  if (existingEntry) {
+    return;
+  }
+
+  const adminUser = db
+    .prepare(
+      `SELECT id, username
+         FROM users
+        WHERE is_admin = 1
+        ORDER BY id ASC
+        LIMIT 1`
+    )
+    .get();
+
+  if (!adminUser?.id) {
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO site_updates (author_id, author_name, content, updated_at)
+     VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
+  ).run(
+    adminUser.id,
+    String(adminUser.username || "Administration").trim() || "Administration",
+    FANTASY_TAVERN_LIVE_UPDATE_TEXT
+  );
+}
+
+ensureFantasyTavernLiveUpdate();
+
 module.exports = db;
