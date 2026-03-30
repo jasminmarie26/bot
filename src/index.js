@@ -5216,9 +5216,9 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
     return [];
   }
 
-  return db
+  const rooms = db
     .prepare(
-      `SELECT id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room,
+      `SELECT id, name, name_key, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, server_id,
               ${supportsSortOrder ? "COALESCE(sort_order, 0)" : "0"} AS sort_order
        FROM chat_rooms
        WHERE server_id = ?
@@ -5238,6 +5238,29 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
       is_locked: Number(room.is_locked) === 1,
       is_public_room: Number(room.is_public_room) === 1
     }));
+
+  const dedupedRooms = [];
+  const seenRooms = new Map();
+
+  rooms.forEach((room) => {
+    const roomNameKey = String(room?.name_key || "").trim().toLowerCase() || toRoomNameKey(room?.name || "");
+    const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
+    const dedupeKey = `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
+    const existingIndex = seenRooms.get(dedupeKey);
+
+    if (existingIndex == null) {
+      seenRooms.set(dedupeKey, dedupedRooms.length);
+      dedupedRooms.push(room);
+      return;
+    }
+
+    const existingRoom = dedupedRooms[existingIndex];
+    if (!existingRoom?.is_public_room && room.is_public_room) {
+      dedupedRooms[existingIndex] = room;
+    }
+  });
+
+  return dedupedRooms;
 }
 
 function getFestplaySideChatsForUser(userId, festplayId) {
