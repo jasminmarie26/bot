@@ -1634,6 +1634,10 @@ a:hover {
   box-shadow: 0 10px 18px -14px var(--panel-shadow);
 }
 
+.guestbook-notification-badge[hidden] {
+  display: none !important;
+}
+
 .live-updates-nav-link {
   position: relative;
   display: inline-flex;
