@@ -1512,11 +1512,79 @@ a:hover {
   background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
 }
 
+.chat-sound-toggle.is-open,
 .chat-whisper-toggle.is-open,
 .rp-board-toggle.is-open {
   background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
   border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
   color: color-mix(in srgb, var(--link) 88%, white 12%);
+}
+
+.chat-sound-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.chat-sound-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 248px;
+  padding: 0.78rem 0.82rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%), color-mix(in srgb, var(--panel-bg) 88%, black 12%));
+  box-shadow: 0 22px 38px -26px var(--panel-shadow);
+  z-index: 30;
+}
+
+.chat-sound-panel[hidden] {
+  display: none !important;
+}
+
+.chat-sound-panel-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.chat-sound-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.55rem;
+  padding: 0.42rem 0;
+  cursor: pointer;
+}
+
+.chat-sound-option + .chat-sound-option {
+  border-top: 1px solid color-mix(in srgb, var(--field-edge) 62%, transparent);
+}
+
+.chat-sound-option input {
+  margin: 0.14rem 0 0;
+  accent-color: var(--accent);
+}
+
+.chat-sound-option-copy {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.chat-sound-option-copy strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.chat-sound-option-copy small {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
 }
 
 .guestbook-notification-link,

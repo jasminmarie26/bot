@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
@@ -6087,8 +6087,8 @@ const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
 
 function normalizeBbcodeMarkup(rawContent) {
   return String(rawContent || "")
-    .replace(/[［【]/g, "[")
-    .replace(/[］】]/g, "]")
+    .replace(/[ï¼»ã€]/g, "[")
+    .replace(/[ï¼½ã€‘]/g, "]")
     .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
       const normalizedInner = String(inner || "")
         .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, "")
@@ -9720,7 +9720,7 @@ app.get("/character-backups/logs/:characterId", requireAuth, (req, res) => {
   }));
 
   if (!characterLogs.length) {
-    setFlash(req, "error", "FÃ¼r diesen Charakter wurden keine Log-Backups gefunden.");
+    setFlash(req, "error", "Für diesen Charakter wurden keine Log-Backups gefunden.");
     return res.redirect("/character-backups/logs");
   }
 
@@ -9774,7 +9774,7 @@ app.post("/character-backups/logs/:logId/delete", requireAuth, (req, res) => {
     }
   );
 
-  setFlash(req, "success", "Log-Backup wurde geloescht.");
+  setFlash(req, "success", "Log-Backup wurde gelöscht.");
   if (remainingLogs.length > 0) {
     return res.redirect(
       buildChatLogBackupDetailTarget(
@@ -14601,7 +14601,7 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
 app.post("/admin/users/:id/toggle-duplicate-accounts", requireAuth, requireAdmin, (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    setFlash(req, "error", "User-ID ist ungÃ¼ltig.");
+    setFlash(req, "error", "User-ID ist ungültig.");
     return res.redirect("/admin");
   }
 
@@ -14621,16 +14621,16 @@ app.post("/admin/users/:id/toggle-duplicate-accounts", requireAuth, requireAdmin
   const nextValue = action === "enable" ? 1 : 0;
 
   if (nextValue === 1 && !String(targetUser.registration_ip || "").trim()) {
-    setFlash(req, "error", "FÃ¼r diesen Account ist keine Registrierungs-IP gespeichert.");
+    setFlash(req, "error", "Für diesen Account ist keine Registrierungs-IP gespeichert.");
     return res.redirect(`/admin/users/${targetId}`);
   }
 
   db.prepare("UPDATE users SET duplicate_accounts_allowed = ? WHERE id = ?").run(nextValue, targetId);
 
   if (nextValue === 1) {
-    setFlash(req, "success", `Doppelaccounts sind fÃ¼r ${targetUser.username} jetzt freigeschaltet.`);
+    setFlash(req, "success", `Doppelaccounts sind für ${targetUser.username} jetzt freigeschaltet.`);
   } else {
-    setFlash(req, "success", `Doppelaccounts sind fÃ¼r ${targetUser.username} jetzt gesperrt.`);
+    setFlash(req, "success", `Doppelaccounts sind für ${targetUser.username} jetzt gesperrt.`);
   }
 
   return res.redirect(`/admin/users/${targetId}`);
@@ -17746,7 +17746,7 @@ io.on("connection", (socket) => {
       if (!requestedCharacterName) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /nick Name. Namen mit Leerzeichen gehen auch in AnfÃ¼hrungszeichen.',
+          content: 'Bitte nutze /nick Name. Namen mit Leerzeichen gehen auch in Anführungszeichen.',
           created_at: formatChatTimestamp()
         });
         return;
@@ -18443,7 +18443,7 @@ io.on("connection", (socket) => {
       if (!rollResult) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Der Wurf konnte gerade nicht ausgefuehrt werden.",
+          content: "Der Wurf konnte gerade nicht ausgeführt werden.",
           created_at: formatChatTimestamp()
         });
         return;
@@ -18767,3 +18767,5 @@ server.listen(port, () => {
   }, SESSION_STORE_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
 });
+
+

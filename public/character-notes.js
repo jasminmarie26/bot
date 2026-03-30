@@ -59,7 +59,7 @@
     if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
       input.value = "";
       activeCharacterId = null;
-      setStatus("Kein Charakter ausgewaehlt.", { error: true });
+      setStatus("Kein Charakter ausgewählt.", { error: true });
       return;
     }
 

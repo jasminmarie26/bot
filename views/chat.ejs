@@ -137,22 +137,42 @@
           </span>
           <span id="chat-whisper-toggle-badge" class="chat-whisper-toggle-badge" hidden>0</span>
         </button>
-        <button
-          id="chat-sound-toggle"
-          class="chat-sound-toggle"
-          type="button"
-          aria-pressed="true"
-          aria-label="Raumton ausschalten"
-          title="Raumton ausschalten"
-        >
-          <span id="chat-sound-toggle-icon" class="chat-sound-toggle-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
-              <path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
-              <path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>
-            </svg>
-          </span>
-        </button>
+        <div class="chat-sound-menu">
+          <button
+            id="chat-sound-toggle"
+            class="chat-sound-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="chat-sound-panel"
+            aria-label="Ton-Einstellungen öffnen"
+            title="Ton-Einstellungen"
+          >
+            <span id="chat-sound-toggle-icon" class="chat-sound-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
+                <path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>
+                <path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>
+              </svg>
+            </span>
+          </button>
+          <div id="chat-sound-panel" class="chat-sound-panel" hidden>
+            <p class="chat-sound-panel-title">Ton-Einstellungen</p>
+            <label class="chat-sound-option" for="chat-entry-sound-toggle">
+              <input id="chat-entry-sound-toggle" type="checkbox" />
+              <span class="chat-sound-option-copy">
+                <strong>Beitrittssound aktivieren</strong>
+                <small>Du hörst einen Ton, wenn jemand den Raum betritt.</small>
+              </span>
+            </label>
+            <label class="chat-sound-option" for="chat-message-sound-toggle">
+              <input id="chat-message-sound-toggle" type="checkbox" />
+              <span class="chat-sound-option-copy">
+                <strong>Chatsound</strong>
+                <small>Du hörst einen anderen Ton, wenn jemand schreibt.</small>
+              </span>
+            </label>
+          </div>
+        </div>
         <details class="rp-user-menu">
           <summary
             class="rp-user-menu-toggle"

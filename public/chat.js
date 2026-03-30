@@ -19,7 +19,9 @@
   const whisperToggle = document.getElementById("chat-whisper-toggle");
   const whisperToggleBadge = document.getElementById("chat-whisper-toggle-badge");
   const soundToggle = document.getElementById("chat-sound-toggle");
-  const soundToggleIcon = document.getElementById("chat-sound-toggle-icon");
+  const soundPanel = document.getElementById("chat-sound-panel");
+  const entrySoundCheckbox = document.getElementById("chat-entry-sound-toggle");
+  const messageSoundCheckbox = document.getElementById("chat-message-sound-toggle");
   const whisperPanel = document.getElementById("chat-whisper-panel");
   const whisperPanelCloseBtn = document.getElementById("chat-whisper-close-btn");
   const whisperList = document.getElementById("chat-whisper-list");
@@ -89,30 +91,16 @@
   let activeRoomInvite = null;
   let activeWhisperThreadUserId = null;
   let whisperSequence = 0;
-  const soundPreferenceKey = "chat-room-entry-sound-enabled";
+  const entrySoundPreferenceKey = "chat-room-entry-sound-enabled";
+  const messageSoundPreferenceKey = "chat-room-message-sound-enabled";
   const chatInputHistoryLimit = 50;
   const chatMessageRestoreLimit = 150;
   const typingIdleDelayMs = 1400;
-  const soundToggleIcons = {
-    on: [
-      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
-      '<path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
-      '<path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
-      '<path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>',
-      '</svg>'
-    ].join(""),
-    off: [
-      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">',
-      '<path class="chat-bell-fill" d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
-      '<path d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 1.4-.42 2.76-1.22 3.91L4.9 16.1a1.1 1.1 0 0 0 .9 1.75h12.4a1.1 1.1 0 0 0 .9-1.75l-1.38-2.09a6.74 6.74 0 0 1-1.22-3.91V8A4.5 4.5 0 0 0 12 3.5Z"/>',
-      '<path d="M9.6 18.1a2.45 2.45 0 0 0 4.8 0"/>',
-      '<path d="M5 5l14 14"/>',
-      '</svg>'
-    ].join("")
-  };
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   let notificationAudioContext = null;
-  let soundEnabled = true;
+  let entrySoundEnabled = true;
+  let messageSoundEnabled = true;
+  let isSoundPanelOpen = false;
   if (!chatBox || !form || !input) return;
 
   function formatRoleDisplayName(rawName, roleStyle = "") {
@@ -609,9 +597,15 @@
   socket.on("chat:room-state", updateRoomLockState);
 
   try {
-    soundEnabled = window.localStorage.getItem(soundPreferenceKey) !== "0";
+    entrySoundEnabled = window.localStorage.getItem(entrySoundPreferenceKey) !== "0";
   } catch (_error) {
-    soundEnabled = true;
+    entrySoundEnabled = true;
+  }
+
+  try {
+    messageSoundEnabled = window.localStorage.getItem(messageSoundPreferenceKey) !== "0";
+  } catch (_error) {
+    messageSoundEnabled = true;
   }
 
   function getNotificationAudioContext() {
@@ -632,17 +626,71 @@
     }
   }
 
-  function updateSoundToggle() {
-    if (!soundToggle || !soundToggleIcon) return;
-    soundToggle.classList.toggle("is-off", !soundEnabled);
-    soundToggle.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
-    soundToggle.setAttribute("aria-label", soundEnabled ? "Raumton ausschalten" : "Raumton einschalten");
-    soundToggle.title = soundEnabled ? "Raumton ausschalten" : "Raumton einschalten";
-    soundToggleIcon.innerHTML = soundEnabled ? soundToggleIcons.on : soundToggleIcons.off;
+  function isAnySoundEnabled() {
+    return entrySoundEnabled || messageSoundEnabled;
   }
 
-  async function playEntryTone() {
-    if (!soundEnabled) return;
+  function updateSoundToggle() {
+    if (soundToggle) {
+      soundToggle.classList.toggle("is-open", isSoundPanelOpen);
+      soundToggle.setAttribute("aria-expanded", isSoundPanelOpen ? "true" : "false");
+      soundToggle.setAttribute(
+        "aria-label",
+        isSoundPanelOpen ? "Ton-Einstellungen schließen" : "Ton-Einstellungen öffnen"
+      );
+      soundToggle.title = "Ton-Einstellungen";
+    }
+
+    if (soundPanel) {
+      soundPanel.hidden = !isSoundPanelOpen;
+    }
+
+    if (entrySoundCheckbox) {
+      entrySoundCheckbox.checked = entrySoundEnabled;
+    }
+
+    if (messageSoundCheckbox) {
+      messageSoundCheckbox.checked = messageSoundEnabled;
+    }
+  }
+
+  function openSoundPanel() {
+    if (!soundPanel) return;
+    isSoundPanelOpen = true;
+    updateSoundToggle();
+  }
+
+  function closeSoundPanel() {
+    if (!isSoundPanelOpen) return;
+    isSoundPanelOpen = false;
+    updateSoundToggle();
+  }
+
+  function toggleSoundPanel() {
+    if (isSoundPanelOpen) {
+      closeSoundPanel();
+      return;
+    }
+
+    openSoundPanel();
+  }
+
+  async function persistSoundPreferences() {
+    try {
+      window.localStorage.setItem(entrySoundPreferenceKey, entrySoundEnabled ? "1" : "0");
+      window.localStorage.setItem(messageSoundPreferenceKey, messageSoundEnabled ? "1" : "0");
+    } catch (_error) {
+      // Ignore storage failures; the toggles still work for the current session.
+    }
+
+    updateSoundToggle();
+    if (isAnySoundEnabled()) {
+      await unlockNotificationAudio();
+    }
+  }
+
+  async function getReadyNotificationAudioContext(preferenceEnabled) {
+    if (!preferenceEnabled) return null;
     const context = getNotificationAudioContext();
     if (!context) return;
 
@@ -654,7 +702,14 @@
       }
     }
 
-    if (context.state !== "running") return;
+    if (context.state !== "running") return null;
+
+    return context;
+  }
+
+  async function playEntryTone() {
+    const context = await getReadyNotificationAudioContext(entrySoundEnabled);
+    if (!context) return;
 
     const lead = context.createOscillator();
     const shimmer = context.createOscillator();
@@ -686,18 +741,60 @@
     shimmer.stop(context.currentTime + 0.4);
   }
 
+  async function playChatTone() {
+    const context = await getReadyNotificationAudioContext(messageSoundEnabled);
+    if (!context) return;
+
+    const lead = context.createOscillator();
+    const echo = context.createOscillator();
+    const gain = context.createGain();
+
+    lead.type = "sine";
+    echo.type = "triangle";
+
+    lead.frequency.setValueAtTime(740, context.currentTime);
+    lead.frequency.exponentialRampToValueAtTime(988, context.currentTime + 0.08);
+    lead.frequency.exponentialRampToValueAtTime(880, context.currentTime + 0.18);
+
+    echo.frequency.setValueAtTime(523, context.currentTime + 0.01);
+    echo.frequency.exponentialRampToValueAtTime(659, context.currentTime + 0.11);
+    echo.frequency.exponentialRampToValueAtTime(587, context.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.03, context.currentTime + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
+
+    lead.connect(gain);
+    echo.connect(gain);
+    gain.connect(context.destination);
+
+    lead.start(context.currentTime);
+    echo.start(context.currentTime);
+    lead.stop(context.currentTime + 0.3);
+    echo.stop(context.currentTime + 0.3);
+  }
+
   if (soundToggle) {
     soundToggle.addEventListener("click", async () => {
-      soundEnabled = !soundEnabled;
-      try {
-        window.localStorage.setItem(soundPreferenceKey, soundEnabled ? "1" : "0");
-      } catch (_error) {
-        // Ignore storage failures; the toggle still works for the current session.
-      }
-      updateSoundToggle();
-      if (soundEnabled) {
+      toggleSoundPanel();
+      if (isAnySoundEnabled()) {
         await unlockNotificationAudio();
       }
+    });
+  }
+
+  if (entrySoundCheckbox) {
+    entrySoundCheckbox.addEventListener("change", async () => {
+      entrySoundEnabled = entrySoundCheckbox.checked;
+      await persistSoundPreferences();
+    });
+  }
+
+  if (messageSoundCheckbox) {
+    messageSoundCheckbox.addEventListener("change", async () => {
+      messageSoundEnabled = messageSoundCheckbox.checked;
+      await persistSoundPreferences();
     });
   }
 
@@ -1353,6 +1450,15 @@
     article.appendChild(line);
     chatBox.appendChild(article);
 
+    if (
+      !isSystemMessage &&
+      Number(msg?.user_id) > 0 &&
+      Number(msg.user_id) !== currentUserId &&
+      options?.skipNotifications !== true
+    ) {
+      playChatTone();
+    }
+
     while (chatBox.children.length > 150) {
       chatBox.removeChild(chatBox.firstChild);
     }
@@ -1468,7 +1574,7 @@
       roomName: String(payload?.roomName || "").trim() || "Unbekannt",
       roomTeaser: String(payload?.roomTeaser || "").trim()
     });
-    playEntryTone();
+    playChatTone();
     syncRoomInviteModal();
   }
 
@@ -1943,17 +2049,28 @@
     if (!clickedInsideMenu && !clickedOnTrigger) {
       closeOnlineMenu();
     }
+
+    if (!target.closest(".chat-sound-menu")) {
+      closeSoundPanel();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeOnlineMenu();
+      closeSoundPanel();
       closeWhisperPanel();
     }
   });
 
-  window.addEventListener("resize", closeOnlineMenu);
-  window.addEventListener("scroll", closeOnlineMenu, true);
+  window.addEventListener("resize", () => {
+    closeOnlineMenu();
+    closeSoundPanel();
+  });
+  window.addEventListener("scroll", () => {
+    closeOnlineMenu();
+    closeSoundPanel();
+  }, true);
 
   function handleWhisperMessage(payload) {
     appendWhisper(payload);
@@ -1964,7 +2081,7 @@
     }
 
     if (!payload?.outgoing) {
-      playEntryTone();
+      playChatTone();
     }
 
     if (!payload?.outgoing && (!isWhisperPanelOpen() || Number(activeWhisperThreadUserId) !== Number(thread.userId))) {
