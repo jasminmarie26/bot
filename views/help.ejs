@@ -6,6 +6,7 @@
       <div class="header-line">
         <div>
           <h1>Hilfe</h1>
+          <p>Alle wichtigen Bereiche, Funktionen und Chatbefehle findest du hier als schnelle &Uuml;bersicht.</p>
         </div>
       </div>
     </section>
@@ -17,6 +18,48 @@
           <a class="help-topic-link" href="/help/<%= topic.slug %>"><%= topic.title %></a>
         <% }) %>
       </nav>
+    </section>
+
+    <section class="panel help-section">
+      <h2>Schnell&uuml;bersicht</h2>
+      <p>Die Themen&uuml;bersicht zeigt dir direkt, wo du welche Funktionen findest.</p>
+
+      <div class="help-table-wrap">
+        <table class="help-table">
+          <thead>
+            <tr>
+              <th>Thema</th>
+              <th>Inhalt</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="/help/bereich-charaktere">Bereich &amp; Charaktere</a></td>
+              <td>Serverliste, Account, Mitgliederliste, Charaktere und G&auml;stebuch-Code.</td>
+            </tr>
+            <tr>
+              <td><a href="/help/raeume-chat">R&auml;ume &amp; Chat</a></td>
+              <td>Raumliste, Chat, Fl&uuml;stern, Notizblatt und alle wichtigen Chatbefehle.</td>
+            </tr>
+            <tr>
+              <td><a href="/help/festspiele-rp-aushang">Festspiele &amp; RP-Aushang</a></td>
+              <td>Festspiel-Verwaltung, Bewerbungen, Spielerrechte und RP-Aushang.</td>
+            </tr>
+            <tr>
+              <td><a href="/help/gaestebuch-design-bbcode">G&auml;stebuch, Design &amp; BBCode</a></td>
+              <td>Bearbeitung, Vorschau, Designs, Bilder, Briefe und BBCode-Beispiele.</td>
+            </tr>
+            <tr>
+              <td><a href="/help/backup">Backup</a></td>
+              <td>Gel&ouml;schte Charaktere, Wiederherstellung und Log-Backups.</td>
+            </tr>
+            <tr>
+              <td><a href="/help/staff-sicherheit">Staff &amp; Sicherheit</a></td>
+              <td>Staff-Namen, Rollencharaktere und Staff-Funktionen.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   <% } else { %>
     <section class="panel help-intro">
@@ -34,28 +77,105 @@
         <h2>Bereich &amp; Charaktere</h2>
         <p>Hier geht es um Serverliste, Account, Mitgliederliste und deine Charaktere.</p>
 
-        <ul class="help-list">
-          <li>In der <code>Serverliste</code> wechselst du zwischen <code>FREE-RP</code> und <code>ERP</code>.</li>
-          <li>Neue Charaktere legst du dort &uuml;ber <code>+ Charakter</code> an.</li>
-          <li>Die Bereichsseite trennt deine freien Charaktere und deine Festspiele pro Server.</li>
-          <li>&Uuml;ber <code>Mitglieder</code> &ouml;ffnest du die Mitgliederliste in einem neuen Tab und springst direkt ins passende G&auml;stebuch.</li>
-          <li><code>Live Updates</code> &ouml;ffnen die Neuigkeiten-Seite in einem neuen Tab. Die neuesten Eintr&auml;ge stehen oben.</li>
-          <li><code>Backup</code> erscheint nur in der Server&uuml;bersicht und f&uuml;hrt zu deinen gel&ouml;schten Charakteren.</li>
-          <li>Im Benutzermen&uuml; &ouml;ffnet <code>Account</code> die Kontoseite in einem neuen Tab.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Bereiche &amp; Navigation</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Serverliste</code></td>
+                  <td>Hier wechselst du zwischen <code>FREE-RP</code> und <code>ERP</code> und legst neue Charaktere &uuml;ber <code>+ Charakter</code> an.</td>
+                </tr>
+                <tr>
+                  <td>Bereichsseite</td>
+                  <td>Die Bereichsseite trennt deine freien Charaktere und deine Festspiele pro Server.</td>
+                </tr>
+                <tr>
+                  <td><code>Mitglieder</code></td>
+                  <td>&Ouml;ffnet die Mitgliederliste in einem neuen Tab und springt direkt ins passende G&auml;stebuch.</td>
+                </tr>
+                <tr>
+                  <td><code>Live Updates</code></td>
+                  <td>&Ouml;ffnet die Neuigkeiten-Seite in einem neuen Tab. Die neuesten Eintr&auml;ge stehen oben.</td>
+                </tr>
+                <tr>
+                  <td><code>Backup</code></td>
+                  <td>Erscheint nur in der Server&uuml;bersicht und f&uuml;hrt zu deinen gel&ouml;schten Charakteren.</td>
+                </tr>
+                <tr>
+                  <td>Benutzermen&uuml;</td>
+                  <td>&Uuml;ber <code>Account</code> &ouml;ffnest du die Kontoseite in einem neuen Tab.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <ul class="help-list">
-          <li>Im Account bearbeitest du Account-Name, E-Mail, Geburtsdatum und die AFK-Zeit.</li>
-          <li>Dort kannst du auch einstellen, ob vor deinen eigenen Chat-Nachrichten lokal eine Uhrzeit angezeigt wird.</li>
-          <li>Diese Uhrzeit nutzt die Zeitzone des jeweiligen Ger&auml;ts und ist nur f&uuml;r dich selbst sichtbar.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Account</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Kontodaten</td>
+                  <td>Im Account bearbeitest du Account-Name, E-Mail, Geburtsdatum und die AFK-Zeit.</td>
+                </tr>
+                <tr>
+                  <td>Eigene Uhrzeit</td>
+                  <td>Dort kannst du einstellen, ob vor deinen eigenen Chat-Nachrichten lokal eine Uhrzeit angezeigt wird.</td>
+                </tr>
+                <tr>
+                  <td>Zeitzone</td>
+                  <td>Diese Uhrzeit nutzt die Zeitzone des jeweiligen Ger&auml;ts und ist nur f&uuml;r dich selbst sichtbar.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <ul class="help-list">
-          <li>Neben jedem eigenen Charakter sitzt der Export-Button f&uuml;r den G&auml;stebuch-Code per E-Mail.</li>
-          <li>Der Haken neben <code>+</code> verschickt die Codes aller dort sichtbaren eigenen Charaktere gesammelt.</li>
-          <li>Der Versand enth&auml;lt den G&auml;stebuch-Code direkt sowie zus&auml;tzlich als PDF- und Word-Datei.</li>
-          <li>Dabei werden keine G&auml;stebucheintr&auml;ge mitgeschickt, nur der eigentliche G&auml;stebuch-Code.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>G&auml;stebuch-Code &amp; Export</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Funktion</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Export-Button</td>
+                  <td>Neben jedem eigenen Charakter sitzt der Export-Button f&uuml;r den G&auml;stebuch-Code per E-Mail.</td>
+                </tr>
+                <tr>
+                  <td>Haken neben <code>+</code></td>
+                  <td>Verschickt die Codes aller dort sichtbaren eigenen Charaktere gesammelt.</td>
+                </tr>
+                <tr>
+                  <td>Versandinhalt</td>
+                  <td>Der Versand enth&auml;lt den G&auml;stebuch-Code direkt sowie zus&auml;tzlich als PDF- und Word-Datei.</td>
+                </tr>
+                <tr>
+                  <td>Wichtig</td>
+                  <td>Dabei werden keine G&auml;stebucheintr&auml;ge mitgeschickt, nur der eigentliche G&auml;stebuch-Code.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     <% } %>
 
@@ -64,33 +184,133 @@
         <h2>R&auml;ume &amp; Chat</h2>
         <p>Hier findest du alles zu Raumliste, Chat, Fl&uuml;stern und Chatbefehlen.</p>
 
-        <ul class="help-list">
-          <li>Die Raumliste findest du auf der Charakterseite.</li>
-          <li><code>Gemeinsamer Treffpunkt</code> mit der Kennzeichnung <code>Offplay</code> ist der feste gemeinsame Standardraum f&uuml;r <code>FREE-RP</code> und <code>ERP</code>.</li>
-          <li>Links neben dem Brief sitzt das <code>Notizblatt</code>. Dort kannst du private Notizen pro eigenem Charakter speichern und oben per Auswahl zwischen deinen Charakteren wechseln.</li>
-          <li>Ein Schloss bedeutet, dass ein Raum abgeschlossen ist.</li>
-          <li>Eigene R&auml;ume erstellst du direkt in der Raumliste oder &uuml;ber <code>Raum erstellen/editieren</code> im Men&uuml;.</li>
-          <li>Im Chat &ouml;ffnet ein Klick auf einen Online-Namen das kleine Aktionsmen&uuml;.</li>
-          <li>Dar&uuml;ber kommst du direkt ins G&auml;stebuch oder ins Fl&uuml;stern.</li>
-          <li>Fl&uuml;sterverl&auml;ufe bleiben in diesem Raum erhalten, bis du ihn verl&auml;sst.</li>
-          <li>Im Fl&uuml;stern sendet <code>Enter</code> sofort ab, mit <code>Shift+Enter</code> machst du eine neue Zeile.</li>
-          <li>Mit Pfeil hoch und runter holst du &auml;ltere eigene Eingaben im normalen Chat zur&uuml;ck.</li>
-          <li><code>/afk Nachricht</code> setzt dich afk. Ohne Text erscheint ein zuf&auml;lliger Grund.</li>
-          <li>Afk-Namen werden mit einer kleinen Uhr markiert.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Raumliste, Chat &amp; Symbole</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Raumliste</td>
+                  <td>Die Raumliste findest du auf der Charakterseite.</td>
+                </tr>
+                <tr>
+                  <td><code>Gemeinsamer Treffpunkt</code></td>
+                  <td>Mit der Kennzeichnung <code>Offplay</code> ist das der feste gemeinsame Standardraum f&uuml;r <code>FREE-RP</code> und <code>ERP</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>Notizblatt</code></td>
+                  <td>Links neben dem Brief sitzt das Notizblatt. Dort kannst du private Notizen pro eigenem Charakter speichern und oben per Auswahl zwischen deinen Charakteren wechseln.</td>
+                </tr>
+                <tr>
+                  <td>Schloss</td>
+                  <td>Ein Schloss bedeutet, dass ein Raum abgeschlossen ist.</td>
+                </tr>
+                <tr>
+                  <td>Eigene R&auml;ume</td>
+                  <td>Eigene R&auml;ume erstellst du direkt in der Raumliste oder &uuml;ber <code>Raum erstellen/editieren</code> im Men&uuml;.</td>
+                </tr>
+                <tr>
+                  <td>Online-Namen</td>
+                  <td>Im Chat &ouml;ffnet ein Klick auf einen Online-Namen das kleine Aktionsmen&uuml;. Dar&uuml;ber kommst du direkt ins G&auml;stebuch oder ins Fl&uuml;stern.</td>
+                </tr>
+                <tr>
+                  <td>Fl&uuml;stern</td>
+                  <td>Fl&uuml;sterverl&auml;ufe bleiben in diesem Raum erhalten, bis du ihn verl&auml;sst.</td>
+                </tr>
+                <tr>
+                  <td>Fl&uuml;ster-Eingabe</td>
+                  <td>Im Fl&uuml;stern sendet <code>Enter</code> sofort ab, mit <code>Shift+Enter</code> machst du eine neue Zeile.</td>
+                </tr>
+                <tr>
+                  <td>Eingabeverlauf</td>
+                  <td>Mit Pfeil hoch und runter holst du &auml;ltere eigene Eingaben im normalen Chat zur&uuml;ck.</td>
+                </tr>
+                <tr>
+                  <td>AFK</td>
+                  <td><code>/afk Nachricht</code> setzt dich afk. Ohne Text erscheint ein zuf&auml;lliger Grund. Afk-Namen werden mit einer kleinen Uhr markiert.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <ul class="help-list">
-          <li><code>/fl Name Nachricht</code> = fl&uuml;stern. Namen mit Leerzeichen gehen auch in Anf&uuml;hrungszeichen.</li>
-          <li><code>/nick Name</code> = im laufenden Chat auf deinen eigenen Charakter mit diesem Namen wechseln. Danach wird der neue Charakter im Chat, in der Online-Liste und bei Fl&uuml;stern angezeigt.</li>
-          <li><code>/rw Raumname "Beschreibung"</code> = Raum wechseln oder neu anlegen. Die Beschreibung ist optional.</li>
-          <li><code>/s</code> = eigenen Raum schlie&szlig;en oder &ouml;ffnen.</li>
-          <li><code>/i Name</code> = Person einladen.</li>
-          <li><code>/rr Name</code> und <code>/rrw Name</code> = Raumrechte geben oder nehmen.</li>
-          <li><code>/werfen Name</code> = Person aus dem Raum werfen.</li>
-          <li><code>/log</code> startet ein Log, <code>/logoff</code> beendet es und verschickt es per E-Mail.</li>
-          <li><code>/roll 1w20</code>, <code>/roll 1w10</code> oder <code>/roll 2w6+3</code> w&uuml;rfeln f&uuml;r den ganzen Raum sichtbar.</li>
-          <li><code>*Text*</code> = kursiv, <code>"Text"</code> = fett, <code>/me Text</code> = Emote.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Chatbefehle</h3>
+          <div class="help-table-wrap">
+            <table class="help-table help-command-table">
+              <thead>
+                <tr>
+                  <th>Befehl</th>
+                  <th>Funktion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>/fl Name Nachricht</code></td>
+                  <td>Fl&uuml;stern. Namen mit Leerzeichen gehen auch in Anf&uuml;hrungszeichen.</td>
+                </tr>
+                <tr>
+                  <td><code>/nick Name</code></td>
+                  <td>Im laufenden Chat auf deinen eigenen Charakter mit diesem Namen wechseln. Danach wird der neue Charakter im Chat, in der Online-Liste und bei Fl&uuml;stern angezeigt.</td>
+                </tr>
+                <tr>
+                  <td><code>/rw Raumname "Beschreibung"</code></td>
+                  <td>Raum wechseln oder neu anlegen. Die Beschreibung ist optional.</td>
+                </tr>
+                <tr>
+                  <td><code>/s</code></td>
+                  <td>Eigenen Raum schlie&szlig;en oder &ouml;ffnen.</td>
+                </tr>
+                <tr>
+                  <td><code>/i Name</code></td>
+                  <td>Person in den Raum einladen.</td>
+                </tr>
+                <tr>
+                  <td><code>/rr Name</code></td>
+                  <td>Raumrechte geben.</td>
+                </tr>
+                <tr>
+                  <td><code>/rrw Name</code></td>
+                  <td>Raumrechte wieder nehmen.</td>
+                </tr>
+                <tr>
+                  <td><code>/werfen Name</code></td>
+                  <td>Person aus dem Raum werfen.</td>
+                </tr>
+                <tr>
+                  <td><code>/log</code></td>
+                  <td>Ein Log starten.</td>
+                </tr>
+                <tr>
+                  <td><code>/logoff</code></td>
+                  <td>Ein Log beenden und per E-Mail verschicken.</td>
+                </tr>
+                <tr>
+                  <td><code>/roll 1w20</code>, <code>/roll 1w10</code>, <code>/roll 2w6+3</code></td>
+                  <td>F&uuml;r den ganzen Raum sichtbar w&uuml;rfeln.</td>
+                </tr>
+                <tr>
+                  <td><code>*Text*</code></td>
+                  <td>Text kursiv darstellen.</td>
+                </tr>
+                <tr>
+                  <td><code>"Text"</code></td>
+                  <td>Text fett darstellen.</td>
+                </tr>
+                <tr>
+                  <td><code>/me Text</code></td>
+                  <td>Text als Emote senden.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     <% } %>
 
@@ -99,25 +319,93 @@
         <h2>Festspiele &amp; RP-Aushang</h2>
         <p>Festspiele und RP-Aushang geh&ouml;ren zusammen, bleiben aber getrennte Funktionen.</p>
 
-        <ul class="help-list">
-          <li>Es gibt <code>Eigene Festplays</code> und <code>Andere Festplays</code>.</li>
-          <li>&Ouml;ffentliche Festspiele findest du oben &uuml;ber <code>Festspiele</code>.</li>
-          <li>Im Detailbereich gibt es die Tabs <code>Allgemein</code>, <code>R&auml;ume</code> und bei eigenen Festspielen <code>Bewerbungen &amp; Spieler</code>.</li>
-          <li>Im Tab <code>Allgemein</code> bearbeitest du Name, Beschreibung und Sichtbarkeit des gew&auml;hlten Festspiels.</li>
-          <li>Im Tab <code>R&auml;ume</code> legst du Festspiel-R&auml;ume an, bearbeitest sie und kannst ihre Reihenfolge per Ziehen &auml;ndern.</li>
-          <li>Die separate Seite <code>Festspiel-R&auml;ume</code> zeigt nur die R&auml;ume des gew&auml;hlten Festspiels.</li>
-          <li>Im Tab <code>Bewerbungen &amp; Spieler</code> schaltest du Bewerbungen frei, vergibst Rechte und verwaltest Mitspieler.</li>
-          <li>Bewerber k&ouml;nnen offene Bewerbungen selbst wieder zur&uuml;ckziehen.</li>
-          <li>Nach Freischaltung kommt die Nachricht &uuml;ber den Brief als gr&uuml;ner System-Brief.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Festspiele</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Festspiel-Arten</td>
+                  <td>Es gibt <code>Eigene Festplays</code> und <code>Andere Festplays</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>Festspiele</code></td>
+                  <td>&Ouml;ffentliche Festspiele findest du oben &uuml;ber <code>Festspiele</code>.</td>
+                </tr>
+                <tr>
+                  <td>Detailbereich</td>
+                  <td>Im Detailbereich gibt es die Tabs <code>Allgemein</code>, <code>R&auml;ume</code> und bei eigenen Festspielen <code>Bewerbungen &amp; Spieler</code>.</td>
+                </tr>
+                <tr>
+                  <td>Tab <code>Allgemein</code></td>
+                  <td>Hier bearbeitest du Name, Beschreibung und Sichtbarkeit des gew&auml;hlten Festspiels.</td>
+                </tr>
+                <tr>
+                  <td>Tab <code>R&auml;ume</code></td>
+                  <td>Hier legst du Festspiel-R&auml;ume an, bearbeitest sie und kannst ihre Reihenfolge per Ziehen &auml;ndern.</td>
+                </tr>
+                <tr>
+                  <td><code>Festspiel-R&auml;ume</code></td>
+                  <td>Die separate Seite zeigt nur die R&auml;ume des gew&auml;hlten Festspiels.</td>
+                </tr>
+                <tr>
+                  <td>Tab <code>Bewerbungen &amp; Spieler</code></td>
+                  <td>Hier schaltest du Bewerbungen frei, vergibst Rechte und verwaltest Mitspieler.</td>
+                </tr>
+                <tr>
+                  <td>Bewerbungen</td>
+                  <td>Bewerber k&ouml;nnen offene Bewerbungen selbst wieder zur&uuml;ckziehen.</td>
+                </tr>
+                <tr>
+                  <td>Freischaltung</td>
+                  <td>Nach Freischaltung kommt die Nachricht &uuml;ber den Brief als gr&uuml;ner System-Brief.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <ul class="help-list">
-          <li>Der Link <code>RP-Aushang</code> sitzt im Header und &ouml;ffnet eine eigene Seite in einem neuen Tab.</li>
-          <li>Der RP-Aushang ist eine allgemeine RP-Suche f&uuml;r den aktuellen Server und keine Festspielsuche.</li>
-          <li><code>FREE-RP</code> und <code>ERP</code> haben getrennte Aush&auml;nge.</li>
-          <li>Eigene Eintr&auml;ge kannst du sp&auml;ter wieder l&ouml;schen.</li>
-          <li>Die Zahl am Link zeigt neue Eintr&auml;ge live an, bis du den Aushang &ouml;ffnest.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>RP-Aushang</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>RP-Aushang</code></td>
+                  <td>Der Link sitzt im Header und &ouml;ffnet eine eigene Seite in einem neuen Tab.</td>
+                </tr>
+                <tr>
+                  <td>Zweck</td>
+                  <td>Der RP-Aushang ist eine allgemeine RP-Suche f&uuml;r den aktuellen Server und keine Festspielsuche.</td>
+                </tr>
+                <tr>
+                  <td>Server</td>
+                  <td><code>FREE-RP</code> und <code>ERP</code> haben getrennte Aush&auml;nge.</td>
+                </tr>
+                <tr>
+                  <td>Eigene Eintr&auml;ge</td>
+                  <td>Eigene Eintr&auml;ge kannst du sp&auml;ter wieder l&ouml;schen.</td>
+                </tr>
+                <tr>
+                  <td>Zahl am Link</td>
+                  <td>Die Zahl am Link zeigt neue Eintr&auml;ge live an, bis du den Aushang &ouml;ffnest.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     <% } %>
 
@@ -126,27 +414,67 @@
         <h2>G&auml;stebuch, Design &amp; BBCode</h2>
         <p>Hier geht es um G&auml;stebuch, Vorschau, Design und BBCode.</p>
 
-        <ul class="help-list">
-          <li><code>Charakter editieren</code> &ouml;ffnet die G&auml;stebuch-Bearbeitung.</li>
-          <li>Die Vorschau zeigt das G&auml;stebuch so, wie es sp&auml;ter f&uuml;r andere aussieht.</li>
-          <li>Wenn die Vorschau offen ist, &uuml;bernimmt ein Neuladen auch den aktuellen Entwurfsstand.</li>
-          <li>Farben, Design und Hintergr&uuml;nde werden pro Seite einzeln gespeichert.</li>
-          <li>Nur die vorgefertigten Designs haben Verlauf. Eigene Farbwerte bleiben ohne Verlauf.</li>
-          <li>Bilder innerhalb und au&szlig;erhalb des Rahmens funktionieren &uuml;ber Bild-URL und Transparenz.</li>
-          <li>Private Eintr&auml;ge sehen nur du, der Besitzer und Admins.</li>
-          <li>Das Briefsymbol zeigt neue G&auml;stebuch-, System- und Festspielnachrichten.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>G&auml;stebuch &amp; Design</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Charakter editieren</code></td>
+                  <td>&Ouml;ffnet die G&auml;stebuch-Bearbeitung.</td>
+                </tr>
+                <tr>
+                  <td>Vorschau</td>
+                  <td>Die Vorschau zeigt das G&auml;stebuch so, wie es sp&auml;ter f&uuml;r andere aussieht.</td>
+                </tr>
+                <tr>
+                  <td>Neuladen</td>
+                  <td>Wenn die Vorschau offen ist, &uuml;bernimmt ein Neuladen auch den aktuellen Entwurfsstand.</td>
+                </tr>
+                <tr>
+                  <td>Farben &amp; Hintergr&uuml;nde</td>
+                  <td>Farben, Design und Hintergr&uuml;nde werden pro Seite einzeln gespeichert.</td>
+                </tr>
+                <tr>
+                  <td>Verlauf</td>
+                  <td>Nur die vorgefertigten Designs haben Verlauf. Eigene Farbwerte bleiben ohne Verlauf.</td>
+                </tr>
+                <tr>
+                  <td>Bilder</td>
+                  <td>Bilder innerhalb und au&szlig;erhalb des Rahmens funktionieren &uuml;ber Bild-URL und Transparenz.</td>
+                </tr>
+                <tr>
+                  <td>Private Eintr&auml;ge</td>
+                  <td>Private Eintr&auml;ge sehen nur du, der Besitzer und Admins.</td>
+                </tr>
+                <tr>
+                  <td>Briefsymbol</td>
+                  <td>Das Briefsymbol zeigt neue G&auml;stebuch-, System- und Festspielnachrichten.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <div class="help-example-grid">
-          <% (helpBbcodeExamples || []).forEach((entry) => { %>
-            <article class="help-example-card">
-              <h3><%= entry.title %></h3>
-              <div class="help-example-split">
-                <code class="help-example-code"><%= entry.code %></code>
-                <div class="help-example-preview guestbook-entry-body<%= entry.title === "Linie" ? " is-line" : "" %>"><%- entry.preview_html %></div>
-              </div>
-            </article>
-          <% }) %>
+        <div class="help-table-group">
+          <h3>BBCode-Beispiele</h3>
+          <div class="help-example-grid">
+            <% (helpBbcodeExamples || []).forEach((entry) => { %>
+              <article class="help-example-card">
+                <h4><%= entry.title %></h4>
+                <div class="help-example-split">
+                  <code class="help-example-code"><%= entry.code %></code>
+                  <div class="help-example-preview guestbook-entry-body<%= entry.title === "Linie" ? " is-line" : "" %>"><%- entry.preview_html %></div>
+                </div>
+              </article>
+            <% }) %>
+          </div>
         </div>
       </section>
     <% } %>
@@ -156,21 +484,101 @@
         <h2>Backup</h2>
         <p>Hier findest du gel&ouml;schte Charaktere zur Wiederherstellung.</p>
 
-        <ul class="help-list">
-          <li>Den Link <code>Backup</code> findest du nur in der Server&uuml;bersicht vor <code>Live Updates</code>.</li>
-          <li>Er &ouml;ffnet eine eigene Seite in einem neuen Tab.</li>
-          <li>Im Bereich <code>Account</code> kannst du festlegen, ob Log-Backups f&uuml;r alle deine Charaktere zus&auml;tzlich per E-Mail geschickt werden.</li>
-          <li>Wenn der Haken dort aus ist, werden Logs nicht per E-Mail verschickt, sondern nur als Backup gespeichert.</li>
-          <li>Im Backup gibt es die Tabs <code>Charaktere</code> und <code>Logs</code>.</li>
-          <li>Unter <code>Charaktere</code> werden gel&ouml;schte Charaktere angezeigt.</li>
-          <li>Mit dem Button vor dem <code>X</code> stellst du den Charakter wieder her.</li>
-          <li>Dabei kommen G&auml;stebuch, Farben und G&auml;stebucheintr&auml;ge zur&uuml;ck.</li>
-          <li>Beim L&ouml;schen eines Charakters wird ein Festspiel nicht automatisch gel&ouml;scht. Es bleibt bestehen, bis es ausdr&uuml;cklich selbst gel&ouml;scht wird.</li>
-          <li>Mit dem <code>X</code> l&ouml;schst du das Backup endg&uuml;ltig.</li>
-          <li>Unter <code>Logs</code> findest du gespeicherte Log-Backups nach Charakter sortiert.</li>
-          <li>Ein Klick auf einen Charakter &ouml;ffnet dessen Logs in einem neuen Tab.</li>
-          <li>Dort kannst du jedes einzelne Log aufklappen und mit dem <code>X</code> gezielt l&ouml;schen.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Backup-Bereich</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Backup</code></td>
+                  <td>Den Link findest du nur in der Server&uuml;bersicht vor <code>Live Updates</code>. Er &ouml;ffnet eine eigene Seite in einem neuen Tab.</td>
+                </tr>
+                <tr>
+                  <td>Account</td>
+                  <td>Im Bereich <code>Account</code> kannst du festlegen, ob Log-Backups f&uuml;r alle deine Charaktere zus&auml;tzlich per E-Mail geschickt werden.</td>
+                </tr>
+                <tr>
+                  <td>Mailversand</td>
+                  <td>Wenn der Haken dort aus ist, werden Logs nicht per E-Mail verschickt, sondern nur als Backup gespeichert.</td>
+                </tr>
+                <tr>
+                  <td>Tabs</td>
+                  <td>Im Backup gibt es die Tabs <code>Charaktere</code> und <code>Logs</code>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="help-table-group">
+          <h3>Tab <code>Charaktere</code></h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Funktion</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Anzeige</td>
+                  <td>Unter <code>Charaktere</code> werden gel&ouml;schte Charaktere angezeigt.</td>
+                </tr>
+                <tr>
+                  <td>Wiederherstellen</td>
+                  <td>Mit dem Button vor dem <code>X</code> stellst du den Charakter wieder her.</td>
+                </tr>
+                <tr>
+                  <td>Wiederherstellungsumfang</td>
+                  <td>Dabei kommen G&auml;stebuch, Farben und G&auml;stebucheintr&auml;ge zur&uuml;ck.</td>
+                </tr>
+                <tr>
+                  <td>Festspiele</td>
+                  <td>Beim L&ouml;schen eines Charakters wird ein Festspiel nicht automatisch gel&ouml;scht. Es bleibt bestehen, bis es ausdr&uuml;cklich selbst gel&ouml;scht wird.</td>
+                </tr>
+                <tr>
+                  <td><code>X</code></td>
+                  <td>Mit dem <code>X</code> l&ouml;schst du das Backup endg&uuml;ltig.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="help-table-group">
+          <h3>Tab <code>Logs</code></h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Funktion</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Anzeige</td>
+                  <td>Unter <code>Logs</code> findest du gespeicherte Log-Backups nach Charakter sortiert.</td>
+                </tr>
+                <tr>
+                  <td>Charakter &ouml;ffnen</td>
+                  <td>Ein Klick auf einen Charakter &ouml;ffnet dessen Logs in einem neuen Tab.</td>
+                </tr>
+                <tr>
+                  <td>Einzell&ouml;schung</td>
+                  <td>Dort kannst du jedes einzelne Log aufklappen und mit dem <code>X</code> gezielt l&ouml;schen.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     <% } %>
 
@@ -179,14 +587,45 @@
         <h2>Staff &amp; Sicherheit</h2>
         <p>Hier geht es um sichtbare Staff-Namen und besondere Staff-Funktionen.</p>
 
-        <ul class="help-list">
-          <li>Admins und Moderatoren w&auml;hlen ihren sichtbaren Rollennamen &uuml;ber einen Charakter.</li>
-          <li>Daf&uuml;r setzt du beim Charakter <code>Als Admin-Charakter verwenden</code> oder <code>Als Moderator-Charakter verwenden</code> und speicherst.</li>
-          <li>Der aktuell sichtbare Admin-Charakter hei&szlig;t <strong><%= adminContactName %></strong>.</li>
-          <li>Der gew&auml;hlte Rollencharakter wird auf der Startseite, im Men&uuml;, in der Mitgliederliste und im Chat verwendet.</li>
-          <li>Admins erscheinen farbig sichtbar, Moderatoren tragen <code>(M)</code>.</li>
-          <li>Admins und Moderatoren k&ouml;nnen Live Updates direkt auf der Live-Updates-Seite erstellen, bearbeiten und l&ouml;schen.</li>
-        </ul>
+        <div class="help-table-group">
+          <h3>Staff-Rollen</h3>
+          <div class="help-table-wrap">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Bereich</th>
+                  <th>Erkl&auml;rung</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Rollencharaktere</td>
+                  <td>Admins und Moderatoren w&auml;hlen ihren sichtbaren Rollennamen &uuml;ber einen Charakter.</td>
+                </tr>
+                <tr>
+                  <td>Aktivierung</td>
+                  <td>Daf&uuml;r setzt du beim Charakter <code>Als Admin-Charakter verwenden</code> oder <code>Als Moderator-Charakter verwenden</code> und speicherst.</td>
+                </tr>
+                <tr>
+                  <td>Aktueller Admin-Name</td>
+                  <td>Der aktuell sichtbare Admin-Charakter hei&szlig;t <strong><%= adminContactName %></strong>.</td>
+                </tr>
+                <tr>
+                  <td>Sichtbarkeit</td>
+                  <td>Der gew&auml;hlte Rollencharakter wird auf der Startseite, im Men&uuml;, in der Mitgliederliste und im Chat verwendet.</td>
+                </tr>
+                <tr>
+                  <td>Darstellung</td>
+                  <td>Admins erscheinen farbig sichtbar, Moderatoren tragen <code>(M)</code>.</td>
+                </tr>
+                <tr>
+                  <td>Live Updates</td>
+                  <td>Admins und Moderatoren k&ouml;nnen Live Updates direkt auf der Live-Updates-Seite erstellen, bearbeiten und l&ouml;schen.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     <% } %>
   <% } %>

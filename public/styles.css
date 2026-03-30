@@ -3280,6 +3280,67 @@ body.page-home-screen .home-hero-actions {
   color: var(--muted);
 }
 
+.help-table-group {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.help-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--field-edge);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+}
+
+.help-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.help-table th,
+.help-table td {
+  padding: 0.62rem 0.72rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.help-table thead th {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--field-bg) 78%, white 22%);
+}
+
+.help-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.help-table td:first-child {
+  width: 30%;
+}
+
+.help-table a {
+  font-weight: 600;
+}
+
+.help-table code {
+  background: color-mix(in srgb, var(--field-bg) 70%, black 30%);
+  border: 1px solid var(--field-edge);
+  border-radius: 6px;
+  padding: 0.08rem 0.3rem;
+  font-size: 0.9em;
+}
+
+.help-command-table td:first-child {
+  width: 26%;
+  white-space: nowrap;
+}
+
 .help-example-grid {
   display: grid;
   gap: 0.62rem;
@@ -3295,7 +3356,8 @@ body.page-home-screen .home-hero-actions {
   background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
 }
 
-.help-example-card h3 {
+.help-example-card h3,
+.help-example-card h4 {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.2;
@@ -3393,6 +3455,18 @@ body.page-home-screen .home-hero-actions {
   border-radius: 6px;
   padding: 0.08rem 0.3rem;
   font-size: 0.9em;
+}
+
+@media (max-width: 720px) {
+  .help-table {
+    min-width: 0;
+  }
+
+  .help-table td:first-child,
+  .help-command-table td:first-child {
+    width: auto;
+    white-space: normal;
+  }
 }
 
 .dashboard-server-list {
