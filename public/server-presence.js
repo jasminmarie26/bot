@@ -191,6 +191,16 @@
 
   function renderRoomWatchTarget(target, entries) {
     target.replaceChildren();
+    const watchMode = String(target?.dataset?.roomWatchMode || "").trim().toLowerCase();
+    if (watchMode === "count-only") {
+      const countState = document.createElement("span");
+      countState.className = "muted";
+      countState.textContent = `User: ${Array.isArray(entries) ? entries.length : 0}`;
+      target.appendChild(countState);
+      scheduleOwnedRoomRowSeparators();
+      return;
+    }
+
     if (!Array.isArray(entries) || entries.length === 0) {
       const emptyState = document.createElement("span");
       emptyState.className = "muted";

@@ -410,8 +410,9 @@
                   data-room-watch-target
                   data-room-watch-room="<%= room.id %>"
                   data-room-watch-server="<%= character.server_id %>"
+                  data-room-watch-mode="count-only"
                 >
-                  <span class="muted"><%= activeUsers.length %> Spieler Online</span>
+                  <span class="muted">User: <%= activeUsers.length %></span>
                 </div>
               </div>
             <% }) %>
