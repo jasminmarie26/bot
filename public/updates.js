@@ -112,6 +112,20 @@
   }
 
   function handleServerInstance(payload) {
+    const applyReload = () => {
+      if (isChatPage) {
+        window.dispatchEvent(
+          new CustomEvent("app:server-instance-reload", {
+            detail: {
+              instanceId: nextInstanceId
+            }
+          })
+        );
+        return;
+      }
+
+      window.location.reload();
+    };
     const nextInstanceId = String(payload?.instanceId || "").trim();
     if (!nextInstanceId) {
       return;
@@ -130,18 +144,35 @@
     activeServerInstanceId = nextInstanceId;
     serverInstanceReloadPending = true;
 
-    if (isChatPage) {
-      window.dispatchEvent(
-        new CustomEvent("app:server-instance-reload", {
-          detail: {
-            instanceId: nextInstanceId
-          }
-        })
-      );
+    const finishReload = () => {
+      if (!serverInstanceReloadPending) {
+        return;
+      }
+      applyReload();
+    };
+
+    if (typeof window.fetch !== "function") {
+      finishReload();
       return;
     }
 
-    window.location.reload();
+    const requestHeaders = new Headers({
+      "x-requested-with": "XMLHttpRequest"
+    });
+    const touchPromise = window.fetch("/session/touch", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+      cache: "no-store",
+      headers: requestHeaders
+    });
+    const timeoutPromise = new Promise((resolve) => {
+      window.setTimeout(resolve, 2500);
+    });
+
+    Promise.race([touchPromise, timeoutPromise])
+      .catch(() => null)
+      .finally(finishReload);
   }
 
   function getLatestLiveUpdatesRevision() {

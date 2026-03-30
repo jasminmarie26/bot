@@ -9139,9 +9139,34 @@ app.post("/logout", (req, res) => {
   });
 });
 
-app.post("/session/touch", requireAuth, (req, res) => {
+app.post("/session/touch", (req, res) => {
+  const isFetchRequest =
+    String(req.get("x-requested-with") || "").trim().toLowerCase() === "xmlhttprequest";
+
+  if (!req.session.user) {
+    if (isFetchRequest) {
+      return res.status(401).json({ error: "auth_required" });
+    }
+
+    setFlash(req, "error", "Bitte melde dich zuerst an.");
+    return res.redirect("/login");
+  }
+
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
-  return res.status(204).end();
+  return req.session.save((error) => {
+    if (error) {
+      console.error("session touch failed", error);
+      if (isFetchRequest) {
+        return res.status(500).json({ error: "session_touch_failed" });
+      }
+      return res.status(500).render("error", {
+        title: "Serverfehler",
+        message: "Die Sitzung konnte gerade nicht aktualisiert werden."
+      });
+    }
+
+    return res.status(204).end();
+  });
 });
 
 app.get("/account", requireAuth, (req, res) => {
