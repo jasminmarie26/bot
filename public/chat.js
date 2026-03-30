@@ -397,7 +397,46 @@
     if (typeof input.setSelectionRange === "function") {
       input.setSelectionRange(nextValue.length, nextValue.length);
     }
+    resizeChatInput();
     handleTypingInput();
+  }
+
+  function resizeChatInput() {
+    if (!input || input.tagName !== "TEXTAREA") {
+      return;
+    }
+
+    const maxHeight = 220;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+  }
+
+  function shouldUseChatHistoryNavigation(event) {
+    if (!input || input.tagName !== "TEXTAREA") {
+      return true;
+    }
+
+    if (event.shiftKey) {
+      return false;
+    }
+
+    const currentValue = String(input.value || "");
+    if (!currentValue.includes("\n")) {
+      return true;
+    }
+
+    const selectionStart = typeof input.selectionStart === "number" ? input.selectionStart : 0;
+    const selectionEnd = typeof input.selectionEnd === "number" ? input.selectionEnd : selectionStart;
+    if (selectionStart !== selectionEnd) {
+      return false;
+    }
+
+    if (event.key === "ArrowUp") {
+      return selectionStart === 0;
+    }
+
+    return selectionEnd === currentValue.length;
   }
 
   function handleChatHistoryNavigation(event) {
@@ -406,6 +445,10 @@
     }
 
     if (event.altKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+
+    if (!shouldUseChatHistoryNavigation(event)) {
       return false;
     }
 
@@ -1880,8 +1923,7 @@
     closeOnlineMenu();
   }
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
+  function submitMainChatMessage() {
     const content = input.value.trim();
     if (!content) return;
 
@@ -1890,10 +1932,17 @@
     rememberSentChatMessage(content);
     socket.emit("chat:message", content);
     input.value = "";
+    resizeChatInput();
     input.focus();
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitMainChatMessage();
   });
 
   input.addEventListener("input", () => {
+    resizeChatInput();
     if (chatInputHistoryIndex !== -1) {
       chatInputHistoryIndex = -1;
       chatInputDraftBuffer = "";
@@ -1909,8 +1958,18 @@
     }
     registerChatActivity({ typing: true });
     handleTypingInput();
+    if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    if (event.isComposing || event.keyCode === 229) {
+      return;
+    }
+
+    event.preventDefault();
+    submitMainChatMessage();
   });
   input.addEventListener("blur", stopTypingIndicator);
+  resizeChatInput();
   window.addEventListener("beforeunload", () => {
     stopTypingIndicator();
     notifyImmediateChatLeave();

@@ -9016,6 +9016,13 @@ select:focus {
   line-height: var(--chat-copy-line-height);
 }
 
+.page-chat #chat-input {
+  min-height: 3.05rem;
+  max-height: 13.75rem;
+  resize: none;
+  overflow-y: hidden;
+}
+
 .chat-box .chat-system {
   color: #000000;
   font-style: italic;
@@ -9063,6 +9070,7 @@ select:focus {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.6rem;
+  align-items: end;
 }
 
 .chat-server-switch {

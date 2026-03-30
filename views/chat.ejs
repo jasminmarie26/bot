@@ -340,8 +340,9 @@
         </div>
 
         <form id="chat-form" class="chat-form" autocomplete="off">
-          <input
+          <textarea
             id="chat-input"
+            rows="1"
             placeholder="Nachricht eingeben..."
             autocomplete="off"
             autocorrect="off"
@@ -350,7 +351,7 @@
             aria-autocomplete="none"
             data-lpignore="true"
             required
-          />
+          ></textarea>
           <button class="btn" type="submit">Senden</button>
         </form>
       </div>
@@ -379,7 +380,7 @@
       <div class="chat-whisper-panel-copy">
         <h3>Fl&uuml;stern</h3>
         <p>Verl&auml;ufe in diesem Raum, bis du ihn verl&auml;sst.</p>
-        <p class="muted chat-whisper-panel-tip">Shift+Enter macht eine neue Zeile.</p>
+        <p class="muted chat-whisper-panel-tip">Shift + Enter macht eine neue Zeile.</p>
       </div>
       <button id="chat-whisper-close-btn" type="button" class="chat-whisper-close-btn" aria-label="Schlie&szlig;en">
         &times;
