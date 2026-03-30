@@ -13524,12 +13524,20 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
   }
 
-  const conflictingRoom = findOwnedRoomByNameKey(
-    req.session.user.id,
-    character.server_id,
-    toRoomNameKey(roomName),
-    roomDescription
-  );
+  const nextRoomNameKey = toRoomNameKey(roomName);
+  const currentRoomNameKey = toRoomNameKey(room.name);
+  const ignoreConflictForCuratedRoom =
+    Boolean(req.session.user?.is_admin) &&
+    isCuratedPublicRoom(room, character.server_id) &&
+    nextRoomNameKey === currentRoomNameKey;
+  const conflictingRoom = ignoreConflictForCuratedRoom
+    ? null
+    : findOwnedRoomByNameKey(
+        req.session.user.id,
+        character.server_id,
+        nextRoomNameKey,
+        roomDescription
+      );
   if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
     setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
     return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
@@ -13547,7 +13555,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
        WHERE id = ?`
     ).run(
       roomName,
-      toRoomNameKey(roomName),
+      nextRoomNameKey,
       roomDescription,
       roomTeaser,
       roomImageUrl,
