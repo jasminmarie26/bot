@@ -76,6 +76,9 @@
       : [];
   let lastLiveUpdatesSyncAt = 0;
   let liveUpdatesSyncPromise = null;
+  let activeServerInstanceId = "";
+  let serverInstanceReloadPending = false;
+  const isChatPage = document.body?.classList?.contains("page-chat") === true;
 
   if (
     !list &&
@@ -83,7 +86,8 @@
     !liveUpdatesLink &&
     !liveUpdatesPageRoot &&
     !updateModal &&
-    !siteContentModal
+    !siteContentModal &&
+    typeof io !== "function"
   ) {
     return;
   }
@@ -105,6 +109,39 @@
     } catch (_error) {
       // Ignore storage failures and keep the live badge best-effort only.
     }
+  }
+
+  function handleServerInstance(payload) {
+    const nextInstanceId = String(payload?.instanceId || "").trim();
+    if (!nextInstanceId) {
+      return;
+    }
+
+    if (!activeServerInstanceId) {
+      activeServerInstanceId = nextInstanceId;
+      return;
+    }
+
+    if (serverInstanceReloadPending || activeServerInstanceId === nextInstanceId) {
+      activeServerInstanceId = nextInstanceId;
+      return;
+    }
+
+    activeServerInstanceId = nextInstanceId;
+    serverInstanceReloadPending = true;
+
+    if (isChatPage) {
+      window.dispatchEvent(
+        new CustomEvent("app:server-instance-reload", {
+          detail: {
+            instanceId: nextInstanceId
+          }
+        })
+      );
+      return;
+    }
+
+    window.location.reload();
   }
 
   function getLatestLiveUpdatesRevision() {
@@ -1042,6 +1079,8 @@
   const socket = io({
     transports: ["websocket"]
   });
+
+  socket.on("app:server-instance", handleServerInstance);
 
   socket.on("connect", () => {
     refreshLiveUpdatesState({

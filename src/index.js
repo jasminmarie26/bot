@@ -16803,6 +16803,9 @@ io.on("connection", (socket) => {
   socket.data.rpBoardChannels = new Set();
   socket.data.isTyping = false;
 
+  socket.emit("app:server-instance", {
+    instanceId: STATIC_ASSET_VERSION
+  });
   socket.emit("site:stats:update", getLoginStats());
 
   if (socket.data.user?.id) {

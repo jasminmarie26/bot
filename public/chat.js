@@ -68,6 +68,12 @@
     serverId,
     hasRoom ? `room-${roomId}` : "room-none"
   ].join(":");
+  const chatReloadSnapshotKey = [
+    "chat-reload-snapshot",
+    Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
+    serverId,
+    hasRoom ? `room-${roomId}` : "room-none"
+  ].join(":");
   let selectedOnlineEntry = null;
   let typingEmitActive = false;
   let typingStopTimer = null;
@@ -84,6 +90,7 @@
   let whisperSequence = 0;
   const soundPreferenceKey = "chat-room-entry-sound-enabled";
   const chatInputHistoryLimit = 50;
+  const chatMessageRestoreLimit = 150;
   const typingIdleDelayMs = 1400;
   const soundToggleIcons = {
     on: [
@@ -140,6 +147,73 @@
       window.sessionStorage.removeItem(key);
     } catch (_error) {
       // Ignore unavailable storage.
+    }
+  }
+
+  function toPositiveIntegerOrNull(value) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  function sanitizeChatMessageForRestore(message) {
+    if (!message || typeof message !== "object") {
+      return null;
+    }
+
+    return {
+      type: String(message?.type || "").trim(),
+      content: String(message?.content || ""),
+      created_at: String(message?.created_at || "").trim(),
+      message_time_iso: String(message?.message_time_iso || "").trim(),
+      user_id: toPositiveIntegerOrNull(message?.user_id),
+      character_id: toPositiveIntegerOrNull(message?.character_id),
+      username: String(message?.username || "").trim(),
+      role_style: String(message?.role_style || "").trim(),
+      chat_text_color: String(message?.chat_text_color || "").trim(),
+      show_name_time: Boolean(message?.show_name_time),
+      system_kind: String(message?.system_kind || "").trim(),
+      presence_kind: String(message?.presence_kind || "").trim(),
+      presence_actor_name: String(message?.presence_actor_name || "").trim(),
+      presence_actor_role_style: String(message?.presence_actor_role_style || "").trim(),
+      presence_actor_chat_text_color: String(message?.presence_actor_chat_text_color || "").trim(),
+      presence_suffix: String(message?.presence_suffix || "").trim(),
+      room_switch_target_name: String(message?.room_switch_target_name || "").trim()
+    };
+  }
+
+  function consumeChatReloadSnapshot() {
+    const rawValue = readSessionStorage(chatReloadSnapshotKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    removeSessionStorage(chatReloadSnapshotKey);
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (!parsed || typeof parsed !== "object") {
+        return null;
+      }
+
+      const messages = Array.isArray(parsed.messages)
+        ? parsed.messages
+            .map((entry) => sanitizeChatMessageForRestore(entry))
+            .filter(Boolean)
+            .slice(-chatMessageRestoreLimit)
+        : [];
+      const scrollTop = Number(parsed.scrollTop);
+
+      return {
+        reason: String(parsed.reason || "").trim(),
+        disconnectAt:
+          Number.isFinite(Number(parsed.disconnectAt)) && Number(parsed.disconnectAt) > 0
+            ? Number(parsed.disconnectAt)
+            : 0,
+        scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
+        messages
+      };
+    } catch (_error) {
+      return null;
     }
   }
 
@@ -404,6 +478,40 @@
     }
   }
 
+  let renderedChatMessages = [];
+  let pendingChatReloadRecovery = consumeChatReloadSnapshot();
+  let serverRestartReloadInProgress = false;
+
+  function rememberRenderedChatMessage(message) {
+    const snapshot = sanitizeChatMessageForRestore(message);
+    if (!snapshot) {
+      return;
+    }
+
+    renderedChatMessages.push(snapshot);
+    if (renderedChatMessages.length > chatMessageRestoreLimit) {
+      renderedChatMessages = renderedChatMessages.slice(-chatMessageRestoreLimit);
+    }
+  }
+
+  function reloadChatAfterServerRestart() {
+    if (serverRestartReloadInProgress) {
+      return;
+    }
+
+    serverRestartReloadInProgress = true;
+    writeSessionStorage(
+      chatReloadSnapshotKey,
+      JSON.stringify({
+        reason: "server-instance-reload",
+        disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
+        scrollTop: chatBox.scrollTop,
+        messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
+      })
+    );
+    window.location.reload();
+  }
+
   const socket = io({
     transports: ["websocket"]
   });
@@ -562,6 +670,8 @@
   let lastDisconnectAt = 0;
   let immediateChatLeaveSent = false;
 
+  window.addEventListener("app:server-instance-reload", reloadChatAfterServerRestart);
+
   function notifyImmediateChatLeave() {
     if (immediateChatLeaveSent || !socket?.id) {
       return;
@@ -597,6 +707,8 @@
 
   socket.on("connect", () => {
     immediateChatLeaveSent = false;
+    const isRecoveredServerRestart =
+      pendingChatReloadRecovery?.reason === "server-instance-reload";
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
@@ -604,9 +716,11 @@
         Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
           ? currentActiveCharacterId
           : null,
-      isReconnect: hasJoinedCurrentChatSession,
+      isReconnect: hasJoinedCurrentChatSession || isRecoveredServerRestart,
       reconnectAgeMs:
-        hasJoinedCurrentChatSession && lastDisconnectAt > 0
+        isRecoveredServerRestart
+          ? 0
+          : hasJoinedCurrentChatSession && lastDisconnectAt > 0
           ? Math.max(0, Date.now() - lastDisconnectAt)
           : null
     });
@@ -625,6 +739,7 @@
     }
     hasJoinedCurrentChatSession = true;
     lastDisconnectAt = 0;
+    pendingChatReloadRecovery = null;
     if (!storedAfkState || (storedAfkState.mode === "auto" && !autoAfkEnabled)) {
       scheduleAfkTimer();
     }
@@ -759,7 +874,8 @@
     }
   }
 
-  function appendMessage(msg) {
+  function appendMessage(msg, options = {}) {
+    rememberRenderedChatMessage(msg);
     const article = document.createElement("article");
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
     const emoteActionText = !isSystemMessage
@@ -802,7 +918,8 @@
         line.appendChild(strong);
         if (
           presenceKind === "enter" &&
-          presenceActorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0
+          presenceActorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0 &&
+          options?.skipNotifications !== true
         ) {
           playEntryTone();
         }
@@ -885,11 +1002,20 @@
     article.appendChild(line);
     chatBox.appendChild(article);
 
-    while (chatBox.children.length > 150) {
+    while (chatBox.children.length > chatMessageRestoreLimit) {
       chatBox.removeChild(chatBox.firstChild);
     }
 
     chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  if (pendingChatReloadRecovery?.messages?.length) {
+    pendingChatReloadRecovery.messages.forEach((message) => {
+      appendMessage(message, { skipNotifications: true });
+    });
+    if (pendingChatReloadRecovery.scrollTop != null) {
+      chatBox.scrollTop = pendingChatReloadRecovery.scrollTop;
+    }
   }
 
   function updateRoomLockState(payload) {
