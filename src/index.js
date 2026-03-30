@@ -5925,7 +5925,7 @@ function normalizeRoomDescription(rawValue) {
 }
 
 function normalizeRoomTeaser(rawValue) {
-  return String(rawValue || "").trim().slice(0, 160);
+  return normalizeBbcodeInput(rawValue, 4000);
 }
 
 function normalizeRoomImageUrl(rawValue) {
