@@ -5863,7 +5863,8 @@ function getCuratedPublicRoomDefinitionsForServer(serverId) {
 
 function getCuratedPublicRoomDefinition(room, serverId = null) {
   const normalizedServerId = normalizeServer(serverId || room?.server_id);
-  const roomNameKey = toRoomNameKey(room?.name || "");
+  const explicitRoomNameKey = String(room?.name_key || "").trim().toLowerCase();
+  const roomNameKey = explicitRoomNameKey || toRoomNameKey(room?.name || "");
   if (!roomNameKey) {
     return null;
   }
@@ -5873,6 +5874,10 @@ function getCuratedPublicRoomDefinition(room, serverId = null) {
       (definition) => String(definition.key || "").trim().toLowerCase() === roomNameKey
     ) || null
   );
+}
+
+function isCuratedPublicRoom(room, serverId = null) {
+  return Boolean(getCuratedPublicRoomDefinition(room, serverId));
 }
 
 function getStandardRoomForServer(serverId, roomId) {
@@ -11489,7 +11494,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   const rooms = db
     .prepare(
-        `SELECT r.id, r.name, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
+        `SELECT r.id, r.name, r.name_key, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
                 COALESCE(owner_character.name, '') AS creator_name,
                  CASE
                   WHEN r.created_by_user_id = ? THEN 1
@@ -17346,9 +17351,12 @@ function ensureSavedRoomVisibleForOwner(room, userId) {
 function shouldAutoDeleteRoom(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return false;
   const room = db
-    .prepare("SELECT is_public_room, is_saved_room FROM chat_rooms WHERE id = ?")
+    .prepare("SELECT id, name, name_key, server_id, is_public_room, is_saved_room FROM chat_rooms WHERE id = ?")
     .get(roomId);
   if (!room) return false;
+  if (isCuratedPublicRoom(room, room.server_id)) {
+    return false;
+  }
   return AUTO_DELETE_EMPTY_ROOMS || Number(room.is_public_room) === 1 || Number(room.is_saved_room) === 1;
 }
 
@@ -19053,6 +19061,7 @@ io.on("connection", (socket) => {
 
 const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {
+  ensureCuratedPublicRooms();
   pruneEmptyRooms();
   const purgedSessionCount = purgeInactiveStoredSessions();
   if (purgedSessionCount > 0) {
