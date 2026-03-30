@@ -97,11 +97,19 @@
   const chatMessageRestoreLimit = 150;
   const typingIdleDelayMs = 1400;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
+  const AudioElementCtor = typeof window.Audio === "function" ? window.Audio : null;
   let notificationAudioContext = null;
   let notificationAudioUnlockListenersBound = false;
+  let notificationAudioPlaybackUnlocked = false;
+  let notificationAudioPrimePromise = null;
   let entrySoundEnabled = true;
   let messageSoundEnabled = true;
   let isSoundPanelOpen = false;
+  const activeNotificationAudios = new Set();
+  const notificationToneDataUrls = {
+    entry: "",
+    chat: ""
+  };
   if (!chatBox || !form || !input) return;
 
   function formatRoleDisplayName(rawName, roleStyle = "") {
@@ -652,9 +660,225 @@
     messageSoundEnabled = true;
   }
 
+  function clampNotificationSample(value) {
+    return Math.max(-1, Math.min(1, Number(value) || 0));
+  }
+
+  function getNotificationWaveSample(waveType, phase) {
+    const normalizedWave = String(waveType || "sine").trim().toLowerCase();
+    if (normalizedWave === "triangle") {
+      return (2 * Math.asin(Math.sin(phase))) / Math.PI;
+    }
+    if (normalizedWave === "square") {
+      return Math.sin(phase) >= 0 ? 1 : -1;
+    }
+    return Math.sin(phase);
+  }
+
+  function bufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return window.btoa(binary);
+  }
+
+  function buildNotificationToneDataUrl(kind) {
+    const normalizedKind = kind === "entry" ? "entry" : "chat";
+    if (notificationToneDataUrls[normalizedKind]) {
+      return notificationToneDataUrls[normalizedKind];
+    }
+
+    if (typeof window.btoa !== "function") {
+      return "";
+    }
+
+    const sampleRate = 22050;
+    const totalDurationMs = normalizedKind === "entry" ? 420 : 320;
+    const totalSamples = Math.max(1, Math.floor((totalDurationMs / 1000) * sampleRate));
+    const samples = new Float32Array(totalSamples);
+    const trackDefinitions = normalizedKind === "entry"
+      ? [
+          { startMs: 0, durationMs: 210, startFreq: 880, endFreq: 1320, volume: 0.5, wave: "triangle" },
+          { startMs: 18, durationMs: 240, startFreq: 1320, endFreq: 1760, volume: 0.24, wave: "sine" },
+          { startMs: 150, durationMs: 160, startFreq: 1174, endFreq: 1046, volume: 0.18, wave: "sine" }
+        ]
+      : [
+          { startMs: 0, durationMs: 170, startFreq: 660, endFreq: 880, volume: 0.42, wave: "sine" },
+          { startMs: 32, durationMs: 190, startFreq: 523, endFreq: 659, volume: 0.24, wave: "triangle" }
+        ];
+
+    for (let sampleIndex = 0; sampleIndex < totalSamples; sampleIndex += 1) {
+      const currentTime = sampleIndex / sampleRate;
+      let mixedSample = 0;
+
+      trackDefinitions.forEach((track) => {
+        const startTime = track.startMs / 1000;
+        const duration = track.durationMs / 1000;
+        const endTime = startTime + duration;
+        if (currentTime < startTime || currentTime >= endTime) {
+          return;
+        }
+
+        const localTime = currentTime - startTime;
+        const progress = duration > 0 ? localTime / duration : 0;
+        const attack = Math.min(0.025, duration * 0.35);
+        const release = Math.min(0.09, duration * 0.45);
+        let envelope = 1;
+
+        if (attack > 0 && localTime < attack) {
+          envelope = localTime / attack;
+        } else if (release > 0 && endTime - currentTime < release) {
+          envelope = (endTime - currentTime) / release;
+        }
+
+        const frequency = track.startFreq + ((track.endFreq ?? track.startFreq) - track.startFreq) * progress;
+        const phase = 2 * Math.PI * frequency * localTime;
+        mixedSample += getNotificationWaveSample(track.wave, phase) * track.volume * Math.max(0, envelope);
+      });
+
+      samples[sampleIndex] = clampNotificationSample(mixedSample * 0.85);
+    }
+
+    const wavBuffer = new ArrayBuffer(44 + totalSamples * 2);
+    const view = new DataView(wavBuffer);
+    let offset = 0;
+
+    function writeAscii(value) {
+      for (let index = 0; index < value.length; index += 1) {
+        view.setUint8(offset, value.charCodeAt(index));
+        offset += 1;
+      }
+    }
+
+    writeAscii("RIFF");
+    view.setUint32(offset, 36 + totalSamples * 2, true);
+    offset += 4;
+    writeAscii("WAVE");
+    writeAscii("fmt ");
+    view.setUint32(offset, 16, true);
+    offset += 4;
+    view.setUint16(offset, 1, true);
+    offset += 2;
+    view.setUint16(offset, 1, true);
+    offset += 2;
+    view.setUint32(offset, sampleRate, true);
+    offset += 4;
+    view.setUint32(offset, sampleRate * 2, true);
+    offset += 4;
+    view.setUint16(offset, 2, true);
+    offset += 2;
+    view.setUint16(offset, 16, true);
+    offset += 2;
+    writeAscii("data");
+    view.setUint32(offset, totalSamples * 2, true);
+    offset += 4;
+
+    for (let index = 0; index < totalSamples; index += 1) {
+      const pcmValue = Math.max(-32768, Math.min(32767, Math.round(samples[index] * 32767)));
+      view.setInt16(offset, pcmValue, true);
+      offset += 2;
+    }
+
+    const dataUrl = `data:audio/wav;base64,${bufferToBase64(wavBuffer)}`;
+    notificationToneDataUrls[normalizedKind] = dataUrl;
+    return dataUrl;
+  }
+
+  function registerNotificationAudioElement(audio) {
+    activeNotificationAudios.add(audio);
+
+    const cleanup = () => {
+      activeNotificationAudios.delete(audio);
+      audio.removeEventListener("ended", cleanup);
+      audio.removeEventListener("error", cleanup);
+    };
+
+    audio.addEventListener("ended", cleanup);
+    audio.addEventListener("error", cleanup);
+    return cleanup;
+  }
+
+  async function playNotificationAudioElement(kind, { volume = 1 } = {}) {
+    if (!AudioElementCtor || !notificationAudioPlaybackUnlocked) {
+      return false;
+    }
+
+    const source = buildNotificationToneDataUrl(kind);
+    if (!source) {
+      return false;
+    }
+
+    const audio = new AudioElementCtor(source);
+    audio.preload = "auto";
+    audio.volume = Math.max(0, Math.min(1, volume));
+    const cleanup = registerNotificationAudioElement(audio);
+
+    try {
+      const playback = audio.play();
+      if (playback && typeof playback.then === "function") {
+        await playback;
+      }
+      return true;
+    } catch (_error) {
+      cleanup();
+      notificationAudioPlaybackUnlocked = false;
+      bindNotificationAudioUnlockListeners();
+      return false;
+    }
+  }
+
+  async function primeNotificationAudioPlayback() {
+    if (!AudioElementCtor || !isAnySoundEnabled()) {
+      return false;
+    }
+
+    if (notificationAudioPrimePromise) {
+      return notificationAudioPrimePromise;
+    }
+
+    const source = buildNotificationToneDataUrl("chat");
+    if (!source) {
+      return false;
+    }
+
+    notificationAudioPrimePromise = (async () => {
+      const audio = new AudioElementCtor(source);
+      audio.preload = "auto";
+      audio.muted = true;
+      audio.volume = 0;
+      const cleanup = registerNotificationAudioElement(audio);
+
+      try {
+        const playback = audio.play();
+        if (playback && typeof playback.then === "function") {
+          await playback;
+        }
+        audio.pause();
+        try {
+          audio.currentTime = 0;
+        } catch (_error) {
+          // Ignore seek failures on short priming sounds.
+        }
+        notificationAudioPlaybackUnlocked = true;
+        return true;
+      } catch (_error) {
+        notificationAudioPlaybackUnlocked = false;
+        return false;
+      } finally {
+        cleanup();
+        notificationAudioPrimePromise = null;
+      }
+    })();
+
+    return notificationAudioPrimePromise;
+  }
+
   function getNotificationAudioContext() {
     if (!AudioContextCtor) return null;
-    if (!notificationAudioContext) {
+    if (!notificationAudioContext || notificationAudioContext.state === "closed") {
       notificationAudioContext = new AudioContextCtor();
       if (typeof notificationAudioContext.addEventListener === "function") {
         notificationAudioContext.addEventListener("statechange", syncNotificationAudioUnlockState);
@@ -689,11 +913,7 @@
 
   function syncNotificationAudioUnlockState() {
     const context = notificationAudioContext;
-    if (!context) {
-      return;
-    }
-
-    if (context.state === "running") {
+    if (notificationAudioPlaybackUnlocked || context?.state === "running") {
       removeNotificationAudioUnlockListeners();
       return;
     }
@@ -703,16 +923,18 @@
 
   async function unlockNotificationAudio() {
     const context = getNotificationAudioContext();
-    if (!context) return;
-    if (context.state === "running") {
-      syncNotificationAudioUnlockState();
-      return;
+    notificationAudioPlaybackUnlocked = true;
+
+    if (context && context.state !== "running") {
+      try {
+        await context.resume();
+      } catch (_error) {
+        // Ignore resume failures for now and keep listening for the next real user gesture.
+      }
     }
 
-    try {
-      await context.resume();
-    } catch (_error) {
-      // Ignore resume failures for now and keep listening for the next real user gesture.
+    if (notificationAudioPlaybackUnlocked) {
+      await primeNotificationAudioPlayback();
     }
 
     syncNotificationAudioUnlockState();
@@ -800,6 +1022,10 @@
   }
 
   async function playEntryTone() {
+    if (await playNotificationAudioElement("entry", { volume: 0.98 })) {
+      return;
+    }
+
     const context = await getReadyNotificationAudioContext(entrySoundEnabled);
     if (!context) return;
 
@@ -819,8 +1045,8 @@
     shimmer.frequency.exponentialRampToValueAtTime(1318, context.currentTime + 0.28);
 
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.2, context.currentTime + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.085, context.currentTime + 0.16);
     gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.38);
 
     lead.connect(gain);
@@ -834,6 +1060,10 @@
   }
 
   async function playChatTone() {
+    if (await playNotificationAudioElement("chat", { volume: 0.92 })) {
+      return;
+    }
+
     const context = await getReadyNotificationAudioContext(messageSoundEnabled);
     if (!context) return;
 
@@ -853,8 +1083,8 @@
     echo.frequency.exponentialRampToValueAtTime(587, context.currentTime + 0.2);
 
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.03, context.currentTime + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.16, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.06, context.currentTime + 0.16);
     gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
 
     lead.connect(gain);
@@ -880,6 +1110,9 @@
     entrySoundCheckbox.addEventListener("change", async () => {
       entrySoundEnabled = entrySoundCheckbox.checked;
       await persistSoundPreferences();
+      if (entrySoundEnabled) {
+        await playEntryTone();
+      }
     });
   }
 
@@ -887,6 +1120,9 @@
     messageSoundCheckbox.addEventListener("change", async () => {
       messageSoundEnabled = messageSoundCheckbox.checked;
       await persistSoundPreferences();
+      if (messageSoundEnabled) {
+        await playChatTone();
+      }
     });
   }
 
@@ -1144,7 +1380,6 @@
         line.appendChild(strong);
         if (
           presenceKind === "enter" &&
-          presenceActorName.localeCompare(currentDisplayName, "de", { sensitivity: "base" }) !== 0 &&
           options?.skipNotifications !== true
         ) {
           playEntryTone();
