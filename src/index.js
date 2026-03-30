@@ -15318,6 +15318,126 @@ function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options
   return true;
 }
 
+function getSocketLastChatActivityAt(socket) {
+  const parsedTimestamp = Number(socket?.data?.lastChatActivityAt);
+  return Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : 0;
+}
+
+function markSocketChatActivity(socket, timestamp = Date.now()) {
+  if (!socket?.data) {
+    return 0;
+  }
+
+  const parsedTimestamp = Number(timestamp);
+  const nextTimestamp =
+    Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : Date.now();
+  socket.data.lastChatActivityAt = nextTimestamp;
+  return nextTimestamp;
+}
+
+function resolveSocketChatChannel(socket) {
+  if (!socket?.data?.user) {
+    return null;
+  }
+
+  const roomId =
+    Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+      ? socket.data.roomId
+      : null;
+  const rawServerId = String(socket.data.serverId || "").trim().toLowerCase();
+  if (!ALLOWED_SERVER_IDS.has(rawServerId)) {
+    return null;
+  }
+
+  let serverId = normalizeServer(rawServerId);
+  if (roomId) {
+    const room = getRoomWithCharacter(roomId);
+    if (!room || !canAccessRoom(socket.data.user, room)) {
+      return null;
+    }
+    serverId = normalizeServer(room.server_id || room.character_server_id);
+  }
+
+  return { roomId, serverId };
+}
+
+function getLatestChatPresenceActivityAt(socket, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+  const presenceIdentity = getSocketPresenceIdentity(socket, serverId, characterId);
+  if (!presenceIdentity?.key) {
+    return getSocketLastChatActivityAt(socket);
+  }
+
+  return getPresenceSocketsInChannel(roomId, serverId, presenceIdentity).reduce(
+    (latestTimestamp, memberSocket) =>
+      Math.max(latestTimestamp, getSocketLastChatActivityAt(memberSocket)),
+    0
+  );
+}
+
+function maybeSetSocketAutoAfk(socket, now = Date.now()) {
+  const userId = Number(socket?.data?.user?.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return false;
+  }
+
+  if (!normalizeAutoAfkEnabled(socket.data.user?.auto_afk_enabled)) {
+    return false;
+  }
+
+  const chatChannel = resolveSocketChatChannel(socket);
+  if (!chatChannel) {
+    return false;
+  }
+
+  const { roomId, serverId } = chatChannel;
+  const characterId = getSocketPreferredCharacterId(socket, serverId);
+  if (getChatAfkState(userId, roomId, serverId, characterId)) {
+    return false;
+  }
+
+  const timeoutMs =
+    normalizeAfkTimeoutMinutes(socket.data.user?.afk_timeout_minutes) * 60 * 1000;
+  const latestActivityAt = getLatestChatPresenceActivityAt(
+    socket,
+    roomId,
+    serverId,
+    characterId
+  );
+  if (!latestActivityAt) {
+    markSocketChatActivity(socket, now);
+    return false;
+  }
+
+  if (now - latestActivityAt < timeoutMs) {
+    return false;
+  }
+
+  const displayProfile = getSocketDisplayProfile(socket, serverId);
+  setChatAfkState({
+    userId,
+    characterId,
+    roomId,
+    serverId,
+    actorName: displayProfile?.label || getUserDefaultDisplayName(socket.data.user),
+    roleStyle: displayProfile?.role_style || "",
+    chatTextColor: displayProfile?.chat_text_color || "",
+    reason: "",
+    mode: "auto"
+  });
+  return true;
+}
+
+function sweepAutoAfkSockets(now = Date.now()) {
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return;
+  }
+
+  for (const socket of sockets.values()) {
+    maybeSetSocketAutoAfk(socket, now);
+  }
+}
+
 function buildChatCharacterSwitchSuffix(nextDisplayName) {
   const safeNextName = String(nextDisplayName || "").trim() || "jemand anderes";
   const template = CHAT_CHARACTER_SWITCH_SUFFIXES.length
@@ -17302,6 +17422,10 @@ function pruneEmptyRooms() {
   });
 }
 
+setInterval(() => {
+  sweepAutoAfkSockets(Date.now());
+}, 15000).unref();
+
 io.on("connection", (socket) => {
   const emitServerInstanceToSocket = () => {
     socket.emit("app:server-instance", {
@@ -17315,6 +17439,7 @@ io.on("connection", (socket) => {
   socket.data.roomWatchChannels = new Set();
   socket.data.rpBoardChannels = new Set();
   socket.data.isTyping = false;
+  socket.data.lastChatActivityAt = Date.now();
 
   emitServerInstanceToSocket();
   socket.emit("site:stats:update", getLoginStats());
@@ -17571,6 +17696,7 @@ io.on("connection", (socket) => {
     socket.data.serverId = nextServerId;
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
+    markSocketChatActivity(socket);
     socket.join(socketChannelForRoom(nextRoomId, nextServerId));
     emitGuestbookNotificationUpdateForUser(socket.data.user.id);
     emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
@@ -17647,6 +17773,9 @@ io.on("connection", (socket) => {
     }
 
     const wantsTyping = Boolean(payload && typeof payload === "object" ? payload.isTyping : payload);
+    if (wantsTyping) {
+      markSocketChatActivity(socket);
+    }
     if (socket.data.isTyping === wantsTyping) {
       return;
     }
@@ -17674,6 +17803,7 @@ io.on("connection", (socket) => {
     }
 
     const activeCharacterId = getSocketPreferredCharacterId(socket, serverId);
+    markSocketChatActivity(socket);
     clearChatAfkState(socket.data.user.id, roomId, serverId, {
       onlyMode: "auto"
     }, activeCharacterId);
@@ -17735,6 +17865,7 @@ io.on("connection", (socket) => {
       serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
+    markSocketChatActivity(socket);
     clearChatAfkState(
       socket.data.user.id,
       roomId,
@@ -17771,6 +17902,7 @@ io.on("connection", (socket) => {
 
     const content = rawMessage.trim();
     if (!content) return;
+    markSocketChatActivity(socket);
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
     const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
     if (afkMatch) {
@@ -18784,6 +18916,7 @@ io.on("connection", (socket) => {
       serverId = normalizeServer(room.server_id || room.character_server_id);
     }
 
+    markSocketChatActivity(socket);
     clearChatAfkState(
       socket.data.user.id,
       roomId,
