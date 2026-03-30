@@ -493,7 +493,7 @@ function getAcmeChallengeRoots() {
 }
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
-const SESSION_MAX_AGE_MS = 1000 * 60 * 60;
+const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
 let cachedLoginStats = null;
 let cachedLoginStatsExpiresAt = 0;
@@ -505,7 +505,7 @@ const sessionMiddleware = session({
   }),
   secret: process.env.SESSION_SECRET || "change-me-in-production",
   resave: false,
-  rolling: false,
+  rolling: true,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
@@ -539,6 +539,12 @@ for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
 }
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(sessionMiddleware);
+app.use((req, res, next) => {
+  if (req.session?.user) {
+    req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
+  }
+  next();
+});
 app.use(passport.initialize());
 
 function setFlash(req, type, text) {
