@@ -1463,6 +1463,15 @@
     article.appendChild(line);
     chatBox.appendChild(article);
 
+    if (
+      !isSystemMessage &&
+      Number(msg?.user_id) > 0 &&
+      Number(msg.user_id) !== currentUserId &&
+      options?.skipNotifications !== true
+    ) {
+      playChatTone();
+    }
+
     while (chatBox.children.length > chatMessageRestoreLimit) {
       chatBox.removeChild(chatBox.firstChild);
     }
