@@ -1262,86 +1262,8 @@ if (festplayCount === 0) {
   db.prepare("INSERT INTO festplays (name) VALUES (?)").run("Freeplay");
 }
 
-const BELL_SOUND_SETTINGS_LIVE_UPDATE_CONTENT =
-  "🔔 Neu bei der Glocke: Den Beitrittssound und den Chatsound kannst du jetzt getrennt mit eigenen Haken an- oder ausschalten. Wenn beide Haken aus sind, bleibt der Chat stumm.";
-
-function ensureBellSoundSettingsLiveUpdate() {
-  const existingEntry = db
-    .prepare(
-      `SELECT id
-         FROM site_updates
-        WHERE content = ?
-        LIMIT 1`
-    )
-    .get(BELL_SOUND_SETTINGS_LIVE_UPDATE_CONTENT);
-
-  if (existingEntry) {
-    return;
-  }
-
-  const adminUser = db
-    .prepare(
-      `SELECT id, username
-         FROM users
-        WHERE is_admin = 1
-        ORDER BY id ASC
-        LIMIT 1`
-    )
-    .get();
-
-  if (!adminUser?.id) {
-    return;
-  }
-
-  db.prepare(
-    `INSERT INTO site_updates (author_id, author_name, content, updated_at)
-     VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
-  ).run(adminUser.id, String(adminUser.username || "Administration").trim() || "Administration", BELL_SOUND_SETTINGS_LIVE_UPDATE_CONTENT);
-}
-
-ensureBellSoundSettingsLiveUpdate();
-
-const FANTASY_TAVERN_LIVE_UPDATE_TEXT =
-  "Die Taverne Zum Silbermond-Krug ist jetzt unter Fantasy Räume zu finden.";
-
-function ensureFantasyTavernLiveUpdate() {
-  const existingEntry = db
-    .prepare(
-      `SELECT id
-         FROM site_updates
-        WHERE content = ?
-        LIMIT 1`
-    )
-    .get(FANTASY_TAVERN_LIVE_UPDATE_TEXT);
-
-  if (existingEntry) {
-    return;
-  }
-
-  const adminUser = db
-    .prepare(
-      `SELECT id, username
-         FROM users
-        WHERE is_admin = 1
-        ORDER BY id ASC
-        LIMIT 1`
-    )
-    .get();
-
-  if (!adminUser?.id) {
-    return;
-  }
-
-  db.prepare(
-    `INSERT INTO site_updates (author_id, author_name, content, updated_at)
-     VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))`
-  ).run(
-    adminUser.id,
-    String(adminUser.username || "Administration").trim() || "Administration",
-    FANTASY_TAVERN_LIVE_UPDATE_TEXT
-  );
-}
-
-ensureFantasyTavernLiveUpdate();
+db.prepare("DELETE FROM site_updates WHERE content = ?").run(
+  "Die Taverne Zum Silbermond-Krug ist jetzt unter Fantasy Räume zu finden."
+);
 
 module.exports = db;
