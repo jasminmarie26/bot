@@ -801,12 +801,36 @@
     return cleanup;
   }
 
+  function stopActiveNotificationAudios() {
+    activeNotificationAudios.forEach((audio) => {
+      try {
+        audio.pause();
+      } catch (_error) {
+        // Ignore pause failures on already-finished sounds.
+      }
+
+      try {
+        audio.currentTime = 0;
+      } catch (_error) {
+        // Ignore seek failures on transient audio elements.
+      }
+
+      activeNotificationAudios.delete(audio);
+    });
+  }
+
   async function playNotificationAudioElement(kind, { volume = 1 } = {}) {
+    const normalizedKind = kind === "entry" ? "entry" : "chat";
+    const preferenceEnabled = normalizedKind === "entry" ? entrySoundEnabled : messageSoundEnabled;
+    if (!preferenceEnabled) {
+      return false;
+    }
+
     if (!AudioElementCtor || !notificationAudioPlaybackUnlocked) {
       return false;
     }
 
-    const source = buildNotificationToneDataUrl(kind);
+    const source = buildNotificationToneDataUrl(normalizedKind);
     if (!source) {
       return false;
     }
@@ -998,6 +1022,9 @@
     }
 
     updateSoundToggle();
+    if (!isAnySoundEnabled()) {
+      stopActiveNotificationAudios();
+    }
     if (isAnySoundEnabled()) {
       await unlockNotificationAudio();
     }
@@ -1022,6 +1049,10 @@
   }
 
   async function playEntryTone() {
+    if (!entrySoundEnabled) {
+      return;
+    }
+
     if (await playNotificationAudioElement("entry", { volume: 0.98 })) {
       return;
     }
@@ -1060,6 +1091,10 @@
   }
 
   async function playChatTone() {
+    if (!messageSoundEnabled) {
+      return;
+    }
+
     if (await playNotificationAudioElement("chat", { volume: 0.92 })) {
       return;
     }
