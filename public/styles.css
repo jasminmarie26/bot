@@ -5621,12 +5621,31 @@ body.page-home-screen .home-hero-actions {
 
 .rp-room-afk-clock,
 .chat-afk-clock {
-  display: inline-block;
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 0.62em;
+  align-items: center;
+  justify-content: center;
+  width: 1.38em;
+  height: 1.38em;
+  margin-right: 0.1rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 246, 196, 0.95), rgba(255, 246, 196, 0) 55%),
+    linear-gradient(135deg, #ffd36e 0%, #ff9f43 52%, #ff6b6b 100%);
+  box-shadow:
+    0 0.18rem 0.45rem rgba(255, 121, 63, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+  font-size: 0;
   line-height: 1;
-  color: color-mix(in srgb, var(--muted) 80%, var(--accent) 20%);
-  -webkit-text-fill-color: currentColor;
+}
+
+.rp-room-afk-clock::before,
+.chat-afk-clock::before {
+  content: "\231B";
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #fff8ef;
+  text-shadow: 0 1px 2px rgba(91, 33, 8, 0.28);
 }
 
 .rp-room-occupant:hover {

@@ -1,9 +1,51 @@
 ﻿<!doctype html>
 <html lang="de">
   <head>
+    <% const pageTitle = String(typeof title !== "undefined" && title ? title : "Heldenhafte Reisen"); %>
+    <% const resolvedSiteName = String(typeof siteName !== "undefined" && siteName ? siteName : "Heldenhafte Reisen"); %>
+    <% const fullPageTitle = pageTitle.toLowerCase().includes(resolvedSiteName.toLowerCase())
+      ? pageTitle
+      : `${pageTitle} | ${resolvedSiteName}`; %>
+    <% const resolvedMetaDescription = String(
+      typeof metaDescription !== "undefined" && metaDescription
+        ? metaDescription
+        : "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen und Live Updates."
+    ); %>
+    <% const resolvedCanonicalUrl = String(typeof canonicalUrl !== "undefined" ? canonicalUrl || "" : "").trim(); %>
+    <% const resolvedMetaImageUrl = String(typeof metaImageUrl !== "undefined" ? metaImageUrl || "" : "").trim(); %>
+    <% const resolvedRobotsMeta = String(
+      typeof robotsMeta !== "undefined" && robotsMeta
+        ? robotsMeta
+        : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    ); %>
+    <% const websiteJsonLd = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: resolvedSiteName,
+      url: resolvedCanonicalUrl || undefined
+    }); %>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><%= title %></title>
+    <title><%= fullPageTitle %></title>
+    <meta name="description" content="<%= resolvedMetaDescription %>" />
+    <meta name="robots" content="<%= resolvedRobotsMeta %>" />
+    <meta property="og:site_name" content="<%= resolvedSiteName %>" />
+    <meta property="og:title" content="<%= fullPageTitle %>" />
+    <meta property="og:description" content="<%= resolvedMetaDescription %>" />
+    <meta property="og:type" content="website" />
+    <% if (resolvedCanonicalUrl) { %>
+      <meta property="og:url" content="<%= resolvedCanonicalUrl %>" />
+      <link rel="canonical" href="<%= resolvedCanonicalUrl %>" />
+    <% } %>
+    <% if (resolvedMetaImageUrl) { %>
+      <meta property="og:image" content="<%= resolvedMetaImageUrl %>" />
+      <meta name="twitter:image" content="<%= resolvedMetaImageUrl %>" />
+    <% } %>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="<%= fullPageTitle %>" />
+    <meta name="twitter:description" content="<%= resolvedMetaDescription %>" />
+    <meta name="application-name" content="<%= resolvedSiteName %>" />
+    <script type="application/ld+json"><%- websiteJsonLd %></script>
     <script>
       (() => {
         const isEdgeBrowser = /\bEdg\//.test(window.navigator.userAgent);

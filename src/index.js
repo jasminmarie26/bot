@@ -494,9 +494,54 @@ function getAcmeChallengeRoots() {
 
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
+const SESSION_COOKIE_NAME = "connect.sid";
 const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
 let cachedLoginStats = null;
 let cachedLoginStatsExpiresAt = 0;
+const DEFAULT_SEO_DESCRIPTION =
+  "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.";
+const DEFAULT_SEO_IMAGE_PATH = "/apple-touch-icon-hr.png";
+const SEO_DESCRIPTION_BY_PATH = {
+  "/":
+    "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.",
+  "/community-regeln":
+    "Lies die Community-Regeln von Heldenhafte Reisen und erfahre, wie das gemeinsame Rollenspiel auf der Plattform organisiert ist.",
+  "/datenschutz":
+    "Datenschutzinformationen von Heldenhafte Reisen mit allen wichtigen Angaben zur Verarbeitung personenbezogener Daten.",
+  "/help":
+    "Die Hilfe von Heldenhafte Reisen erklärt die wichtigsten Bereiche, Einstellungen und Chatbefehle übersichtlich an einem Ort.",
+  "/impressum":
+    "Impressum von Heldenhafte Reisen mit den rechtlichen Pflichtangaben und den öffentlichen Kontaktinformationen der Plattform.",
+  "/kontakt":
+    "Kontaktiere Heldenhafte Reisen direkt über das Kontaktformular, wenn du Fragen, Hinweise oder Unterstützung brauchst.",
+  "/live-updates":
+    "In den Live Updates von Heldenhafte Reisen siehst du aktuelle Neuerungen, Hinweise und Änderungen der Plattform.",
+  "/register":
+    "Registriere dich bei Heldenhafte Reisen und starte mit deinem Account auf der Rollenspielplattform."
+};
+const SEO_SITEMAP_PATHS = [
+  "/",
+  "/community-regeln",
+  "/datenschutz",
+  "/help",
+  "/impressum",
+  "/kontakt",
+  "/live-updates",
+  "/register"
+];
+const NOINDEX_PATH_PREFIXES = [
+  "/account",
+  "/admin",
+  "/auth",
+  "/character-backups",
+  "/chat",
+  "/dashboard",
+  "/logout",
+  "/members",
+  "/session",
+  "/staff"
+];
 
 const sessionMiddleware = session({
   store: new SQLiteStore({
@@ -540,6 +585,12 @@ for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
 app.use(express.static(path.join(__dirname, "..", "public")));
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
+  if (isSessionTabHeartbeatExpired(req.session)) {
+    return respondToInactiveSession(req, res);
+  }
+
+  markSessionTabHeartbeat(req.session);
+
   if (req.session?.user) {
     req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   }
@@ -1516,6 +1567,117 @@ function renderLoginPage(req, res, options = {}) {
 
 function getSessionMaxAgeForUser(user) {
   return SESSION_MAX_AGE_MS;
+}
+
+function normalizeSeoPath(value = "/") {
+  let normalized = String(value || "").trim();
+  if (!normalized) return "/";
+  normalized = normalized.split("#")[0].split("?")[0].trim() || "/";
+  if (!normalized.startsWith("/")) {
+    normalized = `/${normalized}`;
+  }
+  if (normalized.length > 1) {
+    normalized = normalized.replace(/\/+$/, "");
+  }
+  return normalized || "/";
+}
+
+function buildAbsoluteUrl(baseUrl, pathOrUrl = "/") {
+  const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\/+$/, "");
+  if (!normalizedBaseUrl) return "";
+  const normalizedPath = normalizeSeoPath(pathOrUrl);
+  return normalizedPath === "/" ? normalizedBaseUrl : `${normalizedBaseUrl}${normalizedPath}`;
+}
+
+function buildCanonicalUrl(baseUrl, rawUrl = "/") {
+  const normalizedBaseUrl = String(baseUrl || "").trim().replace(/\/+$/, "");
+  if (!normalizedBaseUrl) return "";
+  let relativeUrl = String(rawUrl || "").trim();
+  if (!relativeUrl) return normalizedBaseUrl;
+  relativeUrl = relativeUrl.split("#")[0].trim() || "/";
+  if (!relativeUrl.startsWith("/")) {
+    relativeUrl = `/${relativeUrl}`;
+  }
+  return relativeUrl === "/" ? normalizedBaseUrl : `${normalizedBaseUrl}${relativeUrl}`;
+}
+
+function getSeoDescriptionForPath(pathname) {
+  const normalizedPath = normalizeSeoPath(pathname).toLowerCase();
+  return SEO_DESCRIPTION_BY_PATH[normalizedPath] || DEFAULT_SEO_DESCRIPTION;
+}
+
+function getRobotsMetaForRequest(req) {
+  const normalizedPath = normalizeSeoPath(req.path).toLowerCase();
+  const isPrivatePath = NOINDEX_PATH_PREFIXES.some(
+    (prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`)
+  );
+
+  if (req.session?.user || isPrivatePath) {
+    return "noindex, nofollow, noarchive";
+  }
+
+  return "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+}
+
+function getSessionLastTabHeartbeatAt(sessionData) {
+  const explicitHeartbeatAt = Number(sessionData?.last_tab_heartbeat_at || 0);
+  if (Number.isFinite(explicitHeartbeatAt) && explicitHeartbeatAt > 0) {
+    return explicitHeartbeatAt;
+  }
+
+  const sessionMaxAge = getSessionMaxAgeForUser(sessionData?.user);
+  const cookieExpiresAt = new Date(sessionData?.cookie?.expires || "").getTime();
+  if (!Number.isFinite(cookieExpiresAt) || cookieExpiresAt <= 0 || sessionMaxAge <= 0) {
+    return 0;
+  }
+
+  const inferredHeartbeatAt = cookieExpiresAt - sessionMaxAge;
+  return Number.isFinite(inferredHeartbeatAt) && inferredHeartbeatAt > 0 ? inferredHeartbeatAt : 0;
+}
+
+function isSessionTabHeartbeatExpired(sessionData, now = Date.now()) {
+  if (!sessionData?.user) return false;
+  const lastHeartbeatAt = getSessionLastTabHeartbeatAt(sessionData);
+  if (!Number.isFinite(lastHeartbeatAt) || lastHeartbeatAt <= 0) {
+    return false;
+  }
+  return now - lastHeartbeatAt >= SESSION_TAB_IDLE_TIMEOUT_MS;
+}
+
+function markSessionTabHeartbeat(sessionData, now = Date.now()) {
+  if (!sessionData?.user) return;
+  const lastHeartbeatAt = Number(sessionData?.last_tab_heartbeat_at || 0);
+  if (Number.isFinite(lastHeartbeatAt) && lastHeartbeatAt > 0 && now - lastHeartbeatAt < 1000 * 30) {
+    return;
+  }
+  sessionData.last_tab_heartbeat_at = now;
+}
+
+function isXmlHttpRequest(req) {
+  return String(req.get("x-requested-with") || "").trim().toLowerCase() === "xmlhttprequest";
+}
+
+function respondToInactiveSession(req, res) {
+  const finishResponse = () => {
+    res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+    if (isXmlHttpRequest(req)) {
+      return res.status(401).json({ error: "session_inactive" });
+    }
+    if (req.method === "GET") {
+      return res.redirect(req.originalUrl || "/");
+    }
+    return res.redirect("/login");
+  };
+
+  if (!req.session) {
+    return finishResponse();
+  }
+
+  clearAdminImpersonationSession(req.session);
+  delete req.session.last_tab_heartbeat_at;
+  delete req.session.user;
+
+  return req.session.destroy(() => finishResponse());
 }
 
 function renderForgotUsernamePage(req, res, options = {}) {
@@ -8287,6 +8449,12 @@ app.use((req, res, next) => {
   res.locals.availableThemes = THEME_OPTIONS;
   res.locals.serverOptions = SERVER_OPTIONS;
   res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
+  const publicBaseUrl = getPublicBaseUrl(req) || getLegalMeta().appBaseUrl;
+  res.locals.siteName = getLegalMeta().siteName;
+  res.locals.metaDescription = getSeoDescriptionForPath(req.path);
+  res.locals.robotsMeta = getRobotsMetaForRequest(req);
+  res.locals.canonicalUrl = buildCanonicalUrl(publicBaseUrl, req.originalUrl || req.path || "/");
+  res.locals.metaImageUrl = buildAbsoluteUrl(publicBaseUrl, DEFAULT_SEO_IMAGE_PATH);
   const recentSiteUpdatesForHeader = getRecentSiteUpdates(50);
   res.locals.latestSiteUpdateRevisionToken =
     String(recentSiteUpdatesForHeader[0]?.revision_token || "").trim() ||
@@ -8412,6 +8580,8 @@ app.get("/", (req, res) => {
   const recentSiteUpdates = getRecentSiteUpdates(30);
   return res.render("home", {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
+    metaDescription:
+      "Entdecke Heldenhafte Reisen, eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen und aktuellen Live Updates.",
     stats: getLoginStats(),
     homeContent,
     recentSiteUpdateRevisions: recentSiteUpdates
@@ -8431,6 +8601,8 @@ app.get("/live-updates", (req, res) => {
     .filter(Boolean);
   return res.render("live-updates", {
     title: homeContent.updates_title || DEFAULT_UPDATES_TITLE,
+    metaDescription:
+      "Verfolge in den Live Updates von Heldenhafte Reisen neue Funktionen, Änderungen und wichtige Hinweise zur Plattform.",
     homeContent,
     siteUpdates,
     recentSiteUpdateRevisions,
@@ -9162,8 +9334,7 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/session/touch", (req, res) => {
-  const isFetchRequest =
-    String(req.get("x-requested-with") || "").trim().toLowerCase() === "xmlhttprequest";
+  const isFetchRequest = isXmlHttpRequest(req);
 
   if (!req.session.user) {
     if (isFetchRequest) {
@@ -9174,6 +9345,7 @@ app.post("/session/touch", (req, res) => {
     return res.redirect("/login");
   }
 
+  markSessionTabHeartbeat(req.session);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   return req.session.save((error) => {
     if (error) {
@@ -10902,6 +11074,8 @@ function decorateHelpBbcodeExamples() {
 app.get("/help", (req, res) => {
   return res.render("help", {
     title: "Hilfe",
+    metaDescription:
+      "Hier findest du die Hilfe von Heldenhafte Reisen mit Befehlen, Erklärungen und einer übersichtlichen Orientierung durch die Plattform.",
     helpTopics: HELP_TOPICS,
     helpTopic: null,
     helpBbcodeExamples: decorateHelpBbcodeExamples(),
@@ -10919,11 +11093,83 @@ app.get("/help/:slug", (req, res) => {
 
   return res.render("help", {
     title: `Hilfe: ${helpTopic.title}`,
+    metaDescription:
+      "Hier findest du die Hilfe von Heldenhafte Reisen mit Befehlen, Erklärungen und einer übersichtlichen Orientierung durch die Plattform.",
     helpTopics: HELP_TOPICS,
     helpTopic,
     helpBbcodeExamples: decorateHelpBbcodeExamples(),
     adminContactName: getPublicAdminCharacterName()
   });
+});
+
+function escapeXml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildSitemapXml(urlEntries) {
+  const urls = Array.isArray(urlEntries)
+    ? urlEntries
+        .filter((entry) => String(entry?.loc || "").trim())
+        .map(
+          (entry) => [
+            "  <url>",
+            `    <loc>${escapeXml(entry.loc)}</loc>`,
+            entry.lastmod ? `    <lastmod>${escapeXml(entry.lastmod)}</lastmod>` : "",
+            "  </url>"
+          ]
+            .filter(Boolean)
+            .join("\n")
+        )
+    : [];
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...urls,
+    "</urlset>"
+  ].join("\n");
+}
+
+app.get("/robots.txt", (req, res) => {
+  const publicBaseUrl = getPublicBaseUrl(req) || getLegalMeta().appBaseUrl;
+  const sitemapUrl = buildAbsoluteUrl(publicBaseUrl, "/sitemap.xml");
+  const lines = [
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /account",
+    "Disallow: /admin",
+    "Disallow: /auth",
+    "Disallow: /character-backups",
+    "Disallow: /chat",
+    "Disallow: /dashboard",
+    "Disallow: /logout",
+    "Disallow: /members",
+    "Disallow: /session",
+    "Disallow: /staff",
+    sitemapUrl ? `Sitemap: ${sitemapUrl}` : ""
+  ].filter(Boolean);
+
+  res.type("text/plain; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  return res.send(lines.join("\n"));
+});
+
+app.get("/sitemap.xml", (req, res) => {
+  const publicBaseUrl = getPublicBaseUrl(req) || getLegalMeta().appBaseUrl;
+  const lastmod = new Date().toISOString();
+  const entries = SEO_SITEMAP_PATHS.map((pathName) => ({
+    loc: buildAbsoluteUrl(publicBaseUrl, pathName),
+    lastmod
+  })).filter((entry) => entry.loc);
+
+  res.type("application/xml");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  return res.send(buildSitemapXml(entries));
 });
 
 app.get("/characters/new", requireAuth, (req, res) => {
