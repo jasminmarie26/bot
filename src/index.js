@@ -496,6 +496,7 @@ const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
 const SESSION_COOKIE_NAME = "connect.sid";
+const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
 const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
 let cachedLoginStats = null;
 let cachedLoginStatsExpiresAt = 0;
@@ -602,39 +603,64 @@ function setFlash(req, type, text) {
   req.session.flash = { type, text };
 }
 
-function getActiveSessionUserIds() {
+function clearLoginStatsCache() {
+  cachedLoginStats = null;
+  cachedLoginStatsExpiresAt = 0;
+}
+
+function collectActiveSessionUserIds(options = {}) {
+  const shouldDeleteInactive = options.deleteInactive !== false;
+  const now = Date.now();
   let sessionsDb;
   try {
     sessionsDb = new Database(sessionsDbPath, {
       fileMustExist: true,
-      readonly: true,
       timeout: 1000
     });
   } catch (error) {
-    return [];
+    return {
+      activeUserIds: [],
+      deletedSessionCount: 0
+    };
   }
 
   try {
     const rows = sessionsDb
-      .prepare("SELECT sess FROM sessions WHERE expired > ?")
-      .all(Date.now());
+      .prepare("SELECT sid, sess FROM sessions WHERE expired > ?")
+      .all(now);
+    const deleteSessionStatement = shouldDeleteInactive
+      ? sessionsDb.prepare("DELETE FROM sessions WHERE sid = ?")
+      : null;
 
     const uniqueUserIds = new Set();
+    let deletedSessionCount = 0;
     for (const row of rows) {
       try {
         const parsed = JSON.parse(row.sess);
+        if (isSessionTabHeartbeatExpired(parsed, now)) {
+          if (deleteSessionStatement) {
+            deletedSessionCount += deleteSessionStatement.run(row.sid).changes;
+          }
+          continue;
+        }
+
         const userId = Number(parsed?.user?.id);
         if (Number.isInteger(userId) && userId > 0) {
           uniqueUserIds.add(userId);
         }
       } catch (error) {
-        // Ignore malformed session rows.
+        if (deleteSessionStatement) {
+          deletedSessionCount += deleteSessionStatement.run(row.sid).changes;
+        }
       }
     }
 
     const candidateUserIds = Array.from(uniqueUserIds);
     if (!candidateUserIds.length) {
-      return [];
+      return {
+        activeUserIds: [],
+        deletedSessionCount
+      };
     }
 
     const placeholders = candidateUserIds.map(() => "?").join(", ");
@@ -642,12 +668,32 @@ function getActiveSessionUserIds() {
       .prepare(`SELECT id FROM users WHERE id IN (${placeholders})`)
       .all(...candidateUserIds);
 
-    return existingUsers.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+    return {
+      activeUserIds: existingUsers
+        .map((row) => Number(row.id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+      deletedSessionCount
+    };
   } catch (error) {
-    return [];
+    return {
+      activeUserIds: [],
+      deletedSessionCount: 0
+    };
   } finally {
     sessionsDb.close();
   }
+}
+
+function purgeInactiveStoredSessions() {
+  const sessionSnapshot = collectActiveSessionUserIds({ deleteInactive: true });
+  if (sessionSnapshot.deletedSessionCount > 0) {
+    clearLoginStatsCache();
+  }
+  return sessionSnapshot.deletedSessionCount;
+}
+
+function getActiveSessionUserIds() {
+  return collectActiveSessionUserIds({ deleteInactive: true }).activeUserIds;
 }
 
 function getConnectedSocketUserIds() {
@@ -17560,13 +17606,45 @@ io.on("connection", (socket) => {
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
     const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
     if (afkMatch) {
+      const currentCharacterId = getSocketPreferredCharacterId(socket, serverId);
       const afkDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const afkDisplayName =
         afkDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
+      const existingAfkState = getChatAfkState(
+        socket.data.user.id,
+        roomId,
+        serverId,
+        currentCharacterId
+      );
+
+      if (existingAfkState) {
+        const clearedAfkState = clearChatAfkState(
+          socket.data.user.id,
+          roomId,
+          serverId,
+          {},
+          currentCharacterId
+        );
+
+        if (clearedAfkState) {
+          emitSystemChatMessage(
+            roomId,
+            serverId,
+            "ist wieder zurück",
+            {
+              system_kind: "actor-message",
+              presence_actor_name: afkDisplayName,
+              presence_actor_role_style: afkDisplayProfile?.role_style || "",
+              presence_actor_chat_text_color: afkDisplayProfile?.chat_text_color || ""
+            }
+          );
+        }
+        return;
+      }
 
       setChatAfkState({
         userId: socket.data.user.id,
-        characterId: getSocketPreferredCharacterId(socket, serverId),
+        characterId: currentCharacterId,
         roomId,
         serverId,
         actorName: afkDisplayName,
@@ -18675,5 +18753,15 @@ io.on("connection", (socket) => {
 const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {
   pruneEmptyRooms();
+  const purgedSessionCount = purgeInactiveStoredSessions();
+  if (purgedSessionCount > 0) {
+    console.log(`Inaktive Sitzungen bereinigt: ${purgedSessionCount}`);
+  }
+  setInterval(() => {
+    const deletedSessionCount = purgeInactiveStoredSessions();
+    if (deletedSessionCount > 0) {
+      emitHomeStatsUpdate();
+    }
+  }, SESSION_STORE_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
 });
