@@ -5834,12 +5834,45 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     }
   ]
 });
+const CURATED_PUBLIC_ROOM_DEFINITIONS = Object.freeze({
+  "free-rp": [
+    {
+      key: "zum-silbermond-krug",
+      section: "Fantasy Räume",
+      name: "Zum Silbermond-Krug",
+      teaser: "Taverne für Begegnungen bei Met, Musik und Geschichten.",
+      description: "Eine warme Taverne mit knisterndem Kamin, dunklem Holz und genug Raum für Reisende, Magier, Söldner und nächtliche Gestalten."
+    }
+  ],
+  erp: []
+});
 
 function getStandardRoomsForServer(serverId) {
   const normalizedServerId = normalizeServer(serverId);
   return Array.isArray(STANDARD_ROOM_DEFINITIONS[normalizedServerId])
     ? STANDARD_ROOM_DEFINITIONS[normalizedServerId]
     : [];
+}
+
+function getCuratedPublicRoomDefinitionsForServer(serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  return Array.isArray(CURATED_PUBLIC_ROOM_DEFINITIONS[normalizedServerId])
+    ? CURATED_PUBLIC_ROOM_DEFINITIONS[normalizedServerId]
+    : [];
+}
+
+function getCuratedPublicRoomDefinition(room, serverId = null) {
+  const normalizedServerId = normalizeServer(serverId || room?.server_id);
+  const roomNameKey = toRoomNameKey(room?.name || "");
+  if (!roomNameKey) {
+    return null;
+  }
+
+  return (
+    getCuratedPublicRoomDefinitionsForServer(normalizedServerId).find(
+      (definition) => String(definition.key || "").trim().toLowerCase() === roomNameKey
+    ) || null
+  );
 }
 
 function getStandardRoomForServer(serverId, roomId) {
@@ -7960,6 +7993,130 @@ function getRoomWithCharacter(roomId) {
     )
     .get(roomId);
 }
+
+function resolveCuratedPublicRoomAnchor(serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  const anchor = db
+    .prepare(
+      `SELECT c.id AS character_id, c.user_id AS user_id
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE c.server_id = ?
+        ORDER BY CASE
+          WHEN u.is_admin = 1 THEN 0
+          WHEN u.is_moderator = 1 THEN 1
+          ELSE 2
+        END,
+        CASE
+          WHEN COALESCE(c.festplay_id, 0) = 0 THEN 0
+          ELSE 1
+        END,
+        c.id ASC
+        LIMIT 1`
+    )
+    .get(normalizedServerId);
+
+  return {
+    characterId: Number(anchor?.character_id) || null,
+    userId: Number(anchor?.user_id) || null
+  };
+}
+
+function ensureCuratedPublicRooms() {
+  const findExistingRoom = db.prepare(
+    `SELECT id
+       FROM chat_rooms
+      WHERE server_id = ?
+        AND name_key = ?
+        AND COALESCE(is_public_room, 0) = 1
+        AND COALESCE(festplay_id, 0) = 0
+        AND COALESCE(is_festplay_chat, 0) = 0
+        AND COALESCE(is_manual_festplay_room, 0) = 0
+        AND COALESCE(is_festplay_side_chat, 0) = 0
+      LIMIT 1`
+  );
+  const updateRoom = db.prepare(
+    `UPDATE chat_rooms
+        SET character_id = ?,
+            created_by_user_id = ?,
+            name = ?,
+            name_key = ?,
+            description = ?,
+            teaser = ?,
+            is_public_room = 1,
+            is_saved_room = 0,
+            is_locked = 0,
+            sort_order = ?
+      WHERE id = ?`
+  );
+  const insertRoom = db.prepare(
+    `INSERT INTO chat_rooms (
+       character_id,
+       created_by_user_id,
+       name,
+       name_key,
+       description,
+       teaser,
+       server_id,
+       is_public_room,
+       is_saved_room,
+       is_locked,
+       sort_order
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 0, ?)`
+  );
+
+  Object.entries(CURATED_PUBLIC_ROOM_DEFINITIONS).forEach(([serverId, definitions]) => {
+    if (!Array.isArray(definitions) || !definitions.length) {
+      return;
+    }
+
+    const anchor = resolveCuratedPublicRoomAnchor(serverId);
+    if (!Number.isInteger(anchor.characterId) || anchor.characterId < 1 || !Number.isInteger(anchor.userId) || anchor.userId < 1) {
+      return;
+    }
+
+    definitions.forEach((definition, index) => {
+      const normalizedName = normalizeRoomName(definition.name);
+      const nameKey = String(definition.key || "").trim().toLowerCase() || toRoomNameKey(normalizedName);
+      const normalizedDescription = normalizeRoomDescription(definition.description || "");
+      const normalizedTeaser = normalizeRoomTeaser(definition.teaser || "");
+      if (!normalizedName || !nameKey) {
+        return;
+      }
+
+      const existingRoom = findExistingRoom.get(normalizeServer(serverId), nameKey);
+      const sortOrder = Number.isInteger(Number(definition.sort_order)) ? Number(definition.sort_order) : index + 1;
+
+      if (existingRoom?.id) {
+        updateRoom.run(
+          anchor.characterId,
+          anchor.userId,
+          normalizedName,
+          nameKey,
+          normalizedDescription,
+          normalizedTeaser,
+          sortOrder,
+          existingRoom.id
+        );
+        return;
+      }
+
+      insertRoom.run(
+        anchor.characterId,
+        anchor.userId,
+        normalizedName,
+        nameKey,
+        normalizedDescription,
+        normalizedTeaser,
+        normalizeServer(serverId),
+        sortOrder
+      );
+    });
+  });
+}
+
+ensureCuratedPublicRooms();
 
 function isRoomOwner(user, room = null) {
   if (!user || !room) return false;
@@ -11367,6 +11524,14 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const publicRooms = rooms.filter(
     (room) => room.is_public_room
   );
+  const fantasyPublicRooms = publicRooms.filter((room) => {
+    const curatedDefinition = getCuratedPublicRoomDefinition(room, character.server_id);
+    return curatedDefinition?.section === "Fantasy Räume";
+  });
+  const defaultPublicRooms = publicRooms.filter((room) => {
+    const curatedDefinition = getCuratedPublicRoomDefinition(room, character.server_id);
+    return !curatedDefinition?.section;
+  });
   const ownedRooms = isOwner
     ? rooms.filter(
         (room) =>
@@ -11419,7 +11584,8 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     isOwner,
     standardRooms,
     standardRoomUsers,
-    publicRooms,
+    publicRooms: defaultPublicRooms,
+    fantasyPublicRooms,
     publicRoomUsers,
     roomUsers,
     ownedRooms,
