@@ -1575,9 +1575,6 @@
     if (!autoAfkEnabled) {
       return;
     }
-    if (document.visibilityState === "hidden") {
-      return;
-    }
     if (isCurrentChannelAfk) {
       return;
     }
@@ -1776,7 +1773,6 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       stopTypingIndicator();
-      clearAfkTimer();
       return;
     }
 
