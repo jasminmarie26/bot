@@ -11592,7 +11592,10 @@ app.get("/characters/:id", requireAuth, (req, res) => {
           room.is_saved_room &&
           (!room.is_public_room || isCuratedPublicRoom(room, character.server_id)) &&
           Number(room.created_by_user_id) === Number(req.session.user.id)
-      )
+      ).map((room) => ({
+        ...room,
+        hide_owned_room_users: isCuratedPublicRoom(room, character.server_id)
+      }))
     : [];
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
