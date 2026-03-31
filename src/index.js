@@ -5922,6 +5922,175 @@ function isCuratedPublicRoom(room, serverId = null) {
   return Boolean(getCuratedPublicRoomDefinition(room, serverId));
 }
 
+const TAVERN_INNKEEPER_ROOM_KEY = "zum-silbermond-krug";
+const TAVERN_INNKEEPER_NAME = "Edric Mühlenbrand";
+const TAVERN_INNKEEPER_PRESENCE_KEY = "npc:edric-muehlenbrand";
+const TAVERN_INNKEEPER_CHAT_TEXT_COLOR = "#c4863a";
+const TAVERN_INNKEEPER_COOLDOWN_MS = 8000;
+const tavernInnkeeperLastReactionAtByRoom = new Map();
+
+function isTavernInnkeeperRoom(room, serverId = null) {
+  const definition = getCuratedPublicRoomDefinition(room, serverId);
+  return String(definition?.key || "").trim().toLowerCase() === TAVERN_INNKEEPER_ROOM_KEY;
+}
+
+function normalizeTavernInnkeeperTriggerText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tavernInnkeeperTextIncludesAny(normalizedText, keywords) {
+  if (!normalizedText || !Array.isArray(keywords) || !keywords.length) {
+    return false;
+  }
+
+  return keywords.some((keyword) => normalizedText.includes(String(keyword || "").trim()));
+}
+
+function pickRandomTavernInnkeeperReply(replies) {
+  if (!Array.isArray(replies) || !replies.length) {
+    return "";
+  }
+
+  const randomIndex = Math.floor(Math.random() * replies.length);
+  return String(replies[randomIndex] || "").trim();
+}
+
+function buildTavernInnkeeperReaction(content, actorName) {
+  const normalizedText = normalizeTavernInnkeeperTriggerText(content);
+  if (!normalizedText) {
+    return "";
+  }
+
+  const safeActorName = String(actorName || "").trim() || "dem Gast";
+  const mentionsInnkeeper = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "edric",
+    "muehlenbrand",
+    "wirt"
+  ]);
+  const mentionsDrink = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "bier",
+    "met",
+    "ale",
+    "wein",
+    "krug",
+    "durst",
+    "trinken"
+  ]);
+  const mentionsFood = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "eintopf",
+    "essen",
+    "hunger",
+    "brot",
+    "kueche",
+    "mahlzeit"
+  ]);
+  const mentionsRoom = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "zimmer",
+    "bett",
+    "schlafen",
+    "nachtlager",
+    "uebernachten"
+  ]);
+  const saysThanks = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "danke",
+    "dankeschoen",
+    "vielen dank"
+  ]);
+  const greets = tavernInnkeeperTextIncludesAny(normalizedText, [
+    "hallo",
+    "guten morgen",
+    "guten abend",
+    "gruess",
+    "grues",
+    "moin",
+    "servus",
+    "tag"
+  ]);
+
+  if (mentionsDrink) {
+    return pickRandomTavernInnkeeperReply([
+      `schiebt ${safeActorName} einen frisch gefüllten Krug über den Tresen.`,
+      `gießt ${safeActorName} einen Becher Met ein und nickt zufrieden.`,
+      `stellt ${safeActorName} ein kühles Bier hin und wischt den Tresen sauber.`
+    ]);
+  }
+
+  if (mentionsFood) {
+    return pickRandomTavernInnkeeperReply([
+      `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin.`,
+      `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit.`,
+      `legt ${safeActorName} Brot, Käse und einen großen Löffel Eintopf bereit.`
+    ]);
+  }
+
+  if (mentionsRoom) {
+    return pickRandomTavernInnkeeperReply([
+      "nickt zum Treppenaufgang. Oben ist noch ein freies Zimmer für müde Reisende.",
+      "deutet auf den Flur. Für die Nacht findet sich hier noch ein ruhiges Bett.",
+      "stellt einen Schlüssel auf den Tresen. Ein Zimmer im oberen Stock ist noch frei."
+    ]);
+  }
+
+  if (saysThanks) {
+    return pickRandomTavernInnkeeperReply([
+      "lächelt nur kurz. Gern, dafür ist der Krug schließlich da.",
+      "nickt freundlich. Solange die Gäste zufrieden sind, ist der Abend gut.",
+      "winkt ab. Trink in Ruhe, der Silbermond-Krug sorgt schon für den Rest."
+    ]);
+  }
+
+  if (mentionsInnkeeper || greets) {
+    return pickRandomTavernInnkeeperReply([
+      `hebt ${safeActorName} grüßend die Hand. Willkommen im Silbermond-Krug.`,
+      `nickt ${safeActorName} freundlich zu. Kamin, Met und ein freier Platz warten schon.`,
+      `stellt ${safeActorName} einen sauberen Krug hin. Setz dich, Reisende sind hier willkommen.`
+    ]);
+  }
+
+  return "";
+}
+
+function maybeTriggerTavernInnkeeperReaction({ room, roomId, serverId, content, actorName }) {
+  const normalizedRoomId = Number(roomId);
+  if (!Number.isInteger(normalizedRoomId) || normalizedRoomId < 1 || !isTavernInnkeeperRoom(room, serverId)) {
+    return;
+  }
+
+  const reaction = buildTavernInnkeeperReaction(content, actorName);
+  if (!reaction) {
+    return;
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  const cooldownKey = `${normalizedServerId}:${normalizedRoomId}`;
+  const lastReactionAt = Number(tavernInnkeeperLastReactionAtByRoom.get(cooldownKey) || 0);
+  const now = Date.now();
+  if (now - lastReactionAt < TAVERN_INNKEEPER_COOLDOWN_MS) {
+    return;
+  }
+
+  tavernInnkeeperLastReactionAtByRoom.set(cooldownKey, now);
+  setTimeout(() => {
+    if (!getSocketsInChannel(normalizedRoomId, normalizedServerId).length) {
+      return;
+    }
+
+    emitSystemChatMessage(normalizedRoomId, normalizedServerId, reaction, {
+      system_kind: "actor-message",
+      presence_actor_name: TAVERN_INNKEEPER_NAME,
+      presence_actor_chat_text_color: TAVERN_INNKEEPER_CHAT_TEXT_COLOR
+    });
+  }, 650);
+}
+
 function getStandardRoomForServer(serverId, roomId) {
   const normalizedRoomId = String(roomId || "").trim().toLowerCase();
   if (!normalizedRoomId) return null;
@@ -17019,6 +17188,20 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
     });
   }
 
+  if (room && isTavernInnkeeperRoom(room, serverId)) {
+    onlineCharacters.push({
+      presence_key: TAVERN_INNKEEPER_PRESENCE_KEY,
+      user_id: 0,
+      name: TAVERN_INNKEEPER_NAME,
+      character_id: null,
+      role_style: "",
+      chat_text_color: TAVERN_INNKEEPER_CHAT_TEXT_COLOR,
+      has_room_rights: false,
+      is_afk: false,
+      is_npc: true
+    });
+  }
+
   return onlineCharacters.sort((a, b) =>
     a.name.localeCompare(b.name, "de", { sensitivity: "base" })
   );
@@ -17041,7 +17224,8 @@ function sanitizeOnlineCharacterEntries(entries) {
       role_style: String(entry.role_style || "").trim(),
       chat_text_color: String(entry.chat_text_color || "").trim(),
       has_room_rights: entry.has_room_rights === true,
-      is_afk: entry.is_afk === true
+      is_afk: entry.is_afk === true,
+      is_npc: entry.is_npc === true
     }))
     .filter((entry) => entry.user_id > 0 || entry.name);
 }
@@ -18952,6 +19136,13 @@ io.on("connection", (socket) => {
       created_at: createdAt,
       message_time_iso: messageTimeIso,
       show_name_time: showNameTime
+    });
+    maybeTriggerTavernInnkeeperReaction({
+      room,
+      roomId,
+      serverId,
+      content,
+      actorName: displayProfile.label || getUserDefaultDisplayName(socket.data.user)
     });
   });
 

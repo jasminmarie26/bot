@@ -2187,14 +2187,24 @@
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
       const isAfk = entry?.is_afk === true;
+      const isNpc = entry?.is_npc === true;
       const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
-      const node = document.createElement("button");
+      const node = document.createElement(isNpc ? "div" : "button");
       const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
       const afkClockNode = document.createElement("span");
 
-      node.type = "button";
-      node.classList.add("chat-online-item", "chat-online-trigger");
+      if (!isNpc) {
+        node.type = "button";
+      }
+      node.classList.add("chat-online-item");
+      if (isNpc) {
+        node.classList.add("is-npc");
+        node.setAttribute("aria-label", `${displayName} (Raumfigur)`);
+        node.title = "Raumfigur";
+      } else {
+        node.classList.add("chat-online-trigger");
+      }
       contentNode.className = "chat-online-content";
       if (isAfk) {
         contentNode.classList.add("is-afk");
@@ -2208,13 +2218,15 @@
       }
       if (presenceKey) {
         presentPresenceKeys.add(presenceKey);
-        onlineEntriesByUserId.set(presenceKey, {
-          presenceKey,
-          userId,
-          characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
-          name: displayName,
-          isAfk
-        });
+        if (!isNpc) {
+          onlineEntriesByUserId.set(presenceKey, {
+            presenceKey,
+            userId,
+            characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
+            name: displayName,
+            isAfk
+          });
+        }
       }
       node.dataset.userId = Number.isInteger(userId) && userId > 0 ? String(userId) : "";
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";

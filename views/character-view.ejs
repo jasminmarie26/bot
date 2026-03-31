@@ -376,6 +376,7 @@
           <div class="rp-room-list rp-room-list-stacked">
             <% fantasyPublicRooms.forEach((room) => { %>
               <% const activeUsers = Array.isArray(publicRoomUsers?.[room.id]) ? publicRoomUsers[room.id] : []; %>
+              <% const visibleUserCount = activeUsers.filter((entry) => entry && entry.is_npc !== true).length; %>
               <div class="rp-room-standard-card rp-room-custom-card">
                 <div class="rp-room-custom-titleline">
                   <span
@@ -414,7 +415,7 @@
                   data-room-watch-server="<%= character.server_id %>"
                   data-room-watch-mode="count-only"
                 >
-                  <span class="muted">User Online: <%= activeUsers.length %></span>
+                  <span class="muted">User Online: <%= visibleUserCount %></span>
                 </div>
               </div>
             <% }) %>

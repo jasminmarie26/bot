@@ -8152,6 +8152,15 @@ select:focus {
   transform: translateY(-1px);
 }
 
+.chat-online-item.is-npc {
+  cursor: default;
+}
+
+.chat-online-item.is-npc:hover {
+  border-color: var(--field-edge);
+  transform: none;
+}
+
 .chat-online-item.is-disabled {
   color: var(--muted);
 }

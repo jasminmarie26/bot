@@ -193,9 +193,12 @@
     target.replaceChildren();
     const watchMode = String(target?.dataset?.roomWatchMode || "").trim().toLowerCase();
     if (watchMode === "count-only") {
+      const visibleEntries = Array.isArray(entries)
+        ? entries.filter((entry) => entry?.is_npc !== true)
+        : [];
       const countState = document.createElement("span");
       countState.className = "muted";
-      countState.textContent = `User Online: ${Array.isArray(entries) ? entries.length : 0}`;
+      countState.textContent = `User Online: ${visibleEntries.length}`;
       target.appendChild(countState);
       scheduleOwnedRoomRowSeparators();
       return;

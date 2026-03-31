@@ -262,25 +262,45 @@
               <% onlineCharacters.forEach((entry) => { %>
                 <% const onlineEntryDisplayName = formatChatRoleName(entry.name, entry.role_style); %>
                 <% const onlineEntrySpecialClass = getChatSpecialNameClass(onlineEntryDisplayName); %>
-                <button
-                  class="chat-online-item chat-online-trigger"
-                  type="button"
-                  data-user-id="<%= entry.user_id %>"
-                  data-character-id="<%= entry.character_id || '' %>"
-                  data-name="<%= onlineEntryDisplayName %>"
-                  data-role-style="<%= entry.role_style || '' %>"
-                  data-chat-text-color="<%= entry.chat_text_color || '' %>"
-                >
-                  <span class="chat-online-content">
-                    <% if (entry.is_afk) { %>
-                      <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
-                    <% } %>
-                    <span
-                      class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= onlineEntrySpecialClass ? ` ${onlineEntrySpecialClass}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
-                      style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
-                    ><%= onlineEntryDisplayName %></span>
-                  </span>
-                </button>
+                <% if (entry.is_npc) { %>
+                  <div
+                    class="chat-online-item is-npc"
+                    data-presence-key="<%= entry.presence_key || '' %>"
+                    aria-label="<%= `${onlineEntryDisplayName} (Raumfigur)` %>"
+                    title="Raumfigur"
+                  >
+                    <span class="chat-online-content">
+                      <% if (entry.is_afk) { %>
+                        <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
+                      <% } %>
+                      <span
+                        class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= onlineEntrySpecialClass ? ` ${onlineEntrySpecialClass}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
+                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
+                      ><%= onlineEntryDisplayName %></span>
+                    </span>
+                  </div>
+                <% } else { %>
+                  <button
+                    class="chat-online-item chat-online-trigger"
+                    type="button"
+                    data-user-id="<%= entry.user_id %>"
+                    data-character-id="<%= entry.character_id || '' %>"
+                    data-presence-key="<%= entry.presence_key || '' %>"
+                    data-name="<%= onlineEntryDisplayName %>"
+                    data-role-style="<%= entry.role_style || '' %>"
+                    data-chat-text-color="<%= entry.chat_text_color || '' %>"
+                  >
+                    <span class="chat-online-content">
+                      <% if (entry.is_afk) { %>
+                        <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
+                      <% } %>
+                      <span
+                        class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= onlineEntrySpecialClass ? ` ${onlineEntrySpecialClass}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
+                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
+                      ><%= onlineEntryDisplayName %></span>
+                    </span>
+                  </button>
+                <% } %>
               <% }) %>
             <% } else { %>
               <p class="muted">Niemand online.</p>
