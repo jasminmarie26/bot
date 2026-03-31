@@ -5178,14 +5178,27 @@ function normalizeRoomName(input) {
   return String(input || "").trim().replace(/\s+/g, " ").slice(0, 80);
 }
 
+function normalizeRoomNameKey(input) {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
 function toRoomNameKey(roomName) {
-  return normalizeRoomName(roomName).toLowerCase();
+  return normalizeRoomNameKey(normalizeRoomName(roomName));
 }
 
 function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription = "") {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
-  const normalizedRoomNameKey = String(roomNameKey || "").trim().toLowerCase();
+  const normalizedRoomNameKey = normalizeRoomNameKey(roomNameKey);
   const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedRoomNameKey) {
     return null;
@@ -5215,12 +5228,12 @@ function dedupeSavedNonFestplayRooms(rooms, serverId) {
   const seenRooms = new Map();
   const curatedRoomKeys = new Set(
     getCuratedPublicRoomDefinitionsForServer(normalizedServerId)
-      .map((definition) => String(definition?.key || "").trim().toLowerCase() || toRoomNameKey(definition?.name || ""))
+      .map((definition) => normalizeRoomNameKey(definition?.key || definition?.name || ""))
       .filter(Boolean)
   );
 
   sourceRooms.forEach((room) => {
-    const roomNameKey = toRoomNameKey(room?.name || "") || String(room?.name_key || "").trim().toLowerCase();
+    const roomNameKey = normalizeRoomNameKey(room?.name_key || "") || toRoomNameKey(room?.name || "");
     const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
     const dedupeKey = curatedRoomKeys.has(roomNameKey)
       ? `${normalizeServer(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
@@ -5905,7 +5918,7 @@ function getCuratedPublicRoomDefinitionsForServer(serverId) {
 
 function getCuratedPublicRoomDefinition(room, serverId = null) {
   const normalizedServerId = normalizeServer(serverId || room?.server_id);
-  const explicitRoomNameKey = String(room?.name_key || "").trim().toLowerCase();
+  const explicitRoomNameKey = normalizeRoomNameKey(room?.name_key || "");
   const roomNameKey = explicitRoomNameKey || toRoomNameKey(room?.name || "");
   if (!roomNameKey) {
     return null;
@@ -5913,7 +5926,7 @@ function getCuratedPublicRoomDefinition(room, serverId = null) {
 
   return (
     getCuratedPublicRoomDefinitionsForServer(normalizedServerId).find(
-      (definition) => String(definition.key || "").trim().toLowerCase() === roomNameKey
+      (definition) => normalizeRoomNameKey(definition?.key || definition?.name || "") === roomNameKey
     ) || null
   );
 }
@@ -5941,7 +5954,7 @@ const upsertCuratedRoomOverrideStatement = db.prepare(`
 
 function getCuratedRoomOverride(serverId, roomKey) {
   const normalizedServerId = normalizeServer(serverId);
-  const normalizedRoomKey = String(roomKey || "").trim().toLowerCase();
+  const normalizedRoomKey = normalizeRoomNameKey(roomKey);
   if (!normalizedRoomKey) {
     return null;
   }
@@ -5959,7 +5972,7 @@ function getCuratedRoomOverride(serverId, roomKey) {
 
 function saveCuratedRoomOverride(serverId, roomKey, description = "", teaser = "") {
   const normalizedServerId = normalizeServer(serverId);
-  const normalizedRoomKey = String(roomKey || "").trim().toLowerCase();
+  const normalizedRoomKey = normalizeRoomNameKey(roomKey);
   if (!normalizedRoomKey) {
     return false;
   }
@@ -8295,11 +8308,19 @@ function ensureCuratedPublicRooms() {
     `SELECT id, description, teaser
        FROM chat_rooms
       WHERE server_id = ?
-        AND name_key = ?
+        AND (
+          name_key = ?
+          OR (LOWER(name) = LOWER(?) AND created_by_user_id = ?)
+        )
         AND COALESCE(festplay_id, 0) = 0
         AND COALESCE(is_festplay_chat, 0) = 0
         AND COALESCE(is_manual_festplay_room, 0) = 0
         AND COALESCE(is_festplay_side_chat, 0) = 0
+      ORDER BY CASE
+        WHEN name_key = ? THEN 0
+        ELSE 1
+      END,
+      id ASC
       LIMIT 1`
   );
   const updateRoom = db.prepare(
@@ -8346,14 +8367,20 @@ function ensureCuratedPublicRooms() {
 
     definitions.forEach((definition, index) => {
       const normalizedName = normalizeRoomName(definition.name);
-      const nameKey = String(definition.key || "").trim().toLowerCase() || toRoomNameKey(normalizedName);
+      const nameKey = normalizeRoomNameKey(definition.key || normalizedName);
       const normalizedDescription = normalizeRoomDescription(definition.description || "");
       const normalizedTeaser = normalizeRoomTeaser(definition.teaser || "");
       if (!normalizedName || !nameKey) {
         return;
       }
 
-      const existingRoom = findExistingRoom.get(normalizeServer(serverId), nameKey);
+      const existingRoom = findExistingRoom.get(
+        normalizeServer(serverId),
+        nameKey,
+        normalizedName,
+        anchor.userId,
+        nameKey
+      );
       const override = getCuratedRoomOverride(serverId, nameKey);
       const persistedDescription = override
         ? normalizeRoomDescription(override.description)
