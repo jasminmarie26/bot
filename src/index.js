@@ -19314,7 +19314,7 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
-    if (previousServerId) {
+    if (previousServerId && socket.data.hasJoinedChat === true) {
       const previousCharacterId = getSocketPreferredCharacterId(socket, previousServerId);
       if (socket.data.isTyping) {
         socket.data.isTyping = false;
