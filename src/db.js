@@ -358,6 +358,15 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS curated_room_overrides (
+    server_id TEXT NOT NULL,
+    room_key TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    teaser TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (server_id, room_key)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
   CREATE INDEX IF NOT EXISTS idx_character_backups_user_id
     ON character_backups(user_id, restored_at, deleted_at);

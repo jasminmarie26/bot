@@ -5922,6 +5922,57 @@ function isCuratedPublicRoom(room, serverId = null) {
   return Boolean(getCuratedPublicRoomDefinition(room, serverId));
 }
 
+const selectCuratedRoomOverrideStatement = db.prepare(`
+  SELECT description, teaser
+    FROM curated_room_overrides
+   WHERE server_id = ?
+     AND room_key = ?
+   LIMIT 1
+`);
+const upsertCuratedRoomOverrideStatement = db.prepare(`
+  INSERT INTO curated_room_overrides (server_id, room_key, description, teaser, updated_at)
+  VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+  ON CONFLICT(server_id, room_key)
+  DO UPDATE SET
+    description = excluded.description,
+    teaser = excluded.teaser,
+    updated_at = CURRENT_TIMESTAMP
+`);
+
+function getCuratedRoomOverride(serverId, roomKey) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomKey = String(roomKey || "").trim().toLowerCase();
+  if (!normalizedRoomKey) {
+    return null;
+  }
+
+  const row = selectCuratedRoomOverrideStatement.get(normalizedServerId, normalizedRoomKey);
+  if (!row) {
+    return null;
+  }
+
+  return {
+    description: String(row.description || ""),
+    teaser: String(row.teaser || "")
+  };
+}
+
+function saveCuratedRoomOverride(serverId, roomKey, description = "", teaser = "") {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomKey = String(roomKey || "").trim().toLowerCase();
+  if (!normalizedRoomKey) {
+    return false;
+  }
+
+  upsertCuratedRoomOverrideStatement.run(
+    normalizedServerId,
+    normalizedRoomKey,
+    normalizeRoomDescription(description),
+    normalizeRoomTeaser(teaser)
+  );
+  return true;
+}
+
 const TAVERN_INNKEEPER_ROOM_KEY = "zum-silbermond-krug";
 const TAVERN_INNKEEPER_NAME = "Edric Mühlenbrand";
 const TAVERN_INNKEEPER_PRESENCE_KEY = "npc:edric-muehlenbrand";
@@ -8241,7 +8292,7 @@ function resolveCuratedPublicRoomAnchor(serverId) {
 
 function ensureCuratedPublicRooms() {
   const findExistingRoom = db.prepare(
-    `SELECT id
+    `SELECT id, description, teaser
        FROM chat_rooms
       WHERE server_id = ?
         AND name_key = ?
@@ -8257,6 +8308,8 @@ function ensureCuratedPublicRooms() {
             created_by_user_id = ?,
             name = ?,
             name_key = ?,
+            description = ?,
+            teaser = ?,
             is_public_room = 1,
             is_saved_room = ?,
             is_locked = 0,
@@ -8301,6 +8354,13 @@ function ensureCuratedPublicRooms() {
       }
 
       const existingRoom = findExistingRoom.get(normalizeServer(serverId), nameKey);
+      const override = getCuratedRoomOverride(serverId, nameKey);
+      const persistedDescription = override
+        ? normalizeRoomDescription(override.description)
+        : normalizeRoomDescription(existingRoom?.description || "") || normalizedDescription;
+      const persistedTeaser = override
+        ? normalizeRoomTeaser(override.teaser)
+        : normalizeRoomTeaser(existingRoom?.teaser || "") || normalizedTeaser;
       const sortOrder = Number.isInteger(Number(definition.sort_order)) ? Number(definition.sort_order) : index + 1;
 
       if (existingRoom?.id) {
@@ -8309,6 +8369,8 @@ function ensureCuratedPublicRooms() {
           anchor.userId,
           normalizedName,
           nameKey,
+          persistedDescription,
+          persistedTeaser,
           savedState,
           sortOrder,
           existingRoom.id
@@ -8321,8 +8383,8 @@ function ensureCuratedPublicRooms() {
         anchor.userId,
         normalizedName,
         nameKey,
-        normalizedDescription,
-        normalizedTeaser,
+        persistedDescription,
+        persistedTeaser,
         normalizeServer(serverId),
         savedState,
         sortOrder
@@ -13735,6 +13797,14 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
     isLocked,
     roomId
   );
+  if (isCuratedPublicRoom(room, room.server_id)) {
+    saveCuratedRoomOverride(
+      room.server_id,
+      room.name_key || toRoomNameKey(roomName),
+      roomDescription,
+      roomTeaser
+    );
+  }
 
   const refreshedRoom = getRoomWithCharacter(roomId);
   if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
