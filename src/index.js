@@ -5208,6 +5208,46 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
   );
 }
 
+function dedupeSavedNonFestplayRooms(rooms, serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  const sourceRooms = Array.isArray(rooms) ? rooms : [];
+  const dedupedRooms = [];
+  const seenRooms = new Map();
+  const curatedRoomKeys = new Set(
+    getCuratedPublicRoomDefinitionsForServer(normalizedServerId)
+      .map((definition) => String(definition?.key || "").trim().toLowerCase() || toRoomNameKey(definition?.name || ""))
+      .filter(Boolean)
+  );
+
+  sourceRooms.forEach((room) => {
+    const roomNameKey = toRoomNameKey(room?.name || "") || String(room?.name_key || "").trim().toLowerCase();
+    const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
+    const dedupeKey = curatedRoomKeys.has(roomNameKey)
+      ? `${normalizeServer(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
+      : `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
+    const existingIndex = seenRooms.get(dedupeKey);
+
+    if (existingIndex == null) {
+      seenRooms.set(dedupeKey, dedupedRooms.length);
+      dedupedRooms.push(room);
+      return;
+    }
+
+    const existingRoom = dedupedRooms[existingIndex];
+    const shouldReplaceExistingRoom =
+      (!existingRoom?.is_public_room && room.is_public_room) ||
+      (Boolean(existingRoom?.is_public_room) === Boolean(room.is_public_room) &&
+        Number(room?.id) > 0 &&
+        (!Number(existingRoom?.id) || Number(room.id) < Number(existingRoom.id)));
+
+    if (shouldReplaceExistingRoom) {
+      dedupedRooms[existingIndex] = room;
+    }
+  });
+
+  return dedupedRooms;
+}
+
 function getSavedNonFestplayRoomsForUser(userId, serverId) {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
@@ -5239,41 +5279,7 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
       is_public_room: Number(room.is_public_room) === 1
     }));
 
-  const dedupedRooms = [];
-  const seenRooms = new Map();
-  const curatedRoomKeys = new Set(
-    getCuratedPublicRoomDefinitionsForServer(normalizedServerId)
-      .map((definition) => String(definition?.key || "").trim().toLowerCase() || toRoomNameKey(definition?.name || ""))
-      .filter(Boolean)
-  );
-
-  rooms.forEach((room) => {
-    const roomNameKey = toRoomNameKey(room?.name || "") || String(room?.name_key || "").trim().toLowerCase();
-    const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
-    const dedupeKey = curatedRoomKeys.has(roomNameKey)
-      ? `${normalizeServer(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
-      : `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
-    const existingIndex = seenRooms.get(dedupeKey);
-
-    if (existingIndex == null) {
-      seenRooms.set(dedupeKey, dedupedRooms.length);
-      dedupedRooms.push(room);
-      return;
-    }
-
-    const existingRoom = dedupedRooms[existingIndex];
-    const shouldReplaceExistingRoom =
-      (!existingRoom?.is_public_room && room.is_public_room) ||
-      (Boolean(existingRoom?.is_public_room) === Boolean(room.is_public_room) &&
-        Number(room?.id) > 0 &&
-        (!Number(existingRoom?.id) || Number(room.id) < Number(existingRoom.id)));
-
-    if (shouldReplaceExistingRoom) {
-      dedupedRooms[existingIndex] = room;
-    }
-  });
-
-  return dedupedRooms;
+  return dedupeSavedNonFestplayRooms(rooms, normalizedServerId);
 }
 
 function getFestplaySideChatsForUser(userId, festplayId) {
@@ -11532,7 +11538,8 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     });
   }
 
-  const rooms = db
+  const rooms = dedupeSavedNonFestplayRooms(
+    db
     .prepare(
         `SELECT r.id, r.name, r.name_key, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
                 COALESCE(owner_character.name, '') AS creator_name,
@@ -11565,7 +11572,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         Number(room.is_locked) !== 1 ||
         Number(room.can_manage_room) === 1 ||
         hasRoomInviteAccess(req.session.user, room)
-    }));
+    })),
+    character.server_id
+  );
   const publicRooms = rooms.filter(
     (room) => room.is_public_room
   );
@@ -11581,7 +11590,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     ? rooms.filter(
         (room) =>
           room.is_saved_room &&
-          !room.is_public_room &&
+          (!room.is_public_room || isCuratedPublicRoom(room, character.server_id)) &&
           Number(room.created_by_user_id) === Number(req.session.user.id)
       )
     : [];
