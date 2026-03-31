@@ -13745,6 +13745,7 @@ app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) =
   }
 
   emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
+  emitRoomListRefresh(room.server_id);
   return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
 });
 
@@ -15764,7 +15765,12 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   }
 
   for (const memberSocket of allSockets.values()) {
-    if (!memberSocket?.id || seenSocketIds.has(memberSocket.id) || !memberSocket?.data?.user) {
+    if (
+      !memberSocket?.id ||
+      seenSocketIds.has(memberSocket.id) ||
+      !memberSocket?.data?.user ||
+      memberSocket?.data?.hasJoinedChat !== true
+    ) {
       continue;
     }
 
@@ -17725,6 +17731,7 @@ io.on("connection", (socket) => {
   socket.data.rpBoardChannels = new Set();
   socket.data.isTyping = false;
   socket.data.lastChatActivityAt = Date.now();
+  socket.data.hasJoinedChat = false;
 
   emitServerInstanceToSocket();
   socket.emit("site:stats:update", getLoginStats());
@@ -17979,6 +17986,7 @@ io.on("connection", (socket) => {
 
     socket.data.roomId = nextRoomId;
     socket.data.serverId = nextServerId;
+    socket.data.hasJoinedChat = true;
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     markSocketChatActivity(socket);
