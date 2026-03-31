@@ -2161,6 +2161,21 @@
     if (!onlineCharList) return;
 
     const list = Array.isArray(entries) ? entries.slice() : [];
+    const shouldIncludeTavernInnkeeper =
+      String(onlineCharList.dataset.includeTavernInnkeeper || "").trim().toLowerCase() === "true";
+    if (shouldIncludeTavernInnkeeper && !list.some((entry) => entry?.is_npc === true)) {
+      list.push({
+        presence_key: "npc:edric-muehlenbrand",
+        user_id: 0,
+        name: "Edric Mühlenbrand",
+        character_id: null,
+        role_style: "",
+        chat_text_color: "#c4863a",
+        has_room_rights: false,
+        is_afk: false,
+        is_npc: true
+      });
+    }
     list.sort((a, b) =>
       String(a?.name || "").localeCompare(String(b?.name || ""), "de", {
         sensitivity: "base"

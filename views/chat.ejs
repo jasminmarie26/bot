@@ -257,7 +257,13 @@
 
         <aside class="chat-online-panel">
           <h2>Online Charaktere:</h2>
-          <div id="online-char-list" class="chat-online-list">
+          <% const includeTavernInnkeeper = Boolean(activeRoom && activeRoom.name === "Zum Silbermond-Krug"); %>
+          <% const tavernInnkeeperAlreadyPresent = Array.isArray(onlineCharacters) && onlineCharacters.some((entry) => entry && entry.is_npc); %>
+          <div
+            id="online-char-list"
+            class="chat-online-list"
+            data-include-tavern-innkeeper="<%= includeTavernInnkeeper ? 'true' : 'false' %>"
+          >
             <% if (onlineCharacters && onlineCharacters.length) { %>
               <% onlineCharacters.forEach((entry) => { %>
                 <% const onlineEntryDisplayName = formatChatRoleName(entry.name, entry.role_style); %>
@@ -302,6 +308,35 @@
                   </button>
                 <% } %>
               <% }) %>
+              <% if (includeTavernInnkeeper && !tavernInnkeeperAlreadyPresent) { %>
+                <div
+                  class="chat-online-item is-npc"
+                  data-presence-key="npc:edric-muehlenbrand"
+                  aria-label="Edric Mühlenbrand (Raumfigur)"
+                  title="Raumfigur"
+                >
+                  <span class="chat-online-content">
+                    <span
+                      class="chat-online-name"
+                      style="color:#c4863a;"
+                    >Edric Mühlenbrand</span>
+                  </span>
+                </div>
+              <% } %>
+            <% } else if (includeTavernInnkeeper) { %>
+              <div
+                class="chat-online-item is-npc"
+                data-presence-key="npc:edric-muehlenbrand"
+                aria-label="Edric Mühlenbrand (Raumfigur)"
+                title="Raumfigur"
+              >
+                <span class="chat-online-content">
+                  <span
+                    class="chat-online-name"
+                    style="color:#c4863a;"
+                  >Edric Mühlenbrand</span>
+                </span>
+              </div>
             <% } else { %>
               <p class="muted">Niemand online.</p>
             <% } %>
