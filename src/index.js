@@ -8245,7 +8245,6 @@ function ensureCuratedPublicRooms() {
        FROM chat_rooms
       WHERE server_id = ?
         AND name_key = ?
-        AND COALESCE(is_public_room, 0) = 1
         AND COALESCE(festplay_id, 0) = 0
         AND COALESCE(is_festplay_chat, 0) = 0
         AND COALESCE(is_manual_festplay_room, 0) = 0
@@ -8258,8 +8257,6 @@ function ensureCuratedPublicRooms() {
             created_by_user_id = ?,
             name = ?,
             name_key = ?,
-            description = ?,
-            teaser = ?,
             is_public_room = 1,
             is_saved_room = ?,
             is_locked = 0,
@@ -8312,8 +8309,6 @@ function ensureCuratedPublicRooms() {
           anchor.userId,
           normalizedName,
           nameKey,
-          normalizedDescription,
-          normalizedTeaser,
           savedState,
           sortOrder,
           existingRoom.id
@@ -15748,18 +15743,44 @@ function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, raw
 }
 
 function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
-  const members = io.sockets.adapter.rooms.get(socketChannelForRoom(roomId, serverId));
-  if (!members || members.size === 0) {
-    return [];
-  }
-
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const sockets = [];
-  for (const socketId of members) {
-    const memberSocket = io.sockets.sockets.get(socketId);
-    if (memberSocket) {
-      sockets.push(memberSocket);
+  const seenSocketIds = new Set();
+  const members = io.sockets.adapter.rooms.get(socketChannelForRoom(normalizedRoomId, normalizedServerId));
+  if (members && members.size > 0) {
+    for (const socketId of members) {
+      const memberSocket = io.sockets.sockets.get(socketId);
+      if (memberSocket) {
+        seenSocketIds.add(socketId);
+        sockets.push(memberSocket);
+      }
     }
   }
+
+  const allSockets = io?.of("/")?.sockets;
+  if (!allSockets || typeof allSockets.values !== "function") {
+    return sockets;
+  }
+
+  for (const memberSocket of allSockets.values()) {
+    if (!memberSocket?.id || seenSocketIds.has(memberSocket.id) || !memberSocket?.data?.user) {
+      continue;
+    }
+
+    const socketRoomId =
+      Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
+        ? memberSocket.data.roomId
+        : null;
+    const socketServerId = normalizeServer(memberSocket.data.serverId);
+    if (socketRoomId !== normalizedRoomId || socketServerId !== normalizedServerId) {
+      continue;
+    }
+
+    seenSocketIds.add(memberSocket.id);
+    sockets.push(memberSocket);
+  }
+
   return sockets;
 }
 
@@ -15777,6 +15798,21 @@ function getSocketsInWatchChannel(roomId, serverId = DEFAULT_SERVER_ID) {
     }
   }
   return sockets;
+}
+
+function emitToRoomChannelMembers(roomId, serverId, eventName, payload) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const channelName = socketChannelForRoom(normalizedRoomId, normalizedServerId);
+  const members = io.sockets.adapter.rooms.get(channelName);
+  if (members && members.size > 0) {
+    io.to(channelName).emit(eventName, payload);
+    return;
+  }
+
+  getSocketsInChannel(normalizedRoomId, normalizedServerId).forEach((memberSocket) => {
+    memberSocket.emit(eventName, payload);
+  });
 }
 
 function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
@@ -17122,7 +17158,7 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}) {
     ...payload
   });
 
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:message", payload);
+  emitToRoomChannelMembers(normalizedRoomId, normalizedServerId, "chat:message", payload);
 }
 
 function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
@@ -17146,15 +17182,14 @@ function getSocketDisplayProfile(socket, serverId = DEFAULT_SERVER_ID) {
 }
 
 function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
-  const sockets = getSocketsInChannel(roomId, serverId);
-  if (!sockets.length) {
-    return [];
-  }
-
   const room =
     Number.isInteger(roomId) && roomId > 0
       ? getRoomWithCharacter(Number(roomId))
       : null;
+  const sockets = getSocketsInChannel(roomId, serverId);
+  if (!sockets.length && !(room && isTavernInnkeeperRoom(room, serverId))) {
+    return [];
+  }
   const onlineCharacters = [];
   const seenPresenceKeys = new Set();
   for (const memberSocket of sockets) {
@@ -17235,7 +17270,9 @@ function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
 
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit(
+  emitToRoomChannelMembers(
+    normalizedRoomId,
+    normalizedServerId,
     "chat:online-characters",
     onlineCharacters
   );
