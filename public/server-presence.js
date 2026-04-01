@@ -7,6 +7,8 @@
   let ownedRoomLists = [];
   let roomListRefreshPromise = null;
   let roomListRefreshQueued = false;
+  let socialState = normalizeSocialState(window.__appSocialState || {});
+  const roomWatchPayloads = new Map();
   function collectRoomTargets() {
     roomWatchTargets = Array.from(document.querySelectorAll("[data-room-watch-target]"));
     roomLockTargets = Array.from(document.querySelectorAll("[data-room-lock-target]"));
@@ -47,6 +49,44 @@
   function normalizeChatTextColor(rawColor) {
     const value = String(rawColor || "").trim();
     return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
+  }
+
+  function normalizePositiveNumber(value) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  function normalizeSocialState(payload) {
+    const ignoredAccountUserIds = Array.isArray(payload?.ignored_account_user_ids)
+      ? payload.ignored_account_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
+    const ignoredCharacterIds = Array.isArray(payload?.ignored_character_ids)
+      ? payload.ignored_character_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
+
+    return {
+      ignoredAccountUserIds: new Set(ignoredAccountUserIds),
+      ignoredCharacterIds: new Set(ignoredCharacterIds)
+    };
+  }
+
+  function isIgnoredRoomEntry(entry) {
+    if (!entry || entry.is_npc === true) {
+      return false;
+    }
+
+    const userId = normalizePositiveNumber(entry?.user_id);
+    const characterId = normalizePositiveNumber(entry?.character_id);
+    return Boolean(
+      (userId && socialState.ignoredAccountUserIds.has(userId)) ||
+      (characterId && socialState.ignoredCharacterIds.has(characterId))
+    );
+  }
+
+  function getRoomWatchPayloadKey(roomId, serverIdValue) {
+    const roomKey = roomId == null ? "" : String(roomId);
+    const normalizedServerId = String(serverIdValue || "").trim().toLowerCase();
+    return `${normalizedServerId}:${roomKey}`;
   }
 
   function updateHeaderIdentity(payload) {
@@ -191,20 +231,21 @@
 
   function renderRoomWatchTarget(target, entries) {
     target.replaceChildren();
+    const visibleEntries = Array.isArray(entries)
+      ? entries.filter((entry) => !isIgnoredRoomEntry(entry))
+      : [];
     const watchMode = String(target?.dataset?.roomWatchMode || "").trim().toLowerCase();
     if (watchMode === "count-only") {
-      const visibleEntries = Array.isArray(entries)
-        ? entries.filter((entry) => entry?.is_npc !== true)
-        : [];
+      const countableEntries = visibleEntries.filter((entry) => entry?.is_npc !== true);
       const countState = document.createElement("span");
       countState.className = "muted";
-      countState.textContent = `User Online: ${visibleEntries.length}`;
+      countState.textContent = `User Online: ${countableEntries.length}`;
       target.appendChild(countState);
       scheduleOwnedRoomRowSeparators();
       return;
     }
 
-    if (!Array.isArray(entries) || entries.length === 0) {
+    if (!visibleEntries.length) {
       const emptyState = document.createElement("span");
       emptyState.className = "muted";
       emptyState.textContent = "Gerade niemand dort.";
@@ -213,9 +254,9 @@
       return;
     }
 
-    entries.forEach((entry, index) => {
+    visibleEntries.forEach((entry, index) => {
       target.appendChild(createOccupantNode(entry));
-      if (index < entries.length - 1) {
+      if (index < visibleEntries.length - 1) {
         const separator = document.createElement("span");
         separator.className = "rp-room-occupant-separator";
         separator.textContent = ", ";
@@ -277,6 +318,10 @@
     const watchServerId = String(payload?.serverId || "")
       .trim()
       .toLowerCase();
+    roomWatchPayloads.set(
+      getRoomWatchPayloadKey(payload?.roomId, watchServerId),
+      Array.isArray(payload?.users) ? payload.users.slice() : []
+    );
 
     roomWatchTargets.forEach((target) => {
       const targetRoomKey = String(target.dataset.roomWatchRoom || "");
@@ -289,6 +334,20 @@
       }
 
       renderRoomWatchTarget(target, payload?.users);
+    });
+  });
+
+  window.addEventListener("app:social-state", (event) => {
+    socialState = normalizeSocialState(event?.detail || {});
+    roomWatchTargets.forEach((target) => {
+      const targetRoomKey = String(target.dataset.roomWatchRoom || "");
+      const targetServerId = String(target.dataset.roomWatchServer || "")
+        .trim()
+        .toLowerCase();
+      const payloadEntries = roomWatchPayloads.get(
+        getRoomWatchPayloadKey(targetRoomKey || null, targetServerId)
+      ) || [];
+      renderRoomWatchTarget(target, payloadEntries);
     });
   });
 

@@ -207,6 +207,35 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS friend_links (
+    user_id INTEGER NOT NULL,
+    friend_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, friend_user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (user_id != friend_user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ignored_accounts (
+    user_id INTEGER NOT NULL,
+    ignored_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, ignored_user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (ignored_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (user_id != ignored_user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ignored_characters (
+    user_id INTEGER NOT NULL,
+    ignored_character_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, ignored_character_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (ignored_character_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS rp_board_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     server_id TEXT NOT NULL DEFAULT 'free-rp',
@@ -388,6 +417,12 @@ db.exec(`
     ON festplay_applications(festplay_id, applicant_character_id);
   CREATE INDEX IF NOT EXISTS idx_festplay_applications_user_id
     ON festplay_applications(applicant_user_id);
+  CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user
+    ON friend_links(friend_user_id, user_id);
+  CREATE INDEX IF NOT EXISTS idx_ignored_accounts_ignored_user
+    ON ignored_accounts(ignored_user_id, user_id);
+  CREATE INDEX IF NOT EXISTS idx_ignored_characters_user
+    ON ignored_characters(user_id, ignored_character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_site_updates_created_at ON site_updates(created_at);
   CREATE INDEX IF NOT EXISTS idx_registration_guard_ip_created_at
@@ -881,6 +916,15 @@ db.exec(
 );
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_system_notifications_user_type_key ON system_notifications(user_id, notification_type, notification_key)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user ON friend_links(friend_user_id, user_id)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_ignored_accounts_ignored_user ON ignored_accounts(ignored_user_id, user_id)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_ignored_characters_user ON ignored_characters(user_id, ignored_character_id)"
 );
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room_id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_server_id ON chat_rooms(server_id)");

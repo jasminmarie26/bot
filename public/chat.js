@@ -16,6 +16,9 @@
   const onlineActionsMenu = document.getElementById("online-actions-menu");
   const onlineActionGuestbook = document.getElementById("online-action-guestbook");
   const onlineActionWhisper = document.getElementById("online-action-whisper");
+  const onlineActionFriend = document.getElementById("online-action-friend");
+  const onlineActionIgnoreCharacter = document.getElementById("online-action-ignore-character");
+  const onlineActionIgnoreAccount = document.getElementById("online-action-ignore-account");
   const whisperToggle = document.getElementById("chat-whisper-toggle");
   const whisperToggleBadge = document.getElementById("chat-whisper-toggle-badge");
   const soundToggle = document.getElementById("chat-sound-toggle");
@@ -49,6 +52,8 @@
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
   let currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
+  let socialState = normalizeSocialState(window.__appSocialState || {});
+  let lastRenderedOnlineEntries = [];
   function parseClientAfkTimeoutMinutes(value) {
     const parsedValue = Number(value);
     return Number.isInteger(parsedValue) && parsedValue >= 5 && parsedValue <= 240 ? parsedValue : 20;
@@ -498,6 +503,74 @@
     return /^#[0-9a-f]{6}$/i.test(value) ? value : "";
   }
 
+  function normalizePositiveNumber(value) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  function normalizeSocialState(payload) {
+    const friendUserIds = Array.isArray(payload?.friend_user_ids)
+      ? payload.friend_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
+    const ignoredAccountUserIds = Array.isArray(payload?.ignored_account_user_ids)
+      ? payload.ignored_account_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
+    const ignoredCharacterIds = Array.isArray(payload?.ignored_character_ids)
+      ? payload.ignored_character_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
+
+    return {
+      friendUserIds: new Set(friendUserIds),
+      ignoredAccountUserIds: new Set(ignoredAccountUserIds),
+      ignoredCharacterIds: new Set(ignoredCharacterIds)
+    };
+  }
+
+  function isIgnoredSocialEntry(entry) {
+    if (!entry || entry.is_npc === true) {
+      return false;
+    }
+
+    const userId = normalizePositiveNumber(entry?.user_id ?? entry?.userId);
+    const characterId = normalizePositiveNumber(entry?.character_id ?? entry?.characterId);
+    return Boolean(
+      (userId && socialState.ignoredAccountUserIds.has(userId)) ||
+      (characterId && socialState.ignoredCharacterIds.has(characterId))
+    );
+  }
+
+  function isFriendUserId(userId) {
+    const parsedUserId = normalizePositiveNumber(userId);
+    return Boolean(parsedUserId && socialState.friendUserIds.has(parsedUserId));
+  }
+
+  function isIgnoredAccountUserId(userId) {
+    const parsedUserId = normalizePositiveNumber(userId);
+    return Boolean(parsedUserId && socialState.ignoredAccountUserIds.has(parsedUserId));
+  }
+
+  function isIgnoredCharacterId(characterId) {
+    const parsedCharacterId = normalizePositiveNumber(characterId);
+    return Boolean(parsedCharacterId && socialState.ignoredCharacterIds.has(parsedCharacterId));
+  }
+
+  function captureRenderedOnlineEntriesFromDom() {
+    if (!onlineCharList) {
+      return [];
+    }
+
+    return Array.from(onlineCharList.querySelectorAll(".chat-online-item")).map((node) => ({
+      presence_key: String(node.dataset.presenceKey || "").trim(),
+      user_id: normalizePositiveNumber(node.dataset.userId) || 0,
+      character_id: normalizePositiveNumber(node.dataset.characterId),
+      name: String(node.dataset.name || node.textContent || "").trim(),
+      role_style: String(node.dataset.roleStyle || "").trim(),
+      chat_text_color: String(node.dataset.chatTextColor || "").trim(),
+      is_afk: node.querySelector(".chat-afk-clock") != null,
+      is_npc: node.classList.contains("is-npc")
+    }));
+  }
+
   function applyChatTextColor(node, rawColor) {
     if (!node) return;
     node.style.color = normalizeChatTextColor(rawColor);
@@ -598,7 +671,11 @@
 
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", handleWhisperMessage);
-  socket.on("chat:online-characters", renderOnlineCharacters);
+  socket.on("chat:online-characters", (entries) => {
+    const nextEntries = Array.isArray(entries) ? entries.slice() : [];
+    lastRenderedOnlineEntries = nextEntries;
+    renderOnlineCharacters(nextEntries);
+  });
   socket.on("chat:room-invite", handleRoomInvite);
   socket.on("chat:redirect", (payload) => {
     const nextUrl = String(payload?.url || "").trim();
@@ -1372,9 +1449,13 @@
   }
 
   function appendMessage(msg, options = {}) {
+    const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
+    if (!isSystemMessage && isIgnoredSocialEntry(msg)) {
+      return;
+    }
+
     rememberRenderedChatMessage(msg);
     const article = document.createElement("article");
-    const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
     const emoteActionText = !isSystemMessage
       ? getEmoteActionText(msg?.content, msg?.username)
       : "";
@@ -1629,7 +1710,9 @@
   }
 
   function sortWhisperThreads() {
-    return Array.from(whisperThreadsByUserId.values()).sort((left, right) => {
+    return Array.from(whisperThreadsByUserId.values())
+      .filter((thread) => !isIgnoredAccountUserId(thread?.userId))
+      .sort((left, right) => {
       const rightSequence = Number(right?.lastSequence || 0);
       const leftSequence = Number(left?.lastSequence || 0);
       if (rightSequence !== leftSequence) {
@@ -1638,7 +1721,7 @@
       return String(left?.name || "").localeCompare(String(right?.name || ""), "de", {
         sensitivity: "base"
       });
-    });
+      });
   }
 
   function scrollWhisperThreadToBottom() {
@@ -1713,7 +1796,7 @@
     const thread = whisperThreadsByUserId.get(Number(activeWhisperThreadUserId));
     whisperThread.innerHTML = "";
 
-    if (!thread) {
+    if (!thread || isIgnoredAccountUserId(thread.userId)) {
       whisperThreadShell.hidden = true;
       whisperPlaceholder.hidden = false;
       whisperForm.hidden = true;
@@ -1817,15 +1900,6 @@
 
     article.appendChild(line);
     chatBox.appendChild(article);
-
-    if (
-      !isSystemMessage &&
-      Number(msg?.user_id) > 0 &&
-      Number(msg.user_id) !== currentUserId &&
-      options?.skipNotifications !== true
-    ) {
-      playChatTone();
-    }
 
     while (chatBox.children.length > 150) {
       chatBox.removeChild(chatBox.firstChild);
@@ -1965,6 +2039,11 @@
 
     const hasCharacter = Number.isInteger(selectedOnlineEntry.characterId) && selectedOnlineEntry.characterId > 0;
     const hasUser = Number.isInteger(selectedOnlineEntry.userId) && selectedOnlineEntry.userId > 0;
+    const isOwnEntry = hasUser && selectedOnlineEntry.userId === currentUserId;
+    const hasSocialApi = typeof window.appSocialApi === "object" && window.appSocialApi !== null;
+    const isFriend = hasUser && isFriendUserId(selectedOnlineEntry.userId);
+    const ignoresCharacter = hasCharacter && isIgnoredCharacterId(selectedOnlineEntry.characterId);
+    const ignoresAccount = hasUser && isIgnoredAccountUserId(selectedOnlineEntry.userId);
 
     if (hasCharacter) {
       onlineActionGuestbook.href = `/characters/${selectedOnlineEntry.characterId}/guestbook`;
@@ -1979,6 +2058,18 @@
     }
 
     onlineActionWhisper.disabled = !hasUser;
+    if (onlineActionFriend) {
+      onlineActionFriend.disabled = !hasUser || isOwnEntry || !hasSocialApi;
+      onlineActionFriend.textContent = isFriend ? "Freund entfernen" : "Als Freund speichern";
+    }
+    if (onlineActionIgnoreCharacter) {
+      onlineActionIgnoreCharacter.disabled = !hasCharacter || isOwnEntry || !hasSocialApi;
+      onlineActionIgnoreCharacter.textContent = ignoresCharacter ? "Charakter wieder anzeigen" : "Charakter ignorieren";
+    }
+    if (onlineActionIgnoreAccount) {
+      onlineActionIgnoreAccount.disabled = !hasUser || isOwnEntry || !hasSocialApi;
+      onlineActionIgnoreAccount.textContent = ignoresAccount ? "Account wieder anzeigen" : "Account ignorieren";
+    }
   }
 
   function positionOnlineMenu(triggerEl) {
@@ -2013,7 +2104,10 @@
       presenceKey,
       userId: Number.isInteger(userId) && userId > 0 ? userId : null,
       characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
-      name
+      name,
+      isFriend: isFriendUserId(userId),
+      ignoresCharacter: isIgnoredCharacterId(characterId),
+      ignoresAccount: isIgnoredAccountUserId(userId)
     };
 
     applyOnlineMenuState();
@@ -2161,6 +2255,7 @@
     if (!onlineCharList) return;
 
     const list = Array.isArray(entries) ? entries.slice() : [];
+    lastRenderedOnlineEntries = list.slice();
     const shouldIncludeTavernInnkeeper =
       String(onlineCharList.dataset.includeTavernInnkeeper || "").trim().toLowerCase() === "true";
     if (shouldIncludeTavernInnkeeper && !list.some((entry) => entry?.is_npc === true)) {
@@ -2176,7 +2271,8 @@
         is_npc: true
       });
     }
-    list.sort((a, b) =>
+    const visibleEntries = list.filter((entry) => !isIgnoredSocialEntry(entry));
+    visibleEntries.sort((a, b) =>
       String(a?.name || "").localeCompare(String(b?.name || ""), "de", {
         sensitivity: "base"
       })
@@ -2186,7 +2282,7 @@
 
     onlineCharList.innerHTML = "";
 
-    if (!list.length) {
+    if (!visibleEntries.length) {
       const empty = document.createElement("p");
       empty.className = "muted";
       empty.textContent = "Niemand online.";
@@ -2194,7 +2290,7 @@
       return;
     }
 
-    list.forEach((entry) => {
+    visibleEntries.forEach((entry) => {
       const userId = Number(entry?.user_id);
       const characterId = Number(entry?.character_id);
       const presenceKey = resolvePresenceKey(entry);
@@ -2377,6 +2473,57 @@
     });
   }
 
+  if (onlineActionFriend) {
+    onlineActionFriend.addEventListener("click", async () => {
+      if (!selectedOnlineEntry || !window.appSocialApi) return;
+      try {
+        if (isFriendUserId(selectedOnlineEntry.userId)) {
+          await window.appSocialApi.removeFriend(selectedOnlineEntry.userId);
+        } else {
+          await window.appSocialApi.addFriendByUserId(selectedOnlineEntry.userId);
+        }
+      } catch (_error) {
+        // Ignore panel action errors here. The panel handles user-facing feedback.
+      } finally {
+        closeOnlineMenu();
+      }
+    });
+  }
+
+  if (onlineActionIgnoreCharacter) {
+    onlineActionIgnoreCharacter.addEventListener("click", async () => {
+      if (!selectedOnlineEntry || !window.appSocialApi) return;
+      try {
+        if (isIgnoredCharacterId(selectedOnlineEntry.characterId)) {
+          await window.appSocialApi.unignoreCharacter(selectedOnlineEntry.characterId);
+        } else {
+          await window.appSocialApi.ignoreCharacter(selectedOnlineEntry.characterId);
+        }
+      } catch (_error) {
+        // Ignore panel action errors here. The panel handles user-facing feedback.
+      } finally {
+        closeOnlineMenu();
+      }
+    });
+  }
+
+  if (onlineActionIgnoreAccount) {
+    onlineActionIgnoreAccount.addEventListener("click", async () => {
+      if (!selectedOnlineEntry || !window.appSocialApi) return;
+      try {
+        if (isIgnoredAccountUserId(selectedOnlineEntry.userId)) {
+          await window.appSocialApi.unignoreAccount(selectedOnlineEntry.userId);
+        } else {
+          await window.appSocialApi.ignoreAccount(selectedOnlineEntry.userId);
+        }
+      } catch (_error) {
+        // Ignore panel action errors here. The panel handles user-facing feedback.
+      } finally {
+        closeOnlineMenu();
+      }
+    });
+  }
+
   if (whisperToggle) {
     whisperToggle.addEventListener("click", () => {
       toggleWhisperPanel();
@@ -2474,6 +2621,14 @@
     }
   });
 
+  window.addEventListener("app:social-state", (event) => {
+    socialState = normalizeSocialState(event?.detail || {});
+    renderOnlineCharacters(lastRenderedOnlineEntries.length ? lastRenderedOnlineEntries : captureRenderedOnlineEntriesFromDom());
+    renderWhisperThreadList();
+    renderWhisperThread();
+    applyOnlineMenuState();
+  });
+
   window.addEventListener("resize", () => {
     closeOnlineMenu();
     closeSoundPanel();
@@ -2484,6 +2639,11 @@
   }, true);
 
   function handleWhisperMessage(payload) {
+    const partnerUserId = getWhisperPartnerUserId(payload);
+    if (!payload?.outgoing && isIgnoredAccountUserId(partnerUserId)) {
+      return;
+    }
+
     appendWhisper(payload);
 
     const thread = rememberWhisperMessage(payload);
@@ -2512,6 +2672,8 @@
     updateWhisperToggleBadge();
   }
 
+  lastRenderedOnlineEntries = captureRenderedOnlineEntriesFromDom();
+  renderOnlineCharacters(lastRenderedOnlineEntries);
   updateWhisperToggleState();
   updateWhisperToggleBadge();
   chatBox.scrollTop = chatBox.scrollHeight;

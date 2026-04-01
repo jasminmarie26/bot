@@ -7725,6 +7725,13 @@ function socketChannelForGuestbookNotifications(userId) {
     : "guestbook-notifications:unknown";
 }
 
+function socketChannelForSocialUpdates(userId) {
+  const parsedUserId = Number(userId);
+  return Number.isInteger(parsedUserId) && parsedUserId > 0
+    ? `social:${parsedUserId}`
+    : "social:unknown";
+}
+
 function buildNotificationPayloadEntryForUser(notification, userId, options = {}) {
   if (!notification || typeof notification !== "object") {
     return null;
@@ -10017,6 +10024,194 @@ app.post("/account/update", requireAuth, (req, res) => {
   }
 
   return res.redirect("/account");
+});
+
+app.get("/api/social/state", requireAuth, (req, res) => {
+  return res.json({
+    ok: true,
+    state: buildSocialStatePayloadForUser(req.session.user.id)
+  });
+});
+
+app.post("/api/social/friends", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const directUserId = Number(req.body.user_id);
+  const lookup = normalizeSocialLookupValue(req.body.lookup || "");
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  if (!(Number.isInteger(directUserId) && directUserId > 0) && !lookup) {
+    return res.status(400).json({ ok: false, error: "Bitte einen Account-Namen oder eine Account-Nr. eingeben." });
+  }
+
+  const targetUser =
+    Number.isInteger(directUserId) && directUserId > 0
+      ? db.prepare("SELECT id, username, account_number FROM users WHERE id = ? LIMIT 1").get(directUserId)
+      : findUserBySocialLookup(lookup);
+  if (!targetUser) {
+    return res.status(404).json({ ok: false, error: "Dieser Account wurde nicht gefunden." });
+  }
+
+  if (Number(targetUser.id) === currentUserId) {
+    return res.status(400).json({ ok: false, error: "Du kannst dich nicht selbst als Freund hinzufügen." });
+  }
+
+  db.prepare(
+    `INSERT OR IGNORE INTO friend_links (user_id, friend_user_id)
+     VALUES (?, ?)`
+  ).run(currentUserId, Number(targetUser.id));
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: `${targetUser.username} wurde zu deinen Freunden hinzugefügt.`,
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/friends/:friendUserId/delete", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const friendUserId = Number(req.params.friendUserId);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  if (!Number.isInteger(friendUserId) || friendUserId < 1) {
+    return res.status(400).json({ ok: false, error: "Freund konnte nicht zugeordnet werden." });
+  }
+
+  db.prepare(
+    `DELETE FROM friend_links
+      WHERE user_id = ?
+        AND friend_user_id = ?`
+  ).run(currentUserId, friendUserId);
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: "Freund wurde entfernt.",
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const directUserId = Number(req.body.user_id);
+  const lookup = normalizeSocialLookupValue(req.body.lookup || "");
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  const targetUser =
+    Number.isInteger(directUserId) && directUserId > 0
+      ? db.prepare("SELECT id, username, account_number FROM users WHERE id = ? LIMIT 1").get(directUserId)
+      : findUserBySocialLookup(lookup);
+
+  if (!targetUser) {
+    return res.status(404).json({ ok: false, error: "Dieser Account wurde nicht gefunden." });
+  }
+
+  if (Number(targetUser.id) === currentUserId) {
+    return res.status(400).json({ ok: false, error: "Du kannst deinen eigenen Account nicht ignorieren." });
+  }
+
+  db.prepare(
+    `INSERT OR IGNORE INTO ignored_accounts (user_id, ignored_user_id)
+     VALUES (?, ?)`
+  ).run(currentUserId, Number(targetUser.id));
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: `${targetUser.username} wird jetzt ignoriert.`,
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/ignored-accounts/:ignoredUserId/delete", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const ignoredUserId = Number(req.params.ignoredUserId);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  if (!Number.isInteger(ignoredUserId) || ignoredUserId < 1) {
+    return res.status(400).json({ ok: false, error: "Account konnte nicht zugeordnet werden." });
+  }
+
+  db.prepare(
+    `DELETE FROM ignored_accounts
+      WHERE user_id = ?
+        AND ignored_user_id = ?`
+  ).run(currentUserId, ignoredUserId);
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: "Account-Ignorieren wurde entfernt.",
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/ignored-characters", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const characterId = Number(req.body.character_id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  const targetCharacter = getCharacterSocialTargetById(characterId);
+  if (!targetCharacter) {
+    return res.status(404).json({ ok: false, error: "Dieser Charakter wurde nicht gefunden." });
+  }
+
+  if (Number(targetCharacter.user_id) === currentUserId) {
+    return res.status(400).json({ ok: false, error: "Deinen eigenen Charakter kannst du nicht ignorieren." });
+  }
+
+  db.prepare(
+    `INSERT OR IGNORE INTO ignored_characters (user_id, ignored_character_id)
+     VALUES (?, ?)`
+  ).run(currentUserId, Number(targetCharacter.character_id));
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: `${targetCharacter.name} wird jetzt ignoriert.`,
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/ignored-characters/:ignoredCharacterId/delete", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const ignoredCharacterId = Number(req.params.ignoredCharacterId);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  if (!Number.isInteger(ignoredCharacterId) || ignoredCharacterId < 1) {
+    return res.status(400).json({ ok: false, error: "Charakter konnte nicht zugeordnet werden." });
+  }
+
+  db.prepare(
+    `DELETE FROM ignored_characters
+      WHERE user_id = ?
+        AND ignored_character_id = ?`
+  ).run(currentUserId, ignoredCharacterId);
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: "Charakter-Ignorieren wurde entfernt.",
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
 });
 
 app.post("/account/delete", requireAuth, async (req, res) => {
@@ -16530,7 +16725,286 @@ function refreshConnectedUserDisplay(userId) {
     emitChatTypingState(socket, roomId, serverId);
   });
 
+  emitSocialStateUpdatesForRelatedUsers(userId);
+
   return sessionUser;
+}
+
+function getSocialFriendRowsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT u.id AS user_id,
+              u.username,
+              u.account_number
+         FROM friend_links fl
+         JOIN users u ON u.id = fl.friend_user_id
+        WHERE fl.user_id = ?
+        ORDER BY lower(u.username) ASC, u.id ASC`
+    )
+    .all(parsedUserId);
+}
+
+function getFriendWatcherUserIdsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT user_id
+         FROM friend_links
+        WHERE friend_user_id = ?
+        ORDER BY user_id ASC`
+    )
+    .all(parsedUserId)
+    .map((row) => Number(row.user_id))
+    .filter((value, index, list) => Number.isInteger(value) && value > 0 && list.indexOf(value) === index);
+}
+
+function getIgnoredAccountRowsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT u.id AS user_id,
+              u.username,
+              u.account_number
+         FROM ignored_accounts ia
+         JOIN users u ON u.id = ia.ignored_user_id
+        WHERE ia.user_id = ?
+        ORDER BY lower(u.username) ASC, u.id ASC`
+    )
+    .all(parsedUserId);
+}
+
+function getIgnoredCharacterRowsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id AS character_id,
+              c.name,
+              c.user_id AS owner_user_id,
+              u.username AS owner_username,
+              u.account_number AS owner_account_number
+         FROM ignored_characters ic
+         JOIN characters c ON c.id = ic.ignored_character_id
+         JOIN users u ON u.id = c.user_id
+        WHERE ic.user_id = ?
+        ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedUserId);
+}
+
+function normalizeSocialLookupValue(value) {
+  return String(value || "").trim().replace(/^#/, "").slice(0, 80);
+}
+
+function findUserBySocialLookup(value) {
+  const normalizedValue = normalizeSocialLookupValue(value);
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (/^\d+$/.test(normalizedValue)) {
+    return db
+      .prepare(
+        `SELECT id, username, account_number
+           FROM users
+          WHERE account_number = ?
+          LIMIT 1`
+      )
+      .get(normalizedValue);
+  }
+
+  return db
+    .prepare(
+      `SELECT id, username, account_number
+         FROM users
+        WHERE lower(username) = lower(?)
+        LIMIT 1`
+    )
+    .get(normalizedValue);
+}
+
+function getCharacterSocialTargetById(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id AS character_id,
+              c.name,
+              c.user_id,
+              u.username AS owner_username,
+              u.account_number AS owner_account_number
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE c.id = ?
+        LIMIT 1`
+    )
+    .get(parsedCharacterId);
+}
+
+function pickPrimaryRealtimeSocketForUser(userId) {
+  const sockets = getAllSocketsForUser(userId).filter((memberSocket) => memberSocket?.data?.user);
+  if (!sockets.length) {
+    return null;
+  }
+
+  const scoreSocket = (memberSocket) => {
+    let score = 0;
+    if (memberSocket.data?.hasJoinedChat === true) {
+      score += 300;
+    }
+    if (Number.isInteger(memberSocket.data?.roomId) && memberSocket.data.roomId > 0) {
+      score += 80;
+    }
+    if (ALLOWED_SERVER_IDS.has(String(memberSocket.data?.serverId || "").trim().toLowerCase())) {
+      score += 30;
+    }
+    if (ALLOWED_SERVER_IDS.has(String(memberSocket.data?.presenceServerId || "").trim().toLowerCase())) {
+      score += 20;
+    }
+    if (Number.isInteger(Number(memberSocket.data?.activeCharacterId)) && Number(memberSocket.data.activeCharacterId) > 0) {
+      score += 10;
+    }
+    return score;
+  };
+
+  sockets.sort((leftSocket, rightSocket) => scoreSocket(rightSocket) - scoreSocket(leftSocket));
+  return sockets[0] || null;
+}
+
+function getRealtimePresenceSummaryForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return {
+      is_online: false
+    };
+  }
+
+  const primarySocket = pickPrimaryRealtimeSocketForUser(parsedUserId);
+  if (!primarySocket) {
+    return {
+      is_online: false
+    };
+  }
+
+  const activeServerId = getSocketActiveServerId(primarySocket, DEFAULT_SERVER_ID);
+  const displayProfile = getSocketHeaderDisplayProfile(primarySocket);
+  const roomId =
+    Number.isInteger(primarySocket.data?.roomId) && primarySocket.data.roomId > 0
+      ? Number(primarySocket.data.roomId)
+      : null;
+  const room = roomId ? getRoomWithCharacter(roomId) : null;
+
+  return {
+    is_online: true,
+    online_name: String(displayProfile?.label || primarySocket.data?.user?.username || `User ${parsedUserId}`).trim(),
+    role_style: String(displayProfile?.role_style || "").trim(),
+    chat_text_color: String(displayProfile?.chat_text_color || "").trim(),
+    server_id: normalizeServer(activeServerId),
+    server_label: getServerLabel(activeServerId),
+    room_id: roomId,
+    room_name: String(room?.name || "").trim()
+  };
+}
+
+function buildSocialStatePayloadForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return {
+      friends: [],
+      ignored_accounts: [],
+      ignored_characters: [],
+      friend_user_ids: [],
+      ignored_account_user_ids: [],
+      ignored_character_ids: []
+    };
+  }
+
+  const friends = getSocialFriendRowsForUser(parsedUserId).map((row) => {
+    const presence = getRealtimePresenceSummaryForUser(row.user_id);
+    return {
+      user_id: Number(row.user_id),
+      username: String(row.username || "").trim(),
+      account_number: String(row.account_number || "").trim(),
+      is_online: presence.is_online === true,
+      online_name: String(presence.online_name || row.username || "").trim(),
+      role_style: String(presence.role_style || "").trim(),
+      chat_text_color: String(presence.chat_text_color || "").trim(),
+      server_id: String(presence.server_id || "").trim(),
+      server_label: String(presence.server_label || "").trim(),
+      room_id: Number.isInteger(Number(presence.room_id)) && Number(presence.room_id) > 0
+        ? Number(presence.room_id)
+        : null,
+      room_name: String(presence.room_name || "").trim()
+    };
+  });
+  const ignoredAccounts = getIgnoredAccountRowsForUser(parsedUserId).map((row) => ({
+    user_id: Number(row.user_id),
+    username: String(row.username || "").trim(),
+    account_number: String(row.account_number || "").trim()
+  }));
+  const ignoredCharacters = getIgnoredCharacterRowsForUser(parsedUserId).map((row) => ({
+    character_id: Number(row.character_id),
+    name: String(row.name || "").trim(),
+    owner_user_id: Number(row.owner_user_id),
+    owner_username: String(row.owner_username || "").trim(),
+    owner_account_number: String(row.owner_account_number || "").trim()
+  }));
+
+  return {
+    friends,
+    ignored_accounts: ignoredAccounts,
+    ignored_characters: ignoredCharacters,
+    friend_user_ids: friends.map((entry) => entry.user_id),
+    ignored_account_user_ids: ignoredAccounts.map((entry) => entry.user_id),
+    ignored_character_ids: ignoredCharacters.map((entry) => entry.character_id)
+  };
+}
+
+function emitSocialStateUpdateForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return;
+  }
+
+  io.to(socketChannelForSocialUpdates(parsedUserId)).emit(
+    "social:update",
+    buildSocialStatePayloadForUser(parsedUserId)
+  );
+}
+
+function emitSocialStateUpdatesForRelatedUsers(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return;
+  }
+
+  const relatedUserIds = new Set([parsedUserId]);
+  getFriendWatcherUserIdsForUser(parsedUserId).forEach((watcherUserId) => {
+    relatedUserIds.add(watcherUserId);
+  });
+
+  relatedUserIds.forEach((relatedUserId) => {
+    emitSocialStateUpdateForUser(relatedUserId);
+  });
 }
 
 function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
@@ -18060,10 +18534,16 @@ io.on("connection", (socket) => {
 
   if (socket.data.user?.id) {
     socket.join(socketChannelForGuestbookNotifications(socket.data.user.id));
+    socket.join(socketChannelForSocialUpdates(socket.data.user.id));
     socket.emit(
       "guestbook:notification:update",
       buildGuestbookNotificationPayloadForUser(socket.data.user.id)
     );
+    socket.emit(
+      "social:update",
+      buildSocialStatePayloadForUser(socket.data.user.id)
+    );
+    emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
     emitHomeStatsUpdate();
   }
 
@@ -18083,12 +18563,14 @@ io.on("connection", (socket) => {
     if (socket.data.presenceServerId === nextPresenceServerId) {
       emitUserDisplayProfileToSocket(socket);
       emitGuestbookNotificationUpdateForUser(socket.data.user.id);
+      emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
       return;
     }
 
     socket.data.presenceServerId = nextPresenceServerId;
     emitUserDisplayProfileToSocket(socket);
     emitGuestbookNotificationUpdateForUser(socket.data.user.id);
+    emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
     emitHomeStatsUpdate();
   });
 
@@ -18371,6 +18853,7 @@ io.on("connection", (socket) => {
       emitOnlineCharacters(previousRoomId, previousServerId);
     }
     emitOnlineCharacters(nextRoomId, nextServerId);
+    emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
     if (previousPresenceServerId !== nextServerId) {
       emitHomeStatsUpdate();
     }
@@ -18764,6 +19247,7 @@ io.on("connection", (socket) => {
         }
       );
       emitOnlineCharacters(roomId, serverId);
+      emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
       return;
     }
 
@@ -19682,6 +20166,7 @@ io.on("connection", (socket) => {
     }
 
     if (socket.data.user?.id) {
+      emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
       emitHomeStatsUpdate();
     }
   });
