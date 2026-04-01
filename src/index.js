@@ -16016,6 +16016,86 @@ function getAllSocketsForUser(userId) {
   return sockets;
 }
 
+function buildChatRedirectUrlForLocation(roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+
+  if (normalizedRoomId) {
+    const suffix = normalizedCharacterId ? `&character_id=${normalizedCharacterId}` : "";
+    return `/chat?room_id=${normalizedRoomId}${suffix}`;
+  }
+
+  const defaultStandardRoom = getStandardRoomsForServer(normalizedServerId)[0];
+  const standardRoomSuffix = defaultStandardRoom?.id
+    ? `&standard_room=${encodeURIComponent(String(defaultStandardRoom.id))}`
+    : "";
+  const characterSuffix = normalizedCharacterId ? `&character_id=${normalizedCharacterId}` : "";
+  return `/chat?server=${encodeURIComponent(normalizedServerId)}${standardRoomSuffix}${characterSuffix}`;
+}
+
+function findConflictingChatLocationForCharacter(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  excludedSocketId = "",
+  targetRoomId = null
+) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  const normalizedTargetRoomId = Number.isInteger(targetRoomId) && targetRoomId > 0 ? targetRoomId : null;
+  const excludedId = String(excludedSocketId || "").trim();
+
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedCharacterId) {
+    return null;
+  }
+
+  for (const memberSocket of getAllSocketsForUser(parsedUserId)) {
+    if (!memberSocket || memberSocket.data?.hasJoinedChat !== true) {
+      continue;
+    }
+
+    if (excludedId && memberSocket.id === excludedId) {
+      continue;
+    }
+
+    const memberServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.serverId)
+      : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+        ? normalizeServer(memberSocket.data.presenceServerId)
+        : null;
+    if (memberServerId !== normalizedServerId) {
+      continue;
+    }
+
+    const memberCharacterId = normalizePresenceCharacterId(
+      getSocketPreferredCharacterId(memberSocket, memberServerId)
+    );
+    if (memberCharacterId !== normalizedCharacterId) {
+      continue;
+    }
+
+    const memberRoomId =
+      Number.isInteger(memberSocket?.data?.roomId) && memberSocket.data.roomId > 0
+        ? Number(memberSocket.data.roomId)
+        : null;
+    if (memberRoomId === normalizedTargetRoomId) {
+      continue;
+    }
+
+    return {
+      socket: memberSocket,
+      roomId: memberRoomId,
+      serverId: memberServerId,
+      characterId: memberCharacterId,
+      redirectUrl: buildChatRedirectUrlForLocation(memberRoomId, memberServerId, memberCharacterId)
+    };
+  }
+
+  return null;
+}
+
 function hasOtherSocketInChannel(
   userId,
   roomId,
@@ -18017,6 +18097,25 @@ io.on("connection", (socket) => {
       preferredCharacterId
     );
     const nextCharacterId = preferredCharacter?.id || null;
+    const conflictingCharacterLocation = findConflictingChatLocationForCharacter(
+      socket.data.user.id,
+      nextServerId,
+      nextCharacterId,
+      socket.id,
+      nextRoomId
+    );
+    if (conflictingCharacterLocation) {
+      socket.emit("chat:message", {
+        type: "system",
+        content: `${preferredCharacter?.name || "Dieser Charakter"} ist bereits in einem anderen Raum aktiv. Du wirst dorthin zurückgebracht.`,
+        created_at: formatChatTimestamp()
+      });
+      socket.emit("chat:redirect", {
+        url: conflictingCharacterLocation.redirectUrl,
+        delayMs: 700
+      });
+      return;
+    }
     const nextPresenceKey = getPresenceIdentityKey(socket.data.user.id, nextCharacterId);
     const shouldClearPreviousAfkState = Boolean(previousServerId) &&
       (!isSameChannel || Number(previousCharacterId) !== Number(nextCharacterId)) &&
@@ -18484,6 +18583,22 @@ io.on("connection", (socket) => {
         socket.emit("chat:message", {
           type: "system",
           content: `Du bist bereits als ${targetCharacter.name} unterwegs.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const conflictingCharacterLocation = findConflictingChatLocationForCharacter(
+        socket.data.user.id,
+        serverId,
+        targetCharacter.id,
+        socket.id,
+        roomId
+      );
+      if (conflictingCharacterLocation) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${targetCharacter.name} ist bereits in einem anderen Raum aktiv. Mit diesem Charakter kannst du nicht gleichzeitig in zwei verschiedenen Räumen sein.`,
           created_at: formatChatTimestamp()
         });
         return;
