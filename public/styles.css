@@ -9247,6 +9247,12 @@ select:focus {
   -webkit-backdrop-filter: none;
 }
 
+.page-chat #chat-box {
+  background: #efefef !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
 .page-chat .chat-box {
   flex: 1 1 0%;
   height: auto;
@@ -9341,6 +9347,14 @@ select:focus {
 .page-chat .chat-box {
   font-size: var(--chat-copy-size);
   line-height: var(--chat-copy-line-height);
+}
+
+.page-chat #chat-box .chat-message,
+.page-chat #chat-box .chat-room-scene,
+.page-chat #chat-box .guestbook-entry-body {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 .page-chat #chat-input {
