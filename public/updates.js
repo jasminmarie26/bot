@@ -79,7 +79,9 @@
   let activeServerInstanceId = "";
   let serverInstanceReloadPending = false;
   const isChatPage = document.body?.classList?.contains("page-chat") === true;
+  const isAdminUser = document.body?.dataset.currentUserIsAdmin === "true";
   let serverInstanceNoticeElement = null;
+  let adminReloadTonePlayed = false;
 
   if (
     !list &&
@@ -117,6 +119,11 @@
       return;
     }
 
+    if (isAdminUser && !adminReloadTonePlayed) {
+      adminReloadTonePlayed = true;
+      playAdminServerReloadTone();
+    }
+
     if (!serverInstanceNoticeElement) {
       const notice = document.createElement("div");
       notice.setAttribute("role", "status");
@@ -148,6 +155,60 @@
     }
 
     serverInstanceNoticeElement.style.opacity = "1";
+  }
+
+  function playAdminServerReloadTone() {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (typeof AudioContextCtor !== "function") {
+      return;
+    }
+
+    try {
+      const audioContext = new AudioContextCtor();
+      const masterGain = audioContext.createGain();
+      masterGain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      masterGain.connect(audioContext.destination);
+
+      const notes = [
+        { frequency: 880, start: 0, duration: 0.08 },
+        { frequency: 1174.66, start: 0.13, duration: 0.12 }
+      ];
+
+      notes.forEach((note) => {
+        const oscillator = audioContext.createOscillator();
+        const noteGain = audioContext.createGain();
+        const startAt = audioContext.currentTime + note.start;
+        const peakAt = startAt + 0.02;
+        const stopAt = startAt + note.duration;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(note.frequency, startAt);
+        noteGain.gain.setValueAtTime(0.0001, startAt);
+        noteGain.gain.exponentialRampToValueAtTime(0.14, peakAt);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+        oscillator.connect(noteGain);
+        noteGain.connect(masterGain);
+        oscillator.start(startAt);
+        oscillator.stop(stopAt + 0.02);
+      });
+
+      const closeContext = () => {
+        window.setTimeout(() => {
+          audioContext.close().catch(() => {});
+        }, 450);
+      };
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume().then(closeContext).catch(() => {
+          adminReloadTonePlayed = false;
+        });
+        return;
+      }
+
+      closeContext();
+    } catch (_error) {
+      adminReloadTonePlayed = false;
+    }
   }
 
   function handleServerInstance(payload) {

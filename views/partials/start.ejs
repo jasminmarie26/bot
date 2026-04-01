@@ -191,7 +191,10 @@
   </head>
     <% const bodyClassNames = [`theme-${activeTheme}`]; %>
     <% if (typeof pageClass !== "undefined" && pageClass) { bodyClassNames.push(pageClass); } %>
-  <body class="<%= bodyClassNames.join(' ') %>">
+  <body
+    class="<%= bodyClassNames.join(' ') %>"
+    data-current-user-is-admin="<%= currentUser && currentUser.is_admin ? 'true' : 'false' %>"
+  >
     <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
     <% const showAccountDeleteControl = Boolean(
       currentUser &&

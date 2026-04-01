@@ -6085,55 +6085,55 @@ function buildTavernInnkeeperReaction(content, actorName) {
 
   if (mentionsDrink) {
     return pickRandomTavernInnkeeperReply([
-      `schiebt ${safeActorName} einen frisch gefüllten Krug über den Tresen. "Hier, frisch gezapft."`,
-      `gießt ${safeActorName} einen Becher Met ein und nickt zufrieden. "Der erste Schluck geht auf gute Geschichten."`,
-      `stellt ${safeActorName} ein kühles Bier hin und wischt den Tresen sauber. "Greif zu, solange es noch schäumt."`,
-      `zieht ${safeActorName} ein dunkles Bier und stellt es mit ruhiger Hand ab. "Das wärmt besser als jedes Feuer."`,
-      `füllt ${safeActorName} den Krug bis an den Rand. "Im Silbermond-Krug bleibt niemand durstig."`
+      `schiebt ${safeActorName} einen frisch gefüllten Krug über den Tresen. #Hier, frisch gezapft.#`,
+      `gießt ${safeActorName} einen Becher Met ein und nickt zufrieden. #Der erste Schluck geht auf gute Geschichten.#`,
+      `stellt ${safeActorName} ein kühles Bier hin und wischt den Tresen sauber. #Greif zu, solange es noch schäumt.#`,
+      `zieht ${safeActorName} ein dunkles Bier und stellt es mit ruhiger Hand ab. #Das wärmt besser als jedes Feuer.#`,
+      `füllt ${safeActorName} den Krug bis an den Rand. #Im Silbermond-Krug bleibt niemand durstig.#`
     ]);
   }
 
   if (mentionsFood) {
     return pickRandomTavernInnkeeperReply([
-      `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin. "Iss erst einmal etwas Warmes."`,
-      `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit. "Der Löffel steht schon bereit."`,
-      `legt ${safeActorName} Brot, Käse und einen großen Löffel Eintopf bereit. "Das bringt wieder Kraft in die Knochen."`,
-      `schiebt ${safeActorName} einen Teller mit Braten und Brot heran. "Mehr braucht ein langer Abend nicht."`
+      `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin. #Iss erst einmal etwas Warmes.#`,
+      `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit. #Der Löffel steht schon bereit.#`,
+      `legt ${safeActorName} Brot, Käse und einen großen Löffel Eintopf bereit. #Das bringt wieder Kraft in die Knochen.#`,
+      `schiebt ${safeActorName} einen Teller mit Braten und Brot heran. #Mehr braucht ein langer Abend nicht.#`
     ]);
   }
 
   if (mentionsRoom) {
     return pickRandomTavernInnkeeperReply([
-      `nickt zum Treppenaufgang. "Oben ist noch ein freies Zimmer für müde Reisende, ${safeActorName}."`,
-      `deutet auf den Flur. "Für die Nacht findet sich hier noch ein ruhiges Bett."`,
-      `stellt einen Schlüssel auf den Tresen. "Im oberen Stock ist noch etwas frei."`,
-      `zieht einen kleinen Messingschlüssel hervor. "Wenn du Ruhe suchst, findest du sie hier oben."`
+      `nickt zum Treppenaufgang. #Oben ist noch ein freies Zimmer für müde Reisende, ${safeActorName}.#`,
+      `deutet auf den Flur. #Für die Nacht findet sich hier noch ein ruhiges Bett.#`,
+      `stellt einen Schlüssel auf den Tresen. #Im oberen Stock ist noch etwas frei.#`,
+      `zieht einen kleinen Messingschlüssel hervor. #Wenn du Ruhe suchst, findest du sie hier oben.#`
     ]);
   }
 
   if (saysThanks) {
     return pickRandomTavernInnkeeperReply([
-      `nickt ruhig. "Gern. Dafür ist der Krug schließlich da."`,
-      `meint freundlich. "Schon gut. Solange die Gäste zufrieden sind, ist der Abend gelungen."`,
-      `winkt ab. "Trink in Ruhe, der Silbermond-Krug kümmert sich um den Rest."`,
-      `lächelt knapp. "Ein dankbarer Gast ist mir lieber als zehn laute."`
+      `nickt ruhig. #Gern. Dafür ist der Krug schließlich da.#`,
+      `meint freundlich. #Schon gut. Solange die Gäste zufrieden sind, ist der Abend gelungen.#`,
+      `winkt ab. #Trink in Ruhe, der Silbermond-Krug kümmert sich um den Rest.#`,
+      `lächelt knapp. #Ein dankbarer Gast ist mir lieber als zehn laute.#`
     ]);
   }
 
   if (greets) {
     return pickRandomTavernInnkeeperReply([
-      `hebt ${safeActorName} grüßend die Hand. "Willkommen im Silbermond-Krug."`,
-      `nickt ${safeActorName} freundlich zu. "Kamin, Met und ein freier Platz warten schon."`,
-      `stellt ${safeActorName} einen sauberen Krug hin. "Setz dich, Reisende sind hier willkommen."`,
-      `mustert ${safeActorName} kurz und lächelt dann. "Such dir einen Platz, ich bring dir gleich etwas."`
+      `hebt ${safeActorName} grüßend die Hand. #Willkommen im Silbermond-Krug.#`,
+      `nickt ${safeActorName} freundlich zu. #Kamin, Met und ein freier Platz warten schon.#`,
+      `stellt ${safeActorName} einen sauberen Krug hin. #Setz dich, Reisende sind hier willkommen.#`,
+      `mustert ${safeActorName} kurz und lächelt dann. #Such dir einen Platz, ich bring dir gleich etwas.#`
     ]);
   }
 
   return pickRandomTavernInnkeeperReply([
-    `wischt den Tresen mit einem Tuch ab und schaut zu ${safeActorName}. "Was darf es sein?"`,
-    `stellt sich etwas näher und verschränkt ruhig die Arme. "Wenn du etwas brauchst, sag es nur."`,
-    `hebt fragend eine Braue. "Bier, Bett oder bloß ein offenes Ohr?"`,
-    `nickt ${safeActorName} zu. "Der Krug hat heute noch genug Platz und genug Vorräte."`
+    `wischt den Tresen mit einem Tuch ab und schaut zu ${safeActorName}. #Was darf es sein?#`,
+    `stellt sich etwas näher und verschränkt ruhig die Arme. #Wenn du etwas brauchst, sag es nur.#`,
+    `hebt fragend eine Braue. #Bier, Bett oder bloß ein offenes Ohr?#`,
+    `nickt ${safeActorName} zu. #Der Krug hat heute noch genug Platz und genug Vorräte.#`
   ]);
 }
 

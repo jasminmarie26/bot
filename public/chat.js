@@ -1280,22 +1280,22 @@
         }
       }
 
-      if (allowBold && currentChar === '"') {
+      if (allowBold && currentChar === "#") {
         let contentStart = cursor + 1;
-        while (source[contentStart] === '"') {
+        while (source[contentStart] === "#") {
           contentStart += 1;
         }
 
-        const closingIndex = source.indexOf('"', contentStart);
+        const closingIndex = source.indexOf("#", contentStart);
         if (closingIndex > contentStart) {
           let contentEnd = closingIndex;
-          while (contentEnd > contentStart && source[contentEnd - 1] === '"') {
+          while (contentEnd > contentStart && source[contentEnd - 1] === "#") {
             contentEnd -= 1;
           }
 
           if (contentEnd > contentStart) {
             let nextCursor = closingIndex + 1;
-            while (source[nextCursor] === '"') {
+            while (source[nextCursor] === "#") {
               nextCursor += 1;
             }
 
