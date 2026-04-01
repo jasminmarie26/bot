@@ -1884,6 +1884,76 @@ a:hover {
   display: none !important;
 }
 
+.social-panel {
+  width: min(620px, calc(100vw - 0.85rem));
+}
+
+.social-panel .chat-whisper-panel-card {
+  padding: 0.58rem;
+}
+
+.social-panel-body {
+  gap: 0.58rem;
+}
+
+.social-panel-grid {
+  gap: 0.5rem;
+}
+
+.social-panel-section {
+  gap: 0.22rem;
+}
+
+.social-panel-list[data-social-friends-list] {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.42rem;
+}
+
+.social-panel-list[data-social-friends-list] > .muted {
+  grid-column: 1 / -1;
+}
+
+.social-panel-friend-entry {
+  padding: 0.44rem 0.5rem;
+}
+
+.social-panel-friend-head {
+  align-items: flex-start;
+  gap: 0.38rem;
+}
+
+.social-panel-friend-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.social-panel-friend-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.social-panel-friend-entry .social-panel-entry-copy {
+  gap: 0.08rem;
+  flex: 1 1 auto;
+}
+
+.social-panel-friend-entry .social-panel-entry-actions {
+  gap: 0.22rem;
+  flex-wrap: wrap;
+}
+
+.social-panel-action-btn.is-compact {
+  font-size: 0.6rem;
+  padding: 0.2rem 0.38rem;
+}
+
+.social-panel-action-btn.is-active {
+  border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
+  background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
+}
+
 .live-updates-nav-link {
   position: relative;
   display: inline-flex;

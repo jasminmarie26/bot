@@ -16959,11 +16959,14 @@ function getRealtimePresenceSummaryForUser(userId) {
   }
 
   const activeServerId = getSocketActiveServerId(primarySocket, DEFAULT_SERVER_ID);
-  const displayProfile = getSocketHeaderDisplayProfile(primarySocket);
-  const characterId =
-    Number.isInteger(Number(primarySocket.data?.activeCharacterId)) && Number(primarySocket.data.activeCharacterId) > 0
-      ? Number(primarySocket.data.activeCharacterId)
-      : null;
+  const characterId = normalizePresenceCharacterId(
+    getSocketPreferredCharacterId(primarySocket, activeServerId)
+  );
+  const displayProfile = getCurrentChannelDisplayProfile(
+    primarySocket?.data?.user,
+    activeServerId,
+    characterId
+  );
   const roomId =
     Number.isInteger(primarySocket.data?.roomId) && primarySocket.data.roomId > 0
       ? Number(primarySocket.data.roomId)

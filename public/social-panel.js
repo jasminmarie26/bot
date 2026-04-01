@@ -141,11 +141,22 @@
     return dot;
   }
 
-  function buildActionButton(label, handler) {
+  function buildActionButton(label, handler, options = {}) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "social-panel-action-btn";
     button.textContent = label;
+    const title = normalizeText(options?.title);
+    if (title) {
+      button.title = title;
+      button.setAttribute("aria-label", title);
+    }
+    if (options?.compact) {
+      button.classList.add("is-compact");
+    }
+    if (options?.active) {
+      button.classList.add("is-active");
+    }
     button.addEventListener("click", handler);
     return button;
   }
@@ -158,26 +169,38 @@
   }
 
   function getFriendDisplayName(friend) {
-    if (friend?.is_online) {
-      return normalizeText(friend.online_name) || "Freund";
-    }
-    return "Freund";
+    return normalizeText(friend?.online_name) || "Freund";
+  }
+
+  function getVisibleFriends() {
+    return (socialState.friends || [])
+      .filter((entry) => entry?.is_online)
+      .slice()
+      .sort((leftFriend, rightFriend) =>
+        getFriendDisplayName(leftFriend).localeCompare(getFriendDisplayName(rightFriend), "de", {
+          sensitivity: "base"
+        })
+      );
   }
 
   function renderFriendEntry(friend) {
     const entry = document.createElement("article");
-    entry.className = "social-panel-entry";
+    entry.className = "social-panel-entry social-panel-friend-entry";
 
     const head = document.createElement("div");
-    head.className = "social-panel-entry-head";
-    head.appendChild(buildStatusDot(friend.is_online));
+    head.className = "social-panel-entry-head social-panel-friend-head";
 
     const copy = document.createElement("div");
     copy.className = "social-panel-entry-copy";
 
+    const titleRow = document.createElement("div");
+    titleRow.className = "social-panel-friend-title";
+    titleRow.appendChild(buildStatusDot(friend.is_online));
+
     const title = document.createElement("strong");
     title.textContent = getFriendDisplayName(friend);
-    copy.appendChild(title);
+    titleRow.appendChild(title);
+    copy.appendChild(titleRow);
 
     const meta = document.createElement("small");
     if (friend.is_online) {
@@ -328,6 +351,138 @@
 
     if (badge) {
       const onlineCount = socialState.friends.filter((entry) => entry.is_online).length;
+      badge.hidden = onlineCount < 1;
+      badge.textContent = onlineCount > 99 ? "99+" : String(onlineCount || 0);
+    }
+  }
+
+  function renderFriendEntry(friend) {
+    const entry = document.createElement("article");
+    entry.className = "social-panel-entry social-panel-friend-entry";
+
+    const head = document.createElement("div");
+    head.className = "social-panel-entry-head social-panel-friend-head";
+
+    const copy = document.createElement("div");
+    copy.className = "social-panel-entry-copy";
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "social-panel-friend-title";
+    titleRow.appendChild(buildStatusDot(friend.is_online));
+
+    const title = document.createElement("strong");
+    title.textContent = getFriendDisplayName(friend);
+    titleRow.appendChild(title);
+    copy.appendChild(titleRow);
+
+    const meta = document.createElement("small");
+    const locationParts = [];
+    if (friend.server_label) {
+      locationParts.push(friend.server_label);
+    }
+    if (friend.room_name) {
+      locationParts.push(friend.room_name);
+    }
+    meta.textContent = locationParts.join(" · ") || "Gerade online";
+    copy.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "social-panel-entry-actions";
+    if (friend.character_id) {
+      const characterIsIgnored = socialState.ignored_character_ids.includes(friend.character_id);
+      actions.appendChild(
+        buildActionButton(
+          characterIsIgnored ? "Char frei" : "Char",
+          () => {
+            const action = characterIsIgnored
+              ? unignoreCharacter(friend.character_id)
+              : ignoreCharacter(friend.character_id);
+            action.catch(() => {});
+          },
+          {
+            title: characterIsIgnored ? "Charakter wieder anzeigen" : "Charakter ignorieren",
+            compact: true,
+            active: characterIsIgnored
+          }
+        )
+      );
+    }
+
+    const accountIsIgnored = socialState.ignored_account_user_ids.includes(friend.user_id);
+    actions.appendChild(
+      buildActionButton(
+        accountIsIgnored ? "Acc frei" : "Acc",
+        () => {
+          const action = accountIsIgnored
+            ? unignoreAccount(friend.user_id)
+            : ignoreAccount(friend.user_id);
+          action.catch(() => {});
+        },
+        {
+          title: accountIsIgnored ? "Account wieder anzeigen" : "Account ignorieren",
+          compact: true,
+          active: accountIsIgnored
+        }
+      )
+    );
+    actions.appendChild(
+      buildActionButton(
+        "Entf.",
+        () => {
+          removeFriend(friend.user_id).catch(() => {});
+        },
+        {
+          title: "Freund entfernen",
+          compact: true
+        }
+      )
+    );
+
+    head.appendChild(copy);
+    head.appendChild(actions);
+    entry.appendChild(head);
+    return entry;
+  }
+
+  function renderSocialState() {
+    if (friendsList) {
+      friendsList.replaceChildren();
+      const visibleFriends = getVisibleFriends();
+      if (!socialState.friends.length) {
+        friendsList.appendChild(createEmptyState("Noch keine Freunde gespeichert."));
+      } else if (!visibleFriends.length) {
+        friendsList.appendChild(createEmptyState("Gerade ist keiner deiner Freunde online."));
+      } else {
+        visibleFriends.forEach((friend) => {
+          friendsList.appendChild(renderFriendEntry(friend));
+        });
+      }
+    }
+
+    if (ignoredAccountsList) {
+      ignoredAccountsList.replaceChildren();
+      if (!socialState.ignored_accounts.length) {
+        ignoredAccountsList.appendChild(createEmptyState("Keine ignorierten Accounts."));
+      } else {
+        socialState.ignored_accounts.forEach((entryData) => {
+          ignoredAccountsList.appendChild(renderIgnoredAccountEntry(entryData));
+        });
+      }
+    }
+
+    if (ignoredCharactersList) {
+      ignoredCharactersList.replaceChildren();
+      if (!socialState.ignored_characters.length) {
+        ignoredCharactersList.appendChild(createEmptyState("Keine ignorierten Charaktere."));
+      } else {
+        socialState.ignored_characters.forEach((entryData) => {
+          ignoredCharactersList.appendChild(renderIgnoredCharacterEntry(entryData));
+        });
+      }
+    }
+
+    if (badge) {
+      const onlineCount = getVisibleFriends().length;
       badge.hidden = onlineCount < 1;
       badge.textContent = onlineCount > 99 ? "99+" : String(onlineCount || 0);
     }
