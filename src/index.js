@@ -264,6 +264,14 @@ const SMTP_AUTH_ENABLED = Boolean(SMTP_USER && SMTP_PASS);
 const EMAIL_VERIFICATION_MAIL_ENABLED =
   Boolean(SMTP_HOST && Number.isFinite(SMTP_PORT) && SMTP_PORT > 0 && MAIL_FROM) &&
   (SMTP_AUTH_ENABLED || (!SMTP_USER && !SMTP_PASS));
+const TURNSTILE_SITE_KEY = String(
+  process.env.TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITEKEY || ""
+).trim();
+const TURNSTILE_SECRET_KEY = String(process.env.TURNSTILE_SECRET_KEY || "").trim();
+const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const REGISTRATION_CAPTCHA_ENABLED = Boolean(TURNSTILE_SITE_KEY && TURNSTILE_SECRET_KEY);
+const REGISTRATION_CAPTCHA_ACTION = "register";
+const REGISTRATION_CAPTCHA_TIMEOUT_MS = 8000;
 let verificationMailer = null;
 const USERNAME_PATTERN = /^[\p{L}0-9_.+\- ]{3,24}$/u;
 const USERNAME_CHANGE_COOLDOWN_DAYS = 182;
@@ -272,6 +280,8 @@ const CHARACTER_RENAME_COOLDOWN_MONTHS = 3;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
+const REGISTRATION_MAX_REQUESTS_PER_MINUTE = 3;
+const REGISTRATION_MAX_REQUESTS_PER_10_MINUTES = 8;
 const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
 const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
 const PASSWORD_RESET_TOKEN_LIFETIME_HOURS = 2;
@@ -1472,6 +1482,76 @@ function getRequestIp(req) {
   return String(req.ip || req.socket?.remoteAddress || "").trim().slice(0, 120);
 }
 
+function getHostnameFromUrl(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  try {
+    return String(new URL(normalized).hostname || "").trim().toLowerCase();
+  } catch (_error) {
+    return "";
+  }
+}
+
+function getExpectedRegistrationCaptchaHostnames(req) {
+  const hostnames = new Set();
+  const requestHostname = String(req.hostname || "").trim().toLowerCase();
+  const appHostname = getHostnameFromUrl(APP_BASE_URL);
+
+  if (requestHostname) {
+    hostnames.add(requestHostname);
+  }
+  if (appHostname) {
+    hostnames.add(appHostname);
+  }
+  if (!hostnames.size && process.env.NODE_ENV !== "production") {
+    hostnames.add("localhost");
+    hostnames.add("127.0.0.1");
+  }
+
+  return Array.from(hostnames);
+}
+
+function getRegistrationSecurityFailureResponse(reason) {
+  switch (reason) {
+    case "captcha-missing":
+      return {
+        status: 400,
+        error: "Bitte bestätige zuerst das CAPTCHA."
+      };
+    case "captcha-failed":
+    case "captcha-action-mismatch":
+    case "captcha-hostname-mismatch":
+      return {
+        status: 400,
+        error: "Das CAPTCHA konnte nicht bestätigt werden. Bitte versuche es erneut."
+      };
+    case "captcha-service-unavailable":
+    case "captcha-not-configured":
+      return {
+        status: 503,
+        error: "Die Registrierung ist gerade nicht verfügbar. Bitte versuche es später erneut."
+      };
+    case "ip-temporarily-blocked":
+      return {
+        status: 403,
+        error:
+          "Von dieser Verbindung wurden auffällige Registrierungsversuche erkannt. Bitte versuche es später erneut."
+      };
+    case "too-many-requests":
+    case "too-many-blocked-attempts":
+    case "too-many-successes":
+      return {
+        status: 429,
+        error: "Zu viele Registrierungsversuche in kurzer Zeit. Bitte warte kurz und versuche es dann erneut."
+      };
+    default:
+      return {
+        status: 429,
+        error: "Registrierung im Moment nicht möglich. Bitte versuche es in ein paar Minuten erneut."
+      };
+  }
+}
+
 const DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE =
   'Doppelaccounts sind nur nach Freigabe durch einen Admin erlaubt. Bitte nutze im bestehenden Account in den Einstellungen den Link "Doppel Accounts Beantragen".';
 
@@ -1552,6 +1632,9 @@ function renderAuthPage(req, res, options = {}) {
     resetUrl: options.resetUrl || "",
     values,
     registrationGuardToken: "",
+    registrationCaptchaEnabled: REGISTRATION_CAPTCHA_ENABLED,
+    registrationCaptchaSiteKey: REGISTRATION_CAPTCHA_ENABLED ? TURNSTILE_SITE_KEY : "",
+    registrationReady: Boolean(REGISTRATION_CAPTCHA_ENABLED && EMAIL_VERIFICATION_MAIL_ENABLED),
     resetToken: options.resetToken || ""
   };
 
@@ -1817,6 +1900,57 @@ function getRecentRegistrationGuardCount(ip, outcome, sinceModifier) {
   return Number(row?.count || 0);
 }
 
+function getRecentRegistrationGuardReasonCount(ip, reasons, sinceModifier) {
+  const normalizedIp = String(ip || "").trim().slice(0, 120);
+  const reasonList = (Array.isArray(reasons) ? reasons : [reasons])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+  if (!normalizedIp || !reasonList.length) {
+    return 0;
+  }
+
+  const placeholders = reasonList.map(() => "?").join(", ");
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count
+         FROM registration_guard_events
+        WHERE ip = ?
+          AND reason IN (${placeholders})
+          AND created_at >= datetime('now', ?)`
+    )
+    .get(normalizedIp, ...reasonList, sinceModifier);
+  return Number(row?.count || 0);
+}
+
+function isRegistrationIpTemporarilyBlocked(ip) {
+  const normalizedIp = String(ip || "").trim().slice(0, 120);
+  if (!normalizedIp) {
+    return false;
+  }
+
+  if (
+    getRecentRegistrationGuardReasonCount(
+      normalizedIp,
+      ["honeypot-filled", "suspicious-payload", "captcha-hostname-mismatch"],
+      "-24 hours"
+    ) >= 1
+  ) {
+    return true;
+  }
+
+  if (
+    getRecentRegistrationGuardReasonCount(
+      normalizedIp,
+      ["captcha-failed", "too-many-requests"],
+      "-1 hour"
+    ) >= 4
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isSuspiciousRegistrationPayload({ username, email }) {
   const sample = `${username} ${email}`.toLowerCase();
   return /https?:\/\/|www\.|<[^>]+>|\[url|\[link|discord\.gg|t\.me|bit\.ly|tinyurl/i.test(sample);
@@ -1845,8 +1979,22 @@ function validateRegistrationGuard(req, submittedToken) {
 function getRegistrationBlockReason(req, { username, email, honeypotValue, submittedToken }) {
   const ip = getRequestIp(req);
 
+  if (isRegistrationIpTemporarilyBlocked(ip)) {
+    return { ip, reason: "ip-temporarily-blocked" };
+  }
+
   if (honeypotValue) {
     return { ip, reason: "honeypot-filled" };
+  }
+
+  if (getRecentRegistrationGuardCount(ip, "request", "-1 minute") > REGISTRATION_MAX_REQUESTS_PER_MINUTE) {
+    return { ip, reason: "too-many-requests" };
+  }
+
+  if (
+    getRecentRegistrationGuardCount(ip, "request", "-10 minutes") > REGISTRATION_MAX_REQUESTS_PER_10_MINUTES
+  ) {
+    return { ip, reason: "too-many-requests" };
   }
 
   if (getRecentRegistrationGuardCount(ip, "blocked", "-1 hour") >= REGISTRATION_MAX_ATTEMPTS_PER_HOUR) {
@@ -7786,6 +7934,92 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
   return null;
 }
 
+async function validateRegistrationCaptcha(req) {
+  if (!REGISTRATION_CAPTCHA_ENABLED) {
+    return { ok: false, reason: "captcha-not-configured" };
+  }
+
+  const token = String(req.body["cf-turnstile-response"] || "").trim();
+  if (!token) {
+    return { ok: false, reason: "captcha-missing" };
+  }
+
+  const remoteIp = getRequestIp(req);
+  const formData = new URLSearchParams();
+  formData.set("secret", TURNSTILE_SECRET_KEY);
+  formData.set("response", token);
+  if (remoteIp) {
+    formData.set("remoteip", remoteIp);
+  }
+  if (typeof crypto.randomUUID === "function") {
+    formData.set("idempotency_key", crypto.randomUUID());
+  }
+
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => abortController.abort(), REGISTRATION_CAPTCHA_TIMEOUT_MS);
+
+  let verificationPayload = null;
+  try {
+    const response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: formData.toString(),
+      signal: abortController.signal
+    });
+
+    verificationPayload = await response.json().catch(() => null);
+    if (!response.ok || !verificationPayload) {
+      return { ok: false, reason: "captcha-service-unavailable" };
+    }
+  } catch (error) {
+    console.error("CAPTCHA-Prüfung fehlgeschlagen:", error);
+    return { ok: false, reason: "captcha-service-unavailable" };
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+
+  if (verificationPayload.success !== true) {
+    return {
+      ok: false,
+      reason: "captcha-failed",
+      errorCodes: Array.isArray(verificationPayload["error-codes"])
+        ? verificationPayload["error-codes"]
+        : []
+    };
+  }
+
+  const returnedAction = String(verificationPayload.action || "").trim();
+  if (returnedAction && returnedAction !== REGISTRATION_CAPTCHA_ACTION) {
+    return { ok: false, reason: "captcha-action-mismatch" };
+  }
+
+  const returnedHostname = String(verificationPayload.hostname || "").trim().toLowerCase();
+  const expectedHostnames = getExpectedRegistrationCaptchaHostnames(req);
+  if (returnedHostname && expectedHostnames.length && !expectedHostnames.includes(returnedHostname)) {
+    return { ok: false, reason: "captcha-hostname-mismatch" };
+  }
+
+  return { ok: true };
+}
+
+function renderRegistrationSecurityFailure(req, res, { reason, values, username, email, ip }) {
+  const failure = getRegistrationSecurityFailureResponse(reason);
+  logRegistrationGuardEvent({
+    ip,
+    username,
+    email,
+    outcome: "blocked",
+    reason
+  });
+  return renderRegisterPage(req, res, {
+    status: failure.status,
+    error: failure.error,
+    values
+  });
+}
+
 function buildGuestbookNotificationPayloadForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -9253,6 +9487,13 @@ app.post("/register", async (req, res) => {
   const submittedToken = String(req.body.form_token || "").trim();
   const honeypotValue = String(req.body.website || "").trim();
   const values = { username, email, birth_date: rawBirthDate };
+  logRegistrationGuardEvent({
+    ip: requestIp,
+    username,
+    email,
+    outcome: "request",
+    reason: "register-submit"
+  });
   const blockReason = getRegistrationBlockReason(req, {
     username,
     email,
@@ -9261,17 +9502,12 @@ app.post("/register", async (req, res) => {
   });
 
   if (blockReason) {
-    logRegistrationGuardEvent({
-      ip: blockReason.ip,
+    return renderRegistrationSecurityFailure(req, res, {
+      reason: blockReason.reason,
+      values,
       username,
       email,
-      outcome: "blocked",
-      reason: blockReason.reason
-    });
-    return renderRegisterPage(req, res, {
-      status: 429,
-      error: "Registrierung im Moment nicht möglich. Bitte versuche es in ein paar Minuten erneut.",
-      values
+      ip: blockReason.ip
     });
   }
 
@@ -9322,6 +9558,34 @@ app.post("/register", async (req, res) => {
     });
   }
 
+  if (!EMAIL_VERIFICATION_MAIL_ENABLED) {
+    return renderRegisterPage(req, res, {
+      status: 503,
+      error:
+        "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
+      values
+    });
+  }
+
+  if (!REGISTRATION_CAPTCHA_ENABLED) {
+    return renderRegisterPage(req, res, {
+      status: 503,
+      error: "Registrierung ist derzeit nicht verfügbar. Bitte versuche es später erneut.",
+      values
+    });
+  }
+
+  const captchaCheck = await validateRegistrationCaptcha(req);
+  if (!captchaCheck.ok) {
+    return renderRegistrationSecurityFailure(req, res, {
+      reason: captchaCheck.reason,
+      values,
+      username,
+      email,
+      ip: requestIp
+    });
+  }
+
   const existingUsername = db
     .prepare("SELECT id FROM users WHERE username = ?")
     .get(username);
@@ -9354,15 +9618,6 @@ app.post("/register", async (req, res) => {
     return renderRegisterPage(req, res, {
       status: 403,
       error: DUPLICATE_ACCOUNT_REGISTRATION_MESSAGE,
-      values
-    });
-  }
-
-  if (!EMAIL_VERIFICATION_MAIL_ENABLED) {
-    return renderRegisterPage(req, res, {
-      status: 503,
-      error:
-        "Registrierung ist derzeit nicht verfügbar, weil der E-Mail-Versand noch nicht konfiguriert ist.",
       values
     });
   }

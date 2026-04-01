@@ -38,6 +38,7 @@
         : isResetPassword
           ? "Neues Passwort speichern"
           : "Einloggen";
+  const registrationFormReady = !isRegister || registrationReady !== false;
 %>
 
 <section class="panel narrow">
@@ -131,6 +132,26 @@
         </label>
       <% } %>
 
+      <% if (isRegister) { %>
+        <% if (registrationFormReady && registrationCaptchaEnabled) { %>
+          <div class="auth-captcha">
+            <div
+              class="cf-turnstile"
+              data-sitekey="<%= registrationCaptchaSiteKey || '' %>"
+              data-action="register"
+              data-theme="auto"
+            ></div>
+          </div>
+        <% } else if (!error) { %>
+          <div class="inline-error auth-inline-note">
+            Die Registrierung ist gerade nicht verfügbar. Bitte versuche es später erneut.
+          </div>
+        <% } %>
+        <p class="field-hint auth-submit-note">
+          Dein Account wird erst nach dem Klick auf den Bestätigungslink in deiner E-Mail aktiviert.
+        </p>
+      <% } %>
+
       <% if (isResetPassword) { %>
         <label>
           Passwort wiederholen
@@ -138,7 +159,11 @@
         </label>
       <% } %>
 
-      <button type="submit" class="btn"><%= submitLabel %></button>
+      <button
+        type="submit"
+        class="btn"
+        <%= isRegister && !registrationFormReady ? 'disabled aria-disabled="true"' : '' %>
+      ><%= submitLabel %></button>
     </form>
 
     <% if (isLogin) { %>
@@ -188,5 +213,9 @@
     </p>
   <% } %>
 </section>
+
+<% if (isRegister && registrationCaptchaEnabled) { %>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<% } %>
 
 <%- include("partials/end") %>

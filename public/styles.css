@@ -3214,6 +3214,27 @@ body.page-home-screen .home-hero-actions {
   color: var(--muted);
 }
 
+.auth-captcha {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.auth-inline-note {
+  margin-bottom: 0;
+}
+
+.auth-submit-note {
+  margin-top: -0.1rem;
+}
+
+.form .btn[disabled],
+.form .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: saturate(0.75);
+}
+
 .auth-result {
   display: grid;
   gap: 0.65rem;
