@@ -271,7 +271,11 @@ const TURNSTILE_SECRET_KEY = String(process.env.TURNSTILE_SECRET_KEY || "").trim
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const REGISTRATION_CAPTCHA_ENABLED = Boolean(TURNSTILE_SITE_KEY && TURNSTILE_SECRET_KEY);
 const REGISTRATION_CAPTCHA_ACTION = "register";
+const OAUTH_CAPTCHA_ACTION = "oauth-start";
 const REGISTRATION_CAPTCHA_TIMEOUT_MS = 8000;
+const HUMAN_VERIFICATION_CHALLENGE_LENGTH = 5;
+const HUMAN_VERIFICATION_MAX_AGE_MS = 1000 * 60 * 10;
+const HUMAN_VERIFICATION_CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 let verificationMailer = null;
 const USERNAME_PATTERN = /^[\p{L}0-9_.+\- ]{3,24}$/u;
 const USERNAME_CHANGE_COOLDOWN_DAYS = 182;
@@ -1607,6 +1611,62 @@ function issueRegistrationGuard(req) {
   return guard;
 }
 
+function getHumanVerificationMode() {
+  return REGISTRATION_CAPTCHA_ENABLED ? "turnstile" : "fallback";
+}
+
+function getHumanVerificationStore(req) {
+  if (!req.session.humanVerificationChallenges || typeof req.session.humanVerificationChallenges !== "object") {
+    req.session.humanVerificationChallenges = {};
+  }
+  return req.session.humanVerificationChallenges;
+}
+
+function generateHumanVerificationText(length = HUMAN_VERIFICATION_CHALLENGE_LENGTH) {
+  const preparedLength = Math.max(4, Math.min(8, Number(length) || HUMAN_VERIFICATION_CHALLENGE_LENGTH));
+  let result = "";
+  while (result.length < preparedLength) {
+    const index = crypto.randomInt(0, HUMAN_VERIFICATION_CHARSET.length);
+    result += HUMAN_VERIFICATION_CHARSET[index];
+  }
+  return result;
+}
+
+function issueHumanVerificationChallenge(req, context) {
+  const normalizedContext = String(context || "").trim().toLowerCase() || "default";
+  const store = getHumanVerificationStore(req);
+  const challenge = {
+    answer: generateHumanVerificationText(),
+    token: crypto.randomBytes(12).toString("hex"),
+    issuedAt: Date.now()
+  };
+  store[normalizedContext] = challenge;
+  return challenge;
+}
+
+function getHumanVerificationChallenge(req, context, { reissueIfMissing = false } = {}) {
+  const normalizedContext = String(context || "").trim().toLowerCase() || "default";
+  const store = getHumanVerificationStore(req);
+  const existingChallenge = store[normalizedContext];
+  const ageMs = existingChallenge ? Date.now() - Number(existingChallenge.issuedAt || 0) : Number.POSITIVE_INFINITY;
+
+  if (
+    existingChallenge &&
+    Number.isFinite(ageMs) &&
+    ageMs >= 0 &&
+    ageMs <= HUMAN_VERIFICATION_MAX_AGE_MS &&
+    String(existingChallenge.answer || "").trim()
+  ) {
+    return existingChallenge;
+  }
+
+  delete store[normalizedContext];
+  if (reissueIfMissing) {
+    return issueHumanVerificationChallenge(req, normalizedContext);
+  }
+  return null;
+}
+
 function renderAuthPage(req, res, options = {}) {
   const mode = options.mode || "login";
   const values = {
@@ -1632,18 +1692,51 @@ function renderAuthPage(req, res, options = {}) {
     resetUrl: options.resetUrl || "",
     values,
     registrationGuardToken: "",
-    registrationCaptchaEnabled: REGISTRATION_CAPTCHA_ENABLED,
+    registrationCaptchaMode: getHumanVerificationMode(),
     registrationCaptchaSiteKey: REGISTRATION_CAPTCHA_ENABLED ? TURNSTILE_SITE_KEY : "",
-    registrationReady: Boolean(REGISTRATION_CAPTCHA_ENABLED && EMAIL_VERIFICATION_MAIL_ENABLED),
+    registrationFallbackCaptchaUrl: "",
+    registrationReady: EMAIL_VERIFICATION_MAIL_ENABLED,
     resetToken: options.resetToken || ""
   };
 
   if (mode === "register") {
     const guard = issueRegistrationGuard(req);
     viewData.registrationGuardToken = guard.token;
+    if (viewData.registrationCaptchaMode === "fallback") {
+      const challenge = getHumanVerificationChallenge(req, "register", { reissueIfMissing: true });
+      viewData.registrationFallbackCaptchaUrl = `/auth/captcha.svg?context=register&v=${encodeURIComponent(
+        challenge.token
+      )}`;
+    }
   }
 
   return res.status(options.status || 200).render("auth", viewData);
+}
+
+function renderOAuthVerificationPage(req, res, provider, options = {}) {
+  const normalizedProvider = String(provider || "").trim().toLowerCase() === "facebook" ? "facebook" : "google";
+  const providerLabel = normalizedProvider === "facebook" ? "Facebook" : "Google";
+  const captchaMode = getHumanVerificationMode();
+  let fallbackCaptchaUrl = "";
+
+  if (captchaMode === "fallback") {
+    const challenge = getHumanVerificationChallenge(req, `oauth-${normalizedProvider}`, {
+      reissueIfMissing: true
+    });
+    fallbackCaptchaUrl = `/auth/captcha.svg?context=${encodeURIComponent(
+      `oauth-${normalizedProvider}`
+    )}&v=${encodeURIComponent(challenge.token)}`;
+  }
+
+  return res.status(options.status || 200).render("oauth-human-check", {
+    title: `${providerLabel} Sicherheitsprüfung`,
+    provider: normalizedProvider,
+    providerLabel,
+    error: options.error || "",
+    captchaMode,
+    captchaSiteKey: REGISTRATION_CAPTCHA_ENABLED ? TURNSTILE_SITE_KEY : "",
+    fallbackCaptchaUrl
+  });
 }
 
 function renderRegisterPage(req, res, options = {}) {
@@ -7934,7 +8027,67 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
   return null;
 }
 
-async function validateRegistrationCaptcha(req) {
+function escapeSvgText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildHumanVerificationSvg(text) {
+  const safeText = escapeSvgText(text);
+  const chars = safeText.split("");
+  const lines = Array.from({ length: 5 }, (_entry, index) => {
+    const y = 14 + index * 8;
+    const x1 = 8 + ((index * 19) % 40);
+    const x2 = 180 - ((index * 17) % 44);
+    return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y + 8}" stroke="rgba(120,70,28,0.28)" stroke-width="1.2" />`;
+  }).join("");
+  const glyphs = chars
+    .map((char, index) => {
+      const x = 20 + index * 28;
+      const y = 37 + ((index % 2) * 4 - 2);
+      const rotation = (index % 2 === 0 ? -8 : 7) + index;
+      return `<text x="${x}" y="${y}" font-size="28" font-family="Georgia, 'Times New Roman', serif" font-weight="700" fill="#44250f" transform="rotate(${rotation} ${x} ${y})">${char}</text>`;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="56" viewBox="0 0 180 56" role="img" aria-label="Sicherheitscode">
+  <rect width="180" height="56" rx="10" fill="#f2dfba" />
+  <rect x="1" y="1" width="178" height="54" rx="9" fill="none" stroke="#b98b4d" stroke-width="2" />
+  ${lines}
+  ${glyphs}
+</svg>`;
+}
+
+function validateFallbackHumanVerification(req, context, submittedAnswer) {
+  const normalizedContext = String(context || "").trim().toLowerCase() || "default";
+  const store = getHumanVerificationStore(req);
+  const challenge = getHumanVerificationChallenge(req, normalizedContext);
+  delete store[normalizedContext];
+
+  if (!challenge) {
+    return { ok: false, reason: "captcha-missing" };
+  }
+
+  const ageMs = Date.now() - Number(challenge.issuedAt || 0);
+  if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > HUMAN_VERIFICATION_MAX_AGE_MS) {
+    return { ok: false, reason: "captcha-failed" };
+  }
+
+  const expectedAnswer = String(challenge.answer || "").trim().toUpperCase();
+  const receivedAnswer = String(submittedAnswer || "").trim().toUpperCase();
+  if (!expectedAnswer || !receivedAnswer || expectedAnswer !== receivedAnswer) {
+    return { ok: false, reason: "captcha-failed" };
+  }
+
+  return { ok: true };
+}
+
+async function validateTurnstileCaptcha(req, expectedAction = REGISTRATION_CAPTCHA_ACTION) {
   if (!REGISTRATION_CAPTCHA_ENABLED) {
     return { ok: false, reason: "captcha-not-configured" };
   }
@@ -7991,7 +8144,7 @@ async function validateRegistrationCaptcha(req) {
   }
 
   const returnedAction = String(verificationPayload.action || "").trim();
-  if (returnedAction && returnedAction !== REGISTRATION_CAPTCHA_ACTION) {
+  if (returnedAction && returnedAction !== String(expectedAction || "").trim()) {
     return { ok: false, reason: "captcha-action-mismatch" };
   }
 
@@ -8002,6 +8155,18 @@ async function validateRegistrationCaptcha(req) {
   }
 
   return { ok: true };
+}
+
+async function validateHumanVerification(req, options = {}) {
+  const context = String(options.context || "").trim().toLowerCase() || "register";
+  const submittedAnswer = String(options.submittedAnswer || "").trim();
+  const expectedAction = String(options.expectedAction || REGISTRATION_CAPTCHA_ACTION).trim();
+
+  if (getHumanVerificationMode() === "turnstile") {
+    return validateTurnstileCaptcha(req, expectedAction);
+  }
+
+  return validateFallbackHumanVerification(req, context, submittedAnswer);
 }
 
 function renderRegistrationSecurityFailure(req, res, { reason, values, username, email, ip }) {
@@ -8017,6 +8182,22 @@ function renderRegistrationSecurityFailure(req, res, { reason, values, username,
     status: failure.status,
     error: failure.error,
     values
+  });
+}
+
+function renderOAuthVerificationFailure(req, res, provider, reason, { username = "", email = "" } = {}) {
+  const ip = getRequestIp(req);
+  const failure = getRegistrationSecurityFailureResponse(reason);
+  logRegistrationGuardEvent({
+    ip,
+    username,
+    email,
+    outcome: "blocked",
+    reason: `oauth-${String(reason || "").trim()}`
+  });
+  return renderOAuthVerificationPage(req, res, provider, {
+    status: failure.status,
+    error: failure.error
   });
 }
 
@@ -9567,15 +9748,11 @@ app.post("/register", async (req, res) => {
     });
   }
 
-  if (!REGISTRATION_CAPTCHA_ENABLED) {
-    return renderRegisterPage(req, res, {
-      status: 503,
-      error: "Registrierung ist derzeit nicht verfügbar. Bitte versuche es später erneut.",
-      values
-    });
-  }
-
-  const captchaCheck = await validateRegistrationCaptcha(req);
+  const captchaCheck = await validateHumanVerification(req, {
+    context: "register",
+    submittedAnswer: req.body.captcha_answer || "",
+    expectedAction: REGISTRATION_CAPTCHA_ACTION
+  });
   if (!captchaCheck.ok) {
     return renderRegistrationSecurityFailure(req, res, {
       reason: captchaCheck.reason,
@@ -9926,10 +10103,39 @@ app.post("/reset-password", (req, res) => {
   return res.redirect("/login");
 });
 
+app.get("/auth/captcha.svg", (req, res) => {
+  const requestedContext = String(req.query.context || "register").trim().toLowerCase();
+  const allowedContexts = new Set(["register", "oauth-google", "oauth-facebook"]);
+  const context = allowedContexts.has(requestedContext) ? requestedContext : "register";
+  const challenge = getHumanVerificationChallenge(req, context, { reissueIfMissing: true });
+  const svg = buildHumanVerificationSvg(challenge?.answer || generateHumanVerificationText());
+  res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  return res.status(200).send(svg);
+});
+
 app.get("/auth/google", (req, res, next) => {
   if (!GOOGLE_AUTH_ENABLED) {
     setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.google));
     return res.redirect("/login");
+  }
+
+  return renderOAuthVerificationPage(req, res, "google");
+});
+
+app.post("/auth/google/start", async (req, res, next) => {
+  if (!GOOGLE_AUTH_ENABLED) {
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.google));
+    return res.redirect("/login");
+  }
+
+  const captchaCheck = await validateHumanVerification(req, {
+    context: "oauth-google",
+    submittedAnswer: req.body.captcha_answer || "",
+    expectedAction: OAUTH_CAPTCHA_ACTION
+  });
+  if (!captchaCheck.ok) {
+    return renderOAuthVerificationFailure(req, res, "google", captchaCheck.reason);
   }
 
   return passport.authenticate("google", {
@@ -10002,6 +10208,24 @@ app.get("/auth/facebook", (req, res, next) => {
   if (!FACEBOOK_AUTH_ENABLED) {
     setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.facebook));
     return res.redirect("/login");
+  }
+
+  return renderOAuthVerificationPage(req, res, "facebook");
+});
+
+app.post("/auth/facebook/start", async (req, res, next) => {
+  if (!FACEBOOK_AUTH_ENABLED) {
+    setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.facebook));
+    return res.redirect("/login");
+  }
+
+  const captchaCheck = await validateHumanVerification(req, {
+    context: "oauth-facebook",
+    submittedAnswer: req.body.captcha_answer || "",
+    expectedAction: OAUTH_CAPTCHA_ACTION
+  });
+  if (!captchaCheck.ok) {
+    return renderOAuthVerificationFailure(req, res, "facebook", captchaCheck.reason);
   }
 
   return passport.authenticate("facebook", {

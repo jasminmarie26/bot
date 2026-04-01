@@ -133,7 +133,7 @@
       <% } %>
 
       <% if (isRegister) { %>
-        <% if (registrationFormReady && registrationCaptchaEnabled) { %>
+        <% if (registrationFormReady && registrationCaptchaMode === "turnstile") { %>
           <div class="auth-captcha">
             <div
               class="cf-turnstile"
@@ -142,9 +142,31 @@
               data-theme="auto"
             ></div>
           </div>
+        <% } else if (registrationFormReady && registrationCaptchaMode === "fallback") { %>
+          <label class="auth-captcha auth-captcha-fallback">
+            Sicherheitscode
+            <img
+              src="<%= registrationFallbackCaptchaUrl || '/auth/captcha.svg?context=register' %>"
+              alt="Sicherheitscode"
+              class="auth-captcha-image"
+              loading="eager"
+              decoding="async"
+            />
+            <input
+              type="text"
+              name="captcha_answer"
+              required
+              minlength="4"
+              maxlength="8"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="Code eingeben"
+            />
+          </label>
         <% } else if (!error) { %>
           <div class="inline-error auth-inline-note">
-            Die Registrierung ist gerade nicht verfügbar. Bitte versuche es später erneut.
+            Die Registrierung ist gerade nicht verfügbar, weil der E-Mail-Versand noch nicht eingerichtet ist.
           </div>
         <% } %>
         <p class="field-hint auth-submit-note">
@@ -214,7 +236,7 @@
   <% } %>
 </section>
 
-<% if (isRegister && registrationCaptchaEnabled) { %>
+<% if (isRegister && registrationCaptchaMode === "turnstile") { %>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <% } %>
 
