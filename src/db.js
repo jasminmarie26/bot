@@ -527,6 +527,10 @@ if (!festplayColumns.includes("server_id")) {
   db.exec("ALTER TABLE festplays ADD COLUMN server_id TEXT NOT NULL DEFAULT ''");
 }
 
+if (!festplayColumns.includes("last_activity_at")) {
+  db.exec("ALTER TABLE festplays ADD COLUMN last_activity_at TEXT NOT NULL DEFAULT ''");
+}
+
 db.exec(`
   UPDATE festplays
      SET server_id = (
@@ -550,6 +554,98 @@ db.exec(`
      )
    WHERE trim(COALESCE(server_id, '')) = ''
      AND COALESCE(created_by_user_id, 0) > 0
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = COALESCE(NULLIF(created_at, ''), CURRENT_TIMESTAMP)
+   WHERE trim(COALESCE(last_activity_at, '')) = ''
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(fp.created_at)
+         FROM festplay_permissions fp
+        WHERE fp.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(fp.created_at)
+         FROM festplay_permissions fp
+        WHERE fp.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(fa.updated_at)
+         FROM festplay_applications fa
+        WHERE fa.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(fa.updated_at)
+         FROM festplay_applications fa
+        WHERE fa.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(c.updated_at)
+         FROM characters c
+        WHERE c.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(c.updated_at)
+         FROM characters c
+        WHERE c.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(r.created_at)
+         FROM chat_rooms r
+        WHERE r.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(r.created_at)
+         FROM chat_rooms r
+        WHERE r.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(m.created_at)
+         FROM chat_messages m
+         JOIN chat_rooms r ON r.id = m.room_id
+        WHERE r.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(m.created_at)
+         FROM chat_messages m
+         JOIN chat_rooms r ON r.id = m.room_id
+        WHERE r.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET last_activity_at = (
+       SELECT MAX(rbe.created_at)
+         FROM rp_board_entries rbe
+        WHERE rbe.festplay_id = festplays.id
+     )
+   WHERE COALESCE((
+       SELECT MAX(rbe.created_at)
+         FROM rp_board_entries rbe
+        WHERE rbe.festplay_id = festplays.id
+     ), '') > COALESCE(last_activity_at, '')
 `);
 
 if (!userColumns.includes("is_moderator")) {
@@ -1306,13 +1402,16 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_facebook_id_unique
   ON users(facebook_id)
   WHERE facebook_id IS NOT NULL AND facebook_id != '';
+
+  CREATE INDEX IF NOT EXISTS idx_festplays_last_activity_at
+  ON festplays(last_activity_at);
 `);
 
 const festplayCount = db
   .prepare("SELECT COUNT(*) AS count FROM festplays")
   .get().count;
 if (festplayCount === 0) {
-  db.prepare("INSERT INTO festplays (name) VALUES (?)").run("Freeplay");
+  db.prepare("INSERT INTO festplays (name, last_activity_at) VALUES (?, CURRENT_TIMESTAMP)").run("Freeplay");
 }
 
 db.prepare("DELETE FROM site_updates WHERE content = ?").run(

@@ -511,9 +511,13 @@ const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
 const SESSION_COOKIE_NAME = "connect.sid";
 const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
+const FESTPLAY_INACTIVITY_MONTHS = 6;
+const FESTPLAY_INACTIVITY_SQL_OFFSET = `-${FESTPLAY_INACTIVITY_MONTHS} months`;
+const FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS = 1000 * 60 * 60;
 const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
 let cachedLoginStats = null;
 let cachedLoginStatsExpiresAt = 0;
+let inactiveFestplayCleanupRunning = false;
 const DEFAULT_SEO_DESCRIPTION =
   "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.";
 const DEFAULT_SEO_IMAGE_PATH = "/apple-touch-icon-hr.png";
@@ -2262,6 +2266,38 @@ async function sendAccountDeletionEmail(payload) {
   return true;
 }
 
+async function sendFestplayInactivityDeletionEmail(payload) {
+  const transporter = getVerificationMailer();
+  if (!transporter) return false;
+
+  const email = normalizeEmail(payload.email || "");
+  if (!email) return false;
+
+  const username = String(payload.username || "Account").trim() || "Account";
+  const festplayName = String(payload.festplayName || "Dein Festplay").trim() || "Dein Festplay";
+  const lastActivityLabel = formatGermanDateTime(payload.lastActivityAt) || "unbekannt";
+  const text = [
+    `Hallo ${username},`,
+    "",
+    `dein Festplay ${festplayName} wurde automatisch gelöscht, weil 6 Monate lang keine Aktivität mehr erkannt wurde.`,
+    "",
+    `Letzte erkannte Aktivität: ${lastActivityLabel}`,
+    "",
+    "Als Aktivität zählen zum Beispiel Chat-Beitritte, Chat-Nachrichten, Änderungen am Festplay, Raumänderungen, Bewerbungen und RP-Aushang-Einträge.",
+    "",
+    "Hinweis: Diese E-Mail wurde automatisch versendet."
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: `Festplay automatisch gelöscht: ${festplayName}`,
+    text
+  });
+
+  return true;
+}
+
 function sanitizeGuestbookExportAttachmentPart(rawValue, fallback = "gaestebuch") {
   const prepared = String(rawValue || "")
     .normalize("NFKD")
@@ -3903,6 +3939,58 @@ function festplayExists(festplayId) {
   return Boolean(row);
 }
 
+function touchFestplayActivity(festplayId, activityAt = null) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return false;
+  }
+
+  const trimmedActivityAt = String(activityAt || "").trim();
+  const result = trimmedActivityAt
+    ? db.prepare("UPDATE festplays SET last_activity_at = ? WHERE id = ?").run(trimmedActivityAt, parsedFestplayId)
+    : db.prepare("UPDATE festplays SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?").run(parsedFestplayId);
+
+  return Number(result.changes) > 0;
+}
+
+function touchFestplayActivityForRoom(room) {
+  const festplayId = Number(room?.festplay_id);
+  if (!Number.isInteger(festplayId) || festplayId < 1) {
+    return false;
+  }
+
+  return touchFestplayActivity(festplayId);
+}
+
+function getLiveFestplayIdsWithChatPresence() {
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return new Set();
+  }
+
+  const liveFestplayIds = new Set();
+  for (const socket of sockets.values()) {
+    if (!socket?.data?.user || socket?.data?.hasJoinedChat !== true) {
+      continue;
+    }
+
+    const roomId = Number.isInteger(socket.data.roomId) && socket.data.roomId > 0
+      ? socket.data.roomId
+      : null;
+    if (!roomId) {
+      continue;
+    }
+
+    const room = getRoomWithCharacter(roomId);
+    const festplayId = Number(room?.festplay_id);
+    if (Number.isInteger(festplayId) && festplayId > 0) {
+      liveFestplayIds.add(festplayId);
+    }
+  }
+
+  return liveFestplayIds;
+}
+
 function getOwnedFestplaysForUser(userId, serverId = "") {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeFestplayServerId(serverId);
@@ -5230,6 +5318,97 @@ function deleteFestplayAndResetCharacters(festplayId) {
   })();
 
   return true;
+}
+
+async function purgeInactiveFestplays() {
+  if (inactiveFestplayCleanupRunning) {
+    return {
+      deletedCount: 0,
+      emailedCount: 0
+    };
+  }
+
+  inactiveFestplayCleanupRunning = true;
+
+  try {
+    const liveFestplayIds = getLiveFestplayIdsWithChatPresence();
+    liveFestplayIds.forEach((festplayId) => {
+      touchFestplayActivity(festplayId);
+    });
+
+    const staleFestplays = db
+      .prepare(
+        `SELECT f.id,
+                f.name,
+                f.server_id,
+                COALESCE(NULLIF(f.last_activity_at, ''), f.created_at, CURRENT_TIMESTAMP) AS last_activity_at,
+                COALESCE(u.username, '') AS owner_username,
+                COALESCE(u.email, '') AS owner_email
+           FROM festplays f
+           LEFT JOIN users u ON u.id = f.created_by_user_id
+          WHERE NOT (
+                  lower(trim(COALESCE(f.name, ''))) = 'freeplay'
+              AND COALESCE(f.created_by_user_id, 0) = 0
+              AND COALESCE(f.creator_character_id, 0) = 0
+          )
+            AND datetime(COALESCE(NULLIF(f.last_activity_at, ''), f.created_at, CURRENT_TIMESTAMP)) <= datetime('now', ?)
+          ORDER BY datetime(COALESCE(NULLIF(f.last_activity_at, ''), f.created_at, CURRENT_TIMESTAMP)) ASC, f.id ASC`
+      )
+      .all(FESTPLAY_INACTIVITY_SQL_OFFSET);
+
+    let deletedCount = 0;
+    let emailedCount = 0;
+
+    for (const festplay of staleFestplays) {
+      const festplayId = Number(festplay?.id);
+      if (!Number.isInteger(festplayId) || festplayId < 1) {
+        continue;
+      }
+
+      if (liveFestplayIds.has(festplayId)) {
+        touchFestplayActivity(festplayId);
+        continue;
+      }
+
+      try {
+        const deleted = deleteFestplayAndResetCharacters(festplayId);
+        if (!deleted) {
+          continue;
+        }
+
+        deletedCount += 1;
+
+        try {
+          const emailed = await sendFestplayInactivityDeletionEmail({
+            email: festplay.owner_email,
+            username: festplay.owner_username,
+            festplayName: festplay.name,
+            lastActivityAt: festplay.last_activity_at
+          });
+          if (emailed) {
+            emailedCount += 1;
+          }
+        } catch (mailError) {
+          console.error("Konnte Festplay-Inaktivitätsmail nicht senden:", {
+            festplayId,
+            error: mailError
+          });
+        }
+      } catch (error) {
+        console.error("Automatische Festplay-Löschung fehlgeschlagen:", {
+          festplayId,
+          error
+        });
+      }
+    }
+
+    return {
+      deletedCount,
+      emailedCount
+    };
+  } finally {
+    inactiveFestplayCleanupRunning = false;
+  }
 }
 
 function removeFestplayPermission(festplayId, permissionId) {
@@ -11098,6 +11277,9 @@ app.post("/rp-board/entries", requireAuth, (req, res) => {
     content,
     createdAt
   );
+  if (Number(context.festplayId) > 0) {
+    touchFestplayActivity(context.festplayId, createdAt);
+  }
 
   setRpBoardReadMarker(req.session.user.id, context.serverId, context.festplayId, Number(insertInfo.lastInsertRowid));
   emitRpBoardChanged(context.serverId, context.festplayId);
@@ -11127,6 +11309,9 @@ app.post("/rp-board/entries/:entryId/delete", requireAuth, (req, res) => {
   }
 
   db.prepare("DELETE FROM rp_board_entries WHERE id = ? AND user_id = ?").run(entryId, req.session.user.id);
+  if (Number(entry.festplay_id) > 0) {
+    touchFestplayActivity(entry.festplay_id);
+  }
   emitRpBoardChanged(entry.server_id, entry.festplay_id);
 
   return res.json(
@@ -12961,6 +13146,7 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
       return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
     }
 
+    touchFestplayActivity(festplayId);
     return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
   } catch (error) {
     console.error("festplay side chat creation failed", {
@@ -13056,6 +13242,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
       }
     }
 
+    touchFestplayActivity(festplayId);
     return res.redirect(
       `/characters/${id}/festplays?selected_festplay=${festplayId}&tab=raeume#festplay-selected-editor`
     );
@@ -13146,6 +13333,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/reorder", requireAuth, (re
       setFlash(req, "error", "Die Raumreihenfolge konnte nicht gespeichert werden.");
       return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
     }
+    touchFestplayActivity(festplayId);
   } catch (error) {
     console.error("festplay room reorder failed", {
       festplayId,
@@ -13262,6 +13450,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
 
     clearPendingRoomDeletion(roomId);
     await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+    touchFestplayActivity(festplayId);
     deleteRoomData(roomId);
     io.emit("chat:room-removed", { room_id: roomId });
     setFlash(req, "success", "Festspiel-Raum gelöscht.");
@@ -13304,6 +13493,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
     isLocked,
     roomId
   );
+  touchFestplayActivity(festplayId);
 
   const refreshedRoom = getRoomWithCharacter(roomId);
   if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
@@ -13399,6 +13589,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
 
   clearPendingRoomDeletion(roomId);
   await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+  touchFestplayActivity(festplayId);
   deleteRoomData(roomId);
   io.emit("chat:room-removed", { room_id: roomId });
   setFlash(req, "success", "Festspiel-Raum gelöscht.");
@@ -13448,6 +13639,7 @@ app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req
     ) {
       createFestplayApplicationNotification(festplayOwnerUserId, festplayId, applicationId);
     }
+    touchFestplayActivity(festplayId);
   }
 
   return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
@@ -13488,10 +13680,11 @@ app.post("/characters/:id/festplays/public/:festplayId/withdraw", requireAuth, (
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?
        AND festplay_id = ?
-       AND applicant_user_id = ?`
+     AND applicant_user_id = ?`
   ).run(application.id, festplayId, req.session.user.id);
 
   deleteFestplayApplicationNotificationsForApplication(application.id);
+  touchFestplayActivity(festplayId);
 
   return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
 });
@@ -13672,8 +13865,8 @@ app.post("/characters/:id/festplays", requireAuth, (req, res) => {
 
   try {
     const createdFestplay = db.prepare(
-      `INSERT INTO festplays (name, is_public, created_by_user_id, creator_character_id, server_id)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO festplays (name, is_public, created_by_user_id, creator_character_id, server_id, last_activity_at)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
     ).run(festplayName, isPublic ? 1 : 0, req.session.user.id, id, normalizeServer(character.server_id));
     const createdFestplayId = Number(createdFestplay.lastInsertRowid);
     if (Number.isInteger(createdFestplayId) && createdFestplayId > 0) {
@@ -13731,6 +13924,7 @@ app.post("/characters/:id/festplays/:festplayId/permissions", requireAuth, (req,
   }
 
   addFestplayPermission(festplayId, targetCharacter.id, req.session.user.id);
+  touchFestplayActivity(festplayId);
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
 
@@ -13770,6 +13964,7 @@ app.post("/characters/:id/festplays/:festplayId/permissions/:permissionId/delete
   }
 
   removeFestplayPermission(festplayId, permissionId);
+  touchFestplayActivity(festplayId);
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
 
@@ -13811,6 +14006,8 @@ app.post("/characters/:id/festplays/:festplayId/players/:playerCharacterId/delet
   if (!removeFestplayPlayer(festplayId, playerCharacterId)) {
     setFlash(req, "error", "Dieser Spieler konnte nicht aus dem Festspiel entfernt werden.");
   }
+
+  touchFestplayActivity(festplayId);
 
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}&tab=bewerbungen#festplay-selected-editor`);
 });
@@ -13904,6 +14101,7 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
         actor_name: approverProfile.label || getUserDefaultDisplayName(req.session.user)
       }
     );
+    touchFestplayActivity(festplayId);
   } catch (error) {
     console.error("festplay application approval failed", {
       festplayId,
@@ -13969,6 +14167,7 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
          long_description = ?
      WHERE id = ?`
   ).run(festplayName, isPublic ? 1 : 0, shortDescription, longDescription, festplayId);
+  touchFestplayActivity(festplayId);
 
   return res.redirect(`/characters/${id}/festplays?selected_festplay=${festplayId}#festplay-selected-editor`);
 });
@@ -15676,8 +15875,8 @@ app.post("/admin/festplays", requireAuth, requireAdmin, (req, res) => {
   }
 
   db.prepare(
-    `INSERT INTO festplays (name, created_by_user_id, creator_character_id)
-     VALUES (?, ?, NULL)`
+    `INSERT INTO festplays (name, created_by_user_id, creator_character_id, last_activity_at)
+     VALUES (?, ?, NULL, CURRENT_TIMESTAMP)`
   ).run(name, req.session.user.id);
 
   setFlash(req, "success", "Festplay erstellt.");
@@ -19219,6 +19418,7 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
+    const previousRoom = previousRoomId ? getRoomWithCharacter(previousRoomId) : null;
     const isSameChannel =
       previousServerId === nextServerId &&
       previousRoomId === nextRoomId;
@@ -19321,6 +19521,7 @@ io.on("connection", (socket) => {
             }
           );
         }
+        touchFestplayActivityForRoom(previousRoom);
       }
     }
 
@@ -19380,6 +19581,7 @@ io.on("connection", (socket) => {
       }
     }
     clearPendingRoomDeletion(nextRoomId);
+    touchFestplayActivityForRoom(nextRoom);
     if (nextRoom) {
       maybeStartAutomaticRoomLog(nextRoomId, nextServerId, nextRoom, socket);
     }
@@ -19549,6 +19751,7 @@ io.on("connection", (socket) => {
     const content = rawMessage.trim();
     if (!content) return;
     markSocketChatActivity(socket);
+    touchFestplayActivityForRoom(room);
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
     const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
     if (afkMatch) {
@@ -20675,6 +20878,7 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
+    const previousRoom = previousRoomId ? getRoomWithCharacter(previousRoomId) : null;
     if (previousServerId && socket.data.hasJoinedChat === true) {
       const previousCharacterId = getSocketPreferredCharacterId(socket, previousServerId);
       if (socket.data.isTyping) {
@@ -20702,6 +20906,7 @@ io.on("connection", (socket) => {
         chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
         skipPresence: socket.data.skipDisconnectPresence
       });
+      touchFestplayActivityForRoom(previousRoom);
       maybeRemoveEmptyRoom(previousRoomId);
       return;
     }
@@ -20721,12 +20926,36 @@ server.listen(port, () => {
   if (purgedSessionCount > 0) {
     console.log(`Inaktive Sitzungen bereinigt: ${purgedSessionCount}`);
   }
+  void purgeInactiveFestplays()
+    .then((result) => {
+      if (result.deletedCount > 0) {
+        console.log(
+          `Inaktive Festplays gelöscht: ${result.deletedCount}${result.emailedCount > 0 ? `, E-Mails: ${result.emailedCount}` : ""}`
+        );
+      }
+    })
+    .catch((error) => {
+      console.error("Automatische Festplay-Bereinigung beim Start fehlgeschlagen:", error);
+    });
   setInterval(() => {
     const deletedSessionCount = purgeInactiveStoredSessions();
     if (deletedSessionCount > 0) {
       emitHomeStatsUpdate();
     }
   }, SESSION_STORE_CLEANUP_INTERVAL_MS);
+  setInterval(() => {
+    void purgeInactiveFestplays()
+      .then((result) => {
+        if (result.deletedCount > 0) {
+          console.log(
+            `Inaktive Festplays gelöscht: ${result.deletedCount}${result.emailedCount > 0 ? `, E-Mails: ${result.emailedCount}` : ""}`
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Automatische Festplay-Bereinigung fehlgeschlagen:", error);
+      });
+  }, FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
 });
 
