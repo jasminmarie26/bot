@@ -33,10 +33,9 @@
       ? payload.friends
           .map((entry) => ({
             user_id: normalizeNumber(entry?.user_id),
-            username: normalizeText(entry?.username),
-            account_number: normalizeText(entry?.account_number),
             is_online: entry?.is_online === true,
             online_name: normalizeText(entry?.online_name),
+            character_id: normalizeNumber(entry?.character_id),
             role_style: normalizeText(entry?.role_style),
             chat_text_color: normalizeText(entry?.chat_text_color),
             server_id: normalizeText(entry?.server_id),
@@ -44,25 +43,21 @@
             room_id: normalizeNumber(entry?.room_id),
             room_name: normalizeText(entry?.room_name)
           }))
-          .filter((entry) => entry.user_id && entry.username)
+          .filter((entry) => entry.user_id)
       : [];
     const ignoredAccounts = Array.isArray(payload?.ignored_accounts)
       ? payload.ignored_accounts
           .map((entry) => ({
-            user_id: normalizeNumber(entry?.user_id),
-            username: normalizeText(entry?.username),
-            account_number: normalizeText(entry?.account_number)
+            user_id: normalizeNumber(entry?.user_id)
           }))
-          .filter((entry) => entry.user_id && entry.username)
+          .filter((entry) => entry.user_id)
       : [];
     const ignoredCharacters = Array.isArray(payload?.ignored_characters)
       ? payload.ignored_characters
           .map((entry) => ({
             character_id: normalizeNumber(entry?.character_id),
             name: normalizeText(entry?.name),
-            owner_user_id: normalizeNumber(entry?.owner_user_id),
-            owner_username: normalizeText(entry?.owner_username),
-            owner_account_number: normalizeText(entry?.owner_account_number)
+            owner_user_id: normalizeNumber(entry?.owner_user_id)
           }))
           .filter((entry) => entry.character_id && entry.name)
       : [];
@@ -162,10 +157,11 @@
     return emptyState;
   }
 
-  function formatAccountLine(username, accountNumber) {
-    const safeUsername = normalizeText(username) || "Unbekannt";
-    const safeAccountNumber = normalizeText(accountNumber);
-    return safeAccountNumber ? `${safeUsername} · Account-Nr. ${safeAccountNumber}` : safeUsername;
+  function getFriendDisplayName(friend) {
+    if (friend?.is_online) {
+      return normalizeText(friend.online_name) || "Freund";
+    }
+    return "Freund";
   }
 
   function renderFriendEntry(friend) {
@@ -180,13 +176,12 @@
     copy.className = "social-panel-entry-copy";
 
     const title = document.createElement("strong");
-    title.textContent = formatAccountLine(friend.username, friend.account_number);
+    title.textContent = getFriendDisplayName(friend);
     copy.appendChild(title);
 
     const meta = document.createElement("small");
     if (friend.is_online) {
-      const onlineName = normalizeText(friend.online_name) || friend.username;
-      const locationParts = [`Online als ${onlineName}`];
+      const locationParts = ["Gerade online"];
       if (friend.server_label) {
         locationParts.push(friend.server_label);
       }
@@ -201,6 +196,26 @@
 
     const actions = document.createElement("div");
     actions.className = "social-panel-entry-actions";
+    if (friend.character_id) {
+      const characterIsIgnored = socialState.ignored_character_ids.includes(friend.character_id);
+      actions.appendChild(
+        buildActionButton(characterIsIgnored ? "Charakter frei" : "Charakter blockieren", () => {
+          const action = characterIsIgnored
+            ? unignoreCharacter(friend.character_id)
+            : ignoreCharacter(friend.character_id);
+          action.catch(() => {});
+        })
+      );
+    }
+    const accountIsIgnored = socialState.ignored_account_user_ids.includes(friend.user_id);
+    actions.appendChild(
+      buildActionButton(accountIsIgnored ? "Account frei" : "Account blockieren", () => {
+        const action = accountIsIgnored
+          ? unignoreAccount(friend.user_id)
+          : ignoreAccount(friend.user_id);
+        action.catch(() => {});
+      })
+    );
     actions.appendChild(
       buildActionButton("Entfernen", () => {
         removeFriend(friend.user_id).catch(() => {});
@@ -224,11 +239,11 @@
     copy.className = "social-panel-entry-copy";
 
     const title = document.createElement("strong");
-    title.textContent = formatAccountLine(entryData.username, entryData.account_number);
+    title.textContent = "Blockierter Account";
     copy.appendChild(title);
 
     const meta = document.createElement("small");
-    meta.textContent = "Account wird ausgeblendet";
+    meta.textContent = "Dieser Account wird nur für dich ausgeblendet.";
     copy.appendChild(meta);
 
     const actions = document.createElement("div");
@@ -260,7 +275,7 @@
     copy.appendChild(title);
 
     const meta = document.createElement("small");
-    meta.textContent = `Von ${formatAccountLine(entryData.owner_username, entryData.owner_account_number)}`;
+    meta.textContent = "Dieser Charakter wird nur für dich ausgeblendet.";
     copy.appendChild(meta);
 
     const actions = document.createElement("div");
@@ -533,7 +548,7 @@
     toast.setAttribute("role", "status");
     toast.setAttribute("aria-live", "polite");
 
-    const name = normalizeText(friend.online_name) || normalizeText(friend.username) || "Ein Freund";
+    const name = normalizeText(friend.online_name) || "Ein Freund";
     toast.textContent = `${name} ist jetzt online.`;
     document.body.appendChild(toast);
 
@@ -573,7 +588,7 @@
     event.preventDefault();
     const lookup = normalizeText(friendInput?.value);
     if (!lookup) {
-      setFeedback("Bitte einen Account-Namen oder Charakternamen eingeben.", "error");
+      setFeedback("Bitte einen Charakternamen eingeben.", "error");
       friendInput?.focus();
       return;
     }

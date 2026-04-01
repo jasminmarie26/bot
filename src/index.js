@@ -10042,7 +10042,7 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
   }
 
   if (!(Number.isInteger(directUserId) && directUserId > 0) && !lookup) {
-    return res.status(400).json({ ok: false, error: "Bitte einen Account-Namen oder Charakternamen eingeben." });
+    return res.status(400).json({ ok: false, error: "Bitte einen Charakternamen eingeben." });
   }
 
   const targetUser =
@@ -10050,7 +10050,7 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
       ? db.prepare("SELECT id, username, account_number FROM users WHERE id = ? LIMIT 1").get(directUserId)
       : findUserBySocialLookup(lookup);
   if (!targetUser) {
-    return res.status(404).json({ ok: false, error: "Dieser Account oder Charakter wurde nicht gefunden." });
+    return res.status(404).json({ ok: false, error: "Dieser Charakter wurde nicht gefunden." });
   }
 
   if (Number(targetUser.id) === currentUserId) {
@@ -10066,7 +10066,7 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
 
   return res.json({
     ok: true,
-    message: `${targetUser.username} wurde zu deinen Freunden hinzugefügt.`,
+    message: "Freund wurde hinzugefügt.",
     state: buildSocialStatePayloadForUser(currentUserId)
   });
 });
@@ -10111,7 +10111,7 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
       : findUserBySocialLookup(lookup);
 
   if (!targetUser) {
-    return res.status(404).json({ ok: false, error: "Dieser Account oder Charakter wurde nicht gefunden." });
+    return res.status(404).json({ ok: false, error: "Dieser Charakter wurde nicht gefunden." });
   }
 
   if (Number(targetUser.id) === currentUserId) {
@@ -10127,7 +10127,7 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
 
   return res.json({
     ok: true,
-    message: `${targetUser.username} wird jetzt ignoriert.`,
+    message: "Account wird jetzt ignoriert.",
     state: buildSocialStatePayloadForUser(currentUserId)
   });
 });
@@ -16923,6 +16923,10 @@ function getRealtimePresenceSummaryForUser(userId) {
 
   const activeServerId = getSocketActiveServerId(primarySocket, DEFAULT_SERVER_ID);
   const displayProfile = getSocketHeaderDisplayProfile(primarySocket);
+  const characterId =
+    Number.isInteger(Number(primarySocket.data?.activeCharacterId)) && Number(primarySocket.data.activeCharacterId) > 0
+      ? Number(primarySocket.data.activeCharacterId)
+      : null;
   const roomId =
     Number.isInteger(primarySocket.data?.roomId) && primarySocket.data.roomId > 0
       ? Number(primarySocket.data.roomId)
@@ -16931,9 +16935,10 @@ function getRealtimePresenceSummaryForUser(userId) {
 
   return {
     is_online: true,
-    online_name: String(displayProfile?.label || primarySocket.data?.user?.username || `User ${parsedUserId}`).trim(),
+    online_name: String(displayProfile?.label || "").trim(),
     role_style: String(displayProfile?.role_style || "").trim(),
     chat_text_color: String(displayProfile?.chat_text_color || "").trim(),
+    character_id: characterId,
     server_id: normalizeServer(activeServerId),
     server_label: getServerLabel(activeServerId),
     room_id: roomId,
@@ -16958,12 +16963,13 @@ function buildSocialStatePayloadForUser(userId) {
     const presence = getRealtimePresenceSummaryForUser(row.user_id);
     return {
       user_id: Number(row.user_id),
-      username: String(row.username || "").trim(),
-      account_number: String(row.account_number || "").trim(),
       is_online: presence.is_online === true,
-      online_name: String(presence.online_name || row.username || "").trim(),
+      online_name: String(presence.online_name || "").trim(),
       role_style: String(presence.role_style || "").trim(),
       chat_text_color: String(presence.chat_text_color || "").trim(),
+      character_id: Number.isInteger(Number(presence.character_id)) && Number(presence.character_id) > 0
+        ? Number(presence.character_id)
+        : null,
       server_id: String(presence.server_id || "").trim(),
       server_label: String(presence.server_label || "").trim(),
       room_id: Number.isInteger(Number(presence.room_id)) && Number(presence.room_id) > 0
@@ -16974,15 +16980,13 @@ function buildSocialStatePayloadForUser(userId) {
   });
   const ignoredAccounts = getIgnoredAccountRowsForUser(parsedUserId).map((row) => ({
     user_id: Number(row.user_id),
-    username: String(row.username || "").trim(),
-    account_number: String(row.account_number || "").trim()
+    username: String(row.username || "").trim()
   }));
   const ignoredCharacters = getIgnoredCharacterRowsForUser(parsedUserId).map((row) => ({
     character_id: Number(row.character_id),
     name: String(row.name || "").trim(),
     owner_user_id: Number(row.owner_user_id),
-    owner_username: String(row.owner_username || "").trim(),
-    owner_account_number: String(row.owner_account_number || "").trim()
+    owner_username: String(row.owner_username || "").trim()
   }));
 
   return {
