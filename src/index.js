@@ -18449,6 +18449,7 @@ function buildSystemChatPayload(content, options = {}) {
   const text = String(content || "").trim();
   if (!text) return null;
   const systemKind = String(options?.system_kind || "").trim();
+  const messageTimeIso = new Date().toISOString();
 
   const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
     ? normalizeGuestbookColor(options.chat_text_color)
@@ -18465,6 +18466,7 @@ function buildSystemChatPayload(content, options = {}) {
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
     presence_suffix: String(options?.presence_suffix || "").trim(),
     room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
+    message_time_iso: messageTimeIso,
     created_at: formatChatTimestamp()
   };
 }

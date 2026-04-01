@@ -1474,7 +1474,10 @@
     const line = document.createElement("p");
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    const messageTimeLabel = !isSystemMessage && showChatMessageTimestamps
+    const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
+    const shouldShowMessageTime = showChatMessageTimestamps
+      && (!isSystemMessage || systemKind === "presence");
+    const messageTimeLabel = shouldShowMessageTime
       ? getMessageTimeLabel(msg)
       : "";
     if (messageTimeLabel) {
@@ -1485,7 +1488,6 @@
     }
     if (isSystemMessage) {
       const content = String(msg?.content || "");
-      const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
       const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
       const presenceActorRoleStyle = String(msg?.presence_actor_role_style || "").trim().toLowerCase();
