@@ -9239,9 +9239,10 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 0.18rem;
-  background: #ffffff;
+  background: #efefef;
   border-color: #d3d8df;
   color: #1a1c20;
+  box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
