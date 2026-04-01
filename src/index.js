@@ -16034,7 +16034,12 @@ function buildChatRedirectUrlForLocation(roomId, serverId = DEFAULT_SERVER_ID, c
   return `/chat?server=${encodeURIComponent(normalizedServerId)}${standardRoomSuffix}${characterSuffix}`;
 }
 
-function findConflictingChatLocationForCharacter(
+function buildCharacterRoomListRedirectUrl(characterId) {
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  return normalizedCharacterId ? `/characters/${normalizedCharacterId}#roomlist` : "/dashboard";
+}
+
+function getConflictingChatSocketsForCharacter(
   userId,
   serverId = DEFAULT_SERVER_ID,
   characterId = null,
@@ -16048,9 +16053,10 @@ function findConflictingChatLocationForCharacter(
   const excludedId = String(excludedSocketId || "").trim();
 
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedCharacterId) {
-    return null;
+    return [];
   }
 
+  const conflicts = [];
   for (const memberSocket of getAllSocketsForUser(parsedUserId)) {
     if (!memberSocket || memberSocket.data?.hasJoinedChat !== true) {
       continue;
@@ -16084,16 +16090,140 @@ function findConflictingChatLocationForCharacter(
       continue;
     }
 
-    return {
+    conflicts.push({
       socket: memberSocket,
       roomId: memberRoomId,
       serverId: memberServerId,
-      characterId: memberCharacterId,
-      redirectUrl: buildChatRedirectUrlForLocation(memberRoomId, memberServerId, memberCharacterId)
-    };
+      characterId: memberCharacterId
+    });
   }
 
-  return null;
+  return conflicts;
+}
+
+function ejectSocketFromActiveChat(memberSocket, options = {}) {
+  const previousRoomId =
+    Number.isInteger(memberSocket?.data?.roomId) && memberSocket.data.roomId > 0
+      ? memberSocket.data.roomId
+      : null;
+  const previousServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
+    ? normalizeServer(memberSocket.data.serverId)
+    : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
+      ? normalizeServer(memberSocket.data.presenceServerId)
+      : null;
+  const previousCharacterId = previousServerId
+    ? getSocketPreferredCharacterId(memberSocket, previousServerId)
+    : null;
+  const redirectUrl = String(options?.redirectUrl || "").trim();
+  const notice = String(options?.notice || "").trim();
+
+  if (!previousServerId) {
+    if (notice) {
+      emitDirectSystemMessageToSocket(memberSocket, notice);
+    }
+    if (redirectUrl.startsWith("/")) {
+      memberSocket.emit("chat:redirect", {
+        url: redirectUrl,
+        delayMs: 650
+      });
+    }
+    return;
+  }
+
+  const previousDisplayProfile = getSocketDisplayProfile(memberSocket, previousServerId);
+  const previousDisplayName =
+    previousDisplayProfile?.label || getUserDefaultDisplayName(memberSocket.data.user);
+  const hasOtherPresenceInPreviousChannel = hasOtherSocketInChannel(
+    memberSocket.data.user.id,
+    previousRoomId,
+    previousServerId,
+    memberSocket.id,
+    previousCharacterId
+  );
+
+  if (memberSocket.data.isTyping) {
+    memberSocket.data.isTyping = false;
+    emitChatTypingState(memberSocket, previousRoomId, previousServerId);
+  }
+
+  clearPendingChatDisconnect(
+    memberSocket.data.user.id,
+    previousRoomId,
+    previousServerId,
+    previousCharacterId
+  );
+
+  memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+
+  if (!hasOtherPresenceInPreviousChannel) {
+    clearChatAfkState(memberSocket.data.user.id, previousRoomId, previousServerId, {
+      skipStateEmit: true,
+      skipOnlineRefresh: true
+    }, previousCharacterId);
+
+    const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
+    emitSystemChatMessage(
+      previousRoomId,
+      previousServerId,
+      previousPresenceMessage.text,
+      {
+        chat_text_color: "#000000",
+        system_kind: "presence",
+        presence_kind: previousPresenceMessage.kind,
+        presence_actor_name: previousPresenceMessage.actorName,
+        presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
+        presence_suffix: previousPresenceMessage.suffix
+      }
+    );
+  }
+
+  memberSocket.data.roomId = null;
+  memberSocket.data.serverId = null;
+  memberSocket.data.presenceServerId = null;
+  memberSocket.data.hasJoinedChat = false;
+  memberSocket.data.skipDisconnectPresence = true;
+
+  const previousRoomWasRemoved = maybeRemoveEmptyRoom(previousRoomId);
+  if (!previousRoomWasRemoved) {
+    emitOnlineCharacters(previousRoomId, previousServerId);
+  }
+  void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
+  emitHomeStatsUpdate();
+
+  if (notice) {
+    emitDirectSystemMessageToSocket(memberSocket, notice);
+  }
+  if (redirectUrl.startsWith("/")) {
+    memberSocket.emit("chat:redirect", {
+      url: redirectUrl,
+      delayMs: 650
+    });
+  }
+}
+
+function ejectConflictingChatSocketsForCharacter(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  excludedSocketId = "",
+  targetRoomId = null
+) {
+  const conflicts = getConflictingChatSocketsForCharacter(
+    userId,
+    serverId,
+    characterId,
+    excludedSocketId,
+    targetRoomId
+  );
+
+  conflicts.forEach((conflict) => {
+    ejectSocketFromActiveChat(conflict.socket, {
+      notice: "Dieser Charakter wurde in einem anderen Raum geöffnet. Dieser Tab wurde deshalb aus dem bisherigen Raum entfernt.",
+      redirectUrl: buildCharacterRoomListRedirectUrl(conflict.characterId)
+    });
+  });
+
+  return conflicts.length;
 }
 
 function hasOtherSocketInChannel(
@@ -18097,25 +18227,13 @@ io.on("connection", (socket) => {
       preferredCharacterId
     );
     const nextCharacterId = preferredCharacter?.id || null;
-    const conflictingCharacterLocation = findConflictingChatLocationForCharacter(
+    ejectConflictingChatSocketsForCharacter(
       socket.data.user.id,
       nextServerId,
       nextCharacterId,
       socket.id,
       nextRoomId
     );
-    if (conflictingCharacterLocation) {
-      socket.emit("chat:message", {
-        type: "system",
-        content: `${preferredCharacter?.name || "Dieser Charakter"} ist bereits in einem anderen Raum aktiv. Du wirst dorthin zurückgebracht.`,
-        created_at: formatChatTimestamp()
-      });
-      socket.emit("chat:redirect", {
-        url: conflictingCharacterLocation.redirectUrl,
-        delayMs: 700
-      });
-      return;
-    }
     const nextPresenceKey = getPresenceIdentityKey(socket.data.user.id, nextCharacterId);
     const shouldClearPreviousAfkState = Boolean(previousServerId) &&
       (!isSameChannel || Number(previousCharacterId) !== Number(nextCharacterId)) &&
@@ -18588,22 +18706,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const conflictingCharacterLocation = findConflictingChatLocationForCharacter(
+      ejectConflictingChatSocketsForCharacter(
         socket.data.user.id,
         serverId,
         targetCharacter.id,
         socket.id,
         roomId
       );
-      if (conflictingCharacterLocation) {
-        socket.emit("chat:message", {
-          type: "system",
-          content: `${targetCharacter.name} ist bereits in einem anderen Raum aktiv. Mit diesem Charakter kannst du nicht gleichzeitig in zwei verschiedenen Räumen sein.`,
-          created_at: formatChatTimestamp()
-        });
-        return;
-      }
-
       const previousDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const previousDisplayName =
         previousDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
