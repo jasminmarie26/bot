@@ -10101,13 +10101,18 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const directUserId = Number(req.body.user_id);
   const lookup = normalizeSocialLookupValue(req.body.lookup || "");
+  const currentUser = req.session.user || null;
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
     return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
   }
 
   const targetUser =
     Number.isInteger(directUserId) && directUserId > 0
-      ? db.prepare("SELECT id, username, account_number FROM users WHERE id = ? LIMIT 1").get(directUserId)
+      ? db
+          .prepare(
+            "SELECT id, username, account_number, is_admin, is_moderator FROM users WHERE id = ? LIMIT 1"
+          )
+          .get(directUserId)
       : findUserBySocialLookup(lookup);
 
   if (!targetUser) {
@@ -10116,6 +10121,13 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
 
   if (Number(targetUser.id) === currentUserId) {
     return res.status(400).json({ ok: false, error: "Du kannst deinen eigenen Account nicht ignorieren." });
+  }
+
+  if (isSocialBlockProtectedTarget(currentUser, targetUser)) {
+    return res.status(403).json({
+      ok: false,
+      error: "Admins und Moderatoren können von normalen Usern nicht blockiert oder ignoriert werden."
+    });
   }
 
   db.prepare(
@@ -10161,6 +10173,7 @@ app.post("/api/social/ignored-accounts/:ignoredUserId/delete", requireAuth, (req
 app.post("/api/social/ignored-characters", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const characterId = Number(req.body.character_id);
+  const currentUser = req.session.user || null;
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
     return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
   }
@@ -10172,6 +10185,13 @@ app.post("/api/social/ignored-characters", requireAuth, (req, res) => {
 
   if (Number(targetCharacter.user_id) === currentUserId) {
     return res.status(400).json({ ok: false, error: "Deinen eigenen Charakter kannst du nicht ignorieren." });
+  }
+
+  if (isSocialBlockProtectedTarget(currentUser, targetCharacter)) {
+    return res.status(403).json({
+      ok: false,
+      error: "Admins und Moderatoren können von normalen Usern nicht blockiert oder ignoriert werden."
+    });
   }
 
   db.prepare(
@@ -16812,6 +16832,19 @@ function normalizeSocialLookupValue(value) {
   return String(value || "").trim().replace(/^#/, "").slice(0, 80);
 }
 
+function isPrivilegedStaffUser(user) {
+  return Boolean(
+    user?.is_admin === 1 ||
+      user?.is_admin === true ||
+      user?.is_moderator === 1 ||
+      user?.is_moderator === true
+  );
+}
+
+function isSocialBlockProtectedTarget(actorUser, targetUser) {
+  return !isPrivilegedStaffUser(actorUser) && isPrivilegedStaffUser(targetUser);
+}
+
 function findUserBySocialLookup(value) {
   const normalizedValue = normalizeSocialLookupValue(value);
   if (!normalizedValue) {
@@ -16821,7 +16854,7 @@ function findUserBySocialLookup(value) {
   if (/^\d+$/.test(normalizedValue)) {
     return db
       .prepare(
-        `SELECT id, username, account_number
+        `SELECT id, username, account_number, is_admin, is_moderator
            FROM users
           WHERE account_number = ?
           LIMIT 1`
@@ -16831,7 +16864,7 @@ function findUserBySocialLookup(value) {
 
   const userMatch = db
     .prepare(
-      `SELECT id, username, account_number
+      `SELECT id, username, account_number, is_admin, is_moderator
          FROM users
         WHERE lower(username) = lower(?)
         LIMIT 1`
@@ -16845,7 +16878,9 @@ function findUserBySocialLookup(value) {
     .prepare(
       `SELECT u.id,
               u.username,
-              u.account_number
+              u.account_number,
+              u.is_admin,
+              u.is_moderator
          FROM characters c
          JOIN users u ON u.id = c.user_id
         WHERE lower(c.name) = lower(?)
@@ -16867,7 +16902,9 @@ function getCharacterSocialTargetById(characterId) {
               c.name,
               c.user_id,
               u.username AS owner_username,
-              u.account_number AS owner_account_number
+              u.account_number AS owner_account_number,
+              u.is_admin,
+              u.is_moderator
          FROM characters c
          JOIN users u ON u.id = c.user_id
         WHERE c.id = ?
