@@ -10042,7 +10042,7 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
   }
 
   if (!(Number.isInteger(directUserId) && directUserId > 0) && !lookup) {
-    return res.status(400).json({ ok: false, error: "Bitte einen Account-Namen oder eine Account-Nr. eingeben." });
+    return res.status(400).json({ ok: false, error: "Bitte einen Account-Namen oder Charakternamen eingeben." });
   }
 
   const targetUser =
@@ -10050,7 +10050,7 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
       ? db.prepare("SELECT id, username, account_number FROM users WHERE id = ? LIMIT 1").get(directUserId)
       : findUserBySocialLookup(lookup);
   if (!targetUser) {
-    return res.status(404).json({ ok: false, error: "Dieser Account wurde nicht gefunden." });
+    return res.status(404).json({ ok: false, error: "Dieser Account oder Charakter wurde nicht gefunden." });
   }
 
   if (Number(targetUser.id) === currentUserId) {
@@ -10111,7 +10111,7 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
       : findUserBySocialLookup(lookup);
 
   if (!targetUser) {
-    return res.status(404).json({ ok: false, error: "Dieser Account wurde nicht gefunden." });
+    return res.status(404).json({ ok: false, error: "Dieser Account oder Charakter wurde nicht gefunden." });
   }
 
   if (Number(targetUser.id) === currentUserId) {
@@ -16829,11 +16829,27 @@ function findUserBySocialLookup(value) {
       .get(normalizedValue);
   }
 
-  return db
+  const userMatch = db
     .prepare(
       `SELECT id, username, account_number
          FROM users
         WHERE lower(username) = lower(?)
+        LIMIT 1`
+    )
+    .get(normalizedValue);
+  if (userMatch) {
+    return userMatch;
+  }
+
+  return db
+    .prepare(
+      `SELECT u.id,
+              u.username,
+              u.account_number
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE lower(c.name) = lower(?)
+        ORDER BY c.id ASC
         LIMIT 1`
     )
     .get(normalizedValue);

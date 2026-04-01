@@ -573,7 +573,7 @@
     event.preventDefault();
     const lookup = normalizeText(friendInput?.value);
     if (!lookup) {
-      setFeedback("Bitte einen Account-Namen oder eine Account-Nr. eingeben.", "error");
+      setFeedback("Bitte einen Account-Namen oder Charakternamen eingeben.", "error");
       friendInput?.focus();
       return;
     }
