@@ -1344,15 +1344,16 @@
 
       if (allowItalic && currentChar === "*") {
         const closingIndex = source.indexOf("*", cursor + 1);
-        if (closingIndex > cursor + 1) {
+        const italicEndIndex = closingIndex > cursor + 1 ? closingIndex : source.length;
+        if (italicEndIndex > cursor + 1) {
           flushPlainBuffer();
           const italic = document.createElement("em");
-          appendFormattedChatNodes(italic, source.slice(cursor + 1, closingIndex), {
+          appendFormattedChatNodes(italic, source.slice(cursor + 1, italicEndIndex), {
             allowItalic: false,
             allowBold: true
           });
           container.appendChild(italic);
-          cursor = closingIndex + 1;
+          cursor = closingIndex > cursor + 1 ? closingIndex + 1 : source.length;
           continue;
         }
       }
@@ -1364,17 +1365,26 @@
         }
 
         const closingIndex = source.indexOf("#", contentStart);
-        if (closingIndex > contentStart) {
-          let contentEnd = closingIndex;
-          while (contentEnd > contentStart && source[contentEnd - 1] === "#") {
-            contentEnd -= 1;
+        const hasClosingDelimiter = closingIndex > contentStart;
+        const contentBoundary = hasClosingDelimiter ? closingIndex : source.length;
+        if (contentBoundary > contentStart) {
+          let contentEnd = contentBoundary;
+          if (hasClosingDelimiter) {
+            while (contentEnd > contentStart && source[contentEnd - 1] === "#") {
+              contentEnd -= 1;
+            }
           }
 
           if (contentEnd > contentStart) {
-            let nextCursor = closingIndex + 1;
-            while (source[nextCursor] === "#") {
-              nextCursor += 1;
-            }
+            const nextCursor = hasClosingDelimiter
+              ? (() => {
+                  let nextIndex = closingIndex + 1;
+                  while (source[nextIndex] === "#") {
+                    nextIndex += 1;
+                  }
+                  return nextIndex;
+                })()
+              : source.length;
 
             flushPlainBuffer();
             const strong = document.createElement("strong");
