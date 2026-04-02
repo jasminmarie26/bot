@@ -387,6 +387,19 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS active_chat_room_logs (
+    room_id INTEGER NOT NULL DEFAULT 0,
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    room_label TEXT NOT NULL DEFAULT '',
+    started_at TEXT NOT NULL DEFAULT '',
+    started_by_user_id INTEGER NOT NULL DEFAULT 0,
+    started_by_name TEXT NOT NULL DEFAULT '',
+    participants_json TEXT NOT NULL DEFAULT '[]',
+    messages_json TEXT NOT NULL DEFAULT '[]',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (room_id, server_id)
+  );
+
   CREATE TABLE IF NOT EXISTS curated_room_overrides (
     server_id TEXT NOT NULL,
     room_key TEXT NOT NULL,

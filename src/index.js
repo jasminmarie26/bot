@@ -3467,6 +3467,46 @@ const insertChatLogBackupStatement = db.prepare(
    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 
+const selectActiveRoomLogsStatement = db.prepare(
+  `SELECT room_id,
+          server_id,
+          room_label,
+          started_at,
+          started_by_user_id,
+          started_by_name,
+          participants_json,
+          messages_json
+     FROM active_chat_room_logs`
+);
+
+const upsertActiveRoomLogStatement = db.prepare(
+  `INSERT INTO active_chat_room_logs (
+     room_id,
+     server_id,
+     room_label,
+     started_at,
+     started_by_user_id,
+     started_by_name,
+     participants_json,
+     messages_json,
+     updated_at
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+   ON CONFLICT(room_id, server_id) DO UPDATE SET
+     room_label = excluded.room_label,
+     started_at = excluded.started_at,
+     started_by_user_id = excluded.started_by_user_id,
+     started_by_name = excluded.started_by_name,
+     participants_json = excluded.participants_json,
+     messages_json = excluded.messages_json,
+     updated_at = CURRENT_TIMESTAMP`
+);
+
+const deleteActiveRoomLogStatement = db.prepare(
+  `DELETE FROM active_chat_room_logs
+    WHERE room_id = ?
+      AND server_id = ?`
+);
+
 function saveChatLogBackupForUser(payload = {}) {
   const userId = Number(payload.userId);
   if (!Number.isInteger(userId) || userId < 1) {
@@ -18282,6 +18322,143 @@ function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
   return activeRoomLogs.get(getRoomLogKey(roomId, serverId)) || null;
 }
 
+function serializeRoomLogParticipants(roomLog) {
+  if (!(roomLog?.participants instanceof Map)) {
+    return [];
+  }
+
+  return Array.from(roomLog.participants.values())
+    .map((entry) => {
+      const userId = Number(entry?.userId);
+      if (!Number.isInteger(userId) || userId < 1) {
+        return null;
+      }
+
+      const characterId = Number(entry?.characterId);
+      return {
+        userId,
+        displayName: String(entry?.displayName || `User ${userId}`).trim() || `User ${userId}`,
+        characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : 0
+      };
+    })
+    .filter(Boolean);
+}
+
+function deserializeRoomLogParticipants(rawValue) {
+  return new Map(
+    parseStoredJsonArray(rawValue)
+      .map((entry) => {
+        const userId = Number(entry?.userId);
+        if (!Number.isInteger(userId) || userId < 1) {
+          return null;
+        }
+
+        const characterId = Number(entry?.characterId);
+        return [
+          userId,
+          {
+            userId,
+            displayName: String(entry?.displayName || `User ${userId}`).trim() || `User ${userId}`,
+            characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : 0
+          }
+        ];
+      })
+      .filter(Boolean)
+  );
+}
+
+function serializeRoomLogMessages(roomLog) {
+  if (!Array.isArray(roomLog?.messages)) {
+    return [];
+  }
+
+  return roomLog.messages
+    .map((entry) => {
+      const content = String(entry?.content || "").trim();
+      if (!content) {
+        return null;
+      }
+
+      return {
+        type: String(entry?.type || "chat").trim().toLowerCase() === "system" ? "system" : "chat",
+        username: String(entry?.username || "").trim(),
+        role_style: String(entry?.role_style || "").trim(),
+        content,
+        created_at: String(entry?.created_at || "").trim() || formatChatTimestamp()
+      };
+    })
+    .filter(Boolean);
+}
+
+function hydrateActiveRoomLogRow(row) {
+  if (!row) return null;
+
+  const parsedRoomId = Number(row.room_id);
+  const roomId = Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
+  const serverId = normalizeServer(row.server_id);
+  return {
+    roomId,
+    serverId,
+    roomLabel: String(row.room_label || "").trim() || getRoomLogLabel(roomId, serverId),
+    startedAt: String(row.started_at || "").trim() || formatChatTimestamp(),
+    startedByUserId: Number(row.started_by_user_id) || null,
+    startedByName: String(row.started_by_name || "").trim() || "Jemand",
+    participants: deserializeRoomLogParticipants(row.participants_json),
+    messages: serializeRoomLogMessages({
+      messages: parseStoredJsonArray(row.messages_json)
+    })
+  };
+}
+
+function persistActiveRoomLog(roomLog) {
+  if (!roomLog) return false;
+
+  const roomId = Number(roomLog.roomId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : 0;
+  const normalizedServerId = normalizeServer(roomLog.serverId);
+
+  try {
+    upsertActiveRoomLogStatement.run(
+      normalizedRoomId,
+      normalizedServerId,
+      String(roomLog.roomLabel || "").trim() || getRoomLogLabel(normalizedRoomId, normalizedServerId),
+      String(roomLog.startedAt || "").trim() || formatChatTimestamp(),
+      Number(roomLog.startedByUserId) || 0,
+      String(roomLog.startedByName || "").trim() || "Jemand",
+      JSON.stringify(serializeRoomLogParticipants(roomLog)),
+      JSON.stringify(serializeRoomLogMessages(roomLog))
+    );
+    return true;
+  } catch (error) {
+    console.error("Konnte aktives Raum-Log nicht speichern:", error);
+    return false;
+  }
+}
+
+function removePersistedActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
+  const parsedRoomId = Number(roomId);
+  const normalizedRoomId = Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : 0;
+
+  try {
+    deleteActiveRoomLogStatement.run(normalizedRoomId, normalizeServer(serverId));
+    return true;
+  } catch (error) {
+    console.error("Konnte aktives Raum-Log nicht entfernen:", error);
+    return false;
+  }
+}
+
+function restorePersistedActiveRoomLogs() {
+  selectActiveRoomLogsStatement.all().forEach((row) => {
+    const roomLog = hydrateActiveRoomLogRow(row);
+    if (!roomLog) {
+      return;
+    }
+
+    activeRoomLogs.set(getRoomLogKey(roomLog.roomId, roomLog.serverId), roomLog);
+  });
+}
+
 function canManageRoomLog(user, room = null) {
   if (!user) return false;
   if (
@@ -18316,6 +18493,7 @@ function upsertRoomLogParticipant(roomLog, userId, displayName = "", characterId
     displayName: safeDisplayName,
     characterId: normalizedCharacterId
   });
+  persistActiveRoomLog(roomLog);
 }
 
 function rememberRoomLogParticipant(roomId, serverId, user, displayName = "", characterId = null) {
@@ -18355,7 +18533,10 @@ function appendMessageToActiveRoomLog(roomId, serverId, entry) {
   const userId = Number(entry?.user_id);
   if (type !== "system" && Number.isInteger(userId) && userId > 0) {
     upsertRoomLogParticipant(roomLog, userId, username || `User ${userId}`, entry?.character_id);
+    return;
   }
+
+  persistActiveRoomLog(roomLog);
 }
 
 function startRoomLog(roomId, serverId, room, startedBySocket) {
@@ -18388,6 +18569,7 @@ function startRoomLog(roomId, serverId, room, startedBySocket) {
     );
   });
 
+  persistActiveRoomLog(roomLog);
   return roomLog;
 }
 
@@ -18439,6 +18621,7 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   }
 
   activeRoomLogs.delete(key);
+  removePersistedActiveRoomLog(roomId, serverId);
 
   const recipientRows = getRoomLogRecipients(Array.from(roomLog.participants.keys()));
   const recipientMap = new Map(
@@ -18569,6 +18752,8 @@ async function finalizeRoomLogIfEmpty(roomId, serverId) {
 
   return finalizeRoomLog(roomId, serverId, { reason: "empty-room" });
 }
+
+restorePersistedActiveRoomLogs();
 
 function buildPresenceSuffixPool(basePhrases, tailPhrases, standalonePhrases) {
   const templates = [];
