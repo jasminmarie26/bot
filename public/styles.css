@@ -2960,7 +2960,7 @@ a:hover {
 }
 
 .home-main-discord .home-discord-card {
-  width: 100%;
+  width: min(100%, 320px);
   box-sizing: border-box;
 }
 
@@ -3352,7 +3352,7 @@ body.page-home-screen .home-hero-actions {
 
 .home-main-discord .home-donation-card,
 .home-main-discord .home-contact-card {
-  width: 100%;
+  width: min(100%, 320px);
   box-sizing: border-box;
 }
 
