@@ -18322,6 +18322,46 @@ function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
   return activeRoomLogs.get(getRoomLogKey(roomId, serverId)) || null;
 }
 
+function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID) {
+  const key = getRoomLogKey(roomId, serverId);
+  const timer = pendingRoomLogFinalizations.get(key);
+  if (!timer) {
+    return false;
+  }
+
+  clearTimeout(timer);
+  pendingRoomLogFinalizations.delete(key);
+  return true;
+}
+
+function schedulePendingRoomLogFinalization(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  delayMs = ROOM_LOG_EMPTY_GRACE_MS
+) {
+  const roomLog = getActiveRoomLog(roomId, serverId);
+  if (!roomLog) {
+    return false;
+  }
+
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId);
+
+  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId);
+
+  const timer = setTimeout(() => {
+    pendingRoomLogFinalizations.delete(key);
+    if (getSocketsInChannel(normalizedRoomId, normalizedServerId).length > 0) {
+      return;
+    }
+    void finalizeRoomLog(normalizedRoomId, normalizedServerId, { reason: "empty-room" });
+  }, Math.max(0, Number(delayMs) || 0));
+
+  pendingRoomLogFinalizations.set(key, timer);
+  return true;
+}
+
 function serializeRoomLogParticipants(roomLog) {
   if (!(roomLog?.participants instanceof Map)) {
     return [];
@@ -18500,6 +18540,8 @@ function rememberRoomLogParticipant(roomId, serverId, user, displayName = "", ch
   const roomLog = getActiveRoomLog(roomId, serverId);
   if (!roomLog) return;
 
+  clearPendingRoomLogFinalization(roomId, serverId);
+
   const userId = Number(user?.id);
   if (!Number.isInteger(userId) || userId < 1) return;
 
@@ -18544,6 +18586,8 @@ function startRoomLog(roomId, serverId, room, startedBySocket) {
   if (activeRoomLogs.has(key)) {
     return null;
   }
+
+  clearPendingRoomLogFinalization(roomId, serverId);
 
   const roomLog = {
     roomId: Number.isInteger(roomId) && roomId > 0 ? roomId : null,
@@ -18606,6 +18650,7 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
 
 async function finalizeRoomLog(roomId, serverId, options = {}) {
   const key = getRoomLogKey(roomId, serverId);
+  clearPendingRoomLogFinalization(roomId, serverId);
   const roomLog = activeRoomLogs.get(key);
   if (!roomLog) {
     return {
@@ -18747,10 +18792,11 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
 
 async function finalizeRoomLogIfEmpty(roomId, serverId) {
   if (getSocketsInChannel(roomId, serverId).length > 0) {
+    clearPendingRoomLogFinalization(roomId, serverId);
     return false;
   }
 
-  return finalizeRoomLog(roomId, serverId, { reason: "empty-room" });
+  return schedulePendingRoomLogFinalization(roomId, serverId);
 }
 
 restorePersistedActiveRoomLogs();
@@ -19148,7 +19194,9 @@ function emitRoomListRefresh(serverId = DEFAULT_SERVER_ID) {
 const pendingRoomDeletionTimers = new Map();
 const pendingRoomInvites = new Map();
 const pendingChatDisconnects = new Map();
+const pendingRoomLogFinalizations = new Map();
 const CHAT_RECONNECT_GRACE_MS = 12000;
+const ROOM_LOG_EMPTY_GRACE_MS = 10 * 60 * 1000;
 const CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY = "lobby";
 const pruneExpiredChatReconnectSuppressionsStatement = db.prepare(
   "DELETE FROM chat_reconnect_suppressions WHERE expires_at <= ?"
