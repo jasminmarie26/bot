@@ -1035,12 +1035,29 @@ function getOnlineUserCountForServers(serverIds) {
   return getOnlineUserIdsForServers(serverIds).size;
 }
 
+function normalizeComparableIp(value) {
+  const rawValue = String(value || "").trim().toLowerCase().slice(0, 120);
+  if (!rawValue) {
+    return "";
+  }
+
+  let normalized = rawValue.replace(/^\[|\]$/g, "");
+  normalized = normalized.replace(/^::ffff:/, "");
+  normalized = normalized.replace(/%[a-z0-9._-]+$/i, "");
+
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(normalized)) {
+    normalized = normalized.replace(/:\d+$/, "");
+  }
+
+  return normalized;
+}
+
 function getHomeStatsTrackedIp(user) {
-  const registrationIp = String(user?.registration_ip || "").trim().slice(0, 120);
+  const registrationIp = normalizeComparableIp(user?.registration_ip);
   if (registrationIp) {
     return registrationIp;
   }
-  return String(user?.last_login_ip || "").trim().slice(0, 120);
+  return normalizeComparableIp(user?.last_login_ip);
 }
 
 function getPrimaryHomeStatsAdminUser(users) {
@@ -1085,8 +1102,18 @@ function getHomeStatsUsers() {
 
 function getHomeStatsHiddenUserIds(users) {
   const primaryAdminUser = getPrimaryHomeStatsAdminUser(users);
-  const primaryAdminIp = getHomeStatsTrackedIp(primaryAdminUser);
   const hiddenUserIds = new Set();
+  const adminIps = new Set();
+
+  users.forEach((user) => {
+    if (Number(user?.is_admin) !== 1) {
+      return;
+    }
+    const trackedIp = getHomeStatsTrackedIp(user);
+    if (trackedIp) {
+      adminIps.add(trackedIp);
+    }
+  });
 
   users.forEach((user) => {
     if (primaryAdminUser && Number(user?.id) === Number(primaryAdminUser.id)) {
@@ -1098,7 +1125,7 @@ function getHomeStatsHiddenUserIds(users) {
     }
 
     const trackedIp = getHomeStatsTrackedIp(user);
-    if (primaryAdminIp && trackedIp && trackedIp === primaryAdminIp) {
+    if (trackedIp && adminIps.has(trackedIp)) {
       hiddenUserIds.add(Number(user.id));
     }
   });
@@ -1110,6 +1137,26 @@ function getHomeStatsVisibleUsers() {
   const users = getHomeStatsUsers();
   const hiddenUserIds = getHomeStatsHiddenUserIds(users);
   return users.filter((user) => !hiddenUserIds.has(Number(user.id)));
+}
+
+function getVisibleAccountCountForHomeStats(users = []) {
+  const seenIps = new Set();
+  let visibleCount = 0;
+
+  users.forEach((user) => {
+    const trackedIp = getHomeStatsTrackedIp(user);
+    if (!trackedIp) {
+      visibleCount += 1;
+      return;
+    }
+    if (seenIps.has(trackedIp)) {
+      return;
+    }
+    seenIps.add(trackedIp);
+    visibleCount += 1;
+  });
+
+  return visibleCount;
 }
 
 function getVisibleCharacterStatsForHomeStats(hiddenUserIds = null) {
@@ -1181,7 +1228,7 @@ function buildLoginStats() {
     hiddenHomeStatsUserIds
   );
   const staffStats = getOnlineStaffStats(hiddenHomeStatsUserIds);
-  const accountCount = visibleHomeStatsUsers.length;
+  const accountCount = getVisibleAccountCountForHomeStats(visibleHomeStatsUsers);
   const characterCount = visibleCharacterStats.characterCount;
   const freeRpCharacterCount = visibleCharacterStats.freeRpCharacterCount;
   const erpCharacterCount = visibleCharacterStats.erpCharacterCount;
