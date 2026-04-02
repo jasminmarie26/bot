@@ -103,6 +103,7 @@
   const messageSoundPreferenceKey = "chat-room-message-sound-enabled";
   const chatInputHistoryLimit = 50;
   const chatMessageRestoreLimit = 150;
+  const chatReloadSnapshotMaxAgeMs = 5 * 60 * 1000;
   const typingIdleDelayMs = 1400;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
   const AudioElementCtor = typeof window.Audio === "function" ? window.Audio : null;
@@ -208,13 +209,17 @@
             .slice(-chatMessageRestoreLimit)
         : [];
       const scrollTop = Number(parsed.scrollTop);
+      const disconnectAt =
+        Number.isFinite(Number(parsed.disconnectAt)) && Number(parsed.disconnectAt) > 0
+          ? Number(parsed.disconnectAt)
+          : 0;
+      if (disconnectAt > 0 && Date.now() - disconnectAt > chatReloadSnapshotMaxAgeMs) {
+        return null;
+      }
 
       return {
         reason: String(parsed.reason || "").trim(),
-        disconnectAt:
-          Number.isFinite(Number(parsed.disconnectAt)) && Number(parsed.disconnectAt) > 0
-            ? Number(parsed.disconnectAt)
-            : 0,
+        disconnectAt,
         scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
         messages
       };
@@ -650,21 +655,25 @@
     }
   }
 
+  function saveChatReloadSnapshot(reason = "page-reload") {
+    writeSessionStorage(
+      chatReloadSnapshotKey,
+      JSON.stringify({
+        reason: String(reason || "").trim() || "page-reload",
+        disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
+        scrollTop: chatBox.scrollTop,
+        messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
+      })
+    );
+  }
+
   function reloadChatAfterServerRestart() {
     if (serverRestartReloadInProgress) {
       return;
     }
 
     serverRestartReloadInProgress = true;
-    writeSessionStorage(
-      chatReloadSnapshotKey,
-      JSON.stringify({
-        reason: "server-instance-reload",
-        disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
-        scrollTop: chatBox.scrollTop,
-        messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
-      })
-    );
+    saveChatReloadSnapshot("server-instance-reload");
     window.location.reload();
   }
 
@@ -2472,9 +2481,13 @@
   resizeChatInput();
   window.addEventListener("beforeunload", () => {
     stopTypingIndicator();
+    saveChatReloadSnapshot("page-reload");
     notifyImmediateChatLeave();
   });
-  window.addEventListener("pagehide", notifyImmediateChatLeave);
+  window.addEventListener("pagehide", () => {
+    saveChatReloadSnapshot("page-reload");
+    notifyImmediateChatLeave();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       stopTypingIndicator();
