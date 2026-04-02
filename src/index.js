@@ -1941,7 +1941,7 @@ function renderAccountPage(req, res, options = {}) {
     formValues: {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
-      birth_date: options.values?.birth_date ?? accountUser.birth_date ?? "",
+      birth_date: accountUser.birth_date ?? "",
       auto_afk_enabled:
         options.values?.auto_afk_enabled ??
         normalizeAutoAfkEnabled(accountUser.auto_afk_enabled),
@@ -10680,12 +10680,11 @@ app.post("/account/update", requireAuth, (req, res) => {
 
   const username = String(req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
-  const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const autoAfkEnabled = String(req.body.auto_afk_enabled || "").trim() === "1";
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
-  const birthDate = rawBirthDate ? normalizeBirthDate(rawBirthDate) : "";
+  const birthDate = normalizeBirthDate(accountUser.birth_date) || "";
   const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
   const usernameChanged = username !== accountUser.username;
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
@@ -10697,7 +10696,6 @@ app.post("/account/update", requireAuth, (req, res) => {
       values: {
         username,
         email,
-        birth_date: rawBirthDate,
         auto_afk_enabled: autoAfkEnabled,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
         room_log_email_enabled: roomLogEmailEnabled,
@@ -10713,10 +10711,6 @@ app.post("/account/update", requireAuth, (req, res) => {
 
   if (email && !EMAIL_PATTERN.test(email)) {
     return renderWithError("Bitte eine gültige E-Mail-Adresse verwenden.");
-  }
-
-  if (rawBirthDate && !birthDate) {
-    return renderWithError("Bitte ein gültiges Geburtsdatum verwenden.");
   }
 
   if (afkTimeoutMinutes == null) {
