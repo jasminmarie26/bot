@@ -20670,7 +20670,7 @@ io.on("connection", (socket) => {
               requestedRoomName,
               requestedRoomDescription
             )
-          : ensureOwnedRoomForCharacter(
+          : ensurePublicRoomForServer(
               socket.data.user.id,
               preferredCharacter,
               requestedRoomName,
