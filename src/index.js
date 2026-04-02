@@ -1649,9 +1649,12 @@ function issueHumanVerificationChallenge(req, context) {
   return challenge;
 }
 
-function getHumanVerificationChallenge(req, context, { reissueIfMissing = false } = {}) {
+function getHumanVerificationChallenge(req, context, { reissueIfMissing = false, forceReissue = false } = {}) {
   const normalizedContext = String(context || "").trim().toLowerCase() || "default";
   const store = getHumanVerificationStore(req);
+  if (forceReissue) {
+    return issueHumanVerificationChallenge(req, normalizedContext);
+  }
   const existingChallenge = store[normalizedContext];
   const ageMs = existingChallenge ? Date.now() - Number(existingChallenge.issuedAt || 0) : Number.POSITIVE_INFINITY;
 
@@ -1708,7 +1711,7 @@ function renderAuthPage(req, res, options = {}) {
     const guard = issueRegistrationGuard(req);
     viewData.registrationGuardToken = guard.token;
     if (viewData.registrationCaptchaMode === "fallback") {
-      const challenge = getHumanVerificationChallenge(req, "register", { reissueIfMissing: true });
+      const challenge = getHumanVerificationChallenge(req, "register", { forceReissue: true });
       viewData.registrationFallbackCaptchaUrl = `/auth/captcha.svg?context=register&v=${encodeURIComponent(
         challenge.token
       )}`;
@@ -1726,7 +1729,7 @@ function renderOAuthVerificationPage(req, res, provider, options = {}) {
 
   if (captchaMode === "fallback") {
     const challenge = getHumanVerificationChallenge(req, `oauth-${normalizedProvider}`, {
-      reissueIfMissing: true
+      forceReissue: true
     });
     fallbackCaptchaUrl = `/auth/captcha.svg?context=${encodeURIComponent(
       `oauth-${normalizedProvider}`
