@@ -7260,6 +7260,11 @@ body.page-guestbook-preview::after {
   align-items: center;
 }
 
+.gb-editor-inline-extra-row > .btn,
+.gb-editor-inline-extra-row > .inline-form {
+  margin: 0;
+}
+
 .gb-editor-inline-extra-row .inline-form {
   margin: 0;
 }
@@ -7306,6 +7311,19 @@ body.page-guestbook-preview::after {
 .gb-color-picker::-moz-color-swatch {
   border: none;
   border-radius: 8px;
+}
+
+.character-form-panel {
+  position: relative;
+  overflow: visible;
+}
+
+.character-form-panel:first-of-type {
+  z-index: 2;
+}
+
+.character-guestbook-panel {
+  z-index: 1;
 }
 
 .character-editor-grid {
