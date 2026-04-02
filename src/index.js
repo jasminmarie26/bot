@@ -6159,6 +6159,32 @@ function parseRoomSwitchCommandArguments(rawArgs) {
   };
 }
 
+function parseRoomRenameCommandArguments(rawArgs) {
+  const value = String(rawArgs || "").trim();
+  if (!value) {
+    return {
+      roomName: "",
+      roomDescription: "",
+      hasDescription: false
+    };
+  }
+
+  const quotedDescriptionMatch = value.match(/^(.*?)\s*"([^"]*)"\s*$/);
+  if (quotedDescriptionMatch) {
+    return {
+      roomName: normalizeRoomName(quotedDescriptionMatch[1]),
+      roomDescription: normalizeRoomDescription(quotedDescriptionMatch[2]),
+      hasDescription: true
+    };
+  }
+
+  return {
+    roomName: normalizeRoomName(value),
+    roomDescription: "",
+    hasDescription: false
+  };
+}
+
 function parseRollCommandArguments(rawArgs) {
   const value = String(rawArgs || "").trim();
   if (!value) {
@@ -19823,7 +19849,7 @@ io.on("connection", (socket) => {
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
     const canGrantRoomRights = canGrantRoomPermissions(socket.data.user, room);
 
-    if (isManagedFestplayChatRoom && /^\/(?:rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
+    if (isManagedFestplayChatRoom && /^\/(?:rb|rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
       socket.emit("chat:message", {
         type: "system",
         content: "Festspiel-Räume steuerst du über die eigene Festspiel-Raumseite, nicht direkt im Chat.",
@@ -20618,6 +20644,116 @@ io.on("connection", (socket) => {
           presence_actor_chat_text_color: rollDisplayProfile?.chat_text_color || ""
         }
       );
+      return;
+    }
+
+    const roomRenameMatch = content.match(/^\/rb(?:\s+([\s\S]+))?$/i);
+    if (roomRenameMatch) {
+      if (!roomId || !room) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du musst zuerst einen Raum betreten, um ihn mit /rb umzubenennen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (Number(room.is_festplay_chat) === 1) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Festspiel-Räume steuerst du über die eigene Festspiel-Raumseite, nicht direkt im Chat.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      if (!isRoomOwner(socket.data.user, room)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Nur der Besitzer darf diesen Raum mit /rb umbenennen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const roomRenameArgs = parseRoomRenameCommandArguments(roomRenameMatch[1] || "");
+      const currentRoomName = normalizeRoomName(room.name);
+      const currentRoomDescription = normalizeRoomDescription(room.description);
+      const requestedRoomName = roomRenameArgs.roomName || currentRoomName;
+      const requestedRoomDescription = roomRenameArgs.hasDescription
+        ? roomRenameArgs.roomDescription
+        : currentRoomDescription;
+
+      if (requestedRoomName.length < 2) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: 'Bitte nutze /rb Raumname "Raumbeschreibung". Die Raumbeschreibung ist optional.',
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const nextRoomNameKey = toRoomNameKey(requestedRoomName);
+      const currentRoomNameKey = toRoomNameKey(currentRoomName);
+      let conflictingRoom = null;
+
+      if (
+        nextRoomNameKey !== currentRoomNameKey ||
+        requestedRoomDescription !== currentRoomDescription
+      ) {
+        if (Number(room.festplay_id) > 0 && Number(room.is_festplay_side_chat) === 1) {
+          conflictingRoom = findFestplaySideChatByNameKey(
+            room.festplay_id,
+            room.server_id,
+            nextRoomNameKey,
+            requestedRoomDescription
+          );
+        } else if (Number(room.is_public_room) === 1) {
+          conflictingRoom = findPublicRoomByNameKey(
+            room.server_id,
+            nextRoomNameKey,
+            requestedRoomDescription
+          );
+        } else {
+          conflictingRoom = findOwnedRoomByNameKey(
+            socket.data.user.id,
+            room.server_id,
+            nextRoomNameKey,
+            requestedRoomDescription
+          );
+        }
+      }
+
+      if (conflictingRoom && Number(conflictingRoom.id) !== Number(roomId)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: "Du hast bereits einen Raum mit diesem Namen.",
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      db.prepare(
+        `UPDATE chat_rooms
+            SET name = ?,
+                name_key = ?,
+                description = ?
+          WHERE id = ?`
+      ).run(requestedRoomName, nextRoomNameKey, requestedRoomDescription, roomId);
+
+      if (Number(room.festplay_id) > 0) {
+        touchFestplayActivity(room.festplay_id);
+      }
+
+      const refreshedRoom = getRoomWithCharacter(roomId);
+      emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
+      emitRoomListRefresh(room.server_id);
+
+      socket.emit("chat:message", {
+        type: "system",
+        content: `Raum wurde in ${requestedRoomName} umbenannt.`,
+        created_at: formatChatTimestamp()
+      });
       return;
     }
 
