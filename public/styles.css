@@ -7318,6 +7318,7 @@ body.page-guestbook-preview::after {
   position: relative;
   display: grid;
   gap: 0.45rem;
+  z-index: 120;
 }
 
 .character-color-input-wrap {
@@ -7413,7 +7414,7 @@ body.page-guestbook-preview::after {
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.24),
     0 4px 14px rgba(0, 0, 0, 0.16);
-  z-index: 50;
+  z-index: 200;
 }
 
 .character-color-panel[hidden] {
@@ -7550,6 +7551,8 @@ body.page-guestbook-preview::after {
 }
 
 .character-guestbook-header {
+  display: flex;
+  justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
 }
