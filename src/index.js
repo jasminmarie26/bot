@@ -564,7 +564,7 @@ const SEO_DESCRIPTION_BY_PATH = {
   "/impressum":
     "Impressum von Heldenhafte Reisen mit den rechtlichen Pflichtangaben und den öffentlichen Kontaktinformationen der Plattform.",
   "/kontakt":
-    "Kontaktiere Heldenhafte Reisen direkt über das Kontaktformular, wenn du Fragen, Hinweise oder Unterstützung brauchst.",
+    "Kontakt & Tickets von Heldenhafte Reisen: Sende Fragen, Hinweise oder technische Anliegen direkt über das Formular.",
   "/live-updates":
     "In den Live Updates von Heldenhafte Reisen siehst du aktuelle Neuerungen, Hinweise und Änderungen der Plattform.",
   "/register":
@@ -2137,7 +2137,7 @@ function renderOAuthBirthDatePage(req, res, options = {}) {
 
 function renderKontaktPage(req, res, options = {}) {
   return res.status(options.status || 200).render("kontakt", {
-    title: "Kontakt",
+    title: "Kontakt & Tickets",
     legalMeta: getLegalMeta(),
     pageClass: "page-legal",
     contactError: options.error || "",
