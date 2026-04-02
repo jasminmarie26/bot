@@ -2887,7 +2887,7 @@ a:hover {
 
 .home-layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 228px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -2932,7 +2932,7 @@ a:hover {
 
 .home-main-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 255px);
+  grid-template-columns: minmax(0, 1fr) minmax(225px, 240px);
   gap: 0.9rem;
   align-items: start;
 }
@@ -2951,7 +2951,7 @@ a:hover {
 .home-main-discord {
   display: grid;
   width: 100%;
-  max-width: 255px;
+  max-width: 240px;
   justify-items: start;
   justify-self: end;
   align-self: start;
@@ -3503,7 +3503,7 @@ body.page-home-screen .home-hero-actions {
 
 @media (min-width: 1280px) and (min-height: 820px) {
   .home-layout {
-    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-columns: 344px minmax(0, 1fr);
     gap: 0.85rem;
   }
 
@@ -3532,7 +3532,7 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-main-top {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 255px);
+    grid-template-columns: minmax(0, 1fr) minmax(225px, 240px);
     gap: 0.8rem;
   }
 
