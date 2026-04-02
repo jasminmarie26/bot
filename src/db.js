@@ -143,6 +143,7 @@ db.exec(`
     outer_image_repeat INTEGER NOT NULL DEFAULT 0,
     censor_level TEXT NOT NULL DEFAULT 'none',
     chat_text_color TEXT NOT NULL DEFAULT '#AEE7B7',
+    page_text_color TEXT NOT NULL DEFAULT '#2B2B2B',
     frame_color TEXT NOT NULL DEFAULT '',
     background_color TEXT NOT NULL DEFAULT '',
     surround_color TEXT NOT NULL DEFAULT '',
@@ -835,6 +836,10 @@ if (!guestbookSettingsColumns.includes("surround_color")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN surround_color TEXT NOT NULL DEFAULT ''");
 }
 
+if (!guestbookSettingsColumns.includes("page_text_color")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN page_text_color TEXT NOT NULL DEFAULT '#2B2B2B'");
+}
+
 if (!guestbookPageColumns.includes("image_url")) {
   db.exec("ALTER TABLE guestbook_pages ADD COLUMN image_url TEXT NOT NULL DEFAULT ''");
 }
@@ -1066,6 +1071,7 @@ db.prepare("UPDATE festplay_permissions SET source = 'manual' WHERE source IS NU
 db.prepare("UPDATE guestbook_settings SET frame_color = '' WHERE frame_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET background_color = '' WHERE background_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET surround_color = '' WHERE surround_color IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET page_text_color = '#2B2B2B' WHERE page_text_color IS NULL OR trim(page_text_color) = ''").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_url = '' WHERE inner_image_url IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_opacity = 100 WHERE inner_image_opacity IS NULL").run();

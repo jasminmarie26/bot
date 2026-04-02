@@ -52,6 +52,7 @@ const SERVER_OPTIONS = [
   { id: "erp", label: "ERP" }
 ];
 const GUESTBOOK_PAGE_SIZE = 12;
+const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
 const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
 const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
 const GUESTBOOK_THEME_STYLE_OPTIONS = new Set([
@@ -7255,6 +7256,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     "scroll"
   );
   const existingChatTextColor = normalizeGuestbookColor(existingSettings?.chat_text_color);
+  const existingPageTextColor =
+    normalizeGuestbookColor(existingSettings?.page_text_color) || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR;
   const existingFrameColor = normalizeOptionalGuestbookColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookColor(existingSettings?.background_color);
   const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
@@ -7347,6 +7350,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       outer_image_repeat: outerImageRepeat,
       censor_level: censorLevel,
       chat_text_color: chatTextColor,
+      page_text_color: existingPageTextColor,
       frame_color: frameColor,
       background_color: backgroundColor,
       surround_color: surroundColor,
@@ -7375,6 +7379,8 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     outer_image_repeat: 0,
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
     chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
+    page_text_color:
+      normalizeGuestbookColor(baseSettings?.page_text_color) || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR,
     frame_color: normalizeOptionalGuestbookColor(page?.frame_color),
     background_color: normalizeOptionalGuestbookColor(page?.background_color),
     surround_color: normalizeOptionalGuestbookColor(page?.surround_color),
@@ -7508,7 +7514,7 @@ function renumberGuestbookPages(characterId) {
 function getOrCreateGuestbookSettings(characterId) {
   let settings = db
     .prepare(
-      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
        FROM guestbook_settings
        WHERE character_id = ?`
     )
@@ -7521,7 +7527,7 @@ function getOrCreateGuestbookSettings(characterId) {
     ).run(characterId);
     settings = db
       .prepare(
-        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
          FROM guestbook_settings
          WHERE character_id = ?`
       )
@@ -15424,6 +15430,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
          outer_image_repeat = ?,
          censor_level = ?,
          chat_text_color = ?,
+         page_text_color = ?,
          frame_color = ?,
          background_color = ?,
          surround_color = ?,
@@ -15443,6 +15450,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     payload.settings.outer_image_repeat,
     payload.settings.censor_level,
     payload.settings.chat_text_color,
+    payload.settings.page_text_color,
     payload.settings.frame_color,
     payload.settings.background_color,
     payload.settings.surround_color,
