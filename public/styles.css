@@ -284,6 +284,16 @@ body.theme-future .theme-select {
   background: linear-gradient(180deg, rgba(8, 20, 30, 0.92), rgba(5, 13, 22, 0.96));
 }
 
+body.theme-future .theme-select {
+  color: #dffbff;
+}
+
+body.theme-future .theme-select option,
+body.theme-future .theme-select optgroup {
+  background: #09131c;
+  color: #dffbff;
+}
+
 body.theme-future .hero {
   min-height: 320px;
   display: flex;
