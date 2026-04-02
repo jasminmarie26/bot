@@ -206,7 +206,10 @@ body.theme-future {
     radial-gradient(840px 520px at 90% 10%, rgba(102, 148, 255, 0.16), transparent 72%),
     radial-gradient(920px 620px at 50% 100%, rgba(132, 255, 170, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(190, 255, 246, 0.04), rgba(4, 10, 18, 0.14) 18%, rgba(4, 10, 18, 0.42) 100%),
+    linear-gradient(180deg, rgba(5, 15, 22, 0.26), rgba(4, 10, 18, 0.5) 58%, rgba(2, 6, 10, 0.72) 100%),
+    url("/Future Theme.png") center 14% / cover no-repeat,
     linear-gradient(135deg, #03070d 0%, #071624 44%, #02060a 100%);
+  background-attachment: scroll, scroll, scroll, scroll, scroll, fixed, scroll;
 }
 
 body.theme-future::before {
@@ -3402,6 +3405,25 @@ body.theme-future.page-home-screen .home-stats-title.home-stat-group-title {
 body.theme-future.page-home-screen .home-stat-group-title,
 body.theme-future.page-home-screen .home-support-title {
   font-size: 0.72rem;
+}
+
+body.theme-future.page-home-screen .home-stat,
+body.theme-future.page-home-screen .home-stat span,
+body.theme-future.page-home-screen .home-stat strong,
+body.theme-future.page-home-screen .home-stat-empty,
+body.theme-future.page-home-screen .home-stat-names,
+body.theme-future.page-home-screen .home-hero-copy,
+body.theme-future.page-home-screen .home-discord-name,
+body.theme-future.page-home-screen .home-discord-subtitle,
+body.theme-future.page-home-screen .home-donation-title,
+body.theme-future.page-home-screen .home-donation-text,
+body.theme-future.page-home-screen .home-contact-link-text,
+body.theme-future.page-home-screen .home-legal-links,
+body.theme-future.page-home-screen .home-copyright {
+  font-family: var(--font-ui);
+  letter-spacing: normal;
+  text-transform: none;
+  text-shadow: none;
 }
 
 .home-contact-head {
@@ -8937,6 +8959,37 @@ select:focus {
   padding: 0.62rem;
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.chat-online-panel,
+.chat-online-panel h2,
+.chat-online-list,
+.chat-online-item,
+.chat-online-item > span,
+.chat-online-content,
+.chat-online-name,
+.chat-online-typing,
+.chat-room-title,
+.chat-room-description,
+.chat-room-scene,
+.chat-own-message-time,
+.chat-box,
+.chat-box .chat-message,
+.chat-box .chat-message strong,
+.chat-box .chat-message span,
+.chat-box .chat-message :where(p, div, span, strong, a, b, em, i, u, s, blockquote, code) {
+  font-family: var(--font-ui);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.chat-online-name.has-noctra-wings,
+.chat-message strong.has-noctra-wings,
+.chat-online-name.has-crescentia-moons,
+.chat-message strong.has-crescentia-moons {
+  font-family: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
 }
 
 .page-chat .chat-online-panel {
