@@ -2924,9 +2924,11 @@ a:hover {
   height: auto;
 }
 
-.page-home-screen .home-main > .home-legal-links {
-  margin-top: 0.9rem;
-  margin-bottom: 0;
+.home-main-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
+  gap: 0.9rem;
+  align-items: start;
 }
 
 .home-main-bottom {
@@ -2943,6 +2945,7 @@ a:hover {
 .home-main-discord {
   display: flex;
   justify-content: flex-end;
+  align-self: start;
 }
 
 .home-main-discord .home-discord-card {
@@ -3257,13 +3260,16 @@ body.page-home-screen .home-hero-actions {
 
   .home-main-bottom {
     margin-top: 0.6rem;
-    grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
-    align-items: end;
-    gap: 0.8rem;
+    gap: 0.6rem;
   }
 
   .home-main-bottom-links {
     min-width: 0;
+  }
+
+  .home-main-top {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 270px);
+    gap: 0.8rem;
   }
 
   .home-stat-group {
@@ -9826,6 +9832,10 @@ select:focus {
   }
 
   .home-main-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .home-main-top {
     grid-template-columns: 1fr;
   }
 

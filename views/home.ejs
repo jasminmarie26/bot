@@ -93,53 +93,39 @@
   </aside>
 
   <div class="home-main">
-    <section
-      id="home-hero"
-      class="hero <%= currentUser && currentUser.is_admin ? "has-update-actions" : "" %>"
-    >
-      <input id="home-hero-title-source" type="hidden" value="<%= homeContent.hero_title %>" />
-      <textarea id="home-hero-body-source" hidden><%= homeContent.hero_body %></textarea>
+    <div class="home-main-top">
+      <section
+        id="home-hero"
+        class="hero <%= currentUser && currentUser.is_admin ? "has-update-actions" : "" %>"
+      >
+        <input id="home-hero-title-source" type="hidden" value="<%= homeContent.hero_title %>" />
+        <textarea id="home-hero-body-source" hidden><%= homeContent.hero_body %></textarea>
 
-      <% if (currentUser && currentUser.is_admin) { %>
-        <div class="hero-update-actions">
-          <button
-            class="ghost-btn icon-btn update-pen-btn"
-            type="button"
-            data-site-content-open="hero"
-            aria-label="Startseitenbereich bearbeiten"
-            title="Startseitenbereich bearbeiten"
-          >
-            &#9998;
-          </button>
-        </div>
-      <% } %>
-
-      <div class="home-hero-stack">
-        <h1 id="home-hero-title" class="home-hero-title"><%= homeContent.hero_title %></h1>
-        <div id="home-hero-body" class="hero-copy guestbook-entry-body home-hero-copy"><%- homeContent.hero_body_html %></div>
-        <% if (!currentUser) { %>
-          <div class="hero-actions home-hero-actions">
-            <a class="btn" href="/register">Jetzt starten</a>
-            <a class="btn btn-secondary" href="/login">Einloggen</a>
+        <% if (currentUser && currentUser.is_admin) { %>
+          <div class="hero-update-actions">
+            <button
+              class="ghost-btn icon-btn update-pen-btn"
+              type="button"
+              data-site-content-open="hero"
+              aria-label="Startseitenbereich bearbeiten"
+              title="Startseitenbereich bearbeiten"
+            >
+              &#9998;
+            </button>
           </div>
         <% } %>
-      </div>
-    </section>
 
-    <div class="home-main-bottom">
-      <div class="home-main-bottom-links">
-        <div class="home-legal-links" aria-label="Rechtliche Informationen">
-          <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
-          <span aria-hidden="true">|</span>
-          <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
-          <span aria-hidden="true">|</span>
-          <a href="/community-regeln" target="_blank" rel="noopener noreferrer">Community-Regeln</a>
-          <span aria-hidden="true">|</span>
-          <a href="/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a>
+        <div class="home-hero-stack">
+          <h1 id="home-hero-title" class="home-hero-title"><%= homeContent.hero_title %></h1>
+          <div id="home-hero-body" class="hero-copy guestbook-entry-body home-hero-copy"><%- homeContent.hero_body_html %></div>
+          <% if (!currentUser) { %>
+            <div class="hero-actions home-hero-actions">
+              <a class="btn" href="/register">Jetzt starten</a>
+              <a class="btn btn-secondary" href="/login">Einloggen</a>
+            </div>
+          <% } %>
         </div>
-
-        <div class="home-copyright">&copy; Seit 2026</div>
-      </div>
+      </section>
 
       <section class="home-main-discord" aria-label="Discord">
         <article class="home-stat home-stat-highlight home-stat-server-breakdown home-discord-card">
@@ -193,6 +179,22 @@
           </a>
         </article>
       </section>
+    </div>
+
+    <div class="home-main-bottom">
+      <div class="home-main-bottom-links">
+        <div class="home-legal-links" aria-label="Rechtliche Informationen">
+          <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+          <span aria-hidden="true">|</span>
+          <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
+          <span aria-hidden="true">|</span>
+          <a href="/community-regeln" target="_blank" rel="noopener noreferrer">Community-Regeln</a>
+          <span aria-hidden="true">|</span>
+          <a href="/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a>
+        </div>
+
+        <div class="home-copyright">&copy; Seit 2026</div>
+      </div>
     </div>
   </div>
 </div>
