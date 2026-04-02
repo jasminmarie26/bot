@@ -2929,6 +2929,26 @@ a:hover {
   margin-bottom: 0;
 }
 
+.home-main-bottom {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.home-main-bottom-links {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.home-main-discord {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.home-main-discord .home-discord-card {
+  width: min(100%, 280px);
+}
+
 .home-copyright {
   margin-top: 0.55rem;
   display: flex;
@@ -3231,9 +3251,19 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-stats-shell > .home-stats-title,
-  .home-stats-shell > .home-stat-divider,
-  .home-stats-shell > .home-stat-group:last-of-type {
+  .home-stats-shell > .home-stat-divider {
     grid-column: 1 / -1;
+  }
+
+  .home-main-bottom {
+    margin-top: 0.6rem;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
+    align-items: end;
+    gap: 0.8rem;
+  }
+
+  .home-main-bottom-links {
+    min-width: 0;
   }
 
   .home-stat-group {
@@ -9793,6 +9823,14 @@ select:focus {
 
   .home-discord-card {
     text-align: left;
+  }
+
+  .home-main-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .home-main-discord {
+    justify-content: center;
   }
 
   .character-header {
