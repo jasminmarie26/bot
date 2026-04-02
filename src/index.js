@@ -52,7 +52,20 @@ const SERVER_OPTIONS = [
   { id: "erp", label: "ERP" }
 ];
 const GUESTBOOK_PAGE_SIZE = 12;
-const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
+const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
+const LEGACY_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
+const GUESTBOOK_THEME_TEXT_COLORS = {
+  "pergament-gold": "#EED7AE",
+  rosenlack: "#F3CAD3",
+  mondsilber: "#DCE5F2",
+  elfenhain: "#D2EDBC",
+  kupferpatina: "#D5E6DF",
+  bernsteinfeuer: "#F1D09C",
+  sternsamt: "#D9E1FF",
+  winterglas: "#E4F2F6",
+  tintenmeer: "#D0EEF4",
+  "obsidian-ornament": "#E7D1A3"
+};
 const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
 const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
 const GUESTBOOK_THEME_STYLE_OPTIONS = new Set([
@@ -7242,6 +7255,16 @@ function normalizeGuestbookOpacity(input, fallback = 100) {
   return Math.min(100, Math.max(0, value));
 }
 
+function resolveGuestbookPageTextColor(rawColor, themeStyle) {
+  const normalizedColor = normalizeGuestbookColor(rawColor);
+  if (normalizedColor && normalizedColor !== LEGACY_GUESTBOOK_PAGE_TEXT_COLOR) {
+    return normalizedColor;
+  }
+
+  const normalizedThemeStyle = String(themeStyle || "").trim().toLowerCase();
+  return GUESTBOOK_THEME_TEXT_COLORS[normalizedThemeStyle] || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR;
+}
+
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeGuestbookPageContentInput(body.page_content, 12000);
   const safeBody = body || {};
@@ -7259,8 +7282,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     "scroll"
   );
   const existingChatTextColor = normalizeGuestbookColor(existingSettings?.chat_text_color);
-  const existingPageTextColor =
-    normalizeGuestbookColor(existingSettings?.page_text_color) || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR;
+  const existingPageTextColor = normalizeGuestbookColor(existingSettings?.page_text_color);
   const existingFrameColor = normalizeOptionalGuestbookColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookColor(existingSettings?.background_color);
   const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
@@ -7382,8 +7404,7 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     outer_image_repeat: 0,
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
     chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
-    page_text_color:
-      normalizeGuestbookColor(baseSettings?.page_text_color) || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR,
+    page_text_color: normalizeGuestbookColor(baseSettings?.page_text_color),
     frame_color: normalizeOptionalGuestbookColor(page?.frame_color),
     background_color: normalizeOptionalGuestbookColor(page?.background_color),
     surround_color: normalizeOptionalGuestbookColor(page?.surround_color),
@@ -15082,6 +15103,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     },
     guestbookPageNavigation,
     guestbookSettings,
+    guestbookPageTextColor: resolveGuestbookPageTextColor(
+      guestbookSettings?.page_text_color,
+      guestbookSettings?.theme_style
+    ),
     guestbookPostingCharacters: postingCharactersState.characters,
     selectedGuestbookAuthorCharacterId: postingCharactersState.selectedCharacterId,
     guestbookContextQuery: buildGuestbookContextQuery(guestbookAccessState),
@@ -15361,6 +15386,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     pageNumber: previewPage.page_number,
     guestbookPageNavigation,
     guestbookSettings: previewSettings,
+    guestbookPageTextColor: resolveGuestbookPageTextColor(
+      previewSettings?.page_text_color,
+      previewSettings?.theme_style
+    ),
     previewHtml: renderGuestbookBbcode(previewContent),
     previewBackUrl: buildGuestbookEditorReturnUrl(req, character, previewPage.id)
   });
