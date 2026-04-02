@@ -2932,7 +2932,7 @@ a:hover {
 
 .home-main-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(195px, 210px);
+  grid-template-columns: minmax(0, 1fr) minmax(185px, 200px);
   gap: 0.9rem;
   align-items: start;
 }
@@ -2951,7 +2951,7 @@ a:hover {
 .home-main-discord {
   display: grid;
   width: 100%;
-  max-width: 210px;
+  max-width: 200px;
   justify-items: start;
   justify-self: end;
   align-self: start;
@@ -3532,7 +3532,7 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-main-top {
-    grid-template-columns: minmax(0, 1fr) minmax(195px, 210px);
+    grid-template-columns: minmax(0, 1fr) minmax(185px, 200px);
     gap: 0.8rem;
   }
 
