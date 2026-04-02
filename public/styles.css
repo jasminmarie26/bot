@@ -2949,7 +2949,7 @@ a:hover {
 }
 
 .home-main-discord .home-discord-card {
-  width: min(100%, 280px);
+  width: min(100%, 240px);
 }
 
 .home-copyright {
@@ -3187,6 +3187,11 @@ body.page-home-screen .home-hero-actions {
   color: #fff;
 }
 
+.home-discord-icon[hidden],
+.home-discord-icon-fallback[hidden] {
+  display: none;
+}
+
 .home-discord-copy {
   min-width: 0;
   display: grid;
@@ -3209,6 +3214,7 @@ body.page-home-screen .home-hero-actions {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.35;
+  display: none;
 }
 
 .home-discord-join {
