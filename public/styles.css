@@ -2932,7 +2932,7 @@ a:hover {
 
 .home-main-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 265px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 255px);
   gap: 0.9rem;
   align-items: start;
 }
@@ -2951,7 +2951,7 @@ a:hover {
 .home-main-discord {
   display: grid;
   width: 100%;
-  max-width: 265px;
+  max-width: 255px;
   justify-items: start;
   justify-self: end;
   align-self: start;
@@ -3061,6 +3061,8 @@ body.page-home-screen .home-hero-actions {
 }
 
 .home-support-title {
+  width: 100%;
+  text-align: center;
   white-space: nowrap;
   line-height: 1.1;
   font-size: clamp(0.72rem, 0.64rem + 0.18vw, 0.82rem);
@@ -3357,16 +3359,18 @@ body.page-home-screen .home-hero-actions {
 }
 
 .home-contact-link-text {
-  color: color-mix(in srgb, var(--accent) 80%, #f4d98a 20%);
+  display: block;
+  width: 100%;
+  text-align: center;
+  color: var(--link);
   text-decoration: none;
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.2;
 }
 
 .home-contact-link-text:hover,
 .home-contact-link-text:focus-visible {
-  color: color-mix(in srgb, var(--accent) 92%, white 8%);
   text-decoration: underline;
 }
 
@@ -3528,7 +3532,7 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-main-top {
-    grid-template-columns: minmax(0, 1fr) minmax(250px, 265px);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 255px);
     gap: 0.8rem;
   }
 
