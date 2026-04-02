@@ -397,7 +397,10 @@ body.theme-windows-xp {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(59, 129, 213, 0.24)),
     radial-gradient(circle at 50% -12%, rgba(255, 255, 255, 0.42), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(31, 88, 160, 0.18) 28%, rgba(24, 71, 136, 0.34) 100%),
+    url("/Windows XP Theme.png") center 12% / cover no-repeat,
     linear-gradient(180deg, #6fb5ff 0%, #4d97f0 18%, #3579d7 54%, #295fb9 100%);
+  background-attachment: scroll, scroll, scroll, fixed, scroll;
 }
 
 body.theme-windows-xp::before {
