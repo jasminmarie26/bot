@@ -12,7 +12,10 @@
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const onlineCharList = document.getElementById("online-char-list");
+  const chatRoomHeading = document.querySelector(".chat-room-heading");
   const chatRoomTitle = document.querySelector(".chat-room-title");
+  const chatRoomDivider = document.querySelector(".chat-room-divider");
+  let chatRoomDescription = document.querySelector(".chat-room-description");
   const onlineActionsMenu = document.getElementById("online-actions-menu");
   const onlineActionGuestbook = document.getElementById("online-action-guestbook");
   const onlineActionWhisper = document.getElementById("online-action-whisper");
@@ -1634,6 +1637,43 @@
       } else if (lockNode) {
         lockNode.remove();
       }
+
+    if (typeof payload?.roomName === "string") {
+      const roomNameText = String(payload.roomName || "").trim();
+      let titleTextNode = chatRoomTitle.querySelector(".chat-room-title-text");
+
+      if (!titleTextNode) {
+        Array.from(chatRoomTitle.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .forEach((node) => node.remove());
+
+        titleTextNode = document.createElement("span");
+        titleTextNode.className = "chat-room-title-text";
+        chatRoomTitle.append(titleTextNode);
+      }
+
+      titleTextNode.textContent = roomNameText;
+    }
+
+    if (!chatRoomHeading || !chatRoomDivider || !Object.prototype.hasOwnProperty.call(payload || {}, "roomDescription")) {
+      return;
+    }
+
+    const nextRoomDescription = String(payload?.roomDescription || "").trim();
+    if (nextRoomDescription) {
+      if (!chatRoomDescription) {
+        chatRoomDescription = document.createElement("p");
+        chatRoomDescription.className = "chat-room-description";
+        chatRoomHeading.insertBefore(chatRoomDescription, chatRoomDivider);
+      }
+      chatRoomDescription.textContent = nextRoomDescription;
+      return;
+    }
+
+    if (chatRoomDescription) {
+      chatRoomDescription.remove();
+      chatRoomDescription = null;
+    }
   }
 
   function getWhisperPartnerUserId(msg) {

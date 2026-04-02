@@ -20682,7 +20682,7 @@ io.on("connection", (socket) => {
       const requestedRoomName = roomRenameArgs.roomName || currentRoomName;
       const requestedRoomDescription = roomRenameArgs.hasDescription
         ? roomRenameArgs.roomDescription
-        : currentRoomDescription;
+        : "";
 
       if (requestedRoomName.length < 2) {
         socket.emit("chat:message", {
@@ -20748,6 +20748,12 @@ io.on("connection", (socket) => {
       const refreshedRoom = getRoomWithCharacter(roomId);
       emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
       emitRoomListRefresh(room.server_id);
+      io.to(socketChannelForRoom(roomId, room.server_id)).emit("chat:room-state", {
+        roomId,
+        isLocked: Number(refreshedRoom?.is_locked) === 1,
+        roomName: refreshedRoom?.name || requestedRoomName,
+        roomDescription: refreshedRoom?.description || ""
+      });
 
       socket.emit("chat:message", {
         type: "system",
