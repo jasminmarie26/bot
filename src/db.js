@@ -44,6 +44,7 @@ db.exec(`
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
     room_log_email_enabled INTEGER NOT NULL DEFAULT 1,
     duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
+    oauth_password_pending INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -757,6 +758,10 @@ if (!userColumns.includes("duplicate_accounts_allowed")) {
   db.exec("ALTER TABLE users ADD COLUMN duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!userColumns.includes("oauth_password_pending")) {
+  db.exec("ALTER TABLE users ADD COLUMN oauth_password_pending INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!characterColumns.includes("festplay_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_id INTEGER");
 }
@@ -1143,6 +1148,7 @@ db.prepare(
 ).run();
 db.prepare("UPDATE users SET room_log_email_enabled = 1 WHERE room_log_email_enabled IS NULL").run();
 db.prepare("UPDATE users SET duplicate_accounts_allowed = 0 WHERE duplicate_accounts_allowed IS NULL").run();
+db.prepare("UPDATE users SET oauth_password_pending = 0 WHERE oauth_password_pending IS NULL").run();
 db.prepare(
   "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
 ).run();

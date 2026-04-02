@@ -1755,11 +1755,18 @@ function renderOAuthBirthDatePage(req, res, options = {}) {
     options.provider || req.session.oauth_birth_date_provider || "google"
   ).trim().toLowerCase();
   const providerLabel = provider === "facebook" ? "Facebook" : "Google";
+  const requireBirthDate = options.requireBirthDate !== false;
+  const requirePassword = Boolean(options.requirePassword);
+  const pageTitle = requireBirthDate && requirePassword
+    ? "Profil vervollständigen"
+    : (requirePassword ? "Passwort festlegen" : "Geburtsdatum ergänzen");
 
   return res.status(options.status || 200).render("oauth-birth-date", {
-    title: "Geburtsdatum ergänzen",
+    title: pageTitle,
     provider,
     providerLabel,
+    requireBirthDate,
+    requirePassword,
     error: options.error || "",
     values: {
       birth_date: options.values?.birth_date || ""
@@ -3167,7 +3174,8 @@ function getAccountUserById(userId) {
   return db
     .prepare(
       `SELECT id, username, email, birth_date, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
-              room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at
+              room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at,
+              oauth_password_pending
        FROM users
        WHERE id = ?`
     )
@@ -3230,7 +3238,10 @@ function findOrCreateOAuthUser(provider, profile, requestIp = "") {
     .get(providerId);
 
   if (userByProvider) {
-    return toSessionUser(userByProvider);
+    return {
+      sessionUser: toSessionUser(userByProvider),
+      isNewUser: false
+    };
   }
 
   if (email) {
@@ -3257,7 +3268,10 @@ function findOrCreateOAuthUser(provider, profile, requestIp = "") {
       ).run(providerId, email, userByEmail.id);
 
       const refreshed = getUserForSessionById(userByEmail.id);
-      return toSessionUser(refreshed);
+      return {
+        sessionUser: toSessionUser(refreshed),
+        isNewUser: false
+      };
     }
   }
 
@@ -3273,6 +3287,7 @@ function findOrCreateOAuthUser(provider, profile, requestIp = "") {
 
   const googleId = provider === "google" ? providerId : "";
   const facebookId = provider === "facebook" ? providerId : "";
+  const oauthPasswordPending = provider === "google" ? 1 : 0;
   const duplicateAccountStatus = getDuplicateAccountRegistrationStatus(requestIp);
 
   if (duplicateAccountStatus.isBlocked) {
@@ -3285,8 +3300,8 @@ function findOrCreateOAuthUser(provider, profile, requestIp = "") {
   const info = db
     .prepare(
       `INSERT INTO users
-       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id, registration_ip, username_changed_at)
-       VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+       (username, password_hash, is_admin, is_moderator, theme, email, google_id, facebook_id, registration_ip, username_changed_at, oauth_password_pending)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`
     )
     .run(
       username,
@@ -3296,12 +3311,16 @@ function findOrCreateOAuthUser(provider, profile, requestIp = "") {
       email,
       googleId,
       facebookId,
-      duplicateAccountStatus.ip
+      duplicateAccountStatus.ip,
+      oauthPasswordPending
     );
 
   getAccountNumberByUserId(info.lastInsertRowid);
   const created = getUserForSessionById(info.lastInsertRowid);
-  return toSessionUser(created);
+  return {
+    sessionUser: toSessionUser(created),
+    isNewUser: true
+  };
 }
 
 if (GOOGLE_AUTH_ENABLED) {
@@ -9560,28 +9579,66 @@ function requireSiteUpdateEditor(req, res, next) {
   return next();
 }
 
-function isOAuthBirthDateCompletionRequired(req) {
-  if (!req.session?.user || !req.session?.oauth_birth_date_required) {
-    return false;
+function clearOAuthProfileCompletionSession(req) {
+  delete req.session.oauth_birth_date_required;
+  delete req.session.oauth_password_required;
+  delete req.session.oauth_birth_date_provider;
+  delete req.session.oauth_birth_date_redirect;
+}
+
+function getOAuthProfileCompletionState(req) {
+  if (
+    !req.session?.user ||
+    (!req.session?.oauth_birth_date_required && !req.session?.oauth_password_required)
+  ) {
+    return {
+      required: false,
+      requireBirthDate: false,
+      requirePassword: false
+    };
   }
 
   const accountUser = getAccountUserById(req.session.user.id);
   if (!accountUser) {
     req.session.user = null;
-    delete req.session.oauth_birth_date_required;
-    delete req.session.oauth_birth_date_provider;
-    delete req.session.oauth_birth_date_redirect;
-    return false;
+    clearOAuthProfileCompletionSession(req);
+    return {
+      required: false,
+      requireBirthDate: false,
+      requirePassword: false
+    };
   }
 
-  if (normalizeBirthDate(accountUser.birth_date)) {
-    delete req.session.oauth_birth_date_required;
-    delete req.session.oauth_birth_date_provider;
-    delete req.session.oauth_birth_date_redirect;
-    return false;
+  const requireBirthDate =
+    Boolean(req.session.oauth_birth_date_required) &&
+    !normalizeBirthDate(accountUser.birth_date);
+  const requirePassword =
+    Boolean(req.session.oauth_password_required) &&
+    Number(accountUser.oauth_password_pending) === 1;
+
+  if (!requireBirthDate && !requirePassword) {
+    clearOAuthProfileCompletionSession(req);
+    return {
+      required: false,
+      requireBirthDate: false,
+      requirePassword: false
+    };
   }
 
-  return true;
+  const provider = String(req.session.oauth_birth_date_provider || "google")
+    .trim()
+    .toLowerCase() === "facebook"
+    ? "facebook"
+    : "google";
+
+  return {
+    required: true,
+    provider,
+    providerLabel: provider === "facebook" ? "Facebook" : "Google",
+    requireBirthDate,
+    requirePassword,
+    accountUser
+  };
 }
 
 app.use((req, res, next) => {
@@ -9626,7 +9683,8 @@ app.use((req, res, next) => {
     }
   }
 
-  if (isOAuthBirthDateCompletionRequired(req)) {
+  const oauthCompletionState = getOAuthProfileCompletionState(req);
+  if (oauthCompletionState.required) {
     const normalizedPath = String(req.path || "").trim();
     const isAllowedPath =
       normalizedPath === "/auth/complete-profile" ||
@@ -10439,31 +10497,33 @@ app.get("/auth/google/callback", (req, res, next) => {
   }
 
   return passport.authenticate(
-    "google",
-    { session: false, failureRedirect: "/login" },
-    (error, profile) => {
+      "google",
+      { session: false, failureRedirect: "/login" },
+      (error, profile) => {
       if (error || !profile) {
         setFlash(req, "error", "Google Login fehlgeschlagen.");
         return res.redirect("/login");
       }
 
-      try {
-        req.session.user = findOrCreateOAuthUser("google", profile, getRequestIp(req));
-        req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
-        touchUserLoginMetadata(req.session.user.id, req);
-        const accountUser = getAccountUserById(req.session.user.id);
-        if (!normalizeBirthDate(accountUser?.birth_date)) {
-          req.session.oauth_birth_date_required = true;
-          req.session.oauth_birth_date_provider = "google";
-          req.session.oauth_birth_date_redirect = "/dashboard";
-          return res.redirect("/auth/complete-profile");
-        }
-        delete req.session.oauth_birth_date_required;
-        delete req.session.oauth_birth_date_provider;
-        delete req.session.oauth_birth_date_redirect;
-        setPostLoginFlash(req, req.session.user.id, "Mit Google eingeloggt.");
-        return res.redirect("/dashboard");
-      } catch (oauthError) {
+        try {
+          const oauthUser = findOrCreateOAuthUser("google", profile, getRequestIp(req));
+          req.session.user = oauthUser.sessionUser;
+          req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
+          touchUserLoginMetadata(req.session.user.id, req);
+          const accountUser = getAccountUserById(req.session.user.id);
+          const requiresBirthDate = !normalizeBirthDate(accountUser?.birth_date);
+          const requiresPassword = Number(accountUser?.oauth_password_pending) === 1;
+          if (requiresBirthDate || requiresPassword) {
+            req.session.oauth_birth_date_required = requiresBirthDate;
+            req.session.oauth_password_required = requiresPassword;
+            req.session.oauth_birth_date_provider = "google";
+            req.session.oauth_birth_date_redirect = "/dashboard";
+            return res.redirect("/auth/complete-profile");
+          }
+          clearOAuthProfileCompletionSession(req);
+          setPostLoginFlash(req, req.session.user.id, "Mit Google eingeloggt.");
+          return res.redirect("/dashboard");
+        } catch (oauthError) {
         console.error(oauthError);
         if (oauthError?.code === "DISPOSABLE_EMAIL_DOMAIN") {
           logRegistrationGuardEvent({
@@ -10529,31 +10589,31 @@ app.get("/auth/facebook/callback", (req, res, next) => {
   }
 
   return passport.authenticate(
-    "facebook",
-    { session: false, failureRedirect: "/login" },
-    (error, profile) => {
+      "facebook",
+      { session: false, failureRedirect: "/login" },
+      (error, profile) => {
       if (error || !profile) {
         setFlash(req, "error", "Facebook Login fehlgeschlagen.");
         return res.redirect("/login");
       }
 
-      try {
-        req.session.user = findOrCreateOAuthUser("facebook", profile, getRequestIp(req));
-        req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
-        touchUserLoginMetadata(req.session.user.id, req);
-        const accountUser = getAccountUserById(req.session.user.id);
-        if (!normalizeBirthDate(accountUser?.birth_date)) {
-          req.session.oauth_birth_date_required = true;
-          req.session.oauth_birth_date_provider = "facebook";
-          req.session.oauth_birth_date_redirect = "/dashboard";
-          return res.redirect("/auth/complete-profile");
-        }
-        delete req.session.oauth_birth_date_required;
-        delete req.session.oauth_birth_date_provider;
-        delete req.session.oauth_birth_date_redirect;
-        setPostLoginFlash(req, req.session.user.id, "Mit Facebook eingeloggt.");
-        return res.redirect("/dashboard");
-      } catch (oauthError) {
+        try {
+          const oauthUser = findOrCreateOAuthUser("facebook", profile, getRequestIp(req));
+          req.session.user = oauthUser.sessionUser;
+          req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
+          touchUserLoginMetadata(req.session.user.id, req);
+          const accountUser = getAccountUserById(req.session.user.id);
+          if (!normalizeBirthDate(accountUser?.birth_date)) {
+            req.session.oauth_birth_date_required = true;
+            req.session.oauth_password_required = false;
+            req.session.oauth_birth_date_provider = "facebook";
+            req.session.oauth_birth_date_redirect = "/dashboard";
+            return res.redirect("/auth/complete-profile");
+          }
+          clearOAuthProfileCompletionSession(req);
+          setPostLoginFlash(req, req.session.user.id, "Mit Facebook eingeloggt.");
+          return res.redirect("/dashboard");
+        } catch (oauthError) {
         console.error(oauthError);
         if (oauthError?.code === "DISPOSABLE_EMAIL_DOMAIN") {
           logRegistrationGuardEvent({
@@ -10583,23 +10643,27 @@ app.get("/auth/facebook/callback", (req, res, next) => {
 });
 
 app.get("/auth/complete-profile", requireAuth, (req, res) => {
-  if (!isOAuthBirthDateCompletionRequired(req)) {
+  const completionState = getOAuthProfileCompletionState(req);
+  if (!completionState.required) {
     return res.redirect("/dashboard");
   }
 
-  return renderOAuthBirthDatePage(req, res);
+  return renderOAuthBirthDatePage(req, res, completionState);
 });
 
 app.post("/auth/complete-profile", requireAuth, (req, res) => {
-  if (!isOAuthBirthDateCompletionRequired(req)) {
+  const completionState = getOAuthProfileCompletionState(req);
+  if (!completionState.required) {
     return res.redirect("/dashboard");
   }
 
   const rawBirthDate = String(req.body.birth_date || "").trim().slice(0, 10);
   const birthDate = normalizeBirthDate(rawBirthDate);
+  const password = String(req.body.password || "");
 
-  if (!birthDate) {
+  if (completionState.requireBirthDate && !birthDate) {
     return renderOAuthBirthDatePage(req, res, {
+      ...completionState,
       status: 400,
       error: "Bitte trage ein gültiges Geburtsdatum ein, bevor du weitermachen kannst.",
       values: {
@@ -10608,18 +10672,37 @@ app.post("/auth/complete-profile", requireAuth, (req, res) => {
     });
   }
 
-  db.prepare("UPDATE users SET birth_date = ? WHERE id = ?").run(birthDate, req.session.user.id);
+  if (completionState.requirePassword && password.length < 6) {
+    return renderOAuthBirthDatePage(req, res, {
+      ...completionState,
+      status: 400,
+      error: "Bitte vergib ein Passwort mit mindestens 6 Zeichen für diese Seite.",
+      values: {
+        birth_date: rawBirthDate
+      }
+    });
+  }
+
+  if (completionState.requireBirthDate) {
+    db.prepare("UPDATE users SET birth_date = ? WHERE id = ?").run(birthDate, req.session.user.id);
+  }
+
+  if (completionState.requirePassword) {
+    const passwordHash = bcrypt.hashSync(password, 10);
+    db.prepare("UPDATE users SET password_hash = ?, oauth_password_pending = 0 WHERE id = ?").run(
+      passwordHash,
+      req.session.user.id
+    );
+  }
 
   const refreshedUser = getUserForSessionById(req.session.user.id);
   if (refreshedUser) {
     req.session.user = toSessionUser(refreshedUser);
   }
 
-  delete req.session.oauth_birth_date_required;
-  delete req.session.oauth_birth_date_provider;
   const nextUrl = String(req.session.oauth_birth_date_redirect || "/dashboard").trim() || "/dashboard";
-  delete req.session.oauth_birth_date_redirect;
-  setPostLoginFlash(req, req.session.user.id, "Geburtsdatum gespeichert. Du kannst jetzt weitermachen.");
+  clearOAuthProfileCompletionSession(req);
+  setPostLoginFlash(req, req.session.user.id, "Profil gespeichert. Du kannst jetzt weitermachen.");
   return res.redirect(nextUrl);
 });
 
