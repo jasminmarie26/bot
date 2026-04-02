@@ -1052,6 +1052,39 @@ function normalizeComparableIp(value) {
   return normalized;
 }
 
+function getSocketComparableIp(socket) {
+  const forwarded = String(socket?.handshake?.headers?.["x-forwarded-for"] || "").trim();
+  if (forwarded) {
+    return normalizeComparableIp(forwarded.split(",")[0].trim());
+  }
+  return normalizeComparableIp(socket?.handshake?.address);
+}
+
+function getConnectedUserComparableIps(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return new Set();
+  }
+
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return new Set();
+  }
+
+  const comparableIps = new Set();
+  for (const socket of sockets.values()) {
+    if (Number(socket?.data?.user?.id) !== parsedUserId) {
+      continue;
+    }
+    const comparableIp = getSocketComparableIp(socket);
+    if (comparableIp) {
+      comparableIps.add(comparableIp);
+    }
+  }
+
+  return comparableIps;
+}
+
 function getHomeStatsTrackedIp(user) {
   const registrationIp = normalizeComparableIp(user?.registration_ip);
   if (registrationIp) {
@@ -1104,6 +1137,9 @@ function getHomeStatsHiddenUserIds(users) {
   const primaryAdminUser = getPrimaryHomeStatsAdminUser(users);
   const hiddenUserIds = new Set();
   const adminIps = new Set();
+  const primaryAdminConnectedIps = primaryAdminUser
+    ? getConnectedUserComparableIps(primaryAdminUser.id)
+    : new Set();
 
   users.forEach((user) => {
     if (Number(user?.is_admin) !== 1) {
@@ -1112,6 +1148,11 @@ function getHomeStatsHiddenUserIds(users) {
     const trackedIp = getHomeStatsTrackedIp(user);
     if (trackedIp) {
       adminIps.add(trackedIp);
+    }
+  });
+  primaryAdminConnectedIps.forEach((ip) => {
+    if (ip) {
+      adminIps.add(ip);
     }
   });
 
