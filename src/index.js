@@ -6438,6 +6438,39 @@ const TAVERN_INNKEEPER_PRESENCE_KEY = "npc:edric-muehlenbrand";
 const TAVERN_INNKEEPER_CHAT_TEXT_COLOR = "#c4863a";
 const TAVERN_INNKEEPER_COOLDOWN_MS = 8000;
 const tavernInnkeeperLastReactionAtByRoom = new Map();
+const TAVERN_INNKEEPER_DRINK_ORDERS = [
+  { label: "einen Krug dunkles Bier", keywords: ["dunkelbier", "dunkles bier", "stout", "porter"] },
+  { label: "ein helles Bier", keywords: ["helles bier", "helles", "lager", "pils", "pilsner"] },
+  { label: "ein großes Weizen", keywords: ["weizen", "weissbier", "weizenbier"] },
+  { label: "einen Krug Ale", keywords: ["ale"] },
+  { label: "einen Becher Met", keywords: ["met", "honigwein"] },
+  { label: "ein Glas Rotwein", keywords: ["rotwein"] },
+  { label: "ein Glas Weißwein", keywords: ["weisswein"] },
+  { label: "ein Glas Rosé", keywords: ["rose", "rosé"] },
+  { label: "ein Glas Wein", keywords: ["wein"] },
+  { label: "einen Krug Cider", keywords: ["cider", "cidre"] },
+  { label: "ein Glas Sekt", keywords: ["sekt", "schaumwein"] },
+  { label: "ein Glas Prosecco", keywords: ["prosecco"] },
+  { label: "einen guten Rum", keywords: ["rum", "grog"] },
+  { label: "einen Schluck Whisky", keywords: ["whisky", "whiskey", "bourbon", "scotch"] },
+  { label: "einen klaren Wodka", keywords: ["wodka", "vodka"] },
+  { label: "einen kräftigen Gin", keywords: ["gin"] },
+  { label: "einen kleinen Tequila", keywords: ["tequila"] },
+  { label: "einen Kräuterlikör", keywords: ["likoer", "likör", "kraeuterlikoer", "kräuterlikör"] },
+  { label: "einen Schluck Absinth", keywords: ["absinth", "absinthe"] },
+  { label: "einen Weinbrand", keywords: ["weinbrand", "brandy", "cognac"] },
+  { label: "einen Schnaps", keywords: ["schnaps", "obstler", "korn"] },
+  { label: "einen warmen Tee", keywords: ["tee", "kraeutertee", "kräutertee"] },
+  { label: "einen heißen Kaffee", keywords: ["kaffee"] },
+  { label: "einen heißen Kakao", keywords: ["kakao", "schokolade", "heisse schokolade", "heiße schokolade"] },
+  { label: "ein Glas Wasser", keywords: ["wasser", "quellwasser"] },
+  { label: "einen Krug Milch", keywords: ["milch"] },
+  { label: "ein Glas Apfelsaft", keywords: ["apfelsaft", "most"] },
+  { label: "ein Glas Orangensaft", keywords: ["orangensaft", "orangesaft"] },
+  { label: "ein Glas Beerensaft", keywords: ["beerensaft", "beerensaefte", "beerensafte"] },
+  { label: "ein Glas Traubensaft", keywords: ["traubensaft"] },
+  { label: "ein kühles Bier", keywords: ["bier"] }
+];
 
 function isTavernInnkeeperRoom(room, serverId = null) {
   const definition = getCuratedPublicRoomDefinition(room, serverId);
@@ -6473,6 +6506,17 @@ function pickRandomTavernInnkeeperReply(replies) {
   return String(replies[randomIndex] || "").trim();
 }
 
+function getRequestedTavernDrinkLabel(normalizedText) {
+  if (!normalizedText) {
+    return "";
+  }
+
+  const matchedDrink = TAVERN_INNKEEPER_DRINK_ORDERS.find((entry) =>
+    tavernInnkeeperTextIncludesAny(normalizedText, entry.keywords)
+  );
+  return String(matchedDrink?.label || "").trim();
+}
+
 function buildTavernInnkeeperReaction(content, actorName) {
   const normalizedText = normalizeTavernInnkeeperTriggerText(content);
   if (!normalizedText) {
@@ -6485,14 +6529,12 @@ function buildTavernInnkeeperReaction(content, actorName) {
     "muehlenbrand",
     "wirt"
   ]);
-  const mentionsDrink = tavernInnkeeperTextIncludesAny(normalizedText, [
-    "bier",
-    "met",
-    "ale",
-    "wein",
-    "krug",
+  const requestedDrinkLabel = getRequestedTavernDrinkLabel(normalizedText);
+  const mentionsDrink = Boolean(requestedDrinkLabel) || tavernInnkeeperTextIncludesAny(normalizedText, [
     "durst",
-    "trinken"
+    "trinken",
+    "bestellen",
+    "zu trinken"
   ]);
   const mentionsFood = tavernInnkeeperTextIncludesAny(normalizedText, [
     "eintopf",
@@ -6530,12 +6572,13 @@ function buildTavernInnkeeperReaction(content, actorName) {
   }
 
   if (mentionsDrink) {
+    const servedDrink = requestedDrinkLabel || "einen frisch gefüllten Krug";
     return pickRandomTavernInnkeeperReply([
-      `schiebt ${safeActorName} einen frisch gefüllten Krug über den Tresen. #Hier, frisch gezapft.#`,
-      `gießt ${safeActorName} einen Becher Met ein und nickt zufrieden. #Der erste Schluck geht auf gute Geschichten.#`,
-      `stellt ${safeActorName} ein kühles Bier hin und wischt den Tresen sauber. #Greif zu, solange es noch schäumt.#`,
-      `zieht ${safeActorName} ein dunkles Bier und stellt es mit ruhiger Hand ab. #Das wärmt besser als jedes Feuer.#`,
-      `füllt ${safeActorName} den Krug bis an den Rand. #Im Silbermond-Krug bleibt niemand durstig.#`
+      `schiebt ${safeActorName} ${servedDrink} über den Tresen. #Hier, frisch eingeschenkt.#`,
+      `stellt ${safeActorName} ${servedDrink} hin und wischt den Tresen sauber. #Greif zu, solange es noch gut ist.#`,
+      `gießt ${safeActorName} ${servedDrink} ein und nickt zufrieden. #Der erste Schluck geht auf gute Geschichten.#`,
+      `reicht ${safeActorName} ${servedDrink} mit ruhiger Hand. #Im Silbermond-Krug bleibt niemand durstig.#`,
+      `stellt ${safeActorName} ${servedDrink} hin und lehnt sich kurz auf den Tresen. #Das wärmt besser als kalte Straßen.#`
     ]);
   }
 

@@ -1548,9 +1548,9 @@
         }
         applySpecialNameDecor(strong, displayActorName);
         applyChatTextColor(strong, presenceActorChatTextColor);
-        body.textContent = ` ${content}`;
         body.style.color = "#000000";
         line.appendChild(strong);
+        appendFormattedChatText(body, content, { leadingSpace: true });
       } else {
         body.textContent = content;
       }
