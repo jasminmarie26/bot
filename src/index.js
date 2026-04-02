@@ -529,8 +529,24 @@ const FESTPLAY_INACTIVITY_MONTHS = 6;
 const FESTPLAY_INACTIVITY_SQL_OFFSET = `-${FESTPLAY_INACTIVITY_MONTHS} months`;
 const FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS = 1000 * 60 * 60;
 const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
+const DISCORD_HOME_INVITE_URL = "https://discord.gg/CWWxbZenwS";
+const DISCORD_HOME_INVITE_CODE = "CWWxbZenwS";
+const DISCORD_HOME_INVITE_API_URL =
+  `https://discord.com/api/v9/invites/${DISCORD_HOME_INVITE_CODE}?with_counts=true&with_expiration=true`;
+const DISCORD_HOME_STATS_CACHE_TTL_MS = 1000 * 60 * 2;
+const DISCORD_HOME_FETCH_TIMEOUT_MS = 5000;
 let cachedLoginStats = null;
 let cachedLoginStatsExpiresAt = 0;
+let cachedDiscordHomeStats = {
+  guildName: "Heldenhafte Reisen Discord",
+  inviteUrl: DISCORD_HOME_INVITE_URL,
+  memberCount: null,
+  onlineCount: null,
+  iconUrl: "",
+  available: false
+};
+let cachedDiscordHomeStatsExpiresAt = 0;
+let discordHomeStatsRefreshPromise = null;
 let inactiveFestplayCleanupRunning = false;
 const DEFAULT_SEO_DESCRIPTION =
   "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.";
@@ -638,6 +654,104 @@ function setFlash(req, type, text) {
 function clearLoginStatsCache() {
   cachedLoginStats = null;
   cachedLoginStatsExpiresAt = 0;
+}
+
+function buildDiscordHomeIconUrl(guildId, iconHash) {
+  const normalizedGuildId = String(guildId || "").trim();
+  const normalizedIconHash = String(iconHash || "").trim();
+  if (!normalizedGuildId || !normalizedIconHash) {
+    return "";
+  }
+
+  return `https://cdn.discordapp.com/icons/${encodeURIComponent(normalizedGuildId)}/${encodeURIComponent(normalizedIconHash)}.png?size=128`;
+}
+
+function normalizeDiscordHomeStats(payload) {
+  const guild = payload && typeof payload === "object" ? payload.guild || {} : {};
+  const profile = payload && typeof payload === "object" ? payload.profile || {} : {};
+  const guildName = String(
+    profile.name || guild.name || cachedDiscordHomeStats.guildName || "Heldenhafte Reisen Discord"
+  ).trim() || "Heldenhafte Reisen Discord";
+  const memberCountRaw =
+    profile.member_count ?? payload?.approximate_member_count ?? payload?.member_count;
+  const onlineCountRaw =
+    profile.online_count ?? payload?.approximate_presence_count ?? payload?.presence_count;
+  const memberCount = Number.isFinite(Number(memberCountRaw)) ? Number(memberCountRaw) : null;
+  const onlineCount = Number.isFinite(Number(onlineCountRaw)) ? Number(onlineCountRaw) : null;
+
+  return {
+    guildName,
+    inviteUrl: DISCORD_HOME_INVITE_URL,
+    memberCount,
+    onlineCount,
+    iconUrl: buildDiscordHomeIconUrl(guild.id || payload?.guild_id, guild.icon || profile.icon_hash),
+    available: memberCount !== null || onlineCount !== null
+  };
+}
+
+function getDiscordHomeStats() {
+  if (Date.now() >= cachedDiscordHomeStatsExpiresAt) {
+    void refreshDiscordHomeStats();
+  }
+
+  return cachedDiscordHomeStats;
+}
+
+async function refreshDiscordHomeStats(force = false) {
+  if (discordHomeStatsRefreshPromise) {
+    return discordHomeStatsRefreshPromise;
+  }
+
+  if (!force && Date.now() < cachedDiscordHomeStatsExpiresAt) {
+    return cachedDiscordHomeStats;
+  }
+
+  discordHomeStatsRefreshPromise = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DISCORD_HOME_FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(DISCORD_HOME_INVITE_API_URL, {
+        signal: controller.signal,
+        headers: {
+          accept: "application/json",
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Discord invite request failed with status ${response.status}`);
+      }
+
+      const previousStats = JSON.stringify(cachedDiscordHomeStats);
+      cachedDiscordHomeStats = normalizeDiscordHomeStats(await response.json());
+      cachedDiscordHomeStatsExpiresAt = Date.now() + DISCORD_HOME_STATS_CACHE_TTL_MS;
+      clearLoginStatsCache();
+
+      if (JSON.stringify(cachedDiscordHomeStats) !== previousStats) {
+        io.emit("site:stats:update", getLoginStats());
+      }
+
+      return cachedDiscordHomeStats;
+    } catch (error) {
+      cachedDiscordHomeStatsExpiresAt = Date.now() + 30000;
+      return cachedDiscordHomeStats;
+    } finally {
+      clearTimeout(timeout);
+      discordHomeStatsRefreshPromise = null;
+    }
+  })();
+
+  return discordHomeStatsRefreshPromise;
+}
+
+async function ensureDiscordHomeStats() {
+  if (Date.now() < cachedDiscordHomeStatsExpiresAt) {
+    return cachedDiscordHomeStats;
+  }
+
+  return refreshDiscordHomeStats(true);
 }
 
 function collectActiveSessionUserIds(options = {}) {
@@ -918,6 +1032,7 @@ function getOnlineUserCountForServers(serverIds) {
 }
 
 function buildLoginStats() {
+  const discordHomeStats = getDiscordHomeStats();
   const activeUserIds = getActiveSessionUserIds();
   const accountCount =
     db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
@@ -950,6 +1065,12 @@ function buildLoginStats() {
     erpOnlineCount,
     rpOnlineCount,
     larpOnlineCount: 0,
+    discordGuildName: discordHomeStats.guildName,
+    discordInviteUrl: discordHomeStats.inviteUrl,
+    discordMemberCount: discordHomeStats.memberCount,
+    discordOnlineCount: discordHomeStats.onlineCount,
+    discordIconUrl: discordHomeStats.iconUrl,
+    discordAvailable: discordHomeStats.available,
     loggedInUserCount: getLoggedInUsersCount(activeUserIds),
     adminOnlineCount: staffStats.adminOnlineCount,
     adminOnlineNames: staffStats.adminOnlineNames,
@@ -9895,7 +10016,8 @@ app.get("/media/guestbook-image", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
+  await ensureDiscordHomeStats();
   const homeContent = getHomeContent();
   const recentSiteUpdates = getRecentSiteUpdates(30);
   return res.render("home", {
@@ -21456,6 +21578,7 @@ const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {
   ensureCuratedPublicRooms();
   pruneEmptyRooms();
+  void refreshDiscordHomeStats(true);
   const purgedSessionCount = purgeInactiveStoredSessions();
   if (purgedSessionCount > 0) {
     console.log(`Inaktive Sitzungen bereinigt: ${purgedSessionCount}`);

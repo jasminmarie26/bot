@@ -1,4 +1,6 @@
 (() => {
+  const TRANSPARENT_PIXEL =
+    "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
   const list = document.getElementById("site-updates-list");
 
   const updateModal = document.getElementById("update-modal");
@@ -31,6 +33,12 @@
   const erpOnlineCountElement = document.getElementById("home-erp-online-count");
   const larpCharacterCountElement = document.getElementById("home-larp-character-count");
   const larpOnlineCountElement = document.getElementById("home-larp-online-count");
+  const discordNameElement = document.getElementById("home-discord-name");
+  const discordMemberCountElement = document.getElementById("home-discord-member-count");
+  const discordOnlineCountElement = document.getElementById("home-discord-online-count");
+  const discordIconElement = document.getElementById("home-discord-icon");
+  const discordIconFallbackElement = document.getElementById("home-discord-icon-fallback");
+  const discordLinkElements = Array.from(document.querySelectorAll("[data-home-discord-link]"));
   const staffCardElement = staffCountElement?.closest(".home-stat") || null;
   const liveUpdatesLink = document.querySelector("[data-live-updates-link-root]");
   const liveUpdatesBadge = liveUpdatesLink?.querySelector("[data-live-updates-badge]") || null;
@@ -536,6 +544,42 @@
     setTextContent(erpOnlineCountElement, stats.erpOnlineCount);
     setTextContent(larpCharacterCountElement, stats.larpServerCount);
     setTextContent(larpOnlineCountElement, stats.larpOnlineCount);
+    setTextContent(
+      discordMemberCountElement,
+      Number.isFinite(Number(stats.discordMemberCount)) ? Number(stats.discordMemberCount) : "—"
+    );
+    setTextContent(
+      discordOnlineCountElement,
+      Number.isFinite(Number(stats.discordOnlineCount)) ? Number(stats.discordOnlineCount) : "—"
+    );
+
+    if (discordNameElement && stats.discordGuildName) {
+      discordNameElement.textContent = String(stats.discordGuildName);
+    }
+
+    if (discordIconElement) {
+      const iconUrl = String(stats.discordIconUrl || "").trim();
+      if (iconUrl) {
+        discordIconElement.src = iconUrl;
+        discordIconElement.hidden = false;
+        if (discordIconFallbackElement) {
+          discordIconFallbackElement.hidden = true;
+        }
+      } else {
+        discordIconElement.src = TRANSPARENT_PIXEL;
+        discordIconElement.hidden = true;
+        if (discordIconFallbackElement) {
+          discordIconFallbackElement.hidden = false;
+        }
+      }
+    }
+
+    if (discordLinkElements.length && stats.discordInviteUrl) {
+      discordLinkElements.forEach((element) => {
+        element.href = String(stats.discordInviteUrl);
+      });
+    }
+
     renderStaffNames(stats);
   }
 

@@ -88,6 +88,60 @@
         </article>
       </section>
 
+      <section class="home-stat-group">
+        <h3 class="home-stat-group-title">DISCORD</h3>
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown home-discord-card">
+          <a
+            class="home-discord-summary"
+            href="<%= stats.discordInviteUrl || 'https://discord.gg/CWWxbZenwS' %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-home-discord-link
+          >
+            <img
+              id="home-discord-icon"
+              class="home-discord-icon"
+              src="<%= stats.discordIconUrl || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' %>"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              <%= stats.discordIconUrl ? '' : 'hidden' %>
+            />
+            <div
+              id="home-discord-icon-fallback"
+              class="home-discord-icon home-discord-icon-fallback"
+              aria-hidden="true"
+              <%= stats.discordIconUrl ? 'hidden' : '' %>
+            >D</div>
+            <div class="home-discord-copy">
+              <p id="home-discord-name" class="home-discord-name"><%= stats.discordGuildName || 'Heldenhafte Reisen Discord' %></p>
+              <p class="home-discord-subtitle">Community, Austausch und kurze Wege</p>
+            </div>
+          </a>
+
+          <div class="home-stat-detail-list" aria-label="Discord Übersicht">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Mitglieder:</span>
+              <strong id="home-discord-member-count" class="home-stat-detail-value"><%= typeof stats.discordMemberCount === 'number' ? stats.discordMemberCount : '—' %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Gerade online:</span>
+              <strong id="home-discord-online-count" class="home-stat-detail-value"><%= typeof stats.discordOnlineCount === 'number' ? stats.discordOnlineCount : '—' %></strong>
+            </div>
+          </div>
+
+          <a
+            class="home-discord-join"
+            href="<%= stats.discordInviteUrl || 'https://discord.gg/CWWxbZenwS' %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-home-discord-link
+          >
+            Discord öffnen
+          </a>
+        </article>
+      </section>
+
       <div class="home-stat-divider" aria-hidden="true"></div>
     </div>
   </aside>
