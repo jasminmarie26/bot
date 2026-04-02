@@ -2952,6 +2952,7 @@ a:hover {
   display: grid;
   justify-items: start;
   align-self: start;
+  margin-top: 2.05rem;
 }
 
 .home-main-discord .home-discord-card {
@@ -9853,6 +9854,7 @@ select:focus {
 
   .home-main-discord {
     justify-items: center;
+    margin-top: 0;
   }
 
   .character-header {
