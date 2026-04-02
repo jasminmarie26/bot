@@ -3250,6 +3250,20 @@ body.page-home-screen .home-hero-actions {
   border-color: color-mix(in srgb, #8d98ff 72%, var(--panel-edge) 28%);
 }
 
+.home-discord-extra-link {
+  justify-self: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.home-discord-extra-link:hover,
+.home-discord-extra-link:focus-visible {
+  color: var(--link);
+}
+
 @media (min-width: 1280px) and (min-height: 820px) {
   .home-layout {
     grid-template-columns: 360px minmax(0, 1fr);

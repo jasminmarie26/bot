@@ -10312,6 +10312,13 @@ app.get("/community-regeln", (req, res) => {
   });
 });
 
+app.get("/partner", (req, res) => {
+  return res.render("partner", {
+    title: "Unsere Partner",
+    pageClass: "page-legal"
+  });
+});
+
 app.get("/kontakt", (req, res) => {
   return renderKontaktPage(req, res, {
     success: req.query.sent === "1" ? "Deine Nachricht wurde versendet." : ""
