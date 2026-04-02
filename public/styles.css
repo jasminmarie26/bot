@@ -485,7 +485,10 @@ body.theme-atari {
       rgba(255, 255, 255, 0.035) 0 2px,
       transparent 2px 6px
     ),
+    linear-gradient(180deg, rgba(22, 8, 34, 0.16), rgba(12, 7, 22, 0.4) 52%, rgba(8, 5, 15, 0.6) 100%),
+    url("/Atari Wallpaper.png") center 12% / cover no-repeat,
     linear-gradient(135deg, #13071f 0%, #1f0b39 36%, #251056 62%, #0b0615 100%);
+  background-attachment: scroll, scroll, scroll, scroll, fixed, scroll;
 }
 
 body.theme-atari::before {
