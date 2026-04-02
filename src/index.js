@@ -15694,23 +15694,22 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     previousCharacterId
   );
 
-  memberSocket.data.immediateDisconnectHandled = true;
-  await Promise.resolve(memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId)));
-  memberSocket.disconnect(true);
-  memberSocket.data.roomId = null;
-  memberSocket.data.serverId = null;
-  memberSocket.data.presenceServerId = null;
-
-  finalizeChatDisconnectEntry({
+  schedulePendingChatDisconnect({
     userId: memberSocket.data.user.id,
     characterId: previousCharacterId,
-    presenceKey: getPresenceIdentityKey(memberSocket.data.user.id, previousCharacterId),
     roomId: previousRoomId,
     serverId: previousServerId,
     displayName: disconnectDisplayProfile.label || `User ${memberSocket.data.user?.id || "?"}`,
     chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
     skipPresence: memberSocket.data.skipDisconnectPresence === true
   });
+
+  memberSocket.data.immediateDisconnectHandled = true;
+  await Promise.resolve(memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId)));
+  memberSocket.disconnect(true);
+  memberSocket.data.roomId = null;
+  memberSocket.data.serverId = null;
+  memberSocket.data.presenceServerId = null;
   maybeRemoveEmptyRoom(previousRoomId);
   return res.sendStatus(204);
 });
