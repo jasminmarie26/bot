@@ -553,8 +553,8 @@
       Number.isFinite(Number(stats.discordOnlineCount)) ? Number(stats.discordOnlineCount) : "—"
     );
 
-    if (discordNameElement && stats.discordGuildName) {
-      discordNameElement.textContent = String(stats.discordGuildName);
+    if (discordNameElement) {
+      discordNameElement.textContent = "Discord";
     }
 
     if (discordIconElement) {

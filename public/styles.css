@@ -2924,15 +2924,20 @@ a:hover {
   height: auto;
 }
 
+.home-main-primary {
+  min-width: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
 .home-main-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 280px);
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 230px);
   gap: 0.9rem;
   align-items: start;
 }
 
 .home-main-bottom {
-  margin-top: 0.9rem;
   display: grid;
   gap: 0.9rem;
 }
@@ -2940,22 +2945,23 @@ a:hover {
 .home-main-bottom-links {
   display: grid;
   gap: 0.45rem;
+  justify-items: center;
 }
 
 .home-main-discord {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  justify-items: start;
   align-self: start;
 }
 
 .home-main-discord .home-discord-card {
-  width: min(100%, 240px);
+  width: min(100%, 220px);
 }
 
 .home-copyright {
   margin-top: 0.55rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   font-size: 0.74rem;
   color: var(--muted);
 }
@@ -3205,7 +3211,7 @@ body.page-home-screen .home-hero-actions {
 
 .home-discord-name {
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -3221,7 +3227,7 @@ body.page-home-screen .home-hero-actions {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.2rem;
+  min-height: 2.05rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, #5865f2 58%, var(--panel-edge) 42%);
   background: linear-gradient(
@@ -3231,7 +3237,7 @@ body.page-home-screen .home-hero-actions {
   );
   color: var(--text);
   text-decoration: none;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   transition: transform 160ms ease, border-color 160ms ease, color 160ms ease;
@@ -3274,7 +3280,7 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-main-top {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 270px);
+    grid-template-columns: minmax(0, 1fr) minmax(205px, 220px);
     gap: 0.8rem;
   }
 
@@ -9846,7 +9852,7 @@ select:focus {
   }
 
   .home-main-discord {
-    justify-content: center;
+    justify-items: center;
   }
 
   .character-header {
