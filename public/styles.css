@@ -7402,7 +7402,8 @@ body.page-guestbook-preview::after {
 
 .character-color-panel {
   position: absolute;
-  bottom: calc(100% + 0.6rem);
+  top: calc(100% + 0.6rem);
+  bottom: auto;
   right: 0;
   width: min(16.5rem, calc(100vw - 2rem));
   padding: 0.7rem;
