@@ -1092,6 +1092,10 @@ function getHomeStatsHiddenUserIds(users) {
     if (primaryAdminUser && Number(user?.id) === Number(primaryAdminUser.id)) {
       return;
     }
+    if (Number(user?.is_admin) === 1) {
+      hiddenUserIds.add(Number(user.id));
+      return;
+    }
 
     const trackedIp = getHomeStatsTrackedIp(user);
     if (primaryAdminIp && trackedIp && trackedIp === primaryAdminIp) {
