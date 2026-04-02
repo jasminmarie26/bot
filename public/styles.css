@@ -9392,6 +9392,17 @@ select:focus {
   color: #000000;
 }
 
+.page-chat .role-name-admin.has-noctra-wings,
+.page-chat .role-name-moderator.has-noctra-wings {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: #d4434d !important;
+  color: #d4434d !important;
+  text-shadow: 0 0 0.12em rgba(212, 67, 77, 0.16);
+}
+
 .chat-box .chat-emote {
   color: color-mix(in srgb, #17191d 82%, var(--accent));
 }
