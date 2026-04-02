@@ -151,6 +151,7 @@ const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 0;
+const ROOM_CLEANUP_BOOT_GRACE_MS = 60 * 1000;
 const AUTO_DELETE_EMPTY_ROOMS = false;
 const ROOM_INVITE_TTL_MS = 1000 * 60 * 10;
 const ROOM_INVITE_ACCESS_TTL_MS = 1000 * 60 * 60 * 3;
@@ -19435,6 +19436,7 @@ const pendingChatDisconnects = new Map();
 const pendingRoomLogFinalizations = new Map();
 const CHAT_RECONNECT_GRACE_MS = 12000;
 const ROOM_LOG_EMPTY_GRACE_MS = 10 * 60 * 1000;
+const ROOM_CLEANUP_GRACE_STARTED_AT = Date.now();
 const CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY = "lobby";
 const pruneExpiredChatReconnectSuppressionsStatement = db.prepare(
   "DELETE FROM chat_reconnect_suppressions WHERE expires_at <= ?"
@@ -19530,6 +19532,41 @@ function clearPendingChatDisconnect(userId, roomId, serverId = DEFAULT_SERVER_ID
   return entry;
 }
 
+function getRemainingRoomCleanupBootGraceMs() {
+  const remainingMs = ROOM_CLEANUP_BOOT_GRACE_MS - (Date.now() - ROOM_CLEANUP_GRACE_STARTED_AT);
+  return remainingMs > 0 ? remainingMs : 0;
+}
+
+function getPendingChatDisconnectGraceMsForRoom(roomId) {
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  if (!normalizedRoomId) {
+    return 0;
+  }
+
+  const now = Date.now();
+  let remainingMs = 0;
+  pendingChatDisconnects.forEach((entry) => {
+    if (!entry || Number(entry.roomId) !== normalizedRoomId) {
+      return;
+    }
+
+    const expiresAt = Number(entry.expiresAt);
+    if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+      return;
+    }
+
+    remainingMs = Math.max(remainingMs, expiresAt - now);
+  });
+  return remainingMs;
+}
+
+function getRoomCleanupGraceMs(roomId) {
+  return Math.max(
+    getRemainingRoomCleanupBootGraceMs(),
+    getPendingChatDisconnectGraceMsForRoom(roomId)
+  );
+}
+
 function finalizeChatDisconnectEntry(entry) {
   if (!entry?.presenceKey) {
     return false;
@@ -19597,6 +19634,8 @@ function schedulePendingChatDisconnect({
 
   const normalizedServerId = normalizeServer(serverId);
   const parsedCharacterId = normalizePresenceCharacterId(characterId);
+  const disconnectGraceMs = CHAT_RECONNECT_GRACE_MS;
+  const disconnectExpiresAt = Date.now() + disconnectGraceMs;
   clearPendingChatDisconnect(parsedUserId, roomId, normalizedServerId, parsedCharacterId);
   const key = getPendingChatDisconnectKey(parsedUserId, roomId, normalizedServerId, parsedCharacterId);
 
@@ -19609,13 +19648,14 @@ function schedulePendingChatDisconnect({
     displayName: String(displayName || "").trim(),
     chatTextColor: String(chatTextColor || "").trim(),
     skipPresence: Boolean(skipPresence),
+    expiresAt: disconnectExpiresAt,
     timer: null
   };
 
   entry.timer = setTimeout(() => {
     pendingChatDisconnects.delete(key);
     finalizeChatDisconnectEntry(entry);
-  }, CHAT_RECONNECT_GRACE_MS);
+  }, disconnectGraceMs);
 
   pendingChatDisconnects.set(key, entry);
   return entry;
@@ -19725,17 +19765,19 @@ function scheduleRoomDeletion(roomId) {
     clearPendingRoomDeletion(roomId);
     return;
   }
-  if (ROOM_EMPTY_DELETE_DELAY_MS <= 0) {
-    clearPendingRoomDeletion(roomId);
+  const roomCleanupGraceMs = getRoomCleanupGraceMs(roomId);
+  const roomDeleteDelayMs = Math.max(ROOM_EMPTY_DELETE_DELAY_MS, roomCleanupGraceMs);
+
+  clearPendingRoomDeletion(roomId);
+  if (roomDeleteDelayMs <= 0) {
     maybeRemoveEmptyRoom(roomId);
     return;
   }
-  if (pendingRoomDeletionTimers.has(roomId)) return;
 
   const timer = setTimeout(() => {
     pendingRoomDeletionTimers.delete(roomId);
     maybeRemoveEmptyRoom(roomId);
-  }, ROOM_EMPTY_DELETE_DELAY_MS);
+  }, roomDeleteDelayMs);
 
   pendingRoomDeletionTimers.set(roomId, timer);
 }
@@ -19753,6 +19795,10 @@ function maybeRemoveEmptyRoom(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return false;
   if (!shouldAutoDeleteRoom(roomId)) {
     clearPendingRoomDeletion(roomId);
+    return false;
+  }
+  if (getRoomCleanupGraceMs(roomId) > 0) {
+    scheduleRoomDeletion(roomId);
     return false;
   }
 
