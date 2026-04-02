@@ -941,7 +941,7 @@ function getSocketStaffOnlineEntry(socket) {
   return null;
 }
 
-function getOnlineStaffStats() {
+function getOnlineStaffStats(hiddenUserIds = null) {
   const sockets = io?.of("/")?.sockets;
   if (!sockets || typeof sockets.values !== "function") {
     return {
@@ -956,6 +956,9 @@ function getOnlineStaffStats() {
   for (const socket of sockets.values()) {
     const staffEntry = getSocketStaffOnlineEntry(socket);
     if (!staffEntry) {
+      continue;
+    }
+    if (hiddenUserIds instanceof Set && hiddenUserIds.has(Number(staffEntry.userId))) {
       continue;
     }
 
@@ -1032,28 +1035,155 @@ function getOnlineUserCountForServers(serverIds) {
   return getOnlineUserIdsForServers(serverIds).size;
 }
 
+function getHomeStatsTrackedIp(user) {
+  const registrationIp = String(user?.registration_ip || "").trim().slice(0, 120);
+  if (registrationIp) {
+    return registrationIp;
+  }
+  return String(user?.last_login_ip || "").trim().slice(0, 120);
+}
+
+function getPrimaryHomeStatsAdminUser(users) {
+  if (!Array.isArray(users) || users.length === 0) {
+    return null;
+  }
+
+  const normalizeName = (value) => String(value || "").trim().toLowerCase();
+  return (
+    users.find(
+      (user) =>
+        Number(user?.is_admin) === 1 &&
+        (
+          normalizeName(user?.admin_character_name) === "noctra" ||
+          normalizeName(user?.username) === "noctra"
+        )
+    ) ||
+    users.find((user) => Number(user?.is_admin) === 1) ||
+    null
+  );
+}
+
+function getVisibleAccountCountForHomeStats() {
+  return getHomeStatsVisibleUsers().length;
+}
+
+function getHomeStatsUsers() {
+  return db
+    .prepare(`
+      SELECT u.id,
+             u.username,
+             u.is_admin,
+             u.registration_ip,
+             u.last_login_ip,
+             COALESCE(admin_character.name, '') AS admin_character_name
+        FROM users u
+        LEFT JOIN characters admin_character
+          ON admin_character.id = u.admin_character_id
+    `)
+    .all();
+}
+
+function getHomeStatsHiddenUserIds(users) {
+  const primaryAdminUser = getPrimaryHomeStatsAdminUser(users);
+  const primaryAdminIp = getHomeStatsTrackedIp(primaryAdminUser);
+  const hiddenUserIds = new Set();
+
+  users.forEach((user) => {
+    if (primaryAdminUser && Number(user?.id) === Number(primaryAdminUser.id)) {
+      return;
+    }
+
+    const trackedIp = getHomeStatsTrackedIp(user);
+    if (primaryAdminIp && trackedIp && trackedIp === primaryAdminIp) {
+      hiddenUserIds.add(Number(user.id));
+    }
+  });
+
+  return hiddenUserIds;
+}
+
+function getHomeStatsVisibleUsers() {
+  const users = getHomeStatsUsers();
+  const hiddenUserIds = getHomeStatsHiddenUserIds(users);
+  return users.filter((user) => !hiddenUserIds.has(Number(user.id)));
+}
+
+function getVisibleCharacterStatsForHomeStats(hiddenUserIds = null) {
+  const characters = db.prepare("SELECT user_id, server_id FROM characters").all();
+  const visibleCharacters = hiddenUserIds instanceof Set
+    ? characters.filter((character) => !hiddenUserIds.has(Number(character.user_id)))
+    : characters;
+
+  return {
+    characterCount: visibleCharacters.length,
+    freeRpCharacterCount: visibleCharacters.filter(
+      (character) => normalizeServer(character.server_id) === "free-rp"
+    ).length,
+    erpCharacterCount: visibleCharacters.filter(
+      (character) => normalizeServer(character.server_id) === "erp"
+    ).length
+  };
+}
+
+function getVisibleLoggedInUserIdsForHomeStats(activeUserIds = [], hiddenUserIds = null) {
+  const hiddenSet = hiddenUserIds instanceof Set ? hiddenUserIds : null;
+  const visibleUserIds = [];
+  const seenUserIds = new Set();
+
+  (Array.isArray(activeUserIds) ? activeUserIds : []).forEach((userId) => {
+    const parsedUserId = Number(userId);
+    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+      return;
+    }
+    if (hiddenSet && hiddenSet.has(parsedUserId)) {
+      return;
+    }
+    if (seenUserIds.has(parsedUserId)) {
+      return;
+    }
+    seenUserIds.add(parsedUserId);
+    visibleUserIds.push(parsedUserId);
+  });
+
+  return visibleUserIds;
+}
+
+function getVisibleOnlineUserCountForServers(serverIds, hiddenUserIds = null) {
+  const onlineUserIds = getOnlineUserIdsForServers(serverIds);
+  if (!(hiddenUserIds instanceof Set) || hiddenUserIds.size === 0) {
+    return onlineUserIds.size;
+  }
+
+  let visibleCount = 0;
+  onlineUserIds.forEach((userId) => {
+    if (!hiddenUserIds.has(Number(userId))) {
+      visibleCount += 1;
+    }
+  });
+  return visibleCount;
+}
+
 function buildLoginStats() {
   const discordHomeStats = getDiscordHomeStats();
   const activeUserIds = getActiveSessionUserIds();
-  const accountCount =
-    db.prepare("SELECT COUNT(*) AS count FROM users").get()?.count || 0;
-  const characterCount =
-    db.prepare("SELECT COUNT(*) AS count FROM characters").get()?.count || 0;
-  const serverCharacterRows = db
-    .prepare(
-      `SELECT server_id, COUNT(*) AS count
-       FROM characters
-       GROUP BY server_id`
-    )
-    .all();
-  const staffStats = getOnlineStaffStats();
-  const freeRpCharacterCount =
-    serverCharacterRows.find((row) => normalizeServer(row.server_id) === "free-rp")?.count || 0;
-  const erpCharacterCount =
-    serverCharacterRows.find((row) => normalizeServer(row.server_id) === "erp")?.count || 0;
-  const freeRpOnlineCount = getOnlineUserCountForServers("free-rp");
-  const erpOnlineCount = getOnlineUserCountForServers("erp");
-  const rpOnlineCount = getOnlineUserCountForServers(["free-rp", "erp"]);
+  const homeStatsUsers = getHomeStatsUsers();
+  const hiddenHomeStatsUserIds = getHomeStatsHiddenUserIds(homeStatsUsers);
+  const visibleHomeStatsUsers = homeStatsUsers.filter(
+    (user) => !hiddenHomeStatsUserIds.has(Number(user.id))
+  );
+  const visibleCharacterStats = getVisibleCharacterStatsForHomeStats(hiddenHomeStatsUserIds);
+  const visibleLoggedInUserIds = getVisibleLoggedInUserIdsForHomeStats(
+    activeUserIds,
+    hiddenHomeStatsUserIds
+  );
+  const staffStats = getOnlineStaffStats(hiddenHomeStatsUserIds);
+  const accountCount = visibleHomeStatsUsers.length;
+  const characterCount = visibleCharacterStats.characterCount;
+  const freeRpCharacterCount = visibleCharacterStats.freeRpCharacterCount;
+  const erpCharacterCount = visibleCharacterStats.erpCharacterCount;
+  const freeRpOnlineCount = getVisibleOnlineUserCountForServers("free-rp", hiddenHomeStatsUserIds);
+  const erpOnlineCount = getVisibleOnlineUserCountForServers("erp", hiddenHomeStatsUserIds);
+  const rpOnlineCount = getVisibleOnlineUserCountForServers(["free-rp", "erp"], hiddenHomeStatsUserIds);
 
   return {
     accountCount,
@@ -1072,7 +1202,7 @@ function buildLoginStats() {
     discordOnlineCount: discordHomeStats.onlineCount,
     discordIconUrl: discordHomeStats.iconUrl,
     discordAvailable: discordHomeStats.available,
-    loggedInUserCount: getLoggedInUsersCount(activeUserIds),
+    loggedInUserCount: getLoggedInUsersCount(visibleLoggedInUserIds),
     adminOnlineCount: staffStats.adminOnlineCount,
     adminOnlineNames: staffStats.adminOnlineNames,
     moderatorOnlineCount: staffStats.moderatorOnlineCount,
