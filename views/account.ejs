@@ -1,9 +1,9 @@
 <%- include("partials/start") %>
 
-<% const usernameChangeMonthsLeft = usernameChangeInfo.available_at
+<% const usernameChangeDaysLeft = usernameChangeInfo.available_at
   ? Math.max(
     0,
-    Math.ceil((usernameChangeInfo.available_at.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.5))
+    Math.ceil((usernameChangeInfo.available_at.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   )
   : 0; %>
 
@@ -92,8 +92,8 @@
               <% } else { %>
                 Dein Account-Name ist nur alle 182 Tage &auml;nderbar. N&auml;chste
                 &Auml;nderung ab <strong><%= usernameChangeInfo.available_at_text %></strong>
-                <% if (usernameChangeMonthsLeft > 0) { %>
-                  (noch ca. <%= usernameChangeMonthsLeft %> Monat<%= usernameChangeMonthsLeft === 1 ? "" : "e" %>).
+                <% if (usernameChangeDaysLeft > 0) { %>
+                  (noch <%= usernameChangeDaysLeft %> Tag<%= usernameChangeDaysLeft === 1 ? "" : "e" %>).
                 <% } %>
               <% } %>
             </td>

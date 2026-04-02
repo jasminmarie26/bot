@@ -1353,7 +1353,7 @@ function getUsernameChangeAvailability(user) {
     is_admin_bypass: false,
     can_change: Date.now() >= availableAt.getTime(),
     available_at: availableAt,
-    available_at_text: formatGermanDate(availableAt)
+    available_at_text: formatGermanDateTime(availableAt)
   };
 }
 
