@@ -2932,7 +2932,7 @@ a:hover {
 
 .home-main-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(350px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(285px, 300px);
   gap: 0.9rem;
   align-items: start;
 }
@@ -2951,7 +2951,7 @@ a:hover {
 .home-main-discord {
   display: grid;
   width: 100%;
-  max-width: 360px;
+  max-width: 300px;
   justify-items: start;
   justify-self: end;
   align-self: start;
@@ -2960,7 +2960,7 @@ a:hover {
 }
 
 .home-main-discord .home-discord-card {
-  width: min(100%, 320px);
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -3063,8 +3063,8 @@ body.page-home-screen .home-hero-actions {
 .home-support-title {
   white-space: nowrap;
   line-height: 1.1;
-  font-size: clamp(0.76rem, 0.68rem + 0.22vw, 0.88rem);
-  letter-spacing: 0.03em;
+  font-size: clamp(0.72rem, 0.64rem + 0.18vw, 0.82rem);
+  letter-spacing: 0.02em;
 }
 
 .home-stat-divider {
@@ -3352,7 +3352,7 @@ body.page-home-screen .home-hero-actions {
 
 .home-main-discord .home-donation-card,
 .home-main-discord .home-contact-card {
-  width: min(100%, 320px);
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -3514,7 +3514,7 @@ body.page-home-screen .home-hero-actions {
   }
 
   .home-main-top {
-    grid-template-columns: minmax(0, 1fr) minmax(350px, 360px);
+    grid-template-columns: minmax(0, 1fr) minmax(285px, 300px);
     gap: 0.8rem;
   }
 
