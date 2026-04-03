@@ -31,10 +31,12 @@
       : "#roomlist"; %>
   <% const roomlistAreaLabel =
     character.server_id === "free-rp" || character.server_id === "erp"
-      ? "Serverliste"
+      ? "Charakterliste"
       : "Raumliste"; %>
-  <% const roomlistAreaTarget = roomlistAreaLabel === "Serverliste" ? "_blank" : ""; %>
-  <% const roomlistAreaRel = roomlistAreaLabel === "Serverliste" ? "noopener noreferrer" : ""; %>
+  <% const roomlistAreaTarget =
+    character.server_id === "free-rp" || character.server_id === "erp" ? "_blank" : ""; %>
+  <% const roomlistAreaRel =
+    character.server_id === "free-rp" || character.server_id === "erp" ? "noopener noreferrer" : ""; %>
   <% const roomlistBoardServerId = currentHeaderCharacter?.server_id || character.server_id; %>
   <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
   <% const roomlistBoardHref = `/rp-board?server_id=${roomlistBoardServerId}&character_id=${Number(roomlistBoardCharacterId)}`; %>
@@ -133,7 +135,7 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
-          <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
+          <a href="/dashboard" target="_blank" rel="noopener noreferrer">Charakterliste</a>
           <% if (isOwner) { %>
             <a
               href="/characters/<%= character.id %>/edit"
