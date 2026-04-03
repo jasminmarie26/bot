@@ -1382,6 +1382,11 @@
       pendingChatReloadRecovery?.reason === "server-instance-reload";
     const isRecoveredPageReload =
       pendingChatReloadRecovery?.reason === "page-reload";
+    const joinReloadReason = isRecoveredServerRestart
+      ? "server-instance-reload"
+      : isRecoveredPageReload
+      ? "page-reload"
+      : "";
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
@@ -1391,6 +1396,8 @@
           ? currentActiveCharacterId
           : null,
       isReconnect: hasJoinedCurrentChatSession || isRecoveredServerRestart || isRecoveredPageReload,
+      reloadReason: joinReloadReason,
+      suppressEnterPresence: isRecoveredServerRestart,
       reconnectAgeMs:
         (isRecoveredServerRestart || isRecoveredPageReload)
           ? 0

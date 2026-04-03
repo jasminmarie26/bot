@@ -21770,6 +21770,12 @@ io.on("connection", (socket) => {
       payload && typeof payload === "object" ? payload.characterId : null;
     const isReconnectJoin =
       payload && typeof payload === "object" && payload.isReconnect === true;
+    const reloadReason =
+      payload && typeof payload === "object"
+        ? String(payload.reloadReason || "").trim().toLowerCase()
+        : "";
+    const shouldSuppressExplicitEnterPresence =
+      payload && typeof payload === "object" && payload.suppressEnterPresence === true;
     const reconnectAgeMs =
       payload && typeof payload === "object"
         ? Number(payload.reconnectAgeMs)
@@ -21966,7 +21972,11 @@ io.on("connection", (socket) => {
     );
     if (!isSameChannel) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
-      if (!shouldSuppressReconnectPresence && !hasOtherPresenceInNextChannel) {
+      if (
+        !shouldSuppressExplicitEnterPresence &&
+        !shouldSuppressReconnectPresence &&
+        !hasOtherPresenceInNextChannel
+      ) {
         emitSystemChatMessage(
           nextRoomId,
           nextServerId,
@@ -21981,7 +21991,11 @@ io.on("connection", (socket) => {
           },
           nextStandardRoomId
         );
-      } else if (!shouldSuppressReconnectPresence) {
+      } else if (
+        !shouldSuppressExplicitEnterPresence &&
+        !shouldSuppressReconnectPresence &&
+        reloadReason !== "server-instance-reload"
+      ) {
         emitDirectSystemMessageToSocket(socket, nextPresenceMessage.text, {
           chat_text_color: "#000000",
           system_kind: "presence",

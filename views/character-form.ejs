@@ -573,9 +573,41 @@
       renderColorState({ forceText: true });
     };
 
+    const positionFloatingColorPanel = (panel, trigger) => {
+      if (!panel || panel.hidden || !trigger) {
+        return;
+      }
+
+      const gap = 10;
+      const triggerRect = trigger.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const panelWidth = Math.max(panelRect.width || 0, 240);
+      const panelHeight = Math.max(panelRect.height || 0, 220);
+      const maxLeft = Math.max(gap, window.innerWidth - panelWidth - gap);
+      const left = Math.min(
+        Math.max(gap, triggerRect.right - panelWidth),
+        maxLeft
+      );
+      let top = triggerRect.bottom + gap;
+      const maxTop = window.innerHeight - panelHeight - gap;
+
+      if (top > maxTop) {
+        top = Math.max(gap, triggerRect.top - panelHeight - gap);
+      }
+
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+    };
+
+    const syncOpenColorPanels = () => {
+      positionFloatingColorPanel(colorPanel, colorTrigger);
+      positionFloatingColorPanel(backgroundColorPanel, backgroundColorTrigger);
+    };
+
     const openColorPanel = () => {
       colorPanel.hidden = false;
       colorTrigger.setAttribute("aria-expanded", "true");
+      positionFloatingColorPanel(colorPanel, colorTrigger);
     };
 
     const closeColorPanel = () => {
@@ -748,6 +780,7 @@
     const openBackgroundColorPanel = () => {
       backgroundColorPanel.hidden = false;
       backgroundColorTrigger.setAttribute("aria-expanded", "true");
+      positionFloatingColorPanel(backgroundColorPanel, backgroundColorTrigger);
     };
 
     const closeBackgroundColorPanel = () => {
@@ -849,6 +882,9 @@
         closeBackgroundColorPanel();
       }
     });
+
+    window.addEventListener("resize", syncOpenColorPanels);
+    window.addEventListener("scroll", syncOpenColorPanels, true);
   })();
 </script>
 

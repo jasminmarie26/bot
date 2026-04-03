@@ -8557,10 +8557,6 @@ body.page-guestbook-preview::after {
   z-index: 120;
 }
 
-.character-color-row:has(.character-color-panel:not([hidden])) {
-  padding-bottom: 17rem;
-}
-
 .character-color-input-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -8642,11 +8638,14 @@ body.page-guestbook-preview::after {
 }
 
 .character-color-panel {
-  position: absolute;
-  top: calc(100% + 0.6rem);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
   bottom: auto;
-  right: 0;
   width: min(16.5rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 1rem);
+  overflow: auto;
   padding: 0.7rem;
   border: 1px solid rgba(28, 28, 28, 0.12);
   border-radius: 16px;
@@ -8654,7 +8653,7 @@ body.page-guestbook-preview::after {
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.24),
     0 4px 14px rgba(0, 0, 0, 0.16);
-  z-index: 200;
+  z-index: 400;
 }
 
 .character-color-panel[hidden] {
