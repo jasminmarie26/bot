@@ -37,6 +37,7 @@
     roomWatchTargets.forEach((target) => {
       socket.emit("room:watch", {
         roomId: target.dataset.roomWatchRoom || "",
+        standardRoomId: target.dataset.roomWatchStandardRoom || "",
         serverId: String(target.dataset.roomWatchServer || serverId || "")
           .trim()
           .toLowerCase()
@@ -83,10 +84,11 @@
     );
   }
 
-  function getRoomWatchPayloadKey(roomId, serverIdValue) {
+  function getRoomWatchPayloadKey(roomId, serverIdValue, standardRoomIdValue = "") {
     const roomKey = roomId == null ? "" : String(roomId);
     const normalizedServerId = String(serverIdValue || "").trim().toLowerCase();
-    return `${normalizedServerId}:${roomKey}`;
+    const normalizedStandardRoomId = String(standardRoomIdValue || "").trim().toLowerCase();
+    return `${normalizedServerId}:${roomKey}:${normalizedStandardRoomId}`;
   }
 
   function updateHeaderIdentity(payload) {
@@ -318,8 +320,11 @@
     const watchServerId = String(payload?.serverId || "")
       .trim()
       .toLowerCase();
+    const watchStandardRoomId = String(payload?.standardRoomId || "")
+      .trim()
+      .toLowerCase();
     roomWatchPayloads.set(
-      getRoomWatchPayloadKey(payload?.roomId, watchServerId),
+      getRoomWatchPayloadKey(payload?.roomId, watchServerId, watchStandardRoomId),
       Array.isArray(payload?.users) ? payload.users.slice() : []
     );
 
@@ -328,8 +333,15 @@
       const targetServerId = String(target.dataset.roomWatchServer || "")
         .trim()
         .toLowerCase();
+      const targetStandardRoomId = String(target.dataset.roomWatchStandardRoom || "")
+        .trim()
+        .toLowerCase();
 
-      if (targetRoomKey !== roomKey || targetServerId !== watchServerId) {
+      if (
+        targetRoomKey !== roomKey ||
+        targetServerId !== watchServerId ||
+        targetStandardRoomId !== watchStandardRoomId
+      ) {
         return;
       }
 
@@ -344,8 +356,11 @@
       const targetServerId = String(target.dataset.roomWatchServer || "")
         .trim()
         .toLowerCase();
+      const targetStandardRoomId = String(target.dataset.roomWatchStandardRoom || "")
+        .trim()
+        .toLowerCase();
       const payloadEntries = roomWatchPayloads.get(
-        getRoomWatchPayloadKey(targetRoomKey || null, targetServerId)
+        getRoomWatchPayloadKey(targetRoomKey || null, targetServerId, targetStandardRoomId)
       ) || [];
       renderRoomWatchTarget(target, payloadEntries);
     });

@@ -48,6 +48,7 @@
   const headerIdentity = document.querySelector("[data-header-identity]");
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
+  const standardRoomId = (chatBox?.dataset?.standardRoomId || "").trim().toLowerCase();
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
   let currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
@@ -67,23 +68,26 @@
   const showChatMessageTimestamps = chatBox?.dataset?.showChatTimestamps === "1";
   let afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
+  const chatChannelStorageKey = hasRoom
+    ? `room-${roomId}`
+    : `standard-${standardRoomId || "none"}`;
   const chatInputHistoryKey = [
     "chat-input-history",
     Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
     serverId,
-    hasRoom ? `room-${roomId}` : "room-none"
+    chatChannelStorageKey
   ].join(":");
   const chatInputDraftKey = [
     "chat-input-draft",
     Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
     serverId,
-    hasRoom ? `room-${roomId}` : "room-none"
+    chatChannelStorageKey
   ].join(":");
   const chatReloadSnapshotKey = [
     "chat-reload-snapshot",
     Number.isInteger(currentUserId) && currentUserId > 0 ? currentUserId : "guest",
     serverId,
-    hasRoom ? `room-${roomId}` : "room-none"
+    chatChannelStorageKey
   ].join(":");
   let selectedOnlineEntry = null;
   let typingEmitActive = false;
@@ -246,7 +250,7 @@
       "chat-afk-state",
       String(presenceKey || "").trim() || "guest",
       serverId,
-      hasRoom ? `room-${roomId}` : "room-none"
+      chatChannelStorageKey
     ].join(":");
   }
 
@@ -1300,6 +1304,7 @@
     socket.emit("chat:join", {
       roomId: hasRoom ? roomId : null,
       serverId,
+      standardRoomId: hasRoom ? null : (standardRoomId || null),
       characterId:
         Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
           ? currentActiveCharacterId

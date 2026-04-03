@@ -3850,6 +3850,7 @@ const insertChatLogBackupStatement = db.prepare(
 const selectActiveRoomLogsStatement = db.prepare(
   `SELECT room_id,
           server_id,
+          standard_room_id,
           room_label,
           started_at,
           started_by_user_id,
@@ -3863,6 +3864,7 @@ const upsertActiveRoomLogStatement = db.prepare(
   `INSERT INTO active_chat_room_logs (
      room_id,
      server_id,
+     standard_room_id,
      room_label,
      started_at,
      started_by_user_id,
@@ -3870,8 +3872,8 @@ const upsertActiveRoomLogStatement = db.prepare(
      participants_json,
      messages_json,
      updated_at
-   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-   ON CONFLICT(room_id, server_id) DO UPDATE SET
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+   ON CONFLICT(room_id, server_id, standard_room_id) DO UPDATE SET
      room_label = excluded.room_label,
      started_at = excluded.started_at,
      started_by_user_id = excluded.started_by_user_id,
@@ -3884,7 +3886,8 @@ const upsertActiveRoomLogStatement = db.prepare(
 const deleteActiveRoomLogStatement = db.prepare(
   `DELETE FROM active_chat_room_logs
     WHERE room_id = ?
-      AND server_id = ?`
+      AND server_id = ?
+      AND standard_room_id = ?`
 );
 
 function saveChatLogBackupForUser(payload = {}) {
@@ -6743,6 +6746,13 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
       category: "Offplay",
+      teaser: "Locker reden, planen und ankommen.",
+      shared_scope: true
+    },
+    {
+      id: "free-rp-offbereich",
+      name: "Free-RP-Offbereich",
+      category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
   ],
@@ -6750,6 +6760,13 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
     {
       id: "zwischenwelten-foyer",
       name: "Zwischenwelten-Foyer",
+      category: "Offplay",
+      teaser: "Locker reden, planen und ankommen.",
+      shared_scope: true
+    },
+    {
+      id: "erp-offbereich",
+      name: "ERP-Offbereich",
       category: "Offplay",
       teaser: "Locker reden, planen und ankommen."
     }
@@ -6773,6 +6790,14 @@ function getStandardRoomsForServer(serverId) {
   return Array.isArray(STANDARD_ROOM_DEFINITIONS[normalizedServerId])
     ? STANDARD_ROOM_DEFINITIONS[normalizedServerId]
     : [];
+}
+
+function normalizeStandardRoomId(standardRoomId) {
+  return String(standardRoomId || "").trim().toLowerCase();
+}
+
+function getDefaultStandardRoomForServer(serverId) {
+  return getStandardRoomsForServer(serverId)[0] || null;
 }
 
 function getCuratedPublicRoomDefinitionsForServer(serverId) {
@@ -7088,14 +7113,42 @@ function getStandardRoomForServer(serverId, roomId) {
   );
 }
 
+function resolveStandardRoomForServer(serverId, roomId = null) {
+  return getStandardRoomForServer(serverId, roomId) || getDefaultStandardRoomForServer(serverId);
+}
+
+function getStandardRoomContext(serverId, standardRoomId = null) {
+  const normalizedServerId = normalizeServer(serverId);
+  const room = resolveStandardRoomForServer(normalizedServerId, standardRoomId);
+  return {
+    serverId: normalizedServerId,
+    room,
+    standardRoomId: room?.id || normalizeStandardRoomId(standardRoomId)
+  };
+}
+
+function getStandardRoomScopeKey(serverId, standardRoomId = null) {
+  const context = getStandardRoomContext(serverId, standardRoomId);
+  if (!context.standardRoomId) {
+    return `${context.serverId}:standard-room`;
+  }
+  return context.room?.shared_scope
+    ? `${SHARED_STANDARD_ROOM_SCOPE_KEY}:${context.standardRoomId}`
+    : `${context.serverId}:standard-room:${context.standardRoomId}`;
+}
+
+function getStandardRoomChannelKey(serverId, standardRoomId = null) {
+  return getStandardRoomContext(serverId, standardRoomId).standardRoomId || "lobby";
+}
+
 function isSharedStandardRoomContext(roomId) {
   const normalizedRoomId = Number(roomId);
   return !(Number.isInteger(normalizedRoomId) && normalizedRoomId > 0);
 }
 
-function getChatScopeServerKey(roomId, serverId = DEFAULT_SERVER_ID) {
+function getChatScopeServerKey(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   return isSharedStandardRoomContext(roomId)
-    ? SHARED_STANDARD_ROOM_SCOPE_KEY
+    ? getStandardRoomScopeKey(serverId, standardRoomId)
     : normalizeServer(serverId);
 }
 
@@ -7117,6 +7170,23 @@ function getSocketChannelServerId(memberSocket, roomId = null, fallbackServerId 
   return isSharedStandardRoomContext(roomId)
     ? getSocketActiveServerId(memberSocket, fallbackServerId)
     : normalizeServer(fallbackServerId);
+}
+
+function getSocketChannelStandardRoomId(
+  memberSocket,
+  roomId = null,
+  fallbackServerId = DEFAULT_SERVER_ID,
+  fallbackStandardRoomId = null
+) {
+  if (!isSharedStandardRoomContext(roomId)) {
+    return "";
+  }
+
+  const socketServerId = getSocketChannelServerId(memberSocket, roomId, fallbackServerId);
+  return getStandardRoomContext(
+    socketServerId,
+    memberSocket?.data?.standardRoomId || fallbackStandardRoomId
+  ).standardRoomId;
 }
 
 function normalizeRoomDescription(rawValue) {
@@ -13314,7 +13384,10 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     : [];
   const standardRooms = getStandardRoomsForServer(character.server_id);
   const standardRoomUsers = Object.fromEntries(
-    standardRooms.map((room) => [room.id, getOnlineCharactersForChannel(null, character.server_id)])
+    standardRooms.map((room) => [
+      room.id,
+      getOnlineCharactersForChannel(null, character.server_id, room.id)
+    ])
   );
   const publicRoomUsers = Object.fromEntries(
     publicRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
@@ -16100,14 +16173,15 @@ app.get("/chat", requireAuth, (req, res) => {
   }
 
   if (!activeRoom) {
-    standardRoom = getStandardRoomForServer(activeServerId, requestedStandardRoomId);
+    standardRoom = resolveStandardRoomForServer(activeServerId, requestedStandardRoomId);
   }
 
   const messages = [];
 
   const onlineCharacters = getOnlineCharactersForChannel(
     activeRoom ? activeRoom.id : null,
-    activeServerId
+    activeServerId,
+    standardRoom?.id || ""
   );
 
   return res.render("chat", {
@@ -16148,19 +16222,23 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     return res.sendStatus(204);
   }
 
+  const previousStandardRoomId = previousRoomId
+    ? ""
+    : getStandardRoomContext(previousServerId, memberSocket.data?.standardRoomId).standardRoomId;
   const previousCharacterId = getSocketPreferredCharacterId(memberSocket, previousServerId);
   const disconnectDisplayProfile = getSocketDisplayProfile(memberSocket, previousServerId);
 
   if (memberSocket.data.isTyping) {
     memberSocket.data.isTyping = false;
-    emitChatTypingState(memberSocket, previousRoomId, previousServerId);
+    emitChatTypingState(memberSocket, previousRoomId, previousServerId, previousStandardRoomId);
   }
 
   clearPendingChatDisconnect(
     memberSocket.data.user.id,
     previousRoomId,
     previousServerId,
-    previousCharacterId
+    previousCharacterId,
+    previousStandardRoomId
   );
 
   schedulePendingChatDisconnect({
@@ -16168,15 +16246,19 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     characterId: previousCharacterId,
     roomId: previousRoomId,
     serverId: previousServerId,
+    standardRoomId: previousStandardRoomId,
     displayName: disconnectDisplayProfile.label || `User ${memberSocket.data.user?.id || "?"}`,
     chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
     skipPresence: memberSocket.data.skipDisconnectPresence === true
   });
 
   memberSocket.data.immediateDisconnectHandled = true;
-  await Promise.resolve(memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId)));
+  await Promise.resolve(
+    memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId, previousStandardRoomId))
+  );
   memberSocket.disconnect(true);
   memberSocket.data.roomId = null;
+  memberSocket.data.standardRoomId = "";
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
   maybeRemoveEmptyRoom(previousRoomId);
@@ -16883,11 +16965,11 @@ io.use((socket, next) => {
   });
 });
 
-function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID) {
+function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   if (Number.isInteger(roomId) && roomId > 0) {
     return `room:${roomId}`;
   }
-  return `lobby:${getChatScopeServerKey(roomId, serverId)}`;
+  return `lobby:${getChatScopeServerKey(roomId, serverId, standardRoomId)}`;
 }
 
 const chatAfkStates = new Map();
@@ -16952,19 +17034,33 @@ function getPresenceIdentityKey(userId, characterId = null) {
   return parsedCharacterId ? `character:${parsedCharacterId}` : `user:${parsedUserId}`;
 }
 
-function getChatAfkStateKey(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
+function getChatAfkStateKey(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
+  const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
   const presenceKey = getPresenceIdentityKey(userId, characterId);
   return `${presenceKey}:${scopeServerKey}:${roomKey}`;
 }
 
-function getChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+function getChatAfkState(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
   if (!getPresenceIdentityKey(userId, characterId)) {
     return null;
   }
 
-  return chatAfkStates.get(getChatAfkStateKey(userId, roomId, serverId, characterId)) || null;
+  return chatAfkStates.get(
+    getChatAfkStateKey(userId, roomId, serverId, characterId, standardRoomId)
+  ) || null;
 }
 
 function getRandomAutomaticAfkReason() {
@@ -16975,7 +17071,13 @@ function getRandomAutomaticAfkReason() {
   return CHAT_AUTOMATIC_AFK_REASONS[crypto.randomInt(CHAT_AUTOMATIC_AFK_REASONS.length)];
 }
 
-function emitChatAfkStateToChannel(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+function emitChatAfkStateToChannel(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return;
@@ -16984,10 +17086,19 @@ function emitChatAfkStateToChannel(userId, roomId, serverId = DEFAULT_SERVER_ID,
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const parsedCharacterId = normalizePresenceCharacterId(characterId);
-  const afkState = getChatAfkState(parsedUserId, normalizedRoomId, normalizedServerId, parsedCharacterId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const afkState = getChatAfkState(
+    parsedUserId,
+    normalizedRoomId,
+    normalizedServerId,
+    parsedCharacterId,
+    resolvedStandardRoomId
+  );
   const presenceKey = getPresenceIdentityKey(parsedUserId, parsedCharacterId);
 
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:afk-state", {
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)).emit("chat:afk-state", {
     user_id: parsedUserId,
     character_id: parsedCharacterId,
     presence_key: presenceKey,
@@ -16997,23 +17108,37 @@ function emitChatAfkStateToChannel(userId, roomId, serverId = DEFAULT_SERVER_ID,
   });
 }
 
-function emitChatAfkStateToSocket(memberSocket, roomId, serverId = DEFAULT_SERVER_ID) {
+function emitChatAfkStateToSocket(
+  memberSocket,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null
+) {
   const parsedUserId = Number(memberSocket?.data?.user?.id);
   if (!memberSocket || !Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return;
   }
 
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = getSocketChannelServerId(memberSocket, roomId, serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const presenceIdentity = getSocketPresenceIdentity(memberSocket, normalizedServerId);
   if (!presenceIdentity?.key) {
     return;
   }
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getSocketChannelStandardRoomId(
+        memberSocket,
+        normalizedRoomId,
+        normalizedServerId,
+        standardRoomId
+      );
   const afkState = getChatAfkState(
     parsedUserId,
     normalizedRoomId,
     normalizedServerId,
-    presenceIdentity.characterId
+    presenceIdentity.characterId,
+    resolvedStandardRoomId
   );
   memberSocket.emit("chat:afk-state", {
     user_id: parsedUserId,
@@ -17029,6 +17154,7 @@ function setChatAfkState({
   userId,
   roomId,
   serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
   actorName = "",
   roleStyle = "",
   chatTextColor = "",
@@ -17044,6 +17170,9 @@ function setChatAfkState({
 
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
   const parsedCharacterId = normalizePresenceCharacterId(characterId);
   const normalizedActorName = String(actorName || "").trim() || `User ${parsedUserId}`;
   const normalizedReason = String(reason || "").trim() || getRandomAutomaticAfkReason();
@@ -17054,6 +17183,7 @@ function setChatAfkState({
     presenceKey: getPresenceIdentityKey(parsedUserId, parsedCharacterId),
     roomId: normalizedRoomId,
     serverId: normalizedServerId,
+    standardRoomId: resolvedStandardRoomId,
     actorName: normalizedActorName,
     roleStyle: String(roleStyle || "").trim().toLowerCase(),
     chatTextColor: String(chatTextColor || "").trim(),
@@ -17062,11 +17192,23 @@ function setChatAfkState({
   };
 
   chatAfkStates.set(
-    getChatAfkStateKey(parsedUserId, normalizedRoomId, normalizedServerId, parsedCharacterId),
+    getChatAfkStateKey(
+      parsedUserId,
+      normalizedRoomId,
+      normalizedServerId,
+      parsedCharacterId,
+      resolvedStandardRoomId
+    ),
     afkState
   );
-  emitChatAfkStateToChannel(parsedUserId, normalizedRoomId, normalizedServerId, parsedCharacterId);
-  emitOnlineCharacters(normalizedRoomId, normalizedServerId);
+  emitChatAfkStateToChannel(
+    parsedUserId,
+    normalizedRoomId,
+    normalizedServerId,
+    parsedCharacterId,
+    resolvedStandardRoomId
+  );
+  emitOnlineCharacters(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
   if (!silent) {
     emitSystemChatMessage(
       normalizedRoomId,
@@ -17077,13 +17219,21 @@ function setChatAfkState({
         presence_actor_name: normalizedActorName,
         presence_actor_role_style: afkState.roleStyle,
         presence_actor_chat_text_color: afkState.chatTextColor
-      }
+      },
+      resolvedStandardRoomId
     );
   }
   return afkState;
 }
 
-function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options = {}, characterId = null) {
+function clearChatAfkState(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  options = {},
+  characterId = null,
+  standardRoomId = null
+) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return false;
@@ -17091,12 +17241,16 @@ function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options
 
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
   const parsedCharacterId = normalizePresenceCharacterId(characterId);
   const afkStateKey = getChatAfkStateKey(
     parsedUserId,
     normalizedRoomId,
     normalizedServerId,
-    parsedCharacterId
+    parsedCharacterId,
+    resolvedStandardRoomId
   );
   const existingAfkState = chatAfkStates.get(afkStateKey);
   if (!existingAfkState) {
@@ -17115,12 +17269,13 @@ function clearChatAfkState(userId, roomId, serverId = DEFAULT_SERVER_ID, options
       parsedUserId,
       normalizedRoomId,
       normalizedServerId,
-      existingAfkState.characterId
+      existingAfkState.characterId,
+      existingAfkState.standardRoomId
     );
   }
 
   if (!options?.skipOnlineRefresh) {
-    emitOnlineCharacters(normalizedRoomId, normalizedServerId);
+    emitOnlineCharacters(normalizedRoomId, normalizedServerId, existingAfkState.standardRoomId);
   }
 
   return true;
@@ -17166,16 +17321,33 @@ function resolveSocketChatChannel(socket) {
     serverId = normalizeServer(room.server_id || room.character_server_id);
   }
 
-  return { roomId, serverId };
+  return {
+    roomId,
+    serverId,
+    standardRoomId: roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data?.standardRoomId).standardRoomId
+  };
 }
 
-function getLatestChatPresenceActivityAt(socket, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+function getLatestChatPresenceActivityAt(
+  socket,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
   const presenceIdentity = getSocketPresenceIdentity(socket, serverId, characterId);
   if (!presenceIdentity?.key) {
     return getSocketLastChatActivityAt(socket);
   }
 
-  return getPresenceSocketsInChannel(roomId, serverId, presenceIdentity).reduce(
+  return getPresenceSocketsInChannel(
+    roomId,
+    serverId,
+    presenceIdentity,
+    standardRoomId
+  ).reduce(
     (latestTimestamp, memberSocket) =>
       Math.max(latestTimestamp, getSocketLastChatActivityAt(memberSocket)),
     0
@@ -17197,9 +17369,9 @@ function maybeSetSocketAutoAfk(socket, now = Date.now()) {
     return false;
   }
 
-  const { roomId, serverId } = chatChannel;
+  const { roomId, serverId, standardRoomId } = chatChannel;
   const characterId = getSocketPreferredCharacterId(socket, serverId);
-  if (getChatAfkState(userId, roomId, serverId, characterId)) {
+  if (getChatAfkState(userId, roomId, serverId, characterId, standardRoomId)) {
     return false;
   }
 
@@ -17209,7 +17381,8 @@ function maybeSetSocketAutoAfk(socket, now = Date.now()) {
     socket,
     roomId,
     serverId,
-    characterId
+    characterId,
+    standardRoomId
   );
   if (!latestActivityAt) {
     markSocketChatActivity(socket, now);
@@ -17226,6 +17399,7 @@ function maybeSetSocketAutoAfk(socket, now = Date.now()) {
     characterId,
     roomId,
     serverId,
+    standardRoomId,
     actorName: displayProfile?.label || getUserDefaultDisplayName(socket.data.user),
     roleStyle: displayProfile?.role_style || "",
     chatTextColor: displayProfile?.chat_text_color || "",
@@ -17325,12 +17499,21 @@ function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, raw
     .filter((entry) => normalizeInviteTargetLookupKey(entry?.name) === lookupKey);
 }
 
-function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
+function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoom = normalizedRoomId
+    ? null
+    : getStandardRoomContext(normalizedServerId, standardRoomId);
   const sockets = [];
   const seenSocketIds = new Set();
-  const members = io.sockets.adapter.rooms.get(socketChannelForRoom(normalizedRoomId, normalizedServerId));
+  const members = io.sockets.adapter.rooms.get(
+    socketChannelForRoom(
+      normalizedRoomId,
+      normalizedServerId,
+      resolvedStandardRoom?.standardRoomId || ""
+    )
+  );
   if (members && members.size > 0) {
     for (const socketId of members) {
       const memberSocket = io.sockets.sockets.get(socketId);
@@ -17360,9 +17543,28 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
         ? memberSocket.data.roomId
         : null;
-    const socketServerId = normalizeServer(memberSocket.data.serverId);
-    if (socketRoomId !== normalizedRoomId || socketServerId !== normalizedServerId) {
+    const socketServerId = getSocketChannelServerId(memberSocket, socketRoomId, normalizedServerId);
+    if (socketRoomId !== normalizedRoomId) {
       continue;
+    }
+
+    if (normalizedRoomId != null) {
+      if (socketServerId !== normalizedServerId) {
+        continue;
+      }
+    } else {
+      const socketStandardRoomId = getSocketChannelStandardRoomId(
+        memberSocket,
+        socketRoomId,
+        socketServerId,
+        resolvedStandardRoom?.standardRoomId || ""
+      );
+      if (socketStandardRoomId !== resolvedStandardRoom?.standardRoomId) {
+        continue;
+      }
+      if (!resolvedStandardRoom?.room?.shared_scope && socketServerId !== normalizedServerId) {
+        continue;
+      }
     }
 
     seenSocketIds.add(memberSocket.id);
@@ -17388,27 +17590,34 @@ function getSocketsInWatchChannel(roomId, serverId = DEFAULT_SERVER_ID) {
   return sockets;
 }
 
-function emitToRoomChannelMembers(roomId, serverId, eventName, payload) {
+function emitToRoomChannelMembers(roomId, serverId, eventName, payload, standardRoomId = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
-  const channelName = socketChannelForRoom(normalizedRoomId, normalizedServerId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const channelName = socketChannelForRoom(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId
+  );
   const members = io.sockets.adapter.rooms.get(channelName);
   if (members && members.size > 0) {
     io.to(channelName).emit(eventName, payload);
     return;
   }
 
-  getSocketsInChannel(normalizedRoomId, normalizedServerId).forEach((memberSocket) => {
+  getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((memberSocket) => {
     memberSocket.emit(eventName, payload);
   });
 }
 
-function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId) {
+function getUserSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, userId, standardRoomId = null) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return [];
   }
-  return getSocketsInChannel(roomId, serverId).filter(
+  return getSocketsInChannel(roomId, serverId, standardRoomId).filter(
     (memberSocket) => Number(memberSocket?.data?.user?.id) === parsedUserId
   );
 }
@@ -17430,20 +17639,30 @@ function getSocketPresenceIdentity(socket, serverId = DEFAULT_SERVER_ID, overrid
   };
 }
 
-function getPresenceSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, presenceIdentity) {
+function getPresenceSocketsInChannel(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  presenceIdentity,
+  standardRoomId = null
+) {
   const presenceKey = String(presenceIdentity?.key || "").trim();
   if (!presenceKey) {
     return [];
   }
 
-  return getSocketsInChannel(roomId, serverId).filter((memberSocket) => {
+  return getSocketsInChannel(roomId, serverId, standardRoomId).filter((memberSocket) => {
     const socketServerId = getSocketChannelServerId(memberSocket, roomId, serverId);
     const socketPresence = getSocketPresenceIdentity(memberSocket, socketServerId);
     return socketPresence?.key === presenceKey;
   });
 }
 
-function getUserSocketsOnServer(userId, serverId = DEFAULT_SERVER_ID, roomId = null) {
+function getUserSocketsOnServer(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  roomId = null,
+  standardRoomId = null
+) {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -17451,7 +17670,7 @@ function getUserSocketsOnServer(userId, serverId = DEFAULT_SERVER_ID, roomId = n
   }
 
   if (isSharedStandardRoomContext(roomId)) {
-    return getSocketsInChannel(null, normalizedServerId).filter(
+    return getSocketsInChannel(null, normalizedServerId, standardRoomId).filter(
       (memberSocket) => Number(memberSocket?.data?.user?.id) === parsedUserId
     );
   }
@@ -17486,7 +17705,12 @@ function getAllSocketsForUser(userId) {
   return sockets;
 }
 
-function buildChatRedirectUrlForLocation(roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+function buildChatRedirectUrlForLocation(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
@@ -17496,7 +17720,7 @@ function buildChatRedirectUrlForLocation(roomId, serverId = DEFAULT_SERVER_ID, c
     return `/chat?room_id=${normalizedRoomId}${suffix}`;
   }
 
-  const defaultStandardRoom = getStandardRoomsForServer(normalizedServerId)[0];
+  const defaultStandardRoom = resolveStandardRoomForServer(normalizedServerId, standardRoomId);
   const standardRoomSuffix = defaultStandardRoom?.id
     ? `&standard_room=${encodeURIComponent(String(defaultStandardRoom.id))}`
     : "";
@@ -17514,12 +17738,16 @@ function getConflictingChatSocketsForCharacter(
   serverId = DEFAULT_SERVER_ID,
   characterId = null,
   excludedSocketId = "",
-  targetRoomId = null
+  targetRoomId = null,
+  targetStandardRoomId = null
 ) {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
   const normalizedTargetRoomId = Number.isInteger(targetRoomId) && targetRoomId > 0 ? targetRoomId : null;
+  const normalizedTargetStandardRoomId = normalizedTargetRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, targetStandardRoomId).standardRoomId;
   const excludedId = String(excludedSocketId || "").trim();
 
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedCharacterId) {
@@ -17556,7 +17784,13 @@ function getConflictingChatSocketsForCharacter(
       Number.isInteger(memberSocket?.data?.roomId) && memberSocket.data.roomId > 0
         ? Number(memberSocket.data.roomId)
         : null;
-    if (memberRoomId === normalizedTargetRoomId) {
+    const memberStandardRoomId = memberRoomId
+      ? ""
+      : getStandardRoomContext(memberServerId, memberSocket?.data?.standardRoomId).standardRoomId;
+    if (
+      memberRoomId === normalizedTargetRoomId &&
+      memberStandardRoomId === normalizedTargetStandardRoomId
+    ) {
       continue;
     }
 
@@ -17564,7 +17798,8 @@ function getConflictingChatSocketsForCharacter(
       socket: memberSocket,
       roomId: memberRoomId,
       serverId: memberServerId,
-      characterId: memberCharacterId
+      characterId: memberCharacterId,
+      standardRoomId: memberStandardRoomId
     });
   }
 
@@ -17581,6 +17816,10 @@ function ejectSocketFromActiveChat(memberSocket, options = {}) {
     : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
       ? normalizeServer(memberSocket.data.presenceServerId)
       : null;
+  const previousStandardRoomId = previousRoomId
+    ? ""
+    : getStandardRoomContext(previousServerId || DEFAULT_SERVER_ID, memberSocket?.data?.standardRoomId)
+        .standardRoomId;
   const previousCharacterId = previousServerId
     ? getSocketPreferredCharacterId(memberSocket, previousServerId)
     : null;
@@ -17608,28 +17847,30 @@ function ejectSocketFromActiveChat(memberSocket, options = {}) {
     previousRoomId,
     previousServerId,
     memberSocket.id,
-    previousCharacterId
+    previousCharacterId,
+    previousStandardRoomId
   );
 
   if (memberSocket.data.isTyping) {
     memberSocket.data.isTyping = false;
-    emitChatTypingState(memberSocket, previousRoomId, previousServerId);
+    emitChatTypingState(memberSocket, previousRoomId, previousServerId, previousStandardRoomId);
   }
 
   clearPendingChatDisconnect(
     memberSocket.data.user.id,
     previousRoomId,
     previousServerId,
-    previousCharacterId
+    previousCharacterId,
+    previousStandardRoomId
   );
 
-  memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+  memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId, previousStandardRoomId));
 
   if (!hasOtherPresenceInPreviousChannel) {
     clearChatAfkState(memberSocket.data.user.id, previousRoomId, previousServerId, {
       skipStateEmit: true,
       skipOnlineRefresh: true
-    }, previousCharacterId);
+    }, previousCharacterId, previousStandardRoomId);
 
     const previousPresenceMessage = buildRoomPresenceMessage("leave", previousDisplayName);
     emitSystemChatMessage(
@@ -17643,11 +17884,13 @@ function ejectSocketFromActiveChat(memberSocket, options = {}) {
         presence_actor_name: previousPresenceMessage.actorName,
         presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
         presence_suffix: previousPresenceMessage.suffix
-      }
+      },
+      previousStandardRoomId
     );
   }
 
   memberSocket.data.roomId = null;
+  memberSocket.data.standardRoomId = "";
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
   memberSocket.data.hasJoinedChat = false;
@@ -17655,9 +17898,9 @@ function ejectSocketFromActiveChat(memberSocket, options = {}) {
 
   const previousRoomWasRemoved = maybeRemoveEmptyRoom(previousRoomId);
   if (!previousRoomWasRemoved) {
-    emitOnlineCharacters(previousRoomId, previousServerId);
+    emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
   }
-  void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
+  void finalizeRoomLogIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
   emitHomeStatsUpdate();
 
   if (notice) {
@@ -17676,14 +17919,16 @@ function ejectConflictingChatSocketsForCharacter(
   serverId = DEFAULT_SERVER_ID,
   characterId = null,
   excludedSocketId = "",
-  targetRoomId = null
+  targetRoomId = null,
+  targetStandardRoomId = null
 ) {
   const conflicts = getConflictingChatSocketsForCharacter(
     userId,
     serverId,
     characterId,
     excludedSocketId,
-    targetRoomId
+    targetRoomId,
+    targetStandardRoomId
   );
 
   conflicts.forEach((conflict) => {
@@ -17701,10 +17946,14 @@ function hasOtherSocketInChannel(
   roomId,
   serverId = DEFAULT_SERVER_ID,
   excludedSocketId = "",
-  characterId = null
+  characterId = null,
+  standardRoomId = null
 ) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoom = normalizedRoomId
+    ? null
+    : getStandardRoomContext(normalizedServerId, standardRoomId);
   const excludedId = String(excludedSocketId || "").trim();
   const presenceKey = getPresenceIdentityKey(userId, characterId);
 
@@ -17724,11 +17973,23 @@ function hasOtherSocketInChannel(
       Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
         ? memberSocket.data.roomId
         : null;
-    const socketPresence = getSocketPresenceIdentity(memberSocket, normalizedServerId);
+    const memberStandardRoomId = memberRoomId
+      ? ""
+      : getStandardRoomContext(
+          memberServerId || normalizedServerId,
+          memberSocket?.data?.standardRoomId
+        ).standardRoomId;
+    const socketPresence = getSocketPresenceIdentity(
+      memberSocket,
+      getSocketChannelServerId(memberSocket, memberRoomId, normalizedServerId)
+    );
 
     return (
-      memberServerId === normalizedServerId &&
       memberRoomId === normalizedRoomId &&
+      (normalizedRoomId != null
+        ? memberServerId === normalizedServerId
+        : memberStandardRoomId === resolvedStandardRoom?.standardRoomId &&
+          (resolvedStandardRoom?.room?.shared_scope || memberServerId === normalizedServerId)) &&
       socketPresence?.key === presenceKey
     );
   });
@@ -17793,7 +18054,13 @@ function findInviteTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_I
   return matches;
 }
 
-function findWhisperTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_ID, excludeUserId = null, roomId = null) {
+function findWhisperTargetsByDisplayName(
+  displayName,
+  serverId = DEFAULT_SERVER_ID,
+  excludeUserId = null,
+  roomId = null,
+  standardRoomId = null
+) {
   const normalizedLookupKey = normalizeInviteTargetLookupKey(displayName);
   const normalizedServerId = normalizeServer(serverId);
   const parsedExcludeUserId = Number(excludeUserId);
@@ -17804,7 +18071,7 @@ function findWhisperTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_
   const matches = [];
   const seenPresenceKeys = new Set();
   const candidateSockets = isSharedStandardRoomContext(roomId)
-    ? getSocketsInChannel(null, normalizedServerId)
+    ? getSocketsInChannel(null, normalizedServerId, standardRoomId)
     : Array.from(io.sockets.sockets.values());
 
   for (const memberSocket of candidateSockets) {
@@ -17849,7 +18116,14 @@ function findWhisperTargetsByDisplayName(displayName, serverId = DEFAULT_SERVER_
   return matches;
 }
 
-function emitWhisperBetweenUsers(senderSocket, targetUserId, content, serverId = DEFAULT_SERVER_ID, roomId = null) {
+function emitWhisperBetweenUsers(
+  senderSocket,
+  targetUserId,
+  content,
+  serverId = DEFAULT_SERVER_ID,
+  roomId = null,
+  standardRoomId = null
+) {
   const normalizedContent = String(content || "").trim();
   const parsedTargetUserId = Number(targetUserId);
   if (
@@ -17867,12 +18141,22 @@ function emitWhisperBetweenUsers(senderSocket, targetUserId, content, serverId =
 
   const normalizedServerId = normalizeServer(serverId);
   const senderServerId = getSocketChannelServerId(senderSocket, roomId, normalizedServerId);
-  const recipientSockets = getUserSocketsOnServer(parsedTargetUserId, normalizedServerId, roomId);
+  const recipientSockets = getUserSocketsOnServer(
+    parsedTargetUserId,
+    normalizedServerId,
+    roomId,
+    standardRoomId
+  );
   if (!recipientSockets.length) {
     return { ok: false, reason: "missing_target" };
   }
 
-  const senderSockets = getUserSocketsOnServer(senderSocket.data.user.id, normalizedServerId, roomId);
+  const senderSockets = getUserSocketsOnServer(
+    senderSocket.data.user.id,
+    normalizedServerId,
+    roomId,
+    standardRoomId
+  );
   const senderProfile = getSocketDisplayProfile(senderSocket, senderServerId);
   const recipientProfile = recipientSockets[0]
     ? getSocketDisplayProfile(
@@ -17981,23 +18265,31 @@ function refreshConnectedUserDisplay(userId) {
     const serverId = ALLOWED_SERVER_IDS.has(String(memberSocket.data?.serverId || "").trim().toLowerCase())
       ? normalizeServer(memberSocket.data.serverId)
       : null;
+    const standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId || DEFAULT_SERVER_ID, memberSocket.data?.standardRoomId)
+          .standardRoomId;
 
     if (serverId) {
-      roomsToRefresh.add(`${serverId}:${roomId == null ? "lobby" : roomId}`);
+      roomsToRefresh.add(`${serverId}:${roomId == null ? `standard:${standardRoomId}` : roomId}`);
       if (memberSocket.data?.isTyping) {
-        typingRefreshTargets.push({ socket: memberSocket, roomId, serverId });
+        typingRefreshTargets.push({ socket: memberSocket, roomId, serverId, standardRoomId });
       }
     }
   });
 
   roomsToRefresh.forEach((entry) => {
-    const [serverId, roomKey] = String(entry).split(":");
-    const roomId = roomKey === "lobby" ? null : Number(roomKey);
-    emitOnlineCharacters(roomId, serverId);
+    const [serverId, roomKey, standardRoomKey = ""] = String(entry).split(":");
+    const roomId = roomKey === "standard" ? null : Number(roomKey);
+    emitOnlineCharacters(
+      roomId,
+      serverId,
+      roomId == null ? standardRoomKey : ""
+    );
   });
 
-  typingRefreshTargets.forEach(({ socket, roomId, serverId }) => {
-    emitChatTypingState(socket, roomId, serverId);
+  typingRefreshTargets.forEach(({ socket, roomId, serverId, standardRoomId }) => {
+    emitChatTypingState(socket, roomId, serverId, standardRoomId);
   });
 
   emitSocialStateUpdatesForRelatedUsers(userId);
@@ -18326,10 +18618,12 @@ function getCurrentChannelDisplayName(user, serverId = DEFAULT_SERVER_ID, prefer
   return getCurrentChannelDisplayProfile(user, serverId, preferredCharacterId).label;
 }
 
-function socketChannelForRoomWatch(roomId, serverId = DEFAULT_SERVER_ID) {
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
-  const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
-  return `watch:${scopeServerKey}:${roomKey}`;
+function socketChannelForRoomWatch(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  const normalizedServerId = normalizeServer(serverId);
+  const roomKey = Number.isInteger(roomId) && roomId > 0
+    ? String(roomId)
+    : `standard:${getStandardRoomChannelKey(normalizedServerId, standardRoomId)}`;
+  return `watch:${normalizedServerId}:${roomKey}`;
 }
 
 function formatChatTimestamp(date = new Date()) {
@@ -18343,13 +18637,13 @@ function formatChatTimestamp(date = new Date()) {
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
 }
 
-function getRoomLogKey(roomId, serverId = DEFAULT_SERVER_ID) {
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
+function getRoomLogKey(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
   return `${scopeServerKey}:${normalizedRoomId}`;
 }
 
-function getRoomLogLabel(roomId, serverId = DEFAULT_SERVER_ID, room = null) {
+function getRoomLogLabel(roomId, serverId = DEFAULT_SERVER_ID, room = null, standardRoomId = null) {
   if (room?.name) {
     return String(room.name).trim();
   }
@@ -18362,7 +18656,7 @@ function getRoomLogLabel(roomId, serverId = DEFAULT_SERVER_ID, room = null) {
     }
   }
 
-  const standardRoom = getStandardRoomsForServer(serverId)[0];
+  const standardRoom = resolveStandardRoomForServer(serverId, standardRoomId);
   if (standardRoom?.name) {
     return String(standardRoom.name).trim();
   }
@@ -18786,12 +19080,12 @@ function getRoomLogRecipients(userIds) {
 
 const activeRoomLogs = new Map();
 
-function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
-  return activeRoomLogs.get(getRoomLogKey(roomId, serverId)) || null;
+function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  return activeRoomLogs.get(getRoomLogKey(roomId, serverId, standardRoomId)) || null;
 }
 
-function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID) {
-  const key = getRoomLogKey(roomId, serverId);
+function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  const key = getRoomLogKey(roomId, serverId, standardRoomId);
   const timer = pendingRoomLogFinalizations.get(key);
   if (!timer) {
     return false;
@@ -18805,25 +19099,34 @@ function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID) {
 function schedulePendingRoomLogFinalization(
   roomId,
   serverId = DEFAULT_SERVER_ID,
-  delayMs = ROOM_LOG_EMPTY_GRACE_MS
+  delayMs = ROOM_LOG_EMPTY_GRACE_MS,
+  standardRoomId = null
 ) {
-  const roomLog = getActiveRoomLog(roomId, serverId);
+  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
   if (!roomLog) {
     return false;
   }
 
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
-  const key = getRoomLogKey(normalizedRoomId, normalizedServerId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
 
-  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId);
+  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
 
   const timer = setTimeout(() => {
     pendingRoomLogFinalizations.delete(key);
-    if (getSocketsInChannel(normalizedRoomId, normalizedServerId).length > 0) {
+    if (getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).length > 0) {
       return;
     }
-    void finalizeRoomLog(normalizedRoomId, normalizedServerId, { reason: "empty-room" });
+    void finalizeRoomLog(
+      normalizedRoomId,
+      normalizedServerId,
+      { reason: "empty-room" },
+      resolvedStandardRoomId
+    );
   }, Math.max(0, Number(delayMs) || 0));
 
   pendingRoomLogFinalizations.set(key, timer);
@@ -18904,10 +19207,14 @@ function hydrateActiveRoomLogRow(row) {
   const parsedRoomId = Number(row.room_id);
   const roomId = Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
   const serverId = normalizeServer(row.server_id);
+  const standardRoomId = roomId
+    ? ""
+    : getStandardRoomContext(serverId, row.standard_room_id).standardRoomId;
   return {
     roomId,
     serverId,
-    roomLabel: String(row.room_label || "").trim() || getRoomLogLabel(roomId, serverId),
+    standardRoomId,
+    roomLabel: String(row.room_label || "").trim() || getRoomLogLabel(roomId, serverId, null, standardRoomId),
     startedAt: String(row.started_at || "").trim() || formatChatTimestamp(),
     startedByUserId: Number(row.started_by_user_id) || null,
     startedByName: String(row.started_by_name || "").trim() || "Jemand",
@@ -18924,12 +19231,17 @@ function persistActiveRoomLog(roomLog) {
   const roomId = Number(roomLog.roomId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : 0;
   const normalizedServerId = normalizeServer(roomLog.serverId);
+  const normalizedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, roomLog.standardRoomId).standardRoomId;
 
   try {
     upsertActiveRoomLogStatement.run(
       normalizedRoomId,
       normalizedServerId,
-      String(roomLog.roomLabel || "").trim() || getRoomLogLabel(normalizedRoomId, normalizedServerId),
+      normalizedStandardRoomId,
+      String(roomLog.roomLabel || "").trim() ||
+        getRoomLogLabel(normalizedRoomId, normalizedServerId, null, normalizedStandardRoomId),
       String(roomLog.startedAt || "").trim() || formatChatTimestamp(),
       Number(roomLog.startedByUserId) || 0,
       String(roomLog.startedByName || "").trim() || "Jemand",
@@ -18943,12 +19255,16 @@ function persistActiveRoomLog(roomLog) {
   }
 }
 
-function removePersistedActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID) {
+function removePersistedActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const parsedRoomId = Number(roomId);
   const normalizedRoomId = Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : 0;
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
 
   try {
-    deleteActiveRoomLogStatement.run(normalizedRoomId, normalizeServer(serverId));
+    deleteActiveRoomLogStatement.run(normalizedRoomId, normalizedServerId, normalizedStandardRoomId);
     return true;
   } catch (error) {
     console.error("Konnte aktives Raum-Log nicht entfernen:", error);
@@ -18963,7 +19279,10 @@ function restorePersistedActiveRoomLogs() {
       return;
     }
 
-    activeRoomLogs.set(getRoomLogKey(roomLog.roomId, roomLog.serverId), roomLog);
+    activeRoomLogs.set(
+      getRoomLogKey(roomLog.roomId, roomLog.serverId, roomLog.standardRoomId),
+      roomLog
+    );
   });
 }
 
@@ -19004,11 +19323,18 @@ function upsertRoomLogParticipant(roomLog, userId, displayName = "", characterId
   persistActiveRoomLog(roomLog);
 }
 
-function rememberRoomLogParticipant(roomId, serverId, user, displayName = "", characterId = null) {
-  const roomLog = getActiveRoomLog(roomId, serverId);
+function rememberRoomLogParticipant(
+  roomId,
+  serverId,
+  user,
+  displayName = "",
+  characterId = null,
+  standardRoomId = null
+) {
+  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
   if (!roomLog) return;
 
-  clearPendingRoomLogFinalization(roomId, serverId);
+  clearPendingRoomLogFinalization(roomId, serverId, standardRoomId);
 
   const userId = Number(user?.id);
   if (!Number.isInteger(userId) || userId < 1) return;
@@ -19021,8 +19347,8 @@ function rememberRoomLogParticipant(roomId, serverId, user, displayName = "", ch
   );
 }
 
-function appendMessageToActiveRoomLog(roomId, serverId, entry) {
-  const roomLog = getActiveRoomLog(roomId, serverId);
+function appendMessageToActiveRoomLog(roomId, serverId, entry, standardRoomId = null) {
+  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
   if (!roomLog) return;
 
   const content = String(entry?.content || "").trim();
@@ -19049,35 +19375,42 @@ function appendMessageToActiveRoomLog(roomId, serverId, entry) {
   persistActiveRoomLog(roomLog);
 }
 
-function startRoomLog(roomId, serverId, room, startedBySocket) {
-  const key = getRoomLogKey(roomId, serverId);
+function startRoomLog(roomId, serverId, room, startedBySocket, standardRoomId = null) {
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
   if (activeRoomLogs.has(key)) {
     return null;
   }
 
-  clearPendingRoomLogFinalization(roomId, serverId);
+  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
 
   const roomLog = {
-    roomId: Number.isInteger(roomId) && roomId > 0 ? roomId : null,
-    serverId: normalizeServer(serverId),
-    roomLabel: getRoomLogLabel(roomId, serverId, room),
+    roomId: normalizedRoomId,
+    serverId: normalizedServerId,
+    standardRoomId: resolvedStandardRoomId,
+    roomLabel: getRoomLogLabel(normalizedRoomId, normalizedServerId, room, resolvedStandardRoomId),
     startedAt: formatChatTimestamp(),
     startedByUserId: Number(startedBySocket?.data?.user?.id) || null,
-    startedByName: getSocketDisplayProfile(startedBySocket, serverId).label || "Jemand",
+    startedByName: getSocketDisplayProfile(startedBySocket, normalizedServerId).label || "Jemand",
     participants: new Map(),
     messages: []
   };
 
   activeRoomLogs.set(key, roomLog);
 
-  getSocketsInChannel(roomId, serverId).forEach((memberSocket) => {
-    const socketServerId = getSocketChannelServerId(memberSocket, roomId, serverId);
+  getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((memberSocket) => {
+    const socketServerId = getSocketChannelServerId(memberSocket, normalizedRoomId, normalizedServerId);
     rememberRoomLogParticipant(
-      roomId,
-      serverId,
+      normalizedRoomId,
+      normalizedServerId,
       memberSocket?.data?.user,
       getSocketDisplayProfile(memberSocket, socketServerId).label,
-      getSocketPreferredCharacterId(memberSocket, socketServerId)
+      getSocketPreferredCharacterId(memberSocket, socketServerId),
+      resolvedStandardRoomId
     );
   });
 
@@ -19116,9 +19449,14 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
   return true;
 }
 
-async function finalizeRoomLog(roomId, serverId, options = {}) {
-  const key = getRoomLogKey(roomId, serverId);
-  clearPendingRoomLogFinalization(roomId, serverId);
+async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = null) {
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
   const roomLog = activeRoomLogs.get(key);
   if (!roomLog) {
     return {
@@ -19134,7 +19472,7 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   }
 
   activeRoomLogs.delete(key);
-  removePersistedActiveRoomLog(roomId, serverId);
+  removePersistedActiveRoomLog(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
 
   const recipientRows = getRoomLogRecipients(Array.from(roomLog.participants.keys()));
   const recipientMap = new Map(
@@ -19258,13 +19596,13 @@ async function finalizeRoomLog(roomId, serverId, options = {}) {
   };
 }
 
-async function finalizeRoomLogIfEmpty(roomId, serverId) {
-  if (getSocketsInChannel(roomId, serverId).length > 0) {
-    clearPendingRoomLogFinalization(roomId, serverId);
+async function finalizeRoomLogIfEmpty(roomId, serverId, standardRoomId = null) {
+  if (getSocketsInChannel(roomId, serverId, standardRoomId).length > 0) {
+    clearPendingRoomLogFinalization(roomId, serverId, standardRoomId);
     return false;
   }
 
-  return schedulePendingRoomLogFinalization(roomId, serverId);
+  return schedulePendingRoomLogFinalization(roomId, serverId, ROOM_LOG_EMPTY_GRACE_MS, standardRoomId);
 }
 
 restorePersistedActiveRoomLogs();
@@ -19458,17 +19796,31 @@ function emitDirectSystemMessageToUser(userId, content, options = {}) {
   });
 }
 
-function emitSystemChatMessage(roomId, serverId, content, options = {}) {
+function emitSystemChatMessage(roomId, serverId, content, options = {}, standardRoomId = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
   const payload = buildSystemChatPayload(content, options);
   if (!payload) return;
 
-  appendMessageToActiveRoomLog(normalizedRoomId, normalizedServerId, {
-    ...payload
-  });
+  appendMessageToActiveRoomLog(
+    normalizedRoomId,
+    normalizedServerId,
+    {
+      ...payload
+    },
+    resolvedStandardRoomId
+  );
 
-  emitToRoomChannelMembers(normalizedRoomId, normalizedServerId, "chat:message", payload);
+  emitToRoomChannelMembers(
+    normalizedRoomId,
+    normalizedServerId,
+    "chat:message",
+    payload,
+    resolvedStandardRoomId
+  );
 }
 
 function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
@@ -19491,12 +19843,17 @@ function getSocketDisplayProfile(socket, serverId = DEFAULT_SERVER_ID) {
   );
 }
 
-function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
+function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const room =
     Number.isInteger(roomId) && roomId > 0
       ? getRoomWithCharacter(Number(roomId))
       : null;
-  const sockets = getSocketsInChannel(roomId, serverId);
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const sockets = getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
   if (!sockets.length && !(room && isTavernInnkeeperRoom(room, serverId))) {
     return [];
   }
@@ -19529,7 +19886,20 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID) {
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
       has_room_rights: room ? canBypassRoomLock(user, room) : false,
-      is_afk: Boolean(getChatAfkState(userId, roomId, socketServerId, activeCharacterId))
+      is_afk: Boolean(
+        getChatAfkState(
+          userId,
+          normalizedRoomId,
+          socketServerId,
+          activeCharacterId,
+          getSocketChannelStandardRoomId(
+            memberSocket,
+            normalizedRoomId,
+            socketServerId,
+            resolvedStandardRoomId
+          )
+        )
+      )
     });
   }
 
@@ -19575,36 +19945,52 @@ function sanitizeOnlineCharacterEntries(entries) {
     .filter((entry) => entry.user_id > 0 || entry.name);
 }
 
-function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID) {
-  const onlineCharacters = getOnlineCharactersForChannel(roomId, serverId);
+function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const standardRoom = normalizedRoomId
+    ? null
+    : resolveStandardRoomForServer(normalizedServerId, resolvedStandardRoomId);
+  const onlineCharacters = getOnlineCharactersForChannel(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId
+  );
 
   emitToRoomChannelMembers(
     normalizedRoomId,
     normalizedServerId,
     "chat:online-characters",
-    onlineCharacters
+    onlineCharacters,
+    resolvedStandardRoomId
   );
   if (normalizedRoomId == null) {
-    Array.from(ALLOWED_SERVER_IDS).forEach((watchServerId) => {
-      io.to(socketChannelForRoomWatch(normalizedRoomId, watchServerId)).emit("room:watch:update", {
+    const watchServerIds = standardRoom?.shared_scope
+      ? Array.from(ALLOWED_SERVER_IDS)
+      : [normalizedServerId];
+    watchServerIds.forEach((watchServerId) => {
+      io.to(socketChannelForRoomWatch(normalizedRoomId, watchServerId, resolvedStandardRoomId)).emit("room:watch:update", {
         roomId: normalizedRoomId,
         serverId: watchServerId,
+        standardRoomId: resolvedStandardRoomId,
         users: onlineCharacters
       });
     });
     return;
   }
 
-  io.to(socketChannelForRoomWatch(normalizedRoomId, normalizedServerId)).emit("room:watch:update", {
+  io.to(socketChannelForRoomWatch(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)).emit("room:watch:update", {
     roomId: normalizedRoomId,
     serverId: normalizedServerId,
+    standardRoomId: resolvedStandardRoomId,
     users: onlineCharacters
   });
 }
 
-function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID) {
+function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const socketServerId = getSocketChannelServerId(memberSocket, roomId, serverId);
   const presenceIdentity = getSocketPresenceIdentity(memberSocket, socketServerId);
   const userId = Number(presenceIdentity?.userId);
@@ -19614,15 +20000,19 @@ function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID)
 
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getSocketChannelStandardRoomId(memberSocket, normalizedRoomId, normalizedServerId, standardRoomId);
   const presenceSockets = getPresenceSocketsInChannel(
     normalizedRoomId,
     normalizedServerId,
-    presenceIdentity
+    presenceIdentity,
+    resolvedStandardRoomId
   );
   const isTyping = presenceSockets.some((socketEntry) => Boolean(socketEntry?.data?.isTyping));
   const displayProfile = getSocketDisplayProfile(memberSocket, socketServerId);
 
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId)).emit("chat:typing", {
+  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)).emit("chat:typing", {
     presence_key: presenceIdentity.key,
     user_id: userId,
     character_id: presenceIdentity.characterId,
@@ -19697,14 +20087,20 @@ function getChatReconnectSuppressionRoomKey(roomId) {
     : CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY;
 }
 
-function setChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT_SERVER_ID, durationMs = CHAT_RECONNECT_GRACE_MS) {
+function setChatReconnectSuppression(
+  presenceKey,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  durationMs = CHAT_RECONNECT_GRACE_MS,
+  standardRoomId = null
+) {
   const normalizedPresenceKey = String(presenceKey || "").trim();
   if (!normalizedPresenceKey) {
     return;
   }
 
   const now = Date.now();
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
+  const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   pruneExpiredChatReconnectSuppressionsStatement.run(now);
   upsertChatReconnectSuppressionStatement.run(
     normalizedPresenceKey,
@@ -19714,14 +20110,19 @@ function setChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT_SER
   );
 }
 
-function consumeChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT_SERVER_ID) {
+function consumeChatReconnectSuppression(
+  presenceKey,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null
+) {
   const normalizedPresenceKey = String(presenceKey || "").trim();
   if (!normalizedPresenceKey) {
     return false;
   }
 
   const now = Date.now();
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
+  const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   const roomKey = getChatReconnectSuppressionRoomKey(roomId);
   pruneExpiredChatReconnectSuppressionsStatement.run(now);
   const row = selectChatReconnectSuppressionStatement.get(
@@ -19738,19 +20139,31 @@ function consumeChatReconnectSuppression(presenceKey, roomId, serverId = DEFAULT
   return true;
 }
 
-function getPendingChatDisconnectKey(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
-  const scopeServerKey = getChatScopeServerKey(roomId, serverId);
+function getPendingChatDisconnectKey(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
+  const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   const roomKey = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
   const presenceKey = getPresenceIdentityKey(userId, characterId);
   return `${presenceKey}:${scopeServerKey}:${roomKey}`;
 }
 
-function clearPendingChatDisconnect(userId, roomId, serverId = DEFAULT_SERVER_ID, characterId = null) {
+function clearPendingChatDisconnect(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  characterId = null,
+  standardRoomId = null
+) {
   if (!getPresenceIdentityKey(userId, characterId)) {
     return null;
   }
 
-  const key = getPendingChatDisconnectKey(userId, roomId, serverId, characterId);
+  const key = getPendingChatDisconnectKey(userId, roomId, serverId, characterId, standardRoomId);
   const entry = pendingChatDisconnects.get(key);
   if (!entry) {
     return null;
@@ -19804,7 +20217,7 @@ function finalizeChatDisconnectEntry(entry) {
   if (
     getPresenceSocketsInChannel(entry.roomId, entry.serverId, {
       key: entry.presenceKey
-    }).length > 0
+    }, entry.standardRoomId).length > 0
   ) {
     return false;
   }
@@ -19812,12 +20225,13 @@ function finalizeChatDisconnectEntry(entry) {
   clearChatAfkState(entry.userId, entry.roomId, entry.serverId, {
     skipStateEmit: true,
     skipOnlineRefresh: true
-  }, entry.characterId);
+  }, entry.characterId, entry.standardRoomId);
 
   const shouldSuppressReconnectPresence = consumeChatReconnectSuppression(
     entry.presenceKey,
     entry.roomId,
-    entry.serverId
+    entry.serverId,
+    entry.standardRoomId
   );
 
   if (!entry.skipPresence && !shouldSuppressReconnectPresence) {
@@ -19836,12 +20250,13 @@ function finalizeChatDisconnectEntry(entry) {
         presence_actor_name: disconnectPresenceMessage.actorName,
         presence_actor_chat_text_color: entry.chatTextColor,
         presence_suffix: disconnectPresenceMessage.suffix
-      }
+      },
+      entry.standardRoomId
     );
   }
 
-  emitOnlineCharacters(entry.roomId, entry.serverId);
-  void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId);
+  emitOnlineCharacters(entry.roomId, entry.serverId, entry.standardRoomId);
+  void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId, entry.standardRoomId);
   scheduleRoomDeletion(entry.roomId);
   emitHomeStatsUpdate();
   return true;
@@ -19851,6 +20266,7 @@ function schedulePendingChatDisconnect({
   userId,
   roomId,
   serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
   displayName = "",
   chatTextColor = "",
   skipPresence = false,
@@ -19862,18 +20278,35 @@ function schedulePendingChatDisconnect({
   }
 
   const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
   const parsedCharacterId = normalizePresenceCharacterId(characterId);
   const disconnectGraceMs = CHAT_RECONNECT_GRACE_MS;
   const disconnectExpiresAt = Date.now() + disconnectGraceMs;
-  clearPendingChatDisconnect(parsedUserId, roomId, normalizedServerId, parsedCharacterId);
-  const key = getPendingChatDisconnectKey(parsedUserId, roomId, normalizedServerId, parsedCharacterId);
+  clearPendingChatDisconnect(
+    parsedUserId,
+    normalizedRoomId,
+    normalizedServerId,
+    parsedCharacterId,
+    resolvedStandardRoomId
+  );
+  const key = getPendingChatDisconnectKey(
+    parsedUserId,
+    normalizedRoomId,
+    normalizedServerId,
+    parsedCharacterId,
+    resolvedStandardRoomId
+  );
 
   const entry = {
     userId: parsedUserId,
     characterId: parsedCharacterId,
     presenceKey: getPresenceIdentityKey(parsedUserId, parsedCharacterId),
-    roomId: Number.isInteger(roomId) && roomId > 0 ? roomId : null,
+    roomId: normalizedRoomId,
     serverId: normalizedServerId,
+    standardRoomId: resolvedStandardRoomId,
     displayName: String(displayName || "").trim(),
     chatTextColor: String(chatTextColor || "").trim(),
     skipPresence: Boolean(skipPresence),
@@ -20076,6 +20509,7 @@ io.on("connection", (socket) => {
   };
 
   socket.data.roomId = null;
+  socket.data.standardRoomId = "";
   socket.data.serverId = null;
   socket.data.presenceServerId = null;
   socket.data.roomWatchChannels = new Set();
@@ -20139,11 +20573,16 @@ io.on("connection", (socket) => {
     const rawServerId =
       payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
     const rawRoomId = payload && typeof payload === "object" ? payload.roomId : null;
+    const rawStandardRoomId =
+      payload && typeof payload === "object" ? payload.standardRoomId : "";
     const parsedRoomId = Number(rawRoomId);
     const nextRoomId =
       Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
     const nextServerId = normalizeServer(rawServerId);
-    const watcherChannel = socketChannelForRoomWatch(nextRoomId, nextServerId);
+    const nextStandardRoomId = nextRoomId
+      ? ""
+      : getStandardRoomContext(nextServerId, rawStandardRoomId).standardRoomId;
+    const watcherChannel = socketChannelForRoomWatch(nextRoomId, nextServerId, nextStandardRoomId);
 
     if (!socket.data.roomWatchChannels.has(watcherChannel)) {
       socket.join(watcherChannel);
@@ -20153,7 +20592,8 @@ io.on("connection", (socket) => {
     socket.emit("room:watch:update", {
       roomId: nextRoomId,
       serverId: nextServerId,
-      users: getOnlineCharactersForChannel(nextRoomId, nextServerId)
+      standardRoomId: nextStandardRoomId,
+      users: getOnlineCharactersForChannel(nextRoomId, nextServerId, nextStandardRoomId)
     });
 
     const watchedRoom = nextRoomId ? getRoomWithCharacter(nextRoomId) : null;
@@ -20192,6 +20632,8 @@ io.on("connection", (socket) => {
       payload && typeof payload === "object" ? payload.roomId : payload;
     const rawServerId =
       payload && typeof payload === "object" ? payload.serverId : DEFAULT_SERVER_ID;
+    const rawStandardRoomId =
+      payload && typeof payload === "object" ? payload.standardRoomId : "";
     const rawCharacterId =
       payload && typeof payload === "object" ? payload.characterId : null;
     const isReconnectJoin =
@@ -20206,6 +20648,9 @@ io.on("connection", (socket) => {
     const nextRoomId =
       Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : null;
     let nextServerId = normalizeServer(rawServerId);
+    let nextStandardRoomId = nextRoomId
+      ? ""
+      : getStandardRoomContext(nextServerId, rawStandardRoomId).standardRoomId;
     let nextRoom = null;
 
     if (nextRoomId) {
@@ -20224,6 +20669,7 @@ io.on("connection", (socket) => {
       }
       nextRoom = ensureSavedRoomVisibleForOwner(nextRoom, socket.data.user.id);
       nextServerId = normalizeServer(nextRoom.server_id || nextRoom.character_server_id);
+      nextStandardRoomId = "";
     }
 
     const previousRoomId =
@@ -20233,10 +20679,15 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
+    const previousStandardRoomId = previousRoomId
+      ? ""
+      : getStandardRoomContext(previousServerId || DEFAULT_SERVER_ID, socket.data.standardRoomId)
+          .standardRoomId;
     const previousRoom = previousRoomId ? getRoomWithCharacter(previousRoomId) : null;
     const isSameChannel =
       previousServerId === nextServerId &&
-      previousRoomId === nextRoomId;
+      previousRoomId === nextRoomId &&
+      previousStandardRoomId === nextStandardRoomId;
     const previousDisplayProfile = previousServerId
       ? getSocketDisplayProfile(socket, previousServerId)
       : null;
@@ -20252,7 +20703,8 @@ io.on("connection", (socket) => {
           previousRoomId,
           previousServerId,
           socket.id,
-          previousCharacterId
+          previousCharacterId,
+          previousStandardRoomId
         )
       : false;
     const preferredCharacterId =
@@ -20270,7 +20722,8 @@ io.on("connection", (socket) => {
       nextServerId,
       nextCharacterId,
       socket.id,
-      nextRoomId
+      nextRoomId,
+      nextStandardRoomId
     );
     const nextPresenceKey = getPresenceIdentityKey(socket.data.user.id, nextCharacterId);
     const shouldClearPreviousAfkState = Boolean(previousServerId) &&
@@ -20280,7 +20733,8 @@ io.on("connection", (socket) => {
       socket.data.user.id,
       nextRoomId,
       nextServerId,
-      nextCharacterId
+      nextCharacterId,
+      nextStandardRoomId
     );
     const shouldMarkReconnectSuppression =
       isReconnectJoin &&
@@ -20289,7 +20743,13 @@ io.on("connection", (socket) => {
           reconnectAgeMs >= 0 &&
           reconnectAgeMs <= CHAT_RECONNECT_GRACE_MS));
     if (shouldMarkReconnectSuppression && nextPresenceKey) {
-      setChatReconnectSuppression(nextPresenceKey, nextRoomId, nextServerId);
+      setChatReconnectSuppression(
+        nextPresenceKey,
+        nextRoomId,
+        nextServerId,
+        CHAT_RECONNECT_GRACE_MS,
+        nextStandardRoomId
+      );
     }
     const shouldSuppressReconnectPresence =
       shouldMarkReconnectSuppression;
@@ -20298,7 +20758,8 @@ io.on("connection", (socket) => {
       nextRoomId,
       nextServerId,
       socket.id,
-      nextCharacterId
+      nextCharacterId,
+      nextStandardRoomId
     );
     const nextDisplayProfile = preferredCharacter?.name
       ? getUserDisplayProfile(socket.data.user, preferredCharacter)
@@ -20307,16 +20768,16 @@ io.on("connection", (socket) => {
 
     if (previousServerId && socket.data.isTyping) {
       socket.data.isTyping = false;
-      emitChatTypingState(socket, previousRoomId, previousServerId);
+      emitChatTypingState(socket, previousRoomId, previousServerId, previousStandardRoomId);
     }
 
     if (previousServerId) {
-      socket.leave(socketChannelForRoom(previousRoomId, previousServerId));
+      socket.leave(socketChannelForRoom(previousRoomId, previousServerId, previousStandardRoomId));
       if (shouldClearPreviousAfkState) {
         clearChatAfkState(socket.data.user.id, previousRoomId, previousServerId, {
           skipStateEmit: true,
           skipOnlineRefresh: true
-        }, previousCharacterId);
+        }, previousCharacterId, previousStandardRoomId);
       }
 
       if (!isSameChannel) {
@@ -20329,11 +20790,12 @@ io.on("connection", (socket) => {
             {
               chat_text_color: "#000000",
               system_kind: "presence",
-              presence_kind: previousPresenceMessage.kind,
-              presence_actor_name: previousPresenceMessage.actorName,
-              presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
-              presence_suffix: previousPresenceMessage.suffix
-            }
+                presence_kind: previousPresenceMessage.kind,
+                presence_actor_name: previousPresenceMessage.actorName,
+                presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
+                presence_suffix: previousPresenceMessage.suffix
+            },
+            previousStandardRoomId
           );
         }
         touchFestplayActivityForRoom(previousRoom);
@@ -20353,20 +20815,22 @@ io.on("connection", (socket) => {
     }
 
     socket.data.roomId = nextRoomId;
+    socket.data.standardRoomId = nextStandardRoomId;
     socket.data.serverId = nextServerId;
     socket.data.hasJoinedChat = true;
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
     markSocketChatActivity(socket);
-    socket.join(socketChannelForRoom(nextRoomId, nextServerId));
+    socket.join(socketChannelForRoom(nextRoomId, nextServerId, nextStandardRoomId));
     emitGuestbookNotificationUpdateForUser(socket.data.user.id);
-    emitChatAfkStateToSocket(socket, nextRoomId, nextServerId);
+    emitChatAfkStateToSocket(socket, nextRoomId, nextServerId, nextStandardRoomId);
     rememberRoomLogParticipant(
       nextRoomId,
       nextServerId,
       socket.data.user,
       nextDisplayName,
-      getSocketPreferredCharacterId(socket, nextServerId)
+      getSocketPreferredCharacterId(socket, nextServerId),
+      nextStandardRoomId
     );
     if (!isSameChannel) {
       const nextPresenceMessage = buildRoomPresenceMessage("enter", nextDisplayName);
@@ -20378,11 +20842,12 @@ io.on("connection", (socket) => {
           {
             chat_text_color: "#000000",
             system_kind: "presence",
-            presence_kind: nextPresenceMessage.kind,
-            presence_actor_name: nextPresenceMessage.actorName,
-            presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
-            presence_suffix: nextPresenceMessage.suffix
-          }
+              presence_kind: nextPresenceMessage.kind,
+              presence_actor_name: nextPresenceMessage.actorName,
+              presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
+              presence_suffix: nextPresenceMessage.suffix
+          },
+          nextStandardRoomId
         );
       } else if (!shouldSuppressReconnectPresence) {
         emitDirectSystemMessageToSocket(socket, nextPresenceMessage.text, {
@@ -20405,12 +20870,12 @@ io.on("connection", (socket) => {
       ? maybeRemoveEmptyRoom(previousRoomId)
       : false;
     if (previousServerId) {
-      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId);
+      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
     }
     if (previousServerId && !previousRoomWasRemoved) {
-      emitOnlineCharacters(previousRoomId, previousServerId);
+      emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
     }
-    emitOnlineCharacters(nextRoomId, nextServerId);
+    emitOnlineCharacters(nextRoomId, nextServerId, nextStandardRoomId);
     emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
     if (previousPresenceServerId !== nextServerId) {
       emitHomeStatsUpdate();
@@ -20425,6 +20890,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
 
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
@@ -20433,6 +20901,7 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     const wantsTyping = Boolean(payload && typeof payload === "object" ? payload.isTyping : payload);
@@ -20444,7 +20913,7 @@ io.on("connection", (socket) => {
     }
 
     socket.data.isTyping = wantsTyping;
-    emitChatTypingState(socket, roomId, serverId);
+    emitChatTypingState(socket, roomId, serverId, standardRoomId);
   });
 
   socket.on("chat:activity", () => {
@@ -20455,6 +20924,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
 
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
@@ -20463,13 +20935,14 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     const activeCharacterId = getSocketPreferredCharacterId(socket, serverId);
     markSocketChatActivity(socket);
     clearChatAfkState(socket.data.user.id, roomId, serverId, {
       onlyMode: "auto"
-    }, activeCharacterId);
+    }, activeCharacterId, standardRoomId);
   });
 
   socket.on("chat:afk:set", (payload) => {
@@ -20480,6 +20953,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
 
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
@@ -20488,6 +20964,7 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     const displayProfile = getSocketDisplayProfile(socket, serverId);
@@ -20501,6 +20978,7 @@ io.on("connection", (socket) => {
       characterId: activeCharacterId,
       roomId,
       serverId,
+      standardRoomId,
       actorName,
       roleStyle: displayProfile?.role_style || "",
       chatTextColor: displayProfile?.chat_text_color || "",
@@ -20518,6 +20996,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
 
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
@@ -20526,6 +21007,7 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     markSocketChatActivity(socket);
@@ -20534,7 +21016,8 @@ io.on("connection", (socket) => {
       roomId,
       serverId,
       {},
-      getSocketPreferredCharacterId(socket, serverId)
+      getSocketPreferredCharacterId(socket, serverId),
+      standardRoomId
     );
   });
 
@@ -20547,6 +21030,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
     let room = null;
 
     if (roomId) {
@@ -20556,11 +21042,12 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     if (socket.data.isTyping) {
       socket.data.isTyping = false;
-      emitChatTypingState(socket, roomId, serverId);
+      emitChatTypingState(socket, roomId, serverId, standardRoomId);
     }
 
     const content = rawMessage.trim();
@@ -20578,7 +21065,8 @@ io.on("connection", (socket) => {
         socket.data.user.id,
         roomId,
         serverId,
-        currentCharacterId
+        currentCharacterId,
+        standardRoomId
       );
 
       if (existingAfkState) {
@@ -20587,7 +21075,8 @@ io.on("connection", (socket) => {
           roomId,
           serverId,
           {},
-          currentCharacterId
+          currentCharacterId,
+          standardRoomId
         );
 
         if (clearedAfkState) {
@@ -20600,7 +21089,8 @@ io.on("connection", (socket) => {
               presence_actor_name: afkDisplayName,
               presence_actor_role_style: afkDisplayProfile?.role_style || "",
               presence_actor_chat_text_color: afkDisplayProfile?.chat_text_color || ""
-            }
+            },
+            standardRoomId
           );
         }
         return;
@@ -20611,6 +21101,7 @@ io.on("connection", (socket) => {
         characterId: currentCharacterId,
         roomId,
         serverId,
+        standardRoomId,
         actorName: afkDisplayName,
         roleStyle: afkDisplayProfile?.role_style || "",
         chatTextColor: afkDisplayProfile?.chat_text_color || "",
@@ -20626,7 +21117,8 @@ io.on("connection", (socket) => {
         roomId,
         serverId,
         {},
-        getSocketPreferredCharacterId(socket, serverId)
+        getSocketPreferredCharacterId(socket, serverId),
+        standardRoomId
       );
     }
 
@@ -20663,7 +21155,8 @@ io.on("connection", (socket) => {
         whisperArgs.targetName,
         serverId,
         socket.data.user.id,
-        roomId
+        roomId,
+        standardRoomId
       );
       if (!whisperTargets.length) {
         socket.emit("chat:message", {
@@ -20688,7 +21181,8 @@ io.on("connection", (socket) => {
         whisperTargets[0].userId,
         whisperArgs.message,
         serverId,
-        roomId
+        roomId,
+        standardRoomId
       );
       if (!whisperResult.ok) {
         socket.emit("chat:message", {
@@ -20753,7 +21247,8 @@ io.on("connection", (socket) => {
         serverId,
         targetCharacter.id,
         socket.id,
-        roomId
+        roomId,
+        standardRoomId
       );
       const previousDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const previousDisplayName =
@@ -20763,14 +21258,15 @@ io.on("connection", (socket) => {
         roomId,
         serverId,
         socket.id,
-        currentCharacterId
+        currentCharacterId,
+        standardRoomId
       );
 
       if (!hasOtherPresenceAsCurrentCharacter) {
         clearChatAfkState(socket.data.user.id, roomId, serverId, {
           skipStateEmit: true,
           skipOnlineRefresh: true
-        }, currentCharacterId);
+        }, currentCharacterId, standardRoomId);
       }
 
       socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
@@ -20786,13 +21282,14 @@ io.on("connection", (socket) => {
 
       emitUserDisplayProfileToSocket(socket);
       emitGuestbookNotificationUpdateForUser(socket.data.user.id);
-      emitChatAfkStateToSocket(socket, roomId, serverId);
+      emitChatAfkStateToSocket(socket, roomId, serverId, standardRoomId);
       rememberRoomLogParticipant(
         roomId,
         serverId,
         socket.data.user,
         nextDisplayName,
-        getSocketPreferredCharacterId(socket, serverId)
+        getSocketPreferredCharacterId(socket, serverId),
+        standardRoomId
       );
       emitSystemChatMessage(
         roomId,
@@ -20803,9 +21300,10 @@ io.on("connection", (socket) => {
           presence_actor_name: previousDisplayName,
           presence_actor_role_style: previousDisplayProfile?.role_style || "",
           presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || ""
-        }
+        },
+        standardRoomId
       );
-      emitOnlineCharacters(roomId, serverId);
+      emitOnlineCharacters(roomId, serverId, standardRoomId);
       emitSocialStateUpdatesForRelatedUsers(socket.data.user.id);
       return;
     }
@@ -20857,7 +21355,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (getActiveRoomLog(roomId, serverId)) {
+      if (getActiveRoomLog(roomId, serverId, standardRoomId)) {
         socket.emit("chat:message", {
           type: "system",
           content: "In diesem Raum läuft bereits ein Log.",
@@ -20866,8 +21364,8 @@ io.on("connection", (socket) => {
         return;
       }
 
-      startRoomLog(roomId, serverId, room, socket);
-      emitSystemChatMessage(roomId, serverId, "Log wurde gestartet.");
+      startRoomLog(roomId, serverId, room, socket, standardRoomId);
+      emitSystemChatMessage(roomId, serverId, "Log wurde gestartet.", {}, standardRoomId);
       return;
     }
 
@@ -20883,7 +21381,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (!getActiveRoomLog(roomId, serverId)) {
+      if (!getActiveRoomLog(roomId, serverId, standardRoomId)) {
         socket.emit("chat:message", {
           type: "system",
           content: "In diesem Raum läuft aktuell kein Log.",
@@ -20892,8 +21390,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      emitSystemChatMessage(roomId, serverId, "Log wurde beendet.");
-      const finalizeResult = await finalizeRoomLog(roomId, serverId, { reason: "manual" });
+      emitSystemChatMessage(roomId, serverId, "Log wurde beendet.", {}, standardRoomId);
+      const finalizeResult = await finalizeRoomLog(
+        roomId,
+        serverId,
+        { reason: "manual" },
+        standardRoomId
+      );
       let resultMessage = "Das Log wurde beendet.";
 
       if (!finalizeResult.hadLog) {
@@ -21329,7 +21832,9 @@ io.on("connection", (socket) => {
       emitSystemChatMessage(
         roomId,
         serverId,
-        `${kickTarget.name} wurde aus dem Raum geworfen.`
+        `${kickTarget.name} wurde aus dem Raum geworfen.`,
+        {},
+        standardRoomId
       );
 
       targetRoomSockets.forEach((memberSocket) => {
@@ -21382,7 +21887,8 @@ io.on("connection", (socket) => {
           system_kind: "dice-roll",
           presence_actor_name: rollDisplayName,
           presence_actor_chat_text_color: rollDisplayProfile?.chat_text_color || ""
-        }
+        },
+        standardRoomId
       );
       return;
     }
@@ -21431,7 +21937,8 @@ io.on("connection", (socket) => {
           system_kind: "dice-roll",
           presence_actor_name: rollDisplayName,
           presence_actor_chat_text_color: rollDisplayProfile?.chat_text_color || ""
-        }
+        },
+        standardRoomId
       );
       return;
     }
@@ -21640,7 +22147,8 @@ io.on("connection", (socket) => {
           presence_actor_name: switchDisplayName,
           presence_actor_chat_text_color: switchDisplayProfile?.chat_text_color || "",
           room_switch_target_name: targetRoom.name
-        }
+        },
+        standardRoomId
       );
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
@@ -21654,19 +22162,24 @@ io.on("connection", (socket) => {
     const createdAt = formatChatTimestamp();
     const messageTimeIso = new Date().toISOString();
     const showNameTime = socket.data.user?.show_own_chat_time === true;
-    appendMessageToActiveRoomLog(roomId, serverId, {
-      type: "chat",
-      user_id: socket.data.user.id,
-      username: displayProfile.label,
-      role_style: displayProfile.role_style || "",
-      chat_text_color: displayProfile.chat_text_color || "",
-      content,
-      created_at: createdAt,
-      message_time_iso: messageTimeIso,
-      show_name_time: showNameTime ? 1 : 0
-    });
+    appendMessageToActiveRoomLog(
+      roomId,
+      serverId,
+      {
+        type: "chat",
+        user_id: socket.data.user.id,
+        username: displayProfile.label,
+        role_style: displayProfile.role_style || "",
+        chat_text_color: displayProfile.chat_text_color || "",
+        content,
+        created_at: createdAt,
+        message_time_iso: messageTimeIso,
+        show_name_time: showNameTime ? 1 : 0
+      },
+      standardRoomId
+    );
 
-    io.to(socketChannelForRoom(roomId, serverId)).emit("chat:message", {
+    io.to(socketChannelForRoom(roomId, serverId, standardRoomId)).emit("chat:message", {
       user_id: socket.data.user.id,
       character_id: getSocketPreferredCharacterId(socket, serverId),
       username: displayProfile.label,
@@ -21701,6 +22214,9 @@ io.on("connection", (socket) => {
         ? socket.data.roomId
         : null;
     let serverId = normalizeServer(socket.data.serverId);
+    let standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(serverId, socket.data.standardRoomId).standardRoomId;
 
     if (roomId) {
       const room = getRoomWithCharacter(roomId);
@@ -21709,6 +22225,7 @@ io.on("connection", (socket) => {
         return;
       }
       serverId = normalizeServer(room.server_id || room.character_server_id);
+      standardRoomId = "";
     }
 
     markSocketChatActivity(socket);
@@ -21717,9 +22234,10 @@ io.on("connection", (socket) => {
       roomId,
       serverId,
       {},
-      getSocketPreferredCharacterId(socket, serverId)
+      getSocketPreferredCharacterId(socket, serverId),
+      standardRoomId
     );
-    emitWhisperBetweenUsers(socket, targetUserId, content, serverId, roomId);
+    emitWhisperBetweenUsers(socket, targetUserId, content, serverId, roomId, standardRoomId);
   });
 
   socket.on("chat:room-invite-response", (payload) => {
@@ -21809,12 +22327,16 @@ io.on("connection", (socket) => {
     const previousServerId = ALLOWED_SERVER_IDS.has(String(socket.data.serverId || "").trim().toLowerCase())
       ? normalizeServer(socket.data.serverId)
       : null;
+    const previousStandardRoomId = previousRoomId
+      ? ""
+      : getStandardRoomContext(previousServerId || DEFAULT_SERVER_ID, socket.data.standardRoomId)
+          .standardRoomId;
     const previousRoom = previousRoomId ? getRoomWithCharacter(previousRoomId) : null;
     if (previousServerId && socket.data.hasJoinedChat === true) {
       const previousCharacterId = getSocketPreferredCharacterId(socket, previousServerId);
       if (socket.data.isTyping) {
         socket.data.isTyping = false;
-        emitChatTypingState(socket, previousRoomId, previousServerId);
+        emitChatTypingState(socket, previousRoomId, previousServerId, previousStandardRoomId);
       }
       if (
         hasOtherSocketInChannel(
@@ -21822,7 +22344,8 @@ io.on("connection", (socket) => {
           previousRoomId,
           previousServerId,
           socket.id,
-          previousCharacterId
+          previousCharacterId,
+          previousStandardRoomId
         )
       ) {
         return;
@@ -21833,6 +22356,7 @@ io.on("connection", (socket) => {
         characterId: previousCharacterId,
         roomId: previousRoomId,
         serverId: previousServerId,
+        standardRoomId: previousStandardRoomId,
         displayName: disconnectDisplayProfile.label || `User ${socket.data.user?.id || "?"}`,
         chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
         skipPresence: socket.data.skipDisconnectPresence

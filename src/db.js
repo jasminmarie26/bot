@@ -392,6 +392,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS active_chat_room_logs (
     room_id INTEGER NOT NULL DEFAULT 0,
     server_id TEXT NOT NULL DEFAULT 'free-rp',
+    standard_room_id TEXT NOT NULL DEFAULT '',
     room_label TEXT NOT NULL DEFAULT '',
     started_at TEXT NOT NULL DEFAULT '',
     started_by_user_id INTEGER NOT NULL DEFAULT 0,
@@ -399,7 +400,7 @@ db.exec(`
     participants_json TEXT NOT NULL DEFAULT '[]',
     messages_json TEXT NOT NULL DEFAULT '[]',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (room_id, server_id)
+    PRIMARY KEY (room_id, server_id, standard_room_id)
   );
 
   CREATE TABLE IF NOT EXISTS curated_room_overrides (
@@ -468,6 +469,71 @@ const guestbookSettingsColumns = db
   .prepare("PRAGMA table_info(guestbook_settings)")
   .all()
   .map((column) => column.name);
+
+const activeChatRoomLogColumns = db.prepare("PRAGMA table_info(active_chat_room_logs)").all();
+const activeChatRoomLogColumnNames = activeChatRoomLogColumns
+  .map((column) => String(column?.name || "").trim())
+  .filter(Boolean);
+const activeChatRoomLogPrimaryKeyColumns = activeChatRoomLogColumns
+  .filter((column) => Number(column?.pk) > 0)
+  .sort((a, b) => Number(a.pk || 0) - Number(b.pk || 0))
+  .map((column) => String(column?.name || "").trim());
+const needsActiveChatRoomLogStandardRoomMigration =
+  activeChatRoomLogColumns.length > 0 &&
+  (
+    !activeChatRoomLogColumnNames.includes("standard_room_id") ||
+    activeChatRoomLogPrimaryKeyColumns.join(",") !== "room_id,server_id,standard_room_id"
+  );
+
+if (needsActiveChatRoomLogStandardRoomMigration) {
+  db.exec(`
+    ALTER TABLE active_chat_room_logs RENAME TO active_chat_room_logs_legacy_standard_room_migration;
+
+    CREATE TABLE active_chat_room_logs (
+      room_id INTEGER NOT NULL DEFAULT 0,
+      server_id TEXT NOT NULL DEFAULT 'free-rp',
+      standard_room_id TEXT NOT NULL DEFAULT '',
+      room_label TEXT NOT NULL DEFAULT '',
+      started_at TEXT NOT NULL DEFAULT '',
+      started_by_user_id INTEGER NOT NULL DEFAULT 0,
+      started_by_name TEXT NOT NULL DEFAULT '',
+      participants_json TEXT NOT NULL DEFAULT '[]',
+      messages_json TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (room_id, server_id, standard_room_id)
+    );
+
+    INSERT INTO active_chat_room_logs (
+      room_id,
+      server_id,
+      standard_room_id,
+      room_label,
+      started_at,
+      started_by_user_id,
+      started_by_name,
+      participants_json,
+      messages_json,
+      updated_at
+    )
+    SELECT
+      room_id,
+      server_id,
+      CASE
+        WHEN COALESCE(room_id, 0) > 0 THEN ''
+        ELSE 'zwischenwelten-foyer'
+      END,
+      room_label,
+      started_at,
+      started_by_user_id,
+      started_by_name,
+      participants_json,
+      messages_json,
+      updated_at
+    FROM active_chat_room_logs_legacy_standard_room_migration;
+
+    DROP TABLE active_chat_room_logs_legacy_standard_room_migration;
+  `);
+}
 
 const guestbookPageDesignColumnsWereMissing =
   !guestbookPageColumns.includes("image_url") ||
