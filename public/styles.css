@@ -4202,12 +4202,12 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-list {
   display: grid;
-  gap: 0.95rem;
+  gap: 1.1rem;
 }
 
 .members-section {
   display: grid;
-  gap: 0.62rem;
+  gap: 0.75rem;
 }
 
 .members-section-header {
@@ -4217,44 +4217,34 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-section-header h2 {
   margin: 0;
-  font-size: 0.88rem;
-  letter-spacing: 0.1em;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .members-section-list {
-  display: grid;
-  gap: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: baseline;
 }
 
 .members-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.9rem;
-  padding: 1rem 1.05rem;
-  border: 1px solid var(--panel-edge);
-  border-radius: calc(var(--radius) - 8px);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
   min-width: 0;
 }
 
-.members-card-main {
-  min-width: 0;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.members-card-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
+.members-card:not(:last-child)::after {
+  content: ",";
+  margin-right: 0.45rem;
+  color: var(--muted);
 }
 
 .members-card-login-dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.48rem;
+  height: 0.48rem;
   border-radius: 999px;
   background: #3ddc72;
   box-shadow: 0 0 0 1px color-mix(in srgb, #3ddc72 42%, #0a1a0f), 0 0 8px color-mix(in srgb, #3ddc72 70%, transparent);
@@ -4267,23 +4257,12 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .members-card-name {
-  font-size: 1.18rem;
+  display: inline-block;
+  font-size: 1.08rem;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.16em;
   overflow-wrap: anywhere;
-}
-
-.members-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 0.9rem;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.members-card-action {
-  flex: 0 0 auto;
 }
 
 .festplays-public-list {

@@ -13510,6 +13510,7 @@ app.get("/members", requireAuth, (req, res) => {
     .map((member) => ({
       ...member,
       server_label: getServerLabel(member.server_id),
+      is_logged_in: isUserLoggedIn(member.user_id),
       visibility_label:
         Number(member.user_id) === currentUserId
           ? "Dein Charakter"
