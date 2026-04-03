@@ -6,6 +6,9 @@
   data-member-server="<%= String(member.server_label || '').toLowerCase() %>"
   data-member-role="<%= String(member.role_label || '').toLowerCase() %>"
 >
+  <% if (member.is_logged_in) { %>
+    <span class="members-card-login-dot" aria-label="Eingeloggt" title="Eingeloggt"></span>
+  <% } %>
   <a
     class="members-card-name <%= member.role_style ? `role-name-${member.role_style}` : '' %>"
     href="/characters/<%= member.id %>/guestbook"

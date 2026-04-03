@@ -13480,6 +13480,7 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
+  const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const visibleMembers = db
     .prepare(
       `SELECT c.id,
@@ -13542,13 +13543,15 @@ app.get("/members", requireAuth, (req, res) => {
       staffCharacterIds.add(adminCharacterId);
       staffMembers.push({
         id: adminCharacterId,
+        user_id: user.id,
         name: user.admin_character_name,
         owner_name: user.username,
         server_id: normalizeCharacterServerId(user.admin_character_server_id),
         server_label: getServerLabel(user.admin_character_server_id),
         visibility_label: "Rollencharakter",
         role_label: "Administrator (A)",
-        role_style: "admin"
+        role_style: "admin",
+        is_logged_in: activeSessionUserIds.has(Number(user.id))
       });
     }
 
@@ -13563,13 +13566,15 @@ app.get("/members", requireAuth, (req, res) => {
       staffCharacterIds.add(moderatorCharacterId);
       staffMembers.push({
         id: moderatorCharacterId,
+        user_id: user.id,
         name: user.moderator_character_name,
         owner_name: user.username,
         server_id: normalizeCharacterServerId(user.moderator_character_server_id),
         server_label: getServerLabel(user.moderator_character_server_id),
         visibility_label: "Rollencharakter",
         role_label: "Moderator",
-        role_style: "moderator"
+        role_style: "moderator",
+        is_logged_in: activeSessionUserIds.has(Number(user.id))
       });
     }
   });

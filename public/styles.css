@@ -4231,8 +4231,18 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-card {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   min-width: 0;
+}
+
+.members-card-login-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  background: #3ddc72;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #3ddc72 42%, #0a1a0f), 0 0 8px color-mix(in srgb, #3ddc72 70%, transparent);
+  flex: 0 0 auto;
 }
 
 .members-section[hidden],
