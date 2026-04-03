@@ -16565,9 +16565,13 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const previewSettings = canUseStoredPreview
     ? { ...baseSettings, ...(storedPreview.settings || {}) }
     : baseSettings;
-  const previewContent = canUseStoredPreview
+  const storedPreviewContent = canUseStoredPreview
     ? String(storedPreview.page_content || "")
-    : String(previewPage.content || "");
+    : "";
+  const savedPageContent = String(previewPage.content || "");
+  const previewContent = canUseStoredPreview
+    ? (storedPreviewContent.trim() ? storedPreviewContent : savedPageContent)
+    : savedPageContent;
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     pages,
     previewPage.id,
