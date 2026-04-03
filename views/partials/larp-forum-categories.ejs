@@ -1,0 +1,64 @@
+<%
+  const larpCategories = Array.isArray(larpSection?.categories) ? larpSection.categories : [];
+  const isCompactLarpForum = typeof compactView !== "undefined" ? Boolean(compactView) : false;
+%>
+
+<div class="larp-forum-category-list<%= isCompactLarpForum ? " is-compact" : "" %>">
+  <% larpCategories.forEach((category) => { %>
+    <section class="panel larp-forum-category">
+      <header class="larp-forum-category-head">
+        <div>
+          <p class="larp-forum-category-kicker">Kategorie</p>
+          <h3><%= category.title %></h3>
+          <% if (category.description) { %>
+            <p class="muted"><%= category.description %></p>
+          <% } %>
+        </div>
+        <span class="larp-forum-category-count">
+          <%= Array.isArray(category.boards) ? category.boards.length : 0 %> Foren
+        </span>
+      </header>
+
+      <div class="larp-forum-board-table">
+        <div class="larp-forum-board-table-head" aria-hidden="true">
+          <span>Forum</span>
+          <span>Bereich</span>
+          <span>Hinweis</span>
+        </div>
+
+        <% (Array.isArray(category.boards) ? category.boards : []).forEach((board) => { %>
+          <article class="larp-forum-board-row">
+            <div class="larp-forum-board-main">
+              <span class="larp-forum-board-icon" aria-hidden="true"><%= board.short_label %></span>
+              <div class="larp-forum-board-copy">
+                <div class="larp-forum-board-flags">
+                  <% if (board.flag) { %>
+                    <span class="larp-forum-board-flag"><%= board.flag %></span>
+                  <% } %>
+                  <% if (board.access) { %>
+                    <span class="larp-forum-board-meta-pill"><%= board.access %></span>
+                  <% } %>
+                </div>
+
+                <h4><%= board.title %></h4>
+                <p class="muted"><%= board.description %></p>
+              </div>
+            </div>
+
+            <div class="larp-forum-board-column">
+              <span class="larp-forum-board-column-label">Bereich</span>
+              <strong><%= board.scope %></strong>
+              <p><%= board.focus %></p>
+            </div>
+
+            <div class="larp-forum-board-column larp-forum-board-activity">
+              <span class="larp-forum-board-column-label">Letzte Richtung</span>
+              <strong><%= board.activity_title %></strong>
+              <p><%= board.activity_note %></p>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  <% }) %>
+</div>

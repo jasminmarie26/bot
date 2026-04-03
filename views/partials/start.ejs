@@ -216,6 +216,7 @@
         menuCharacter.is_owner
       )
     ); %>
+    <% const isLarpMenuCharacter = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const displayIdentityName =
       currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
     <% const accountDisplayName =
@@ -415,7 +416,7 @@
                     <span>Account Nr.: <%= currentUser.account_number %></span>
                     <% if (menuCharacter) { %>
                       <span>Charakter: <%= menuCharacter.name %></span>
-                      <span>Server: <%= menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+                      <span>Server: <%= menuCharacter.server_id === "larp" ? "LARP" : (menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
                     <% } %>
                   </div>
 
@@ -425,7 +426,12 @@
                       <a href="/dashboard" target="_blank" rel="noopener noreferrer">Charakterliste</a>
                     <% } %>
                     <% if (menuCharacter) { %>
-                      <a href="/characters/<%= menuCharacter.id %>">Charakter</a>
+                      <% if (isLarpMenuCharacter) { %>
+                        <a href="/dashboard/larp">LARP-Zugang</a>
+                        <a href="/larp-forum?character_id=<%= menuCharacter.id %>">LARP-Forum</a>
+                      <% } else { %>
+                        <a href="/characters/<%= menuCharacter.id %>">Charakter</a>
+                      <% } %>
                       <% if (canEditMenuCharacter) { %>
                         <a href="/characters/<%= menuCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
                       <% } %>

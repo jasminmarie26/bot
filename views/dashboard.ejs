@@ -41,14 +41,32 @@
     </summary>
 
     <div class="dashboard-accordion-body">
-      <section class="panel dashboard-larp-panel dashboard-subpanel">
-        <div class="dashboard-larp-orb" aria-hidden="true"></div>
-        <div class="dashboard-larp-copy">
-          <span class="dashboard-status-pill">In Planung</span>
-          <h3>Wegmarken f&uuml;r deine n&auml;chste Reise</h3>
-          <p class="muted"><%= larpSection.note %></p>
-        </div>
-      </section>
+      <div class="dashboard-larp-preview">
+        <section class="panel dashboard-larp-hero dashboard-subpanel">
+          <div class="dashboard-larp-hero-copy">
+            <span class="dashboard-status-pill"><%= larpSection.intro_badge %></span>
+            <h3><%= larpSection.hero_title %></h3>
+            <p class="muted"><%= larpSection.hero_text %></p>
+          </div>
+
+          <div class="dashboard-larp-hero-actions">
+            <a class="btn" href="<%= larpSection.cta_href %>"><%= larpSection.cta_label %></a>
+            <span class="dashboard-status-pill is-soft">Eigener Zugang</span>
+          </div>
+
+          <div class="dashboard-larp-stat-grid">
+            <% (Array.isArray(larpSection.stats) ? larpSection.stats : []).forEach((stat) => { %>
+              <article class="dashboard-larp-stat-card">
+                <strong><%= stat.value %></strong>
+                <span><%= stat.label %></span>
+                <p><%= stat.note %></p>
+              </article>
+            <% }) %>
+          </div>
+        </section>
+
+        <%- include("partials/larp-forum-categories", { larpSection, compactView: true }) %>
+      </div>
     </div>
   </details>
 </section>
