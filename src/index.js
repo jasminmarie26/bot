@@ -3896,6 +3896,57 @@ function findCharacterNameConflictForTarget(name, options = {}) {
   return matches[0];
 }
 
+function findCharacterNameConflictForMove(name, options = {}) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) {
+    return null;
+  }
+
+  const excludedCharacterId = Number(options.excludedCharacterId);
+  const currentUserId = Number(options.currentUserId);
+  const targetServerId = normalizeCharacterServerId(options.targetServerId);
+  const params = [normalizedName];
+  let query = `
+    SELECT id, name, user_id, server_id
+    FROM characters
+    WHERE lower(trim(name)) = lower(trim(?))
+  `;
+
+  if (Number.isInteger(excludedCharacterId) && excludedCharacterId > 0) {
+    query += " AND id != ?";
+    params.push(excludedCharacterId);
+  }
+
+  query += " ORDER BY id ASC";
+
+  const matches = db.prepare(query).all(...params);
+  if (!matches.length) {
+    return null;
+  }
+
+  if (targetServerId === LARP_SERVER_ID) {
+    const blockingMatch = matches.find((character) => {
+      if (Number(character.user_id) !== currentUserId) {
+        return true;
+      }
+
+      return normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID;
+    });
+
+    return blockingMatch || null;
+  }
+
+  const blockingMatch = matches.find((character) => {
+    if (Number(character.user_id) !== currentUserId) {
+      return true;
+    }
+
+    return normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID;
+  });
+
+  return blockingMatch || null;
+}
+
 function isAvatarUrlValid(url) {
   if (!url) return true;
   return /^https?:\/\/.+/i.test(url);
@@ -12631,6 +12682,15 @@ function getSafeExplicitReturnTarget(value, fallback = "/") {
   return fallback;
 }
 
+function getCharacterAreaReturnTarget(serverId) {
+  if (isLarpServerId(serverId)) {
+    return "/dashboard/larp";
+  }
+
+  const normalizedServerId = normalizeServer(serverId);
+  return normalizedServerId ? `/dashboard/areas/${normalizedServerId}` : "/dashboard";
+}
+
 function getDashboardOwnCharacters(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -12730,7 +12790,16 @@ function getLarpCharactersForUser(userId) {
        WHERE user_id = ? AND server_id = ?
        ORDER BY lower(name) ASC, id ASC`
     )
-    .all(parsedUserId, LARP_SERVER_ID);
+    .all(parsedUserId, LARP_SERVER_ID)
+    .map((character) => ({
+      ...character,
+      can_dashboard_move: true
+    }));
+}
+
+function getDashboardLarpGuilds(userId) {
+  void userId;
+  return [];
 }
 
 function ensureFestplayRoomForCharacter(
@@ -13095,6 +13164,23 @@ app.get("/dashboard", requireAuth, (req, res) => {
   });
 });
 
+app.get("/dashboard/larp", requireAuth, (req, res) => {
+  const larpSection = getDashboardLarpSection();
+  const larpCharacters = getLarpCharactersForUser(req.session.user.id);
+  const larpGuilds = getDashboardLarpGuilds(req.session.user.id);
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+
+  return res.render("dashboard-larp", {
+    title: "LARP Bereich",
+    larpSection,
+    larpCharacters,
+    larpGuilds,
+    erpMoveAllowed
+  });
+});
+
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
   const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
   if (!serverSection) {
@@ -13216,6 +13302,58 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
       req,
       "success",
       `Gästebuch-Codes von ${exportItems.length} Charakteren wurden per E-Mail verschickt.`
+    );
+  } catch (error) {
+    console.error(error);
+    setFlash(
+      req,
+      "error",
+      `Gästebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(error)}).`
+    );
+  }
+
+  return res.redirect(returnTarget);
+});
+
+app.post("/dashboard/larp/guestbook-code-email", requireAuth, async (req, res) => {
+  const returnTarget = getSafeReturnTarget(req, "/dashboard/larp");
+  const dashboardCharacters = getLarpCharactersForUser(req.session.user.id);
+  if (!dashboardCharacters.length) {
+    setFlash(req, "error", "Es sind keine eigenen LARP-Charaktere vorhanden.");
+    return res.redirect(returnTarget);
+  }
+
+  const accountUser = getAccountUserById(req.session.user.id);
+  const email = normalizeEmail(accountUser?.email || "");
+  if (!email) {
+    setFlash(req, "error", "In deinem Account ist keine gültige E-Mail-Adresse hinterlegt.");
+    return res.redirect(returnTarget);
+  }
+
+  const exportItems = dashboardCharacters
+    .map((character) => getGuestbookExportDataForCharacter(character.id))
+    .filter((item) => item && Number(item.character?.user_id) === Number(req.session.user.id));
+
+  if (!exportItems.length) {
+    setFlash(req, "error", "Gästebuch-Codes konnten nicht geladen werden.");
+    return res.redirect(returnTarget);
+  }
+
+  try {
+    const deliveryResult = await sendGuestbookCodeEmail({
+      email,
+      username: accountUser?.username || req.session.user.username,
+      exportLabel: `LARP (${exportItems.length})`,
+      title: "Gästebuch-Codes: LARP",
+      introText:
+        "Im Anhang findest du die Gästebuch-Codes deiner sichtbaren LARP-Charaktere.",
+      items: exportItems
+    });
+
+    setFlash(
+      req,
+      "success",
+      `Gästebuch-Codes für LARP wurden per E-Mail verschickt (${deliveryResult.items.length}).`
     );
   } catch (error) {
     console.error(error);
@@ -13563,9 +13701,7 @@ app.get("/sitemap.xml", (req, res) => {
 app.get("/characters/new", requireAuth, (req, res) => {
   const festplays = getFestplays();
   const requestedServer = normalizeCharacterServerId(req.query.server);
-  const fallbackReturnTarget = requestedServer === LARP_SERVER_ID
-    ? "/dashboard?section=larp"
-    : `/dashboard/areas/${requestedServer}`;
+  const fallbackReturnTarget = getCharacterAreaReturnTarget(requestedServer);
   const returnTarget = getSafeExplicitReturnTarget(
     req.query.return_to,
     fallbackReturnTarget
@@ -13596,9 +13732,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
 app.post("/characters", requireAuth, (req, res) => {
   const payload = normalizeCharacterInput(req.body);
   const festplays = getFestplays();
-  const fallbackReturnTarget = payload.server_id === LARP_SERVER_ID
-    ? "/dashboard?section=larp"
-    : `/dashboard/areas/${payload.server_id}`;
+  const fallbackReturnTarget = getCharacterAreaReturnTarget(payload.server_id);
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
   payload.festplay_id = null;
 
@@ -15452,7 +15586,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
   const fallbackReturnTarget = character?.server_id
-    ? `/dashboard/areas/${normalizeServer(character.server_id)}`
+    ? getCharacterAreaReturnTarget(character.server_id)
     : "/dashboard";
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
 
@@ -15487,7 +15621,10 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
 app.post("/characters/:id/move", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
-  const returnTarget = getSafeReturnTarget(req, "/dashboard");
+  const returnTarget = getSafeReturnTarget(
+    req,
+    character?.server_id ? getCharacterAreaReturnTarget(character.server_id) : "/dashboard"
+  );
 
   if (!character) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
@@ -15500,7 +15637,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
     });
   }
 
-  const currentServerId = normalizeServer(character.server_id);
+  const currentServerId = normalizeCharacterServerId(character.server_id);
   const requestedServerId = normalizeFestplayServerId(req.body.target_server_id);
   const festplayHomeServerId = getCharacterFestplayHomeServer(id);
   const requestedDashboardMode = parseRequestedFestplayDashboardMode(
@@ -15549,6 +15686,20 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   if (nextServerId === "erp" && (viewerAge === null || viewerAge < 18)) {
     setFlash(req, "error", "ERP ist erst ab 18 Jahren verfügbar.");
+    return res.redirect(returnTarget);
+  }
+
+  const nameConflict = findCharacterNameConflictForMove(character.name, {
+    excludedCharacterId: id,
+    currentUserId: req.session.user.id,
+    targetServerId: nextServerId
+  });
+  if (nameConflict) {
+    setFlash(
+      req,
+      "error",
+      `Auf ${getServerLabel(nextServerId)} existiert bereits ein Charakter mit diesem Namen.`
+    );
     return res.redirect(returnTarget);
   }
 

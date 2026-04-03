@@ -44,14 +44,17 @@
       <section class="panel dashboard-larp-panel dashboard-subpanel">
         <div class="dashboard-larp-orb" aria-hidden="true"></div>
         <div class="dashboard-larp-copy">
-          <span class="dashboard-status-pill">Charakterzugang offen</span>
-          <h3>LARP-Charaktere anlegen</h3>
+          <span class="dashboard-status-pill">Bereich bereit</span>
+          <h3>LARP-Verwaltung im selben Stil</h3>
           <p class="muted"><%= larpSection.note %></p>
 
           <div class="dashboard-larp-actions">
+            <a class="btn btn-secondary" href="/dashboard/larp">
+              LARP-Bereich &ouml;ffnen
+            </a>
             <a
               class="btn"
-              href="/characters/new?server=larp&return_to=<%= encodeURIComponent('/dashboard?section=larp') %>"
+              href="/characters/new?server=larp&return_to=<%= encodeURIComponent('/dashboard/larp') %>"
             >
               LARP-Charakter erstellen
             </a>
