@@ -7398,7 +7398,7 @@ body:has(.guestbook-layout) .guestbook-layout {
 }
 
 .guestbook-entry-heading {
-  color: var(--link);
+  color: var(--gb-entry-color, var(--link));
   display: inline-flex;
   align-items: center;
   font-size: clamp(1rem, 1.4vw, 1.14rem);
@@ -7466,6 +7466,8 @@ body:has(.guestbook-layout) .guestbook-layout {
     0 10px 24px -20px color-mix(in srgb, black 44%, transparent);
   backdrop-filter: blur(var(--glass-blur)) saturate(130%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%);
+  color: var(--gb-entry-color, var(--text));
+  font-family: var(--gb-font-family, var(--font-ui));
 }
 
 .guestbook-entry-panel[hidden] {
@@ -7931,72 +7933,144 @@ body.theme-atari .guestbook-entry-panel {
   font-family: var(--font-ui);
 }
 
+body.gb-font-default {
+  --gb-font-family: var(--font-ui);
+}
+
 .guestbook-page-preview.gb-font-serif {
   font-family: "Cardo", "Times New Roman", serif;
+}
+
+body.gb-font-serif {
+  --gb-font-family: "Cardo", "Times New Roman", serif;
 }
 
 .guestbook-page-preview.gb-font-sans {
   font-family: var(--font-ui);
 }
 
+body.gb-font-sans {
+  --gb-font-family: var(--font-ui);
+}
+
 .guestbook-page-preview.gb-font-mono {
   font-family: "Consolas", "Courier New", monospace;
+}
+
+body.gb-font-mono {
+  --gb-font-family: "Consolas", "Courier New", monospace;
 }
 
 .guestbook-page-preview.gb-font-audiowide {
   font-family: "Audiowide", "Trebuchet MS", sans-serif;
 }
 
+body.gb-font-audiowide {
+  --gb-font-family: "Audiowide", "Trebuchet MS", sans-serif;
+}
+
 .guestbook-page-preview.gb-font-berkshire-swash {
   font-family: "Berkshire Swash", "Palatino Linotype", serif;
+}
+
+body.gb-font-berkshire-swash {
+  --gb-font-family: "Berkshire Swash", "Palatino Linotype", serif;
 }
 
 .guestbook-page-preview.gb-font-cardo {
   font-family: "Cardo", "Times New Roman", serif;
 }
 
+body.gb-font-cardo {
+  --gb-font-family: "Cardo", "Times New Roman", serif;
+}
+
 .guestbook-page-preview.gb-font-della-respira {
   font-family: "Della Respira", "Palatino Linotype", serif;
+}
+
+body.gb-font-della-respira {
+  --gb-font-family: "Della Respira", "Palatino Linotype", serif;
 }
 
 .guestbook-page-preview.gb-font-flamenco {
   font-family: "Flamenco", var(--font-ui);
 }
 
+body.gb-font-flamenco {
+  --gb-font-family: "Flamenco", var(--font-ui);
+}
+
 .guestbook-page-preview.gb-font-indie-flower {
   font-family: "Indie Flower", "Comic Sans MS", cursive;
+}
+
+body.gb-font-indie-flower {
+  --gb-font-family: "Indie Flower", "Comic Sans MS", cursive;
 }
 
 .guestbook-page-preview.gb-font-josefin-slab {
   font-family: "Josefin Slab", "Georgia", serif;
 }
 
+body.gb-font-josefin-slab {
+  --gb-font-family: "Josefin Slab", "Georgia", serif;
+}
+
 .guestbook-page-preview.gb-font-kelly-slab {
   font-family: "Kelly Slab", var(--font-ui);
+}
+
+body.gb-font-kelly-slab {
+  --gb-font-family: "Kelly Slab", var(--font-ui);
 }
 
 .guestbook-page-preview.gb-font-medieval-sharp {
   font-family: "MedievalSharp", "Cinzel", serif;
 }
 
+body.gb-font-medieval-sharp {
+  --gb-font-family: "MedievalSharp", "Cinzel", serif;
+}
+
 .guestbook-page-preview.gb-font-old-standard-tt {
   font-family: "Old Standard TT", "Times New Roman", serif;
+}
+
+body.gb-font-old-standard-tt {
+  --gb-font-family: "Old Standard TT", "Times New Roman", serif;
 }
 
 .guestbook-page-preview.gb-font-russo-one {
   font-family: "Russo One", "Arial Black", sans-serif;
 }
 
+body.gb-font-russo-one {
+  --gb-font-family: "Russo One", "Arial Black", sans-serif;
+}
+
 .guestbook-page-preview.gb-font-sunshiney {
   font-family: "Sunshiney", "Comic Sans MS", cursive;
+}
+
+body.gb-font-sunshiney {
+  --gb-font-family: "Sunshiney", "Comic Sans MS", cursive;
 }
 
 .guestbook-page-preview.gb-font-altdeutsch {
   font-family: "UnifrakturCook", "Old English Text MT", serif;
 }
 
+body.gb-font-altdeutsch {
+  --gb-font-family: "UnifrakturCook", "Old English Text MT", serif;
+}
+
 .guestbook-page-preview.gb-font-altdeutsch-royal {
   font-family: "Pirata One", "Cinzel", serif;
+}
+
+body.gb-font-altdeutsch-royal {
+  --gb-font-family: "Pirata One", "Cinzel", serif;
 }
 
 .guestbook-page-preview.gb-font-jedi {
@@ -8004,26 +8078,49 @@ body.theme-atari .guestbook-entry-panel {
   letter-spacing: 0.02em;
 }
 
+body.gb-font-jedi {
+  --gb-font-family: "Poller One", "Russo One", sans-serif;
+}
+
 .guestbook-page-preview.gb-font-jedi-tech {
   font-family: "Orbitron", "Audiowide", sans-serif;
   letter-spacing: 0.02em;
+}
+
+body.gb-font-jedi-tech {
+  --gb-font-family: "Orbitron", "Audiowide", sans-serif;
 }
 
 .guestbook-page-preview.gb-font-elfisch {
   font-family: "Cinzel Decorative", "Cinzel", serif;
 }
 
+body.gb-font-elfisch {
+  --gb-font-family: "Cinzel Decorative", "Cinzel", serif;
+}
+
 .guestbook-page-preview.gb-font-elfisch-rune {
   font-family: "Metamorphous", "Cinzel", serif;
 }
 
+body.gb-font-elfisch-rune {
+  --gb-font-family: "Metamorphous", "Cinzel", serif;
+}
+
 .guestbook-page-preview.gb-font-magie {
   font-family: "Great Vibes", "Berkshire Swash", cursive;
-  font-size: inherit;
+}
+
+body.gb-font-magie {
+  --gb-font-family: "Great Vibes", "Berkshire Swash", cursive;
 }
 
 .guestbook-page-preview.gb-font-vintage-fantasy {
   font-family: "IM Fell English SC", "Old Standard TT", serif;
+}
+
+body.gb-font-vintage-fantasy {
+  --gb-font-family: "IM Fell English SC", "Old Standard TT", serif;
 }
 
 .guestbook-page-image {
@@ -9538,6 +9635,11 @@ select:focus {
 
 .guestbook-entry-panel .guestbook-item {
   font-size: 0.88rem;
+}
+
+body.page-guestbook-view .topbar,
+body.page-guestbook-view .guestbook-entry-heading {
+  font-family: var(--gb-font-family, var(--font-ui));
 }
 
 .guestbook-reply-hint {

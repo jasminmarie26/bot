@@ -54,14 +54,24 @@
     `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
 %>
+<%
+  const guestbookFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
+  const guestbookEntryColor = guestbookPageTextColor || "#EED7AE";
+%>
 <%- include("partials/start", {
   topbarCharacter,
   topbarBrandLabel,
   topbarBrandHref,
   topbarBrandModifier,
   topbarGuestbookMode: true,
-  pageClass: "page-guestbook-view"
+  pageClass: `page-guestbook-view ${guestbookFontClass}`
 }) %>
+
+<style>
+  body.page-guestbook-view {
+    --gb-entry-color: <%= guestbookEntryColor %>;
+  }
+</style>
 
 <% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
 <% const guestbookEntryPage = guestbookEntryPagination?.currentPage || 1; %>
