@@ -7460,7 +7460,7 @@ body:has(.guestbook-layout) .guestbook-layout {
   border: 1px solid color-mix(in srgb, var(--panel-edge) 88%, transparent);
   border-left: 0;
   border-radius: 0 16px 16px 0;
-  background-color: color-mix(in srgb, var(--gb-panel-bg-color, var(--panel-bg)) 92%, transparent);
+  background-color: color-mix(in srgb, var(--gb-panel-bg-color, var(--panel-bg)) 72%, transparent);
   background-image: var(--gb-panel-image, none);
   background-position: center;
   background-size: cover;
@@ -7468,8 +7468,8 @@ body:has(.guestbook-layout) .guestbook-layout {
   box-shadow:
     0 22px 42px -34px var(--panel-shadow),
     0 10px 24px -20px color-mix(in srgb, black 44%, transparent);
-  backdrop-filter: blur(var(--glass-blur)) saturate(130%);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%);
+  backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
   color: var(--gb-entry-color, var(--text));
 }
 
@@ -9514,8 +9514,18 @@ select:focus {
 }
 
 body.page-guestbook-view .guestbook-item {
-  background-color: color-mix(in srgb, var(--gb-panel-bg-color, var(--panel-bg)) 88%, transparent);
+  background-color: color-mix(in srgb, var(--gb-panel-bg-color, var(--panel-bg)) 70%, transparent);
   border-color: color-mix(in srgb, var(--panel-edge) 82%, transparent);
+  backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
+}
+
+body.page-guestbook-view .guestbook-entry-panel textarea,
+body.page-guestbook-view .guestbook-entry-panel input,
+body.page-guestbook-view .guestbook-entry-panel select {
+  background-color: color-mix(in srgb, var(--gb-panel-bg-color, var(--field-bg)) 68%, transparent);
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(135%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(135%);
 }
 
 .guestbook-item header {
