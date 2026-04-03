@@ -8602,6 +8602,72 @@ body.page-guestbook-preview::after {
   align-items: center;
 }
 
+.character-chat-background-field {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.character-chat-background-preview {
+  --character-chat-background-image: none;
+  position: relative;
+  min-height: 12rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #efefef;
+  background-image:
+    linear-gradient(180deg, rgba(239, 239, 239, 0.76), rgba(239, 239, 239, 0.9)),
+    var(--character-chat-background-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.character-chat-background-preview.is-empty {
+  background-image:
+    linear-gradient(180deg, rgba(239, 239, 239, 0.92), rgba(239, 239, 239, 0.98)),
+    none;
+}
+
+.character-chat-background-preview-copy {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.95rem 1rem;
+  background: linear-gradient(180deg, rgba(239, 239, 239, 0.08), rgba(239, 239, 239, 0.94));
+  color: #1a1c20;
+}
+
+.character-chat-background-preview-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #1a1c20 62%, var(--muted) 38%);
+}
+
+.character-chat-background-preview-name,
+.character-chat-background-preview-message,
+.character-chat-background-preview-state {
+  margin: 0;
+}
+
+.character-chat-background-preview-name {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.character-chat-background-preview-message {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.character-chat-background-preview-state {
+  color: color-mix(in srgb, #1a1c20 72%, var(--muted) 28%);
+  font-size: 0.84rem;
+}
+
 .character-guestbook-header {
   display: flex;
   justify-content: space-between;
@@ -10319,6 +10385,7 @@ select:focus {
 }
 
 .chat-box {
+  --character-chat-background-image: none;
   border-radius: 14px;
   height: 420px;
   overflow-y: auto;
@@ -10327,6 +10394,12 @@ select:focus {
   flex-direction: column;
   gap: 0.18rem;
   background: #efefef;
+  background-image:
+    linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9)),
+    var(--character-chat-background-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   border-color: #d3d8df;
   color: #1a1c20;
   box-shadow: none;
@@ -10336,7 +10409,9 @@ select:focus {
 
 .page-chat #chat-box {
   background: #efefef !important;
-  background-image: none !important;
+  background-image:
+    linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9)),
+    var(--character-chat-background-image) !important;
   box-shadow: none !important;
 }
 

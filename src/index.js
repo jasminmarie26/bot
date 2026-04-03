@@ -3810,6 +3810,7 @@ function normalizeCharacterInput(body) {
     description: "",
     chat_text_color: normalizeGuestbookColor(body.chat_text_color),
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
+    chat_background_url: (body.chat_background_url || "").trim().slice(0, 500),
     is_public: 1
   };
 }
@@ -5292,6 +5293,7 @@ function getPreferredFestplayChatCharacterForUser(userId, festplayId, preferredC
         `SELECT c.id,
                 c.name,
                 c.server_id,
+                c.chat_background_url,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
            FROM characters c
            LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -13834,6 +13836,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
       description: "",
       chat_text_color: "#AEE7B7",
       avatar_url: "",
+      chat_background_url: "",
       is_public: 1
     }
   });
@@ -13885,6 +13888,19 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
+  if (!isAvatarUrlValid(payload.chat_background_url)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
+      character: payload
+    });
+  }
+
   if (
     findCharacterNameConflictForTarget(payload.name, {
       currentUserId: req.session.user.id,
@@ -13906,8 +13922,8 @@ app.post("/characters", requireAuth, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, chat_background_url, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -13919,6 +13935,7 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.faceclaim,
       payload.description,
       payload.avatar_url,
+      payload.chat_background_url,
       payload.is_public
     );
 
@@ -15546,6 +15563,9 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_background_url")) {
+    payload.chat_background_url = String(character.chat_background_url || "").trim().slice(0, 500);
+  }
   const nameChanged = payload.name !== character.name;
   const characterFormValues = renameAvailability.can_change
     ? { ...character, ...payload }
@@ -15582,6 +15602,19 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       "character-form",
       buildCharacterEditFormViewModel(character, {
         error: "Avatar-URL muss mit http:// oder https:// starten.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
+  }
+
+  if (!isAvatarUrlValid(payload.chat_background_url)) {
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
         festplays,
         renameAvailability,
         requestedGuestbookPageId,
@@ -15660,7 +15693,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, is_public = ?,
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, chat_background_url = ?, is_public = ?,
          name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
@@ -15673,6 +15706,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.faceclaim,
     payload.description,
     payload.avatar_url,
+    payload.chat_background_url,
     payload.is_public,
     nameChanged ? 1 : 0,
     id
@@ -16844,7 +16878,8 @@ app.get("/chat", requireAuth, (req, res) => {
         name: preferredCharacter.name,
         is_owner: true,
         server_id: normalizeServer(preferredCharacter.server_id),
-        chat_text_color: normalizeGuestbookColor(preferredCharacter.chat_text_color)
+        chat_text_color: normalizeGuestbookColor(preferredCharacter.chat_text_color),
+        chat_background_url: String(preferredCharacter.chat_background_url || "").trim()
       };
     }
   }
@@ -18293,6 +18328,7 @@ function getPreferredCharacterForUser(
         `SELECT c.id,
                 c.name,
                 c.server_id,
+                c.chat_background_url,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
          FROM characters c
          LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -18309,6 +18345,7 @@ function getPreferredCharacterForUser(
       `SELECT c.id,
               c.name,
               c.server_id,
+              c.chat_background_url,
               COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
        FROM characters c
        LEFT JOIN guestbook_settings gs ON gs.character_id = c.id

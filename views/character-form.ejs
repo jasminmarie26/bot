@@ -127,6 +127,36 @@
       </div>
     </label>
 
+    <label class="character-chat-background-field">
+      Chat-Hintergrund
+      <span class="gb-editor-helptext">
+        F&uuml;ge einen Bildlink ein. Die Vorschau darunter aktualisiert sich direkt live.
+      </span>
+      <input
+        id="character-chat-background-url"
+        name="chat_background_url"
+        type="url"
+        inputmode="url"
+        maxlength="500"
+        placeholder="https://..."
+        value="<%= character.chat_background_url || '' %>"
+      />
+      <div id="character-chat-background-preview" class="character-chat-background-preview" aria-live="polite">
+        <div class="character-chat-background-preview-copy">
+          <span class="character-chat-background-preview-label">Live-Vorschau</span>
+          <strong id="character-chat-background-preview-name" class="character-chat-background-preview-name">
+            <%= character.name || "Dein Charakter" %>:
+          </strong>
+          <p class="character-chat-background-preview-message">
+            Hier siehst du direkt, wie dein Chat mit diesem Hintergrund wirkt.
+          </p>
+          <small id="character-chat-background-preview-state" class="character-chat-background-preview-state">
+            Kein Hintergrund gesetzt.
+          </small>
+        </div>
+      </div>
+    </label>
+
     <div class="character-form-actions">
       <button type="submit" class="btn">Speichern</button>
     </div>
@@ -203,6 +233,11 @@
     const colorHueHandle = document.getElementById("character-chat-color-hue-handle");
     const colorPanelSwatch = document.getElementById("character-chat-color-panel-swatch");
     const colorPanelValue = document.getElementById("character-chat-color-panel-value");
+    const chatBackgroundInput = document.getElementById("character-chat-background-url");
+    const chatBackgroundPreview = document.getElementById("character-chat-background-preview");
+    const chatBackgroundPreviewName = document.getElementById("character-chat-background-preview-name");
+    const chatBackgroundPreviewState = document.getElementById("character-chat-background-preview-state");
+    const nameInput = document.querySelector('input[name="name"]');
 
     if (
       !colorRoot ||
@@ -216,7 +251,11 @@
       !colorHue ||
       !colorHueHandle ||
       !colorPanelSwatch ||
-      !colorPanelValue
+      !colorPanelValue ||
+      !chatBackgroundInput ||
+      !chatBackgroundPreview ||
+      !chatBackgroundPreviewName ||
+      !chatBackgroundPreviewState
     ) {
       return;
     }
@@ -232,6 +271,11 @@
     const normalizeHexColor = (value) => {
       const normalized = String(value || "").trim().toUpperCase();
       return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : "";
+    };
+
+    const normalizeBackgroundUrl = (value) => {
+      const normalized = String(value || "").trim();
+      return /^https?:\/\/.+/i.test(normalized) ? normalized : "";
     };
 
     const rgbToHex = (rgb) =>
@@ -328,6 +372,7 @@
       colorPreview.style.color = nextColor;
       colorPanelSwatch.style.backgroundColor = nextColor;
       colorPanelValue.textContent = nextColor;
+      chatBackgroundPreviewName.style.color = nextColor;
 
       colorSurface.style.setProperty("--character-picker-hue", String(Math.round(colorState.h)));
       colorSurface.setAttribute(
@@ -343,6 +388,29 @@
       colorSurfaceHandle.style.left = `${colorState.s * 100}%`;
       colorSurfaceHandle.style.top = `${(1 - colorState.v) * 100}%`;
       colorHueHandle.style.top = `${(colorState.h / 360) * 100}%`;
+    };
+
+    const renderBackgroundPreview = () => {
+      const normalizedUrl = normalizeBackgroundUrl(chatBackgroundInput.value);
+      const normalizedName = String(nameInput?.value || "").trim();
+
+      chatBackgroundPreviewName.textContent = `${normalizedName || "Dein Charakter"}:`;
+
+      if (!normalizedUrl) {
+        chatBackgroundPreview.classList.add("is-empty");
+        chatBackgroundPreview.style.setProperty("--character-chat-background-image", "none");
+        chatBackgroundPreviewState.textContent = chatBackgroundInput.value.trim()
+          ? "Ungültiger Link. Bitte http:// oder https:// verwenden."
+          : "Kein Hintergrund gesetzt.";
+        return;
+      }
+
+      chatBackgroundPreview.classList.remove("is-empty");
+      chatBackgroundPreview.style.setProperty(
+        "--character-chat-background-image",
+        `url(${JSON.stringify(normalizedUrl)})`
+      );
+      chatBackgroundPreviewState.textContent = "So sieht dein Chat nach dem Speichern aus.";
     };
 
     const setStateFromHex = (value, { force = false } = {}) => {
@@ -438,10 +506,14 @@
     });
 
     setStateFromHex(colorText.value, { force: true });
+    renderBackgroundPreview();
 
     colorText.addEventListener("focus", openColorPanel);
     colorText.addEventListener("input", () => setStateFromHex(colorText.value));
     colorText.addEventListener("blur", () => setStateFromHex(colorText.value, { force: true }));
+    chatBackgroundInput.addEventListener("input", renderBackgroundPreview);
+    chatBackgroundInput.addEventListener("blur", renderBackgroundPreview);
+    nameInput?.addEventListener("input", renderBackgroundPreview);
 
     colorTrigger.addEventListener("click", () => {
       if (colorPanel.hidden) {

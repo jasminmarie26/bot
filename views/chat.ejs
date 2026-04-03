@@ -44,6 +44,12 @@
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
 <% const chatBoardHref = `/rp-board?server_id=${chatBoardServerId}&character_id=${Number(chatBoardCharacterId)}`; %>
+<% const chatBackgroundUrl = /^https?:\/\/.+/i.test(String(activeCharacter?.chat_background_url || "").trim())
+  ? String(activeCharacter.chat_background_url).trim()
+  : ""; %>
+<% const chatBackgroundStyle = chatBackgroundUrl
+  ? `--character-chat-background-image: url(${JSON.stringify(chatBackgroundUrl)});`
+  : ""; %>
 
 <section class="rp-shell">
   <header class="rp-topline">
@@ -348,6 +354,7 @@
         <div
           id="chat-box"
           class="chat-box"
+          style="<%= chatBackgroundStyle %>"
           data-room-id="<%= activeRoom ? activeRoom.id : '' %>"
           data-server-id="<%= activeServerId %>"
           data-standard-room-id="<%= standardRoom ? standardRoom.id : '' %>"

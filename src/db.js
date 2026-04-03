@@ -63,6 +63,7 @@ db.exec(`
     faceclaim TEXT DEFAULT '',
     description TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
+    chat_background_url TEXT DEFAULT '',
     is_public INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -864,6 +865,10 @@ if (!characterColumns.includes("festplay_dashboard_mode")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay'");
 }
 
+if (!characterColumns.includes("chat_background_url")) {
+  db.exec("ALTER TABLE characters ADD COLUMN chat_background_url TEXT DEFAULT ''");
+}
+
 if (!festplayPermissionColumns.includes("source")) {
   db.exec("ALTER TABLE festplay_permissions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
   db.prepare(
@@ -1250,6 +1255,7 @@ db.prepare(
   "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS NULL").run();
+db.prepare("UPDATE characters SET chat_background_url = '' WHERE chat_background_url IS NULL").run();
 db.prepare(
   `UPDATE chat_rooms
    SET server_id = COALESCE(
