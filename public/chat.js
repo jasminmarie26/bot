@@ -1344,7 +1344,7 @@
   window.addEventListener("app:server-instance-reload", reloadChatAfterServerRestart);
 
   function notifyImmediateChatLeave() {
-    if (immediateChatLeaveSent || !socket?.id) {
+    if (immediateChatLeaveSent || !socket?.id || serverRestartReloadInProgress) {
       return;
     }
 
