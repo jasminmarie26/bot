@@ -6779,10 +6779,32 @@ const CURATED_PUBLIC_ROOM_DEFINITIONS = Object.freeze({
       section: "Fantasy Räume",
       name: "Zum Silbermond-Krug",
       teaser: "[b]Wirt: Edric Mühlenbrand[/b]\nEin ruhiger Wirt mit warmer Stimme, der Gäste mit Met, Eintopf und einem offenen Ohr begrüßt.",
-      description: "Warme Taverne für Reisende, Met und Geschichten."
+      description: "Warme Taverne für Reisende, Met und Geschichten.",
+      innkeeper: {
+        name: "Edric Mühlenbrand",
+        presence_key: "npc:edric-muehlenbrand",
+        chat_text_color: "#c4863a",
+        trigger_keywords: ["edric", "muehlenbrand", "wirt"],
+        reply_variant: "wirt"
+      }
     }
   ],
-  erp: []
+  erp: [
+    {
+      key: "zur-samtlaterne",
+      section: "Fantasy Räume",
+      name: "Zur Samtlaterne",
+      teaser: "[b]Wirtin: Selene Abendrot[/b]\nEine aufmerksame Wirtin, die Gäste mit Wein, warmen Speisen und ruhiger Höflichkeit empfängt.",
+      description: "Gedämpfte Taverne für Wein, Wärme und lange Gespräche.",
+      innkeeper: {
+        name: "Selene Abendrot",
+        presence_key: "npc:selene-abendrot",
+        chat_text_color: "#b76584",
+        trigger_keywords: ["selene", "abendrot", "wirtin", "wirt"],
+        reply_variant: "wirtin"
+      }
+    }
+  ]
 });
 
 function getStandardRoomsForServer(serverId) {
@@ -6877,10 +6899,6 @@ function saveCuratedRoomOverride(serverId, roomKey, description = "", teaser = "
   return true;
 }
 
-const TAVERN_INNKEEPER_ROOM_KEY = "zum-silbermond-krug";
-const TAVERN_INNKEEPER_NAME = "Edric Mühlenbrand";
-const TAVERN_INNKEEPER_PRESENCE_KEY = "npc:edric-muehlenbrand";
-const TAVERN_INNKEEPER_CHAT_TEXT_COLOR = "#c4863a";
 const TAVERN_INNKEEPER_COOLDOWN_MS = 8000;
 const tavernInnkeeperLastReactionAtByRoom = new Map();
 const TAVERN_INNKEEPER_DRINK_ORDERS = [
@@ -6917,9 +6935,44 @@ const TAVERN_INNKEEPER_DRINK_ORDERS = [
   { label: "ein kühles Bier", keywords: ["bier"] }
 ];
 
-function isTavernInnkeeperRoom(room, serverId = null) {
+function getTavernInnkeeperProfile(room, serverId = null) {
   const definition = getCuratedPublicRoomDefinition(room, serverId);
-  return String(definition?.key || "").trim().toLowerCase() === TAVERN_INNKEEPER_ROOM_KEY;
+  const innkeeper = definition?.innkeeper;
+  if (!definition || !innkeeper) {
+    return null;
+  }
+
+  const name = String(innkeeper.name || "").trim();
+  if (!name) {
+    return null;
+  }
+
+  const triggerKeywords = Array.from(
+    new Set(
+      [
+        ...String(name).split(/\s+/),
+        ...(Array.isArray(innkeeper.trigger_keywords) ? innkeeper.trigger_keywords : [])
+      ]
+        .map((entry) => normalizeTavernInnkeeperTriggerText(entry))
+        .filter(Boolean)
+    )
+  );
+
+  return {
+    roomKey: normalizeRoomNameKey(definition.key || definition.name || ""),
+    roomName: String(definition.name || "").trim() || "die Taverne",
+    keeperName: name,
+    presenceKey:
+      String(innkeeper.presence_key || "").trim() ||
+      `npc:${normalizeRoomNameKey(name).replace(/[^a-z0-9-]/g, "")}`,
+    chatTextColor: String(innkeeper.chat_text_color || "").trim() || "#c4863a",
+    replyVariant: String(innkeeper.reply_variant || "wirt").trim().toLowerCase(),
+    triggerKeywords
+  };
+}
+
+function isTavernInnkeeperRoom(room, serverId = null) {
+  return Boolean(getTavernInnkeeperProfile(room, serverId));
 }
 
 function normalizeTavernInnkeeperTriggerText(value) {
@@ -6962,18 +7015,124 @@ function getRequestedTavernDrinkLabel(normalizedText) {
   return String(matchedDrink?.label || "").trim();
 }
 
-function buildTavernInnkeeperReaction(content, actorName) {
+function buildTavernInnkeeperDrinkReplies(profile, safeActorName, servedDrink) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      `schiebt ${safeActorName} ${servedDrink} über den Tresen. #Hier, frisch eingeschenkt.#`,
+      `stellt ${safeActorName} ${servedDrink} hin und lächelt ruhig. #In der Samtlaterne bleibt niemand durstig.#`,
+      `gießt ${safeActorName} ${servedDrink} ein und streicht die Schürze glatt. #Der erste Schluck macht vieles leichter.#`,
+      `reicht ${safeActorName} ${servedDrink} mit sicherer Hand. #Setz dich ruhig, die Nacht ist noch jung.#`,
+      `stellt ${safeActorName} ${servedDrink} hin und neigt den Kopf. #Ein guter Drink hilft bei langen Gesprächen.#`
+    ];
+  }
+
+  return [
+    `schiebt ${safeActorName} ${servedDrink} über den Tresen. #Hier, frisch eingeschenkt.#`,
+    `stellt ${safeActorName} ${servedDrink} hin und wischt den Tresen sauber. #Greif zu, solange es noch gut ist.#`,
+    `gießt ${safeActorName} ${servedDrink} ein und nickt zufrieden. #Der erste Schluck geht auf gute Geschichten.#`,
+    `reicht ${safeActorName} ${servedDrink} mit ruhiger Hand. #Im Silbermond-Krug bleibt niemand durstig.#`,
+    `stellt ${safeActorName} ${servedDrink} hin und lehnt sich kurz auf den Tresen. #Das wärmt besser als kalte Straßen.#`
+  ];
+}
+
+function buildTavernInnkeeperFoodReplies(profile, safeActorName) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin. #Iss erst einmal etwas Warmes.#`,
+      `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit. #Die Nacht redet sich leichter mit vollem Magen.#`,
+      `legt ${safeActorName} Brot, Käse und eine dampfende Schale bereit. #Das bringt wieder Ruhe in die Knochen.#`,
+      `schiebt ${safeActorName} einen Teller mit Braten und Brot heran. #Hier wird niemand hungrig sitzen gelassen.#`
+    ];
+  }
+
+  return [
+    `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin. #Iss erst einmal etwas Warmes.#`,
+    `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit. #Der Löffel steht schon bereit.#`,
+    `legt ${safeActorName} Brot, Käse und einen großen Löffel Eintopf bereit. #Das bringt wieder Kraft in die Knochen.#`,
+    `schiebt ${safeActorName} einen Teller mit Braten und Brot heran. #Mehr braucht ein langer Abend nicht.#`
+  ];
+}
+
+function buildTavernInnkeeperRoomReplies(profile, safeActorName) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      `nickt zum Treppenaufgang. #Oben ist noch ein freies Zimmer für dich, ${safeActorName}.#`,
+      `deutet auf den Flur. #Für die Nacht findet sich hier noch ein ruhiges Bett.#`,
+      `stellt einen Schlüssel auf den Tresen. #Im oberen Stock ist noch etwas frei.#`,
+      `zieht einen kleinen Messingschlüssel hervor. #Wenn du Ruhe suchst, findest du sie hier oben.#`
+    ];
+  }
+
+  return [
+    `nickt zum Treppenaufgang. #Oben ist noch ein freies Zimmer für müde Reisende, ${safeActorName}.#`,
+    `deutet auf den Flur. #Für die Nacht findet sich hier noch ein ruhiges Bett.#`,
+    `stellt einen Schlüssel auf den Tresen. #Im oberen Stock ist noch etwas frei.#`,
+    `zieht einen kleinen Messingschlüssel hervor. #Wenn du Ruhe suchst, findest du sie hier oben.#`
+  ];
+}
+
+function buildTavernInnkeeperThanksReplies(profile) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      "lächelt sanft. #Gern. Dafür bin ich da.#",
+      "winkt gelassen ab. #Schon gut. Solange meine Gäste zufrieden sind, stimmt der Abend.#",
+      "nickt ruhig. #Genieß den Abend, um den Rest kümmere ich mich.#",
+      "legt kurz die Hand auf den Tresen. #Ein freundliches Wort ist hier immer willkommen.#"
+    ];
+  }
+
+  return [
+    "nickt ruhig. #Gern. Dafür ist der Krug schließlich da.#",
+    "meint freundlich. #Schon gut. Solange die Gäste zufrieden sind, ist der Abend gelungen.#",
+    "winkt ab. #Trink in Ruhe, der Silbermond-Krug kümmert sich um den Rest.#",
+    "lächelt knapp. #Ein dankbarer Gast ist mir lieber als zehn laute.#"
+  ];
+}
+
+function buildTavernInnkeeperGreetingReplies(profile, safeActorName) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      `hebt ${safeActorName} grüßend die Hand. #Willkommen in der Samtlaterne.#`,
+      `nickt ${safeActorName} freundlich zu. #Wein, Feuer und ein freier Platz warten schon.#`,
+      `stellt ${safeActorName} einen sauberen Becher hin. #Setz dich, hier darf man erst ankommen.#`,
+      `mustert ${safeActorName} kurz und lächelt dann. #Such dir einen Platz, ich bring dir gleich etwas.#`
+    ];
+  }
+
+  return [
+    `hebt ${safeActorName} grüßend die Hand. #Willkommen im Silbermond-Krug.#`,
+    `nickt ${safeActorName} freundlich zu. #Kamin, Met und ein freier Platz warten schon.#`,
+    `stellt ${safeActorName} einen sauberen Krug hin. #Setz dich, Reisende sind hier willkommen.#`,
+    `mustert ${safeActorName} kurz und lächelt dann. #Such dir einen Platz, ich bring dir gleich etwas.#`
+  ];
+}
+
+function buildTavernInnkeeperDefaultReplies(profile, safeActorName) {
+  if (profile?.replyVariant === "wirtin") {
+    return [
+      `wischt den Tresen mit einem Tuch ab und schaut zu ${safeActorName}. #Was darf es sein?#`,
+      `stellt sich etwas näher und verschränkt gelassen die Arme. #Wenn du etwas brauchst, sag es nur.#`,
+      `hebt fragend eine Braue. #Wein, Bett oder bloß ein offenes Ohr?#`,
+      `nickt ${safeActorName} zu. #Die Samtlaterne hat heute noch genug Platz und genug Vorräte.#`
+    ];
+  }
+
+  return [
+    `wischt den Tresen mit einem Tuch ab und schaut zu ${safeActorName}. #Was darf es sein?#`,
+    `stellt sich etwas näher und verschränkt ruhig die Arme. #Wenn du etwas brauchst, sag es nur.#`,
+    `hebt fragend eine Braue. #Bier, Bett oder bloß ein offenes Ohr?#`,
+    `nickt ${safeActorName} zu. #Der Krug hat heute noch genug Platz und genug Vorräte.#`
+  ];
+}
+
+function buildTavernInnkeeperReaction(profile, content, actorName) {
   const normalizedText = normalizeTavernInnkeeperTriggerText(content);
-  if (!normalizedText) {
+  if (!profile || !normalizedText) {
     return "";
   }
 
   const safeActorName = String(actorName || "").trim() || "dem Gast";
-  const mentionsInnkeeper = tavernInnkeeperTextIncludesAny(normalizedText, [
-    "edric",
-    "muehlenbrand",
-    "wirt"
-  ]);
+  const mentionsInnkeeper = tavernInnkeeperTextIncludesAny(normalizedText, profile.triggerKeywords);
   const requestedDrinkLabel = getRequestedTavernDrinkLabel(normalizedText);
   const mentionsDrink = Boolean(requestedDrinkLabel) || tavernInnkeeperTextIncludesAny(normalizedText, [
     "durst",
@@ -7018,66 +7177,40 @@ function buildTavernInnkeeperReaction(content, actorName) {
 
   if (mentionsDrink) {
     const servedDrink = requestedDrinkLabel || "einen frisch gefüllten Krug";
-    return pickRandomTavernInnkeeperReply([
-      `schiebt ${safeActorName} ${servedDrink} über den Tresen. #Hier, frisch eingeschenkt.#`,
-      `stellt ${safeActorName} ${servedDrink} hin und wischt den Tresen sauber. #Greif zu, solange es noch gut ist.#`,
-      `gießt ${safeActorName} ${servedDrink} ein und nickt zufrieden. #Der erste Schluck geht auf gute Geschichten.#`,
-      `reicht ${safeActorName} ${servedDrink} mit ruhiger Hand. #Im Silbermond-Krug bleibt niemand durstig.#`,
-      `stellt ${safeActorName} ${servedDrink} hin und lehnt sich kurz auf den Tresen. #Das wärmt besser als kalte Straßen.#`
-    ]);
+    return pickRandomTavernInnkeeperReply(
+      buildTavernInnkeeperDrinkReplies(profile, safeActorName, servedDrink)
+    );
   }
 
   if (mentionsFood) {
-    return pickRandomTavernInnkeeperReply([
-      `stellt ${safeActorName} eine dampfende Schale Eintopf und frisches Brot hin. #Iss erst einmal etwas Warmes.#`,
-      `ruft in Richtung Küche und schickt ${safeActorName} kurz darauf eine warme Mahlzeit. #Der Löffel steht schon bereit.#`,
-      `legt ${safeActorName} Brot, Käse und einen großen Löffel Eintopf bereit. #Das bringt wieder Kraft in die Knochen.#`,
-      `schiebt ${safeActorName} einen Teller mit Braten und Brot heran. #Mehr braucht ein langer Abend nicht.#`
-    ]);
+    return pickRandomTavernInnkeeperReply(buildTavernInnkeeperFoodReplies(profile, safeActorName));
   }
 
   if (mentionsRoom) {
-    return pickRandomTavernInnkeeperReply([
-      `nickt zum Treppenaufgang. #Oben ist noch ein freies Zimmer für müde Reisende, ${safeActorName}.#`,
-      `deutet auf den Flur. #Für die Nacht findet sich hier noch ein ruhiges Bett.#`,
-      `stellt einen Schlüssel auf den Tresen. #Im oberen Stock ist noch etwas frei.#`,
-      `zieht einen kleinen Messingschlüssel hervor. #Wenn du Ruhe suchst, findest du sie hier oben.#`
-    ]);
+    return pickRandomTavernInnkeeperReply(buildTavernInnkeeperRoomReplies(profile, safeActorName));
   }
 
   if (saysThanks) {
-    return pickRandomTavernInnkeeperReply([
-      `nickt ruhig. #Gern. Dafür ist der Krug schließlich da.#`,
-      `meint freundlich. #Schon gut. Solange die Gäste zufrieden sind, ist der Abend gelungen.#`,
-      `winkt ab. #Trink in Ruhe, der Silbermond-Krug kümmert sich um den Rest.#`,
-      `lächelt knapp. #Ein dankbarer Gast ist mir lieber als zehn laute.#`
-    ]);
+    return pickRandomTavernInnkeeperReply(buildTavernInnkeeperThanksReplies(profile));
   }
 
   if (greets) {
-    return pickRandomTavernInnkeeperReply([
-      `hebt ${safeActorName} grüßend die Hand. #Willkommen im Silbermond-Krug.#`,
-      `nickt ${safeActorName} freundlich zu. #Kamin, Met und ein freier Platz warten schon.#`,
-      `stellt ${safeActorName} einen sauberen Krug hin. #Setz dich, Reisende sind hier willkommen.#`,
-      `mustert ${safeActorName} kurz und lächelt dann. #Such dir einen Platz, ich bring dir gleich etwas.#`
-    ]);
+    return pickRandomTavernInnkeeperReply(
+      buildTavernInnkeeperGreetingReplies(profile, safeActorName)
+    );
   }
 
-  return pickRandomTavernInnkeeperReply([
-    `wischt den Tresen mit einem Tuch ab und schaut zu ${safeActorName}. #Was darf es sein?#`,
-    `stellt sich etwas näher und verschränkt ruhig die Arme. #Wenn du etwas brauchst, sag es nur.#`,
-    `hebt fragend eine Braue. #Bier, Bett oder bloß ein offenes Ohr?#`,
-    `nickt ${safeActorName} zu. #Der Krug hat heute noch genug Platz und genug Vorräte.#`
-  ]);
+  return pickRandomTavernInnkeeperReply(buildTavernInnkeeperDefaultReplies(profile, safeActorName));
 }
 
 function maybeTriggerTavernInnkeeperReaction({ room, roomId, serverId, content, actorName }) {
   const normalizedRoomId = Number(roomId);
-  if (!Number.isInteger(normalizedRoomId) || normalizedRoomId < 1 || !isTavernInnkeeperRoom(room, serverId)) {
+  const profile = getTavernInnkeeperProfile(room, serverId);
+  if (!Number.isInteger(normalizedRoomId) || normalizedRoomId < 1 || !profile) {
     return;
   }
 
-  const reaction = buildTavernInnkeeperReaction(content, actorName);
+  const reaction = buildTavernInnkeeperReaction(profile, content, actorName);
   if (!reaction) {
     return;
   }
@@ -7098,8 +7231,8 @@ function maybeTriggerTavernInnkeeperReaction({ room, roomId, serverId, content, 
 
     emitSystemChatMessage(normalizedRoomId, normalizedServerId, reaction, {
       system_kind: "actor-message",
-      presence_actor_name: TAVERN_INNKEEPER_NAME,
-      presence_actor_chat_text_color: TAVERN_INNKEEPER_CHAT_TEXT_COLOR
+      presence_actor_name: profile.keeperName,
+      presence_actor_chat_text_color: profile.chatTextColor
     });
   }, 650);
 }
@@ -19903,14 +20036,15 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, sta
     });
   }
 
-  if (room && isTavernInnkeeperRoom(room, serverId)) {
+  const tavernInnkeeperProfile = room ? getTavernInnkeeperProfile(room, serverId) : null;
+  if (tavernInnkeeperProfile) {
     onlineCharacters.push({
-      presence_key: TAVERN_INNKEEPER_PRESENCE_KEY,
+      presence_key: tavernInnkeeperProfile.presenceKey,
       user_id: 0,
-      name: TAVERN_INNKEEPER_NAME,
+      name: tavernInnkeeperProfile.keeperName,
       character_id: null,
       role_style: "",
-      chat_text_color: TAVERN_INNKEEPER_CHAT_TEXT_COLOR,
+      chat_text_color: tavernInnkeeperProfile.chatTextColor,
       has_room_rights: false,
       is_afk: false,
       is_npc: true
