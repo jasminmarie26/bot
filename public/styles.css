@@ -4079,7 +4079,7 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-header h1 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-size: clamp(1.6rem, 3.1vw, 2.3rem);
 }
 
 .members-header .muted {
@@ -6605,6 +6605,27 @@ body.theme-future.page-home-screen .home-copyright {
 
 .page-roomlist .rp-room-standard-card {
   gap: 0.16rem;
+}
+
+.page-roomlist .rp-room-list-standard .rp-room-standard-card {
+  padding: 0.36rem 0.42rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
+}
+
+.page-roomlist .rp-room-list-standard .rp-room-link-standard {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-roomlist .rp-room-list-standard .rp-room-link-standard:hover {
+  transform: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .page-roomlist .rp-room-list-stacked .rp-room-standard-card {
