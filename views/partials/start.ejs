@@ -451,7 +451,28 @@
     <script>
       (() => {
         document.addEventListener("DOMContentLoaded", () => {
+          const topbar = document.querySelector(".topbar");
           const userMenus = Array.from(document.querySelectorAll(".topbar-user-menu"));
+
+          const syncTopbarOffset = () => {
+            const fallbackOffset = 72;
+            const offset = topbar
+              ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom))
+              : fallbackOffset;
+
+            document.documentElement.style.setProperty("--topbar-bottom-offset", `${offset}px`);
+          };
+
+          syncTopbarOffset();
+          window.addEventListener("resize", syncTopbarOffset);
+          window.addEventListener("orientationchange", syncTopbarOffset);
+          window.addEventListener("load", syncTopbarOffset, { once: true });
+
+          if (topbar && "ResizeObserver" in window) {
+            const topbarObserver = new ResizeObserver(syncTopbarOffset);
+            topbarObserver.observe(topbar);
+          }
+
           if (!userMenus.length) return;
 
           document.addEventListener("click", (event) => {
