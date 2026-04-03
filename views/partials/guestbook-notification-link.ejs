@@ -81,7 +81,7 @@
             <span>Charakter</span>
             <select data-character-notes-select>
               <% noteCharacters.forEach((entry) => { %>
-                <% const noteServerLabel = entry.server_id === "erp" ? "ERP" : "FREE-RP"; %>
+                <% const noteServerLabel = entry.server_id === "larp" ? "LARP" : (entry.server_id === "erp" ? "ERP" : "FREE-RP"); %>
                 <option
                   value="<%= entry.id %>"
                   <%= Number(entry.id) === Number(selectedNoteCharacterId) ? "selected" : "" %>
