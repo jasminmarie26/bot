@@ -210,6 +210,7 @@
           <% if (section.users.length) { %>
             <%- include("partials/admin-status-user-table", {
               users: section.users,
+              sectionKey: section.key,
               detailBasePath,
               allowUserDeletion,
               currentUser
@@ -222,5 +223,69 @@
     </div>
   <% } %>
 </section>
+
+<script>
+  (() => {
+    const pageSize = 10;
+    const roots = Array.from(document.querySelectorAll("[data-admin-status-pagination-root]"));
+
+    roots.forEach((root) => {
+      const rows = Array.from(root.querySelectorAll("[data-admin-status-row]"));
+      const prevButton = root.querySelector("[data-admin-status-page-prev]");
+      const nextButton = root.querySelector("[data-admin-status-page-next]");
+      const pageButtons = Array.from(root.querySelectorAll("[data-admin-status-page-button]"));
+      const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+      let currentPage = 1;
+
+      if (totalPages <= 1) {
+        return;
+      }
+
+      const renderPage = (pageNumber) => {
+        currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+
+        rows.forEach((row, index) => {
+          const pageForRow = Math.floor(index / pageSize) + 1;
+          row.hidden = pageForRow !== currentPage;
+        });
+
+        pageButtons.forEach((button) => {
+          const buttonPage = Number(button.dataset.adminStatusPageButton || "1");
+          const isActive = buttonPage === currentPage;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-current", isActive ? "page" : "false");
+        });
+
+        if (prevButton) {
+          prevButton.disabled = currentPage <= 1;
+        }
+
+        if (nextButton) {
+          nextButton.disabled = currentPage >= totalPages;
+        }
+      };
+
+      pageButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          renderPage(button.dataset.adminStatusPageButton);
+        });
+      });
+
+      if (prevButton) {
+        prevButton.addEventListener("click", () => {
+          renderPage(currentPage - 1);
+        });
+      }
+
+      if (nextButton) {
+        nextButton.addEventListener("click", () => {
+          renderPage(currentPage + 1);
+        });
+      }
+
+      renderPage(1);
+    });
+  })();
+</script>
 
 <%- include("partials/end") %>

@@ -1,4 +1,11 @@
-<div class="help-table-wrap">
+<%
+  const statusUsers = Array.isArray(users) ? users : [];
+  const statusSectionKey = String(sectionKey || "default").trim() || "default";
+  const statusPageSize = 10;
+  const statusTotalPages = Math.max(1, Math.ceil(statusUsers.length / statusPageSize));
+%>
+
+<div class="help-table-wrap" data-admin-status-pagination-root="<%= statusSectionKey %>">
   <table class="help-table admin-user-table">
     <thead>
       <tr>
@@ -11,8 +18,13 @@
       </tr>
     </thead>
     <tbody>
-      <% users.forEach((user) => { %>
-        <tr class="admin-user-row">
+      <% statusUsers.forEach((user, index) => { %>
+        <tr
+          class="admin-user-row"
+          data-admin-status-row
+          data-admin-status-page="<%= Math.floor(index / statusPageSize) + 1 %>"
+          <%= index >= statusPageSize ? "hidden" : "" %>
+        >
           <td>
             <div class="admin-account-name">
               <% if (user.is_online) { %>
@@ -72,4 +84,32 @@
       <% }) %>
     </tbody>
   </table>
+
+  <% if (statusTotalPages > 1) { %>
+    <nav class="admin-status-pagination" aria-label="Seitennavigation">
+      <button
+        class="admin-status-page-link"
+        type="button"
+        data-admin-status-page-prev
+        aria-label="Vorherige Seite"
+      >&lsaquo;</button>
+
+      <% for (let pageNumber = 1; pageNumber <= statusTotalPages; pageNumber += 1) { %>
+        <button
+          class="admin-status-page-link <%= pageNumber === 1 ? "is-active" : "" %>"
+          type="button"
+          data-admin-status-page-button="<%= pageNumber %>"
+          aria-label="Seite <%= pageNumber %>"
+          aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+        ><%= pageNumber %></button>
+      <% } %>
+
+      <button
+        class="admin-status-page-link"
+        type="button"
+        data-admin-status-page-next
+        aria-label="Nächste Seite"
+      >&rsaquo;</button>
+    </nav>
+  <% } %>
 </div>
