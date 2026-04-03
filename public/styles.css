@@ -5354,6 +5354,193 @@ body.theme-future.page-home-screen .home-copyright {
   box-shadow: 0 18px 34px -24px color-mix(in srgb, var(--danger) 28%, var(--panel-shadow));
 }
 
+.admin-status-groups {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.admin-status-group {
+  --status-tone: color-mix(in srgb, var(--accent) 55%, #ffffff 45%);
+  border: 1px solid color-mix(in srgb, var(--status-tone) 35%, var(--panel-edge) 65%);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%,
+      color-mix(in srgb, var(--panel-bg) 88%, black 12%) 100%
+    );
+  overflow: hidden;
+  box-shadow: 0 14px 30px -28px color-mix(in srgb, var(--status-tone) 28%, var(--panel-shadow));
+}
+
+.admin-status-group[open] {
+  border-color: color-mix(in srgb, var(--status-tone) 55%, var(--panel-edge) 45%);
+}
+
+.admin-status-group.is-online {
+  --status-tone: #3ddc72;
+}
+
+.admin-status-group.is-green {
+  --status-tone: #6bcf63;
+}
+
+.admin-status-group.is-yellow {
+  --status-tone: #e0b24c;
+}
+
+.admin-status-group.is-red {
+  --status-tone: #d96958;
+}
+
+.admin-status-group.is-violet {
+  --status-tone: #9565f2;
+}
+
+.admin-status-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.95rem;
+  cursor: pointer;
+}
+
+.admin-status-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-status-summary::marker {
+  content: "";
+}
+
+.admin-status-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--status-tone) 58%, transparent);
+  background: color-mix(in srgb, var(--status-tone) 14%, var(--field-bg) 86%);
+  color: color-mix(in srgb, var(--status-tone) 72%, white 28%);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.admin-status-summary-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--status-tone) 42%, var(--panel-edge) 58%);
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  font-weight: 700;
+}
+
+.admin-status-group > .muted {
+  margin: -0.05rem 0 0;
+  padding: 0 0.95rem;
+  font-size: 0.9rem;
+}
+
+.admin-status-group > .help-table-wrap,
+.admin-status-group > p:last-child {
+  padding: 0 0.95rem 0.95rem;
+}
+
+.admin-status-group > p:last-child {
+  margin: 0;
+}
+
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.18rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 85%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 90%, white 10%);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.admin-status-badge.is-green {
+  border-color: color-mix(in srgb, #6bcf63 62%, transparent);
+  color: color-mix(in srgb, #8ef285 78%, white 22%);
+  background: color-mix(in srgb, #6bcf63 14%, var(--field-bg) 86%);
+}
+
+.admin-status-badge.is-yellow {
+  border-color: color-mix(in srgb, #e0b24c 62%, transparent);
+  color: color-mix(in srgb, #ffd980 78%, white 22%);
+  background: color-mix(in srgb, #e0b24c 14%, var(--field-bg) 86%);
+}
+
+.admin-status-badge.is-red {
+  border-color: color-mix(in srgb, #d96958 62%, transparent);
+  color: color-mix(in srgb, #ffb0a2 78%, white 22%);
+  background: color-mix(in srgb, #d96958 14%, var(--field-bg) 86%);
+}
+
+.admin-status-badge.is-violet {
+  border-color: color-mix(in srgb, #9565f2 62%, transparent);
+  color: color-mix(in srgb, #ceb6ff 78%, white 22%);
+  background: color-mix(in srgb, #9565f2 14%, var(--field-bg) 86%);
+}
+
+.admin-status-note {
+  display: inline-block;
+  max-width: 30rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.admin-status-note.is-empty {
+  color: var(--muted);
+}
+
+.admin-moderation-form {
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  gap: 0.75rem 0.9rem;
+}
+
+.admin-moderation-form .admin-moderation-note-field {
+  grid-column: 1 / -1;
+}
+
+.admin-moderation-form textarea {
+  min-height: 7.2rem;
+  resize: vertical;
+}
+
+.admin-moderation-form .btn {
+  justify-self: start;
+}
+
+@media (max-width: 760px) {
+  .admin-status-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-status-summary-count {
+    min-width: 0;
+  }
+
+  .admin-moderation-form {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard-server-list {
   display: grid;
   gap: 0.9rem;

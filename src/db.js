@@ -44,6 +44,8 @@ db.exec(`
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
     room_log_email_enabled INTEGER NOT NULL DEFAULT 1,
     duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
+    moderation_status_level INTEGER NOT NULL DEFAULT 1,
+    moderation_status_note TEXT NOT NULL DEFAULT '',
     oauth_password_pending INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
@@ -832,6 +834,14 @@ if (!userColumns.includes("room_log_email_enabled")) {
 
 if (!userColumns.includes("duplicate_accounts_allowed")) {
   db.exec("ALTER TABLE users ADD COLUMN duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!userColumns.includes("moderation_status_level")) {
+  db.exec("ALTER TABLE users ADD COLUMN moderation_status_level INTEGER NOT NULL DEFAULT 1");
+}
+
+if (!userColumns.includes("moderation_status_note")) {
+  db.exec("ALTER TABLE users ADD COLUMN moderation_status_note TEXT NOT NULL DEFAULT ''");
 }
 
 if (!userColumns.includes("oauth_password_pending")) {

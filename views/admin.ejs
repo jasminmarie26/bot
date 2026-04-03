@@ -8,26 +8,50 @@
     typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
   const currentSearchQuery = String(searchQuery || "");
   const visibleUsers = Array.isArray(users) ? users : [];
-  const pagination = userPagination || {};
-  const currentPage = Number(pagination.currentPage) || 1;
-  const totalPages = Number(pagination.totalPages) || 1;
-  const pageSize = Number(pagination.pageSize) || 10;
   const totalFilteredUsers =
     typeof filteredUserCount === "number" ? filteredUserCount : visibleUsers.length;
-  const visibleStart = totalFilteredUsers ? (currentPage - 1) * pageSize + 1 : 0;
-  const visibleEnd = totalFilteredUsers ? visibleStart + visibleUsers.length - 1 : 0;
-  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
-  const buildUserPageUrl = (pageNumber) => {
-    const queryParts = [];
-    if (currentSearchQuery) {
-      queryParts.push(`q=${encodeURIComponent(currentSearchQuery)}`);
+  const groupedSections = [
+    {
+      key: "online",
+      title: "Online User",
+      tone: "online",
+      users: Array.isArray(onlineUsers) ? onlineUsers : [],
+      description: "Accounts, die gerade irgendwo auf der Seite online sind.",
+      open: true
+    },
+    {
+      key: "green",
+      title: "Grüne User",
+      tone: "green",
+      users: Array.isArray(greenUsers) ? greenUsers : [],
+      description: "1 = Grün. Alles okay.",
+      open: true
+    },
+    {
+      key: "yellow",
+      title: "Gelbe User",
+      tone: "yellow",
+      users: Array.isArray(yellowUsers) ? yellowUsers : [],
+      description: "2 = Gelb. Beobachtung oder leichte Verwarnung.",
+      open: false
+    },
+    {
+      key: "red",
+      title: "Rote User",
+      tone: "red",
+      users: Array.isArray(redUsers) ? redUsers : [],
+      description: "3 = Rot. User mit ernsteren Problemen oder Verwarnungen.",
+      open: false
+    },
+    {
+      key: "violet",
+      title: "Violette User",
+      tone: "violet",
+      users: Array.isArray(violetUsers) ? violetUsers : [],
+      description: "4 = Violett. Gebannte oder hart markierte Accounts.",
+      open: false
     }
-    if (pageNumber > 1) {
-      queryParts.push(`page=${encodeURIComponent(String(pageNumber))}`);
-    }
-    const queryString = queryParts.join("&");
-    return queryString ? `${overviewBasePath}?${queryString}` : overviewBasePath;
-  };
+  ];
 %>
 
 <section class="panel account-layout">
@@ -64,9 +88,29 @@
           <td>Benutzer mit Moderationsrechten ohne kompletten Adminzugriff.</td>
         </tr>
         <tr>
-          <td>Verd&auml;chtige Accounts</td>
-          <td><strong><%= suspiciousUsers?.length || 0 %></strong></td>
-          <td>Auff&auml;llige Konten mit schneller Pr&uuml;fung und Direktzugriff.</td>
+          <td>Online jetzt</td>
+          <td><strong><%= statusCounts?.online || 0 %></strong></td>
+          <td>Accounts, die gerade irgendwo auf der Seite online sind.</td>
+        </tr>
+        <tr>
+          <td>Gr&uuml;n / Okay</td>
+          <td><strong><%= statusCounts?.green || 0 %></strong></td>
+          <td>Stufe 1: Unauff&auml;llig oder okay.</td>
+        </tr>
+        <tr>
+          <td>Gelb</td>
+          <td><strong><%= statusCounts?.yellow || 0 %></strong></td>
+          <td>Stufe 2: Beobachtung oder leichte Verwarnung.</td>
+        </tr>
+        <tr>
+          <td>Rot</td>
+          <td><strong><%= statusCounts?.red || 0 %></strong></td>
+          <td>Stufe 3: Accounts mit deutlicheren Problemen.</td>
+        </tr>
+        <tr>
+          <td>Violett</td>
+          <td><strong><%= statusCounts?.violet || 0 %></strong></td>
+          <td>Stufe 4: Gebannte oder hart markierte Accounts.</td>
         </tr>
       </tbody>
     </table>
@@ -112,74 +156,12 @@
   </form>
 </section>
 
-<% if (suspiciousUsers && suspiciousUsers.length) { %>
-  <section class="panel account-layout">
-    <h2>Verd&auml;chtige Accounts</h2>
-    <p class="muted">Auff&auml;llige Konten mit schnellem Direktzugriff.</p>
-
-    <div class="help-table-wrap">
-      <table class="help-table admin-suspicious-table">
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>Daten</th>
-            <th>Gr&uuml;nde</th>
-            <th>Aktion</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% suspiciousUsers.forEach((user) => { %>
-            <tr>
-              <td>
-                <div class="admin-account-name">
-                  <% if (user.is_online) { %>
-                    <span class="admin-online-dot" aria-label="Online" title="Online"></span>
-                  <% } %>
-                  <strong><%= user.username %></strong>
-                </div>
-                <div class="admin-table-subline">
-                  <span>#<%= user.account_number %></span>
-                  <span>IP: <%= user.last_login_ip || "-" %></span>
-                </div>
-              </td>
-              <td>
-                <div class="admin-table-subline">
-                  <span>E-Mail: <%= user.email || "-" %></span>
-                  <span>Geburtsdatum: <%= user.birth_date || "-" %></span>
-                </div>
-              </td>
-              <td><%= user.suspicion_reasons.join(", ") %></td>
-              <td>
-                <div class="admin-table-actions">
-                  <a
-                    class="btn btn-secondary"
-                    href="<%= `${detailBasePath}/${user.id}` %>"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Pr&uuml;fen
-                  </a>
-                  <% if (allowUserDeletion && user.id !== currentUser.id) { %>
-                    <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                      <button class="btn btn-danger" type="submit">L&ouml;schen</button>
-                    </form>
-                  <% } %>
-                </div>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </section>
-<% } %>
-
 <section class="panel account-layout">
   <div class="header-line">
     <div>
-      <h2>Benutzerverwaltung</h2>
+      <h2>Accountstatus</h2>
       <p class="muted">
-        Die Details &ouml;ffnen sich in einem neuen Tab. Dort findest du unten auch Charaktere und G&auml;steb&uuml;cher.
+        Vergib in der Detailansicht die Stufen 1 bis 4. Danach taucht der Account automatisch im passenden Bereich auf.
       </p>
     </div>
   </div>
@@ -207,8 +189,7 @@
 
   <p class="muted">
     <% if (totalFilteredUsers) { %>
-      Zeige <%= visibleStart %> bis <%= visibleEnd %> von <%= totalFilteredUsers %> Accounts.
-      Seite <%= currentPage %> von <%= totalPages %>.
+      <%= totalFilteredUsers %> Accounts gefunden.
     <% } else if (currentSearchQuery) { %>
       Keine passenden Benutzer gefunden.
     <% } else { %>
@@ -217,101 +198,28 @@
   </p>
 
   <% if (visibleUsers.length) { %>
-    <div class="help-table-wrap">
-      <table class="help-table admin-user-table">
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>E-Mail</th>
-            <th>Geburtsdatum</th>
-            <th>Rollen</th>
-            <th>Status</th>
-            <th>Aktion</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% visibleUsers.forEach((user) => { %>
-            <tr class="admin-user-row">
-              <td>
-                <div class="admin-account-name">
-                  <% if (user.is_online) { %>
-                    <span class="admin-online-dot" aria-label="Online" title="Online"></span>
-                  <% } %>
-                  <strong><%= user.username %></strong>
-                </div>
-                <div class="admin-table-subline">
-                  <span>#<%= user.account_number %></span>
-                  <span>Erstellt: <%= user.created_at || "-" %></span>
-                </div>
-              </td>
-              <td><%= user.email || "-" %></td>
-              <td><%= user.birth_date || "-" %></td>
-              <td>
-                <div class="admin-table-badges">
-                  <% if (user.is_admin) { %>
-                    <span class="admin-role-badge is-admin">Admin</span>
-                  <% } %>
-                  <% if (user.is_moderator) { %>
-                    <span class="admin-role-badge is-moderator">Moderator</span>
-                  <% } %>
-                  <% if (!user.is_admin && !user.is_moderator) { %>
-                    <span class="admin-role-badge">User</span>
-                  <% } %>
-                </div>
-              </td>
-              <td>
-                <div class="admin-table-subline">
-                  <span><%= user.is_suspicious ? "Verd&auml;chtig" : "Unauff&auml;llig" %></span>
-                  <span>Letzte IP: <%= user.last_login_ip || "-" %></span>
-                </div>
-              </td>
-              <td>
-                <div class="admin-table-actions">
-                  <a
-                    class="btn btn-secondary"
-                    href="<%= `${detailBasePath}/${user.id}` %>"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Details
-                  </a>
-                  <% if (allowUserDeletion && user.id !== currentUser.id) { %>
-                    <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
-                      <button class="btn btn-danger" type="submit">L&ouml;schen</button>
-                    </form>
-                  <% } %>
-                </div>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+    <div class="admin-status-groups">
+      <% groupedSections.forEach((section) => { %>
+        <details class="admin-status-group is-<%= section.tone %>" <%= section.open ? "open" : "" %>>
+          <summary class="admin-status-summary">
+            <span class="admin-status-summary-badge is-<%= section.tone %>"><%= section.title %></span>
+            <span class="admin-status-summary-count"><%= section.users.length %></span>
+          </summary>
+          <p class="muted"><%= section.description %></p>
+
+          <% if (section.users.length) { %>
+            <%- include("partials/admin-status-user-table", {
+              users: section.users,
+              detailBasePath,
+              allowUserDeletion,
+              currentUser
+            }) %>
+          <% } else { %>
+            <p class="muted">Keine Accounts in diesem Bereich.</p>
+          <% } %>
+        </details>
+      <% }) %>
     </div>
-
-    <% if (totalPages > 1) { %>
-      <nav class="site-updates-pagination" aria-label="Benutzer Seitenwechsel">
-        <% if (pagination.hasPreviousPage) { %>
-          <a class="site-updates-page-link" href="<%= buildUserPageUrl(pagination.previousPage) %>">
-            &#8249;
-          </a>
-        <% } %>
-
-        <% pageNumbers.forEach((pageNumber) => { %>
-          <a
-            class="site-updates-page-link<%= pageNumber === currentPage ? ' is-active' : '' %>"
-            href="<%= buildUserPageUrl(pageNumber) %>"
-          >
-            <%= pageNumber %>
-          </a>
-        <% }) %>
-
-        <% if (pagination.hasNextPage) { %>
-          <a class="site-updates-page-link" href="<%= buildUserPageUrl(pagination.nextPage) %>">
-            &#8250;
-          </a>
-        <% } %>
-      </nav>
-    <% } %>
   <% } %>
 </section>
 

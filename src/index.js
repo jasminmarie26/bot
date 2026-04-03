@@ -16960,11 +16960,19 @@ function getAdminUsersOverview() {
   const duplicateAccountsAllowedExpr = userColumns.has("duplicate_accounts_allowed")
     ? "u.duplicate_accounts_allowed"
     : "0 AS duplicate_accounts_allowed";
+  const moderationStatusLevelExpr = userColumns.has("moderation_status_level")
+    ? "u.moderation_status_level"
+    : "1 AS moderation_status_level";
+  const moderationStatusNoteExpr = userColumns.has("moderation_status_note")
+    ? "u.moderation_status_note"
+    : "'' AS moderation_status_note";
 
   return db
     .prepare(
       `SELECT u.id, u.username, ${emailExpr}, ${birthDateExpr}, ${loginIpExpr}, ${loginAtExpr},
               ${duplicateAccountsAllowedExpr},
+              ${moderationStatusLevelExpr},
+              ${moderationStatusNoteExpr},
               u.is_admin, u.is_moderator, u.admin_display_name, u.moderator_display_name, u.created_at,
               ${accountNumberExpr},
               COUNT(c.id) AS character_count
@@ -17009,7 +17017,56 @@ function decorateAdminUsers(users) {
   });
 }
 
-const STAFF_USER_PAGE_SIZE = 10;
+const MODERATION_STATUS_DEFINITIONS = [
+  {
+    level: 1,
+    slug: "green",
+    label: "1 - Grün",
+    shortLabel: "Grün",
+    description: "Okay"
+  },
+  {
+    level: 2,
+    slug: "yellow",
+    label: "2 - Gelb",
+    shortLabel: "Gelb",
+    description: "Beobachtung"
+  },
+  {
+    level: 3,
+    slug: "red",
+    label: "3 - Rot",
+    shortLabel: "Rot",
+    description: "Verwarnung"
+  },
+  {
+    level: 4,
+    slug: "violet",
+    label: "4 - Violett",
+    shortLabel: "Violett / Gebannt",
+    description: "Gebannt"
+  }
+];
+
+function normalizeModerationStatusLevel(value) {
+  const parsedValue = Number.parseInt(String(value || "").trim(), 10);
+  if (!Number.isInteger(parsedValue) || parsedValue < 1 || parsedValue > 4) {
+    return 1;
+  }
+  return parsedValue;
+}
+
+function normalizeModerationStatusNote(value) {
+  return String(value || "").trim().slice(0, 2000);
+}
+
+function getModerationStatusDefinition(level) {
+  const normalizedLevel = normalizeModerationStatusLevel(level);
+  return (
+    MODERATION_STATUS_DEFINITIONS.find((entry) => entry.level === normalizedLevel) ||
+    MODERATION_STATUS_DEFINITIONS[0]
+  );
+}
 
 function normalizeStaffOverviewSearchValue(value) {
   return String(value || "")
@@ -17030,7 +17087,8 @@ function getStaffOverviewUserSearchText(user) {
     user?.birth_date,
     user?.last_login_ip,
     user?.created_at,
-    user?.account_number
+    user?.account_number,
+    user?.moderation_status_note
   ]
     .filter(Boolean)
     .join(" ");
@@ -17047,15 +17105,6 @@ function filterStaffOverviewUsers(users, query) {
       normalizedQuery
     )
   );
-}
-
-function normalizeStaffOverviewPageNumber(value) {
-  const parsedValue = Number.parseInt(String(value || "").trim(), 10);
-  if (!Number.isInteger(parsedValue) || parsedValue < 1) {
-    return 1;
-  }
-
-  return parsedValue;
 }
 
 function getAdminUserCharacters(userId) {
@@ -17090,6 +17139,7 @@ function getStaffPanelConfig(user) {
       canEditUsers: true,
       canResetPasswords: true,
       canManageUsers: true,
+      canModerateUsers: true,
       canDeleteUsers: true,
       canClearGuestbooks: true
     };
@@ -17104,6 +17154,7 @@ function getStaffPanelConfig(user) {
     canEditUsers: false,
     canResetPasswords: false,
     canManageUsers: false,
+    canModerateUsers: true,
     canDeleteUsers: false,
     canClearGuestbooks: false
   };
@@ -17114,16 +17165,19 @@ function renderStaffOverview(req, res) {
   const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
   const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
     ...user,
-    is_online: onlineAccountUserIds.has(Number(user.id))
+    is_online: onlineAccountUserIds.has(Number(user.id)),
+    moderation_status_level: normalizeModerationStatusLevel(user.moderation_status_level),
+    moderation_status_note: normalizeModerationStatusNote(user.moderation_status_note),
+    moderation_status: getModerationStatusDefinition(user.moderation_status_level)
   }));
-  const suspiciousUsers = allUsers.filter((user) => user.is_suspicious);
   const searchQuery = String(req.query.q || "").trim();
   const filteredUsers = filterStaffOverviewUsers(allUsers, searchQuery);
-  const requestedPageNumber = normalizeStaffOverviewPageNumber(req.query.page);
-  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / STAFF_USER_PAGE_SIZE));
-  const currentPageNumber = Math.min(requestedPageNumber, totalUserPages);
-  const pageStartIndex = (currentPageNumber - 1) * STAFF_USER_PAGE_SIZE;
-  const users = filteredUsers.slice(pageStartIndex, pageStartIndex + STAFF_USER_PAGE_SIZE);
+  const users = filteredUsers;
+  const onlineUsers = filteredUsers.filter((user) => user.is_online);
+  const greenUsers = filteredUsers.filter((user) => user.moderation_status_level === 1);
+  const yellowUsers = filteredUsers.filter((user) => user.moderation_status_level === 2);
+  const redUsers = filteredUsers.filter((user) => user.moderation_status_level === 3);
+  const violetUsers = filteredUsers.filter((user) => user.moderation_status_level === 4);
 
   const adminCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
@@ -17144,24 +17198,28 @@ function renderStaffOverview(req, res) {
     canEditUsers: panelConfig.canEditUsers,
     canResetPasswords: panelConfig.canResetPasswords,
     canManageUsers: panelConfig.canManageUsers,
+    canModerateUsers: panelConfig.canModerateUsers,
     canDeleteUsers: panelConfig.canDeleteUsers,
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     users,
-    suspiciousUsers,
+    onlineUsers,
+    greenUsers,
+    yellowUsers,
+    redUsers,
+    violetUsers,
     searchQuery,
     filteredUserCount: filteredUsers.length,
-    userPagination: {
-      pageSize: STAFF_USER_PAGE_SIZE,
-      currentPage: currentPageNumber,
-      totalPages: totalUserPages,
-      hasPreviousPage: currentPageNumber > 1,
-      hasNextPage: currentPageNumber < totalUserPages,
-      previousPage: Math.max(1, currentPageNumber - 1),
-      nextPage: Math.min(totalUserPages, currentPageNumber + 1)
-    },
     accountCount,
     adminCount,
-    moderatorCount
+    moderatorCount,
+    statusDefinitions: MODERATION_STATUS_DEFINITIONS,
+    statusCounts: {
+      online: onlineUsers.length,
+      green: greenUsers.length,
+      yellow: yellowUsers.length,
+      red: redUsers.length,
+      violet: violetUsers.length
+    }
   });
 }
 
@@ -17176,7 +17234,10 @@ function renderStaffUserDetails(req, res) {
   const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
   const users = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
     ...user,
-    is_online: onlineAccountUserIds.has(Number(user.id))
+    is_online: onlineAccountUserIds.has(Number(user.id)),
+    moderation_status_level: normalizeModerationStatusLevel(user.moderation_status_level),
+    moderation_status_note: normalizeModerationStatusNote(user.moderation_status_note),
+    moderation_status: getModerationStatusDefinition(user.moderation_status_level)
   }));
   const targetUser = users.find((user) => Number(user.id) === targetId);
   if (!targetUser) {
@@ -17195,10 +17256,12 @@ function renderStaffUserDetails(req, res) {
     canEditUsers: panelConfig.canEditUsers,
     canResetPasswords: panelConfig.canResetPasswords,
     canManageUsers: panelConfig.canManageUsers,
+    canModerateUsers: panelConfig.canModerateUsers,
     canDeleteUsers: panelConfig.canDeleteUsers,
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     targetUser,
-    userCharacters
+    userCharacters,
+    statusDefinitions: MODERATION_STATUS_DEFINITIONS
   });
 }
 
@@ -17247,6 +17310,40 @@ app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
 
 app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
 app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
+
+function updateUserModerationStatus(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungültig.");
+    return res.redirect(panelConfig.panelBasePath);
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect(panelConfig.panelBasePath);
+  }
+
+  const moderationStatusLevel = normalizeModerationStatusLevel(req.body.moderation_status_level);
+  const moderationStatusNote = normalizeModerationStatusNote(req.body.moderation_status_note);
+  const statusDefinition = getModerationStatusDefinition(moderationStatusLevel);
+
+  db.prepare(
+    `UPDATE users
+        SET moderation_status_level = ?,
+            moderation_status_note = ?
+      WHERE id = ?`
+  ).run(moderationStatusLevel, moderationStatusNote, targetId);
+
+  setFlash(req, "success", `${targetUser.username} steht jetzt auf ${statusDefinition.shortLabel}.`);
+  return res.redirect(`${panelConfig.userDetailsBasePath}/${targetId}`);
+}
+
+app.post("/admin/users/:id/moderation-status", requireAuth, requireAdmin, updateUserModerationStatus);
+app.post("/staff/users/:id/moderation-status", requireAuth, requireStaff, updateUserModerationStatus);
 
 app.post("/admin/impersonation/stop", requireAuth, (req, res) => {
   const adminUserId = Number(req.session.admin_impersonator_user_id);

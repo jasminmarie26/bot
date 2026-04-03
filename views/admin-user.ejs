@@ -10,6 +10,8 @@
     typeof canResetPasswords === "undefined" ? true : Boolean(canResetPasswords);
   const canManageUserRoles =
     typeof canManageUsers === "undefined" ? true : Boolean(canManageUsers);
+  const canModerateAccount =
+    typeof canModerateUsers === "undefined" ? false : Boolean(canModerateUsers);
   const canClearUserGuestbooks =
     typeof canClearGuestbooks === "undefined" ? true : Boolean(canClearGuestbooks);
 %>
@@ -49,6 +51,9 @@
     <% if (targetUser.is_suspicious) { %>
       <span class="admin-role-badge is-suspicious">Verd&auml;chtig</span>
     <% } %>
+    <span class="admin-status-badge is-<%= targetUser.moderation_status.slug %>">
+      <%= targetUser.moderation_status.label %>
+    </span>
   </div>
 
   <div class="admin-user-meta">
@@ -60,6 +65,47 @@
     <span>Doppelaccounts: <%= Number(targetUser.duplicate_accounts_allowed) === 1 ? "freigeschaltet" : "gesperrt" %></span>
     <small>Erstellt: <%= targetUser.created_at %></small>
   </div>
+</section>
+
+<section class="panel">
+  <h2>Moderationsstatus</h2>
+  <p class="muted">1 = Gr&uuml;n, 2 = Gelb, 3 = Rot, 4 = Violett / Gebannt.</p>
+
+  <% if (canModerateAccount) { %>
+    <form
+      method="POST"
+      action="<%= `${userDetailsBasePath}/${targetUser.id}/moderation-status` %>"
+      class="admin-inline-form admin-moderation-form"
+    >
+      <label>
+        Stufe
+        <select name="moderation_status_level">
+          <% statusDefinitions.forEach((statusEntry) => { %>
+            <option
+              value="<%= statusEntry.level %>"
+              <%= Number(targetUser.moderation_status_level) === Number(statusEntry.level) ? "selected" : "" %>
+            >
+              <%= statusEntry.label %> - <%= statusEntry.description %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="admin-moderation-note-field">
+        Notiz
+        <textarea
+          name="moderation_status_note"
+          rows="5"
+          placeholder="Hier können Verwarnungen, Hinweise oder interne Notizen stehen."
+        ><%= targetUser.moderation_status_note || "" %></textarea>
+      </label>
+      <button class="btn btn-secondary" type="submit">Status speichern</button>
+    </form>
+  <% } else { %>
+    <div class="admin-user-meta">
+      <span>Status: <%= targetUser.moderation_status.label %></span>
+      <span>Notiz: <%= targetUser.moderation_status_note || "Keine Notiz." %></span>
+    </div>
+  <% } %>
 </section>
 
 <% if (targetUser.is_suspicious) { %>

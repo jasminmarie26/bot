@@ -1,0 +1,74 @@
+<div class="help-table-wrap">
+  <table class="help-table admin-user-table">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>E-Mail</th>
+        <th>Geburtsdatum</th>
+        <th>Rollen</th>
+        <th>Status / Notiz</th>
+        <th>Aktion</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach((user) => { %>
+        <tr class="admin-user-row">
+          <td>
+            <div class="admin-account-name">
+              <% if (user.is_online) { %>
+                <span class="admin-online-dot" aria-label="Online" title="Online"></span>
+              <% } %>
+              <strong><%= user.username %></strong>
+            </div>
+            <div class="admin-table-subline">
+              <span>#<%= user.account_number %></span>
+              <span>Erstellt: <%= user.created_at || "-" %></span>
+            </div>
+          </td>
+          <td><%= user.email || "-" %></td>
+          <td><%= user.birth_date || "-" %></td>
+          <td>
+            <div class="admin-table-badges">
+              <% if (user.is_admin) { %>
+                <span class="admin-role-badge is-admin">Admin</span>
+              <% } %>
+              <% if (user.is_moderator) { %>
+                <span class="admin-role-badge is-moderator">Moderator</span>
+              <% } %>
+              <% if (!user.is_admin && !user.is_moderator) { %>
+                <span class="admin-role-badge">User</span>
+              <% } %>
+            </div>
+          </td>
+          <td>
+            <div class="admin-table-subline">
+              <span class="admin-status-badge is-<%= user.moderation_status.slug %>">
+                <%= user.moderation_status.label %>
+              </span>
+              <% if (user.moderation_status_note) { %>
+                <span class="admin-status-note"><%= user.moderation_status_note %></span>
+              <% } else { %>
+                <span class="admin-status-note is-empty">Keine Notiz.</span>
+              <% } %>
+            </div>
+          </td>
+          <td>
+            <div class="admin-table-actions">
+              <a
+                class="btn btn-secondary"
+                href="<%= `${detailBasePath}/${user.id}` %>"
+              >
+                Details
+              </a>
+              <% if (allowUserDeletion && user.id !== currentUser.id) { %>
+                <form method="POST" action="/admin/users/<%= user.id %>/delete" class="inline-form">
+                  <button class="btn btn-danger" type="submit">L&ouml;schen</button>
+                </form>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
