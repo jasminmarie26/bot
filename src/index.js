@@ -6753,7 +6753,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
       id: "free-rp-offbereich",
       name: "Free-RP-Offbereich",
       category: "Offplay",
-      teaser: "Locker reden, planen und ankommen."
+      teaser: "Nur für Free RP."
     }
   ],
   erp: [
@@ -6768,7 +6768,7 @@ const STANDARD_ROOM_DEFINITIONS = Object.freeze({
       id: "erp-offbereich",
       name: "ERP-Offbereich",
       category: "Offplay",
-      teaser: "Locker reden, planen und ankommen."
+      teaser: "Nur für ERP."
     }
   ]
 });
