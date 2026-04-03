@@ -10476,7 +10476,7 @@ select:focus {
 }
 
 .chat-box::after {
-  background: linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.22));
 }
 
 .chat-box > * {
