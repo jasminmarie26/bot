@@ -23,6 +23,7 @@
             <div class="admin-table-subline">
               <span>#<%= user.account_number %></span>
               <span>Erstellt: <%= user.created_at || "-" %></span>
+              <span>Letzter Login: <%= user.last_login_at || "-" %></span>
             </div>
           </td>
           <td><%= user.email || "-" %></td>
