@@ -6635,12 +6635,12 @@ body.theme-future.page-home-screen .home-copyright {
   flex-wrap: wrap;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 0.38rem 0.52rem;
+  gap: 0.55rem 1rem;
 }
 
 .page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {
-  flex: 0 0 auto;
-  width: min(21rem, 100%);
+  flex: 0 1 16rem;
+  width: min(16rem, 100%);
   min-width: 0;
   max-width: 100%;
 }
