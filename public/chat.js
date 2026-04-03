@@ -156,6 +156,46 @@
     updateChatTabTitle();
   }
 
+  function normalizeHexColor(value, fallback = "#EFEFEF") {
+    const normalized = String(value || "").trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : fallback;
+  }
+
+  function normalizeBackgroundUrl(value) {
+    const normalized = String(value || "").trim();
+    return /^https?:\/\/.+/i.test(normalized) ? normalized : "";
+  }
+
+  function normalizeOpacityPercent(value, fallback = 100) {
+    const parsed = Number.parseInt(String(value ?? "").trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, parsed));
+  }
+
+  function applyCharacterBackgroundAppearance(payload) {
+    const payloadCharacterId = Number(payload?.character_id);
+    if (
+      !Number.isInteger(currentActiveCharacterId) ||
+      currentActiveCharacterId < 1 ||
+      payloadCharacterId !== currentActiveCharacterId
+    ) {
+      return;
+    }
+
+    const nextBackgroundColor = normalizeHexColor(payload?.chat_background_color, "#EFEFEF");
+    const nextBackgroundUrl = normalizeBackgroundUrl(payload?.chat_background_url);
+    const nextOpacity = normalizeOpacityPercent(payload?.chat_background_image_opacity, 100);
+
+    chatBox.style.setProperty("--character-chat-background-color", nextBackgroundColor);
+    chatBox.style.setProperty(
+      "--character-chat-background-image",
+      nextBackgroundUrl ? `url(${JSON.stringify(nextBackgroundUrl)})` : "none"
+    );
+    chatBox.style.setProperty("--character-chat-background-image-opacity", String(nextOpacity / 100));
+  }
+
   function formatRoleDisplayName(rawName, roleStyle = "") {
     const label = String(rawName || "").trim();
     return label.replace(/\s*\(M\)\s*$/i, "").trim();
@@ -745,6 +785,7 @@
     }
     window.location.assign(nextUrl);
   });
+  socket.on("character:appearance:update", applyCharacterBackgroundAppearance);
   socket.on("user:display-profile", updateHeaderIdentity);
   socket.on("chat:typing", (payload) => {
     const presenceKey = resolvePresenceKey(payload);

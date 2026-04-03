@@ -8607,31 +8607,85 @@ body.page-guestbook-preview::after {
   gap: 0.65rem;
 }
 
+.character-chat-background-option-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
+}
+
+.character-chat-background-opacity-row,
+.character-chat-background-opacity-controls {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.character-chat-background-opacity-controls {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.character-chat-background-opacity-controls input[type="range"] {
+  width: 100%;
+}
+
+.character-chat-background-opacity-value,
+.character-chat-background-color-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.2rem;
+  height: 2.7rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .character-chat-background-preview {
   --character-chat-background-image: none;
+  --character-chat-background-color: #efefef;
+  --character-chat-background-image-opacity: 1;
   position: relative;
   min-height: 12rem;
   border: 1px solid var(--field-edge);
   border-radius: 16px;
   overflow: hidden;
-  background-color: #efefef;
-  background-image:
-    linear-gradient(180deg, rgba(239, 239, 239, 0.76), rgba(239, 239, 239, 0.9)),
-    var(--character-chat-background-image);
+  isolation: isolate;
+  background-color: var(--character-chat-background-color);
+}
+
+.character-chat-background-preview::before,
+.character-chat-background-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.character-chat-background-preview::before {
+  background-image: var(--character-chat-background-image);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
+  opacity: var(--character-chat-background-image-opacity);
+}
+
+.character-chat-background-preview::after {
+  background: linear-gradient(180deg, rgba(239, 239, 239, 0.12), rgba(239, 239, 239, 0.18));
 }
 
 .character-chat-background-preview.is-empty {
-  background-image:
-    linear-gradient(180deg, rgba(239, 239, 239, 0.92), rgba(239, 239, 239, 0.98)),
-    none;
+  background-color: #efefef;
 }
 
 .character-chat-background-preview-copy {
   position: absolute;
   inset: auto 0 0 0;
+  z-index: 1;
   display: grid;
   gap: 0.3rem;
   padding: 0.95rem 1rem;
@@ -10386,6 +10440,8 @@ select:focus {
 
 .chat-box {
   --character-chat-background-image: none;
+  --character-chat-background-color: #efefef;
+  --character-chat-background-image-opacity: 1;
   border-radius: 14px;
   height: 420px;
   overflow-y: auto;
@@ -10393,13 +10449,9 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 0.18rem;
-  background: #efefef;
-  background-image:
-    linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9)),
-    var(--character-chat-background-image);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
+  position: relative;
+  isolation: isolate;
+  background: var(--character-chat-background-color);
   border-color: #d3d8df;
   color: #1a1c20;
   box-shadow: none;
@@ -10407,11 +10459,33 @@ select:focus {
   -webkit-backdrop-filter: none;
 }
 
+.chat-box::before,
+.chat-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chat-box::before {
+  background-image: var(--character-chat-background-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: var(--character-chat-background-image-opacity);
+}
+
+.chat-box::after {
+  background: linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9));
+}
+
+.chat-box > * {
+  position: relative;
+  z-index: 1;
+}
+
 .page-chat #chat-box {
-  background: #efefef !important;
-  background-image:
-    linear-gradient(180deg, rgba(239, 239, 239, 0.82), rgba(239, 239, 239, 0.9)),
-    var(--character-chat-background-image) !important;
+  background: var(--character-chat-background-color) !important;
   box-shadow: none !important;
 }
 

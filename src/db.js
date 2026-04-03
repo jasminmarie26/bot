@@ -64,6 +64,8 @@ db.exec(`
     description TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
     chat_background_url TEXT DEFAULT '',
+    chat_background_color TEXT DEFAULT '#EFEFEF',
+    chat_background_image_opacity INTEGER NOT NULL DEFAULT 100,
     is_public INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -869,6 +871,14 @@ if (!characterColumns.includes("chat_background_url")) {
   db.exec("ALTER TABLE characters ADD COLUMN chat_background_url TEXT DEFAULT ''");
 }
 
+if (!characterColumns.includes("chat_background_color")) {
+  db.exec("ALTER TABLE characters ADD COLUMN chat_background_color TEXT DEFAULT '#EFEFEF'");
+}
+
+if (!characterColumns.includes("chat_background_image_opacity")) {
+  db.exec("ALTER TABLE characters ADD COLUMN chat_background_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
 if (!festplayPermissionColumns.includes("source")) {
   db.exec("ALTER TABLE festplay_permissions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
   db.prepare(
@@ -1256,6 +1266,8 @@ db.prepare(
 ).run();
 db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS NULL").run();
 db.prepare("UPDATE characters SET chat_background_url = '' WHERE chat_background_url IS NULL").run();
+db.prepare("UPDATE characters SET chat_background_color = '#EFEFEF' WHERE chat_background_color IS NULL OR trim(chat_background_color) = ''").run();
+db.prepare("UPDATE characters SET chat_background_image_opacity = 100 WHERE chat_background_image_opacity IS NULL").run();
 db.prepare(
   `UPDATE chat_rooms
    SET server_id = COALESCE(

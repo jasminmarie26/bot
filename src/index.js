@@ -3811,6 +3811,8 @@ function normalizeCharacterInput(body) {
     chat_text_color: normalizeGuestbookColor(body.chat_text_color),
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
     chat_background_url: (body.chat_background_url || "").trim().slice(0, 500),
+    chat_background_color: normalizeChatBackgroundColor(body.chat_background_color),
+    chat_background_image_opacity: normalizeGuestbookOpacity(body.chat_background_image_opacity, 100),
     is_public: 1
   };
 }
@@ -5294,6 +5296,8 @@ function getPreferredFestplayChatCharacterForUser(userId, festplayId, preferredC
                 c.name,
                 c.server_id,
                 c.chat_background_url,
+                c.chat_background_color,
+                c.chat_background_image_opacity,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
            FROM characters c
            LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -8025,6 +8029,15 @@ function normalizeOptionalGuestbookColor(rawColor) {
     return "";
   }
   return /^#[0-9a-f]{6}$/i.test(prepared) ? prepared.toUpperCase() : "";
+}
+
+function isOptionalHexColorInputValid(rawColor) {
+  const prepared = String(rawColor || "").trim();
+  return !prepared || /^#[0-9a-f]{6}$/i.test(prepared);
+}
+
+function normalizeChatBackgroundColor(rawColor) {
+  return normalizeOptionalGuestbookColor(rawColor) || "#EFEFEF";
 }
 
 function normalizeGuestbookOption(input, allowedValues, fallback) {
@@ -13837,6 +13850,8 @@ app.get("/characters/new", requireAuth, (req, res) => {
       chat_text_color: "#AEE7B7",
       avatar_url: "",
       chat_background_url: "",
+      chat_background_color: "#EFEFEF",
+      chat_background_image_opacity: 100,
       is_public: 1
     }
   });
@@ -13901,6 +13916,19 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
+  if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
+      character: payload
+    });
+  }
+
   if (
     findCharacterNameConflictForTarget(payload.name, {
       currentUserId: req.session.user.id,
@@ -13922,8 +13950,8 @@ app.post("/characters", requireAuth, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, chat_background_url, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, chat_background_url, chat_background_color, chat_background_image_opacity, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -13936,6 +13964,8 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.description,
       payload.avatar_url,
       payload.chat_background_url,
+      payload.chat_background_color,
+      payload.chat_background_image_opacity,
       payload.is_public
     );
 
@@ -15566,6 +15596,15 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_background_url")) {
     payload.chat_background_url = String(character.chat_background_url || "").trim().slice(0, 500);
   }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_background_color")) {
+    payload.chat_background_color = normalizeChatBackgroundColor(character.chat_background_color);
+  }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_background_image_opacity")) {
+    payload.chat_background_image_opacity = normalizeGuestbookOpacity(
+      character.chat_background_image_opacity,
+      100
+    );
+  }
   const nameChanged = payload.name !== character.name;
   const characterFormValues = renameAvailability.can_change
     ? { ...character, ...payload }
@@ -15615,6 +15654,19 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       "character-form",
       buildCharacterEditFormViewModel(character, {
         error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
+  }
+
+  if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
         festplays,
         renameAvailability,
         requestedGuestbookPageId,
@@ -15693,7 +15745,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, chat_background_url = ?, is_public = ?,
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, is_public = ?,
          name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
@@ -15707,6 +15759,8 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.description,
     payload.avatar_url,
     payload.chat_background_url,
+    payload.chat_background_color,
+    payload.chat_background_image_opacity,
     payload.is_public,
     nameChanged ? 1 : 0,
     id
@@ -15724,6 +15778,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     req.session.user = toSessionUser(refreshedUser);
   }
   refreshConnectedUserDisplay(req.session.user.id);
+  emitCharacterAppearanceUpdate(req.session.user.id, id);
 
   emitHomeStatsUpdate();
   setFlash(
@@ -16879,7 +16934,12 @@ app.get("/chat", requireAuth, (req, res) => {
         is_owner: true,
         server_id: normalizeServer(preferredCharacter.server_id),
         chat_text_color: normalizeGuestbookColor(preferredCharacter.chat_text_color),
-        chat_background_url: String(preferredCharacter.chat_background_url || "").trim()
+        chat_background_url: String(preferredCharacter.chat_background_url || "").trim(),
+        chat_background_color: normalizeChatBackgroundColor(preferredCharacter.chat_background_color),
+        chat_background_image_opacity: normalizeGuestbookOpacity(
+          preferredCharacter.chat_background_image_opacity,
+          100
+        )
       };
     }
   }
@@ -18329,6 +18389,8 @@ function getPreferredCharacterForUser(
                 c.name,
                 c.server_id,
                 c.chat_background_url,
+                c.chat_background_color,
+                c.chat_background_image_opacity,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
          FROM characters c
          LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -18346,6 +18408,8 @@ function getPreferredCharacterForUser(
               c.name,
               c.server_id,
               c.chat_background_url,
+              c.chat_background_color,
+              c.chat_background_image_opacity,
               COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
        FROM characters c
        LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -18589,6 +18653,34 @@ function getAllSocketsForUser(userId) {
     }
   }
   return sockets;
+}
+
+function emitCharacterAppearanceUpdate(userId, characterId) {
+  const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
+    return;
+  }
+
+  const character = getCharacterById(parsedCharacterId);
+  if (!character || Number(character.user_id) !== parsedUserId) {
+    return;
+  }
+
+  io.to(socketChannelForSocialUpdates(parsedUserId)).emit("character:appearance:update", {
+    character_id: parsedCharacterId,
+    chat_background_url: String(character.chat_background_url || "").trim(),
+    chat_background_color: normalizeChatBackgroundColor(character.chat_background_color),
+    chat_background_image_opacity: normalizeGuestbookOpacity(
+      character.chat_background_image_opacity,
+      100
+    )
+  });
 }
 
 function buildChatRedirectUrlForLocation(

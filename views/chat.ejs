@@ -44,12 +44,21 @@
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
 <% const chatBoardHref = `/rp-board?server_id=${chatBoardServerId}&character_id=${Number(chatBoardCharacterId)}`; %>
+<% const chatBackgroundColor = /^#[0-9a-f]{6}$/i.test(String(activeCharacter?.chat_background_color || "").trim())
+  ? String(activeCharacter.chat_background_color).trim().toUpperCase()
+  : "#EFEFEF"; %>
 <% const chatBackgroundUrl = /^https?:\/\/.+/i.test(String(activeCharacter?.chat_background_url || "").trim())
   ? String(activeCharacter.chat_background_url).trim()
   : ""; %>
-<% const chatBackgroundStyle = chatBackgroundUrl
-  ? `--character-chat-background-image: url(${JSON.stringify(chatBackgroundUrl)});`
-  : ""; %>
+<% const chatBackgroundImageOpacity = Math.min(
+  100,
+  Math.max(0, Number.parseInt(String(activeCharacter?.chat_background_image_opacity ?? "100"), 10) || 100)
+) / 100; %>
+<% const chatBackgroundStyle = [
+  `--character-chat-background-color: ${chatBackgroundColor};`,
+  `--character-chat-background-image-opacity: ${chatBackgroundImageOpacity};`,
+  chatBackgroundUrl ? `--character-chat-background-image: url(${JSON.stringify(chatBackgroundUrl)});` : ""
+].filter(Boolean).join(" "); %>
 
 <section class="rp-shell">
   <header class="rp-topline">
