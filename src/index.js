@@ -3853,6 +3853,49 @@ function findCharacterWithSameName(name, excludedCharacterId = null) {
     .get(normalizedName);
 }
 
+function findCharacterNameConflictForTarget(name, options = {}) {
+  const normalizedName = String(name || "").trim();
+  if (!normalizedName) {
+    return null;
+  }
+
+  const excludedCharacterId = Number(options.excludedCharacterId);
+  const currentUserId = Number(options.currentUserId);
+  const targetServerId = normalizeCharacterServerId(options.targetServerId);
+  const params = [normalizedName];
+  let query = `
+    SELECT id, name, user_id, server_id
+    FROM characters
+    WHERE lower(trim(name)) = lower(trim(?))
+  `;
+
+  if (Number.isInteger(excludedCharacterId) && excludedCharacterId > 0) {
+    query += " AND id != ?";
+    params.push(excludedCharacterId);
+  }
+
+  query += " ORDER BY id ASC";
+
+  const matches = db.prepare(query).all(...params);
+  if (!matches.length) {
+    return null;
+  }
+
+  if (targetServerId === LARP_SERVER_ID && Number.isInteger(currentUserId) && currentUserId > 0) {
+    const blockingMatch = matches.find((character) => {
+      if (Number(character.user_id) !== currentUserId) {
+        return true;
+      }
+
+      return normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID;
+    });
+
+    return blockingMatch || null;
+  }
+
+  return matches[0];
+}
+
 function isAvatarUrlValid(url) {
   if (!url) return true;
   return /^https?:\/\/.+/i.test(url);
@@ -13598,7 +13641,12 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
-  if (findCharacterWithSameName(payload.name)) {
+  if (
+    findCharacterNameConflictForTarget(payload.name, {
+      currentUserId: req.session.user.id,
+      targetServerId: payload.server_id
+    })
+  ) {
     return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
@@ -15342,7 +15390,13 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     );
   }
 
-  if (findCharacterWithSameName(payload.name, id)) {
+  if (
+    findCharacterNameConflictForTarget(payload.name, {
+      excludedCharacterId: id,
+      currentUserId: req.session.user.id,
+      targetServerId: payload.server_id
+    })
+  ) {
     return res.status(400).render(
       "character-form",
       buildCharacterEditFormViewModel(character, {
