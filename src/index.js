@@ -12518,6 +12518,16 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
         ),
         can_dashboard_move: true
       }))
+      .sort((left, right) => {
+        const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
+          sensitivity: "base"
+        });
+        if (nameCompare !== 0) {
+          return nameCompare;
+        }
+
+        return Number(left.id) - Number(right.id);
+      })
   };
 }
 
@@ -16465,6 +16475,55 @@ function decorateAdminUsers(users) {
   });
 }
 
+const STAFF_USER_PAGE_SIZE = 10;
+
+function normalizeStaffOverviewSearchValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\u00e4/g, "ae")
+    .replace(/\u00f6/g, "oe")
+    .replace(/\u00fc/g, "ue")
+    .replace(/\u00df/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getStaffOverviewUserSearchText(user) {
+  return [
+    user?.username,
+    user?.email,
+    user?.birth_date,
+    user?.last_login_ip,
+    user?.created_at,
+    user?.account_number
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function filterStaffOverviewUsers(users, query) {
+  const normalizedQuery = normalizeStaffOverviewSearchValue(query);
+  if (!normalizedQuery) {
+    return users;
+  }
+
+  return users.filter((user) =>
+    normalizeStaffOverviewSearchValue(getStaffOverviewUserSearchText(user)).includes(
+      normalizedQuery
+    )
+  );
+}
+
+function normalizeStaffOverviewPageNumber(value) {
+  const parsedValue = Number.parseInt(String(value || "").trim(), 10);
+  if (!Number.isInteger(parsedValue) || parsedValue < 1) {
+    return 1;
+  }
+
+  return parsedValue;
+}
+
 function getAdminUserCharacters(userId) {
   return db
     .prepare(
@@ -16518,8 +16577,15 @@ function getStaffPanelConfig(user) {
 
 function renderStaffOverview(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
-  const users = decorateAdminUsers(getAdminUsersOverview());
-  const suspiciousUsers = users.filter((user) => user.is_suspicious);
+  const allUsers = decorateAdminUsers(getAdminUsersOverview());
+  const suspiciousUsers = allUsers.filter((user) => user.is_suspicious);
+  const searchQuery = String(req.query.q || "").trim();
+  const filteredUsers = filterStaffOverviewUsers(allUsers, searchQuery);
+  const requestedPageNumber = normalizeStaffOverviewPageNumber(req.query.page);
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / STAFF_USER_PAGE_SIZE));
+  const currentPageNumber = Math.min(requestedPageNumber, totalUserPages);
+  const pageStartIndex = (currentPageNumber - 1) * STAFF_USER_PAGE_SIZE;
+  const users = filteredUsers.slice(pageStartIndex, pageStartIndex + STAFF_USER_PAGE_SIZE);
 
   const adminCount = db
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_admin = 1")
@@ -16544,6 +16610,17 @@ function renderStaffOverview(req, res) {
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     users,
     suspiciousUsers,
+    searchQuery,
+    filteredUserCount: filteredUsers.length,
+    userPagination: {
+      pageSize: STAFF_USER_PAGE_SIZE,
+      currentPage: currentPageNumber,
+      totalPages: totalUserPages,
+      hasPreviousPage: currentPageNumber > 1,
+      hasNextPage: currentPageNumber < totalUserPages,
+      previousPage: Math.max(1, currentPageNumber - 1),
+      nextPage: Math.min(totalUserPages, currentPageNumber + 1)
+    },
     accountCount,
     adminCount,
     moderatorCount

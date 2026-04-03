@@ -1,15 +1,33 @@
 <%- include("partials/start") %>
 
 <%
-  const sortedUsers = [...users].sort((a, b) =>
-    String(a.username || "").localeCompare(String(b.username || ""), "de", {
-      sensitivity: "base"
-    })
-  );
   const overviewTitle = panelTitle || "Adminbereich";
+  const overviewBasePath = panelBasePath || "/admin";
   const detailBasePath = userDetailsBasePath || "/admin/users";
   const allowUserDeletion =
     typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
+  const currentSearchQuery = String(searchQuery || "");
+  const visibleUsers = Array.isArray(users) ? users : [];
+  const pagination = userPagination || {};
+  const currentPage = Number(pagination.currentPage) || 1;
+  const totalPages = Number(pagination.totalPages) || 1;
+  const pageSize = Number(pagination.pageSize) || 10;
+  const totalFilteredUsers =
+    typeof filteredUserCount === "number" ? filteredUserCount : visibleUsers.length;
+  const visibleStart = totalFilteredUsers ? (currentPage - 1) * pageSize + 1 : 0;
+  const visibleEnd = totalFilteredUsers ? visibleStart + visibleUsers.length - 1 : 0;
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
+  const buildUserPageUrl = (pageNumber) => {
+    const queryParts = [];
+    if (currentSearchQuery) {
+      queryParts.push(`q=${encodeURIComponent(currentSearchQuery)}`);
+    }
+    if (pageNumber > 1) {
+      queryParts.push(`page=${encodeURIComponent(String(pageNumber))}`);
+    }
+    const queryString = queryParts.join("&");
+    return queryString ? `${overviewBasePath}?${queryString}` : overviewBasePath;
+  };
 %>
 
 <section class="panel account-layout">
@@ -161,22 +179,39 @@
     </div>
   </div>
 
-  <div class="admin-tools">
+  <form method="GET" action="<%= overviewBasePath %>" class="admin-tools">
     <label class="admin-search">
       <span>Suchen</span>
       <input
         id="admin-user-search"
+        name="q"
         class="admin-search-input"
         type="search"
         placeholder="Name, E-Mail, Geburtsdatum oder IP"
         autocomplete="off"
+        value="<%= currentSearchQuery %>"
       />
     </label>
-  </div>
+    <div class="admin-table-actions">
+      <button class="btn" type="submit">Suchen</button>
+      <% if (currentSearchQuery) { %>
+        <a class="btn btn-secondary" href="<%= overviewBasePath %>">Zur&uuml;cksetzen</a>
+      <% } %>
+    </div>
+  </form>
 
-  <% if (!sortedUsers.length) { %>
-    <p class="muted">Noch keine Benutzer vorhanden.</p>
-  <% } else { %>
+  <p class="muted">
+    <% if (totalFilteredUsers) { %>
+      Zeige <%= visibleStart %> bis <%= visibleEnd %> von <%= totalFilteredUsers %> Accounts.
+      Seite <%= currentPage %> von <%= totalPages %>.
+    <% } else if (currentSearchQuery) { %>
+      Keine passenden Benutzer gefunden.
+    <% } else { %>
+      Noch keine Benutzer vorhanden.
+    <% } %>
+  </p>
+
+  <% if (visibleUsers.length) { %>
     <div class="help-table-wrap">
       <table class="help-table admin-user-table">
         <thead>
@@ -190,20 +225,8 @@
           </tr>
         </thead>
         <tbody>
-          <% sortedUsers.forEach((user) => { %>
-            <%
-              const searchValues = [
-                user.username,
-                user.email,
-                user.birth_date,
-                user.last_login_ip,
-                user.created_at,
-                user.account_number
-              ]
-                .filter(Boolean)
-                .join(" ");
-            %>
-            <tr class="admin-user-row" data-user-row data-search="<%= searchValues %>">
+          <% visibleUsers.forEach((user) => { %>
+            <tr class="admin-user-row">
               <td>
                 <strong><%= user.username %></strong>
                 <div class="admin-table-subline">
@@ -254,40 +277,32 @@
         </tbody>
       </table>
     </div>
+
+    <% if (totalPages > 1) { %>
+      <nav class="site-updates-pagination" aria-label="Benutzer Seitenwechsel">
+        <% if (pagination.hasPreviousPage) { %>
+          <a class="site-updates-page-link" href="<%= buildUserPageUrl(pagination.previousPage) %>">
+            &#8249;
+          </a>
+        <% } %>
+
+        <% pageNumbers.forEach((pageNumber) => { %>
+          <a
+            class="site-updates-page-link<%= pageNumber === currentPage ? ' is-active' : '' %>"
+            href="<%= buildUserPageUrl(pageNumber) %>"
+          >
+            <%= pageNumber %>
+          </a>
+        <% }) %>
+
+        <% if (pagination.hasNextPage) { %>
+          <a class="site-updates-page-link" href="<%= buildUserPageUrl(pagination.nextPage) %>">
+            &#8250;
+          </a>
+        <% } %>
+      </nav>
+    <% } %>
   <% } %>
 </section>
-
-<script>
-  (() => {
-    const normalizeSearchValue = (value) =>
-      String(value || "")
-        .toLowerCase()
-        .replace(/\u00E4/g, "ae")
-        .replace(/\u00F6/g, "oe")
-        .replace(/\u00FC/g, "ue")
-        .replace(/\u00DF/g, "ss")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const searchInput = document.getElementById("admin-user-search");
-      if (!searchInput) return;
-
-      const userRows = Array.from(document.querySelectorAll("[data-user-row]"));
-
-      const applyFilter = () => {
-        const query = normalizeSearchValue(searchInput.value);
-
-        userRows.forEach((row) => {
-          const haystack = normalizeSearchValue(row.getAttribute("data-search"));
-          row.hidden = Boolean(query) && !haystack.includes(query);
-        });
-      };
-
-      searchInput.addEventListener("input", applyFilter);
-      applyFilter();
-    });
-  })();
-</script>
 
 <%- include("partials/end") %>

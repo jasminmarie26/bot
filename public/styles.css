@@ -4077,10 +4077,20 @@ body.theme-future.page-home-screen .home-copyright {
   align-items: end;
 }
 
+.members-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.members-header .muted {
+  margin-top: 0.35rem;
+  font-size: 0.98rem;
+}
+
 .members-search-wrap {
   display: grid;
   gap: 0.35rem;
-  min-width: min(100%, 20rem);
+  min-width: min(100%, 18rem);
 }
 
 .members-search-label {
@@ -4089,8 +4099,8 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .members-search-input {
-  min-width: min(100%, 20rem);
-  font-size: 0.88rem;
+  min-width: min(100%, 18rem);
+  font-size: 0.82rem;
 }
 
 .members-search-status {
@@ -4115,7 +4125,7 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-section-header h2 {
   margin: 0;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -4146,7 +4156,7 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-card-name {
   display: inline-block;
-  font-size: 0.96rem;
+  font-size: 0.84rem;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.16em;
