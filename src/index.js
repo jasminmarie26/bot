@@ -574,11 +574,10 @@ let cachedDiscordHomeStatsExpiresAt = 0;
 let discordHomeStatsRefreshPromise = null;
 let inactiveFestplayCleanupRunning = false;
 const DEFAULT_SEO_DESCRIPTION =
-  "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.";
+  "Heldenhafte Reisen ist eine kostenlose deutschsprachige Rollenspiel-Community mit getrennten Bereichen für Free RP, ERP und LARP, Charakterprofilen, Gästebüchern und Community-Austausch.";
 const DEFAULT_SEO_IMAGE_PATH = "/apple-touch-icon-hr.png";
 const SEO_DESCRIPTION_BY_PATH = {
-  "/":
-    "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen, Live Updates und gemeinschaftlichem Schreiben.",
+  "/": DEFAULT_SEO_DESCRIPTION,
   "/community-regeln":
     "Lies die Community-Regeln von Heldenhafte Reisen und erfahre, wie das gemeinsame Rollenspiel auf der Plattform organisiert ist.",
   "/datenschutz":
@@ -591,8 +590,10 @@ const SEO_DESCRIPTION_BY_PATH = {
     "Kontakt & Ticket von Heldenhafte Reisen: Sende Fragen, Hinweise oder technische Anliegen direkt über das Formular.",
   "/live-updates":
     "In den Live Updates von Heldenhafte Reisen siehst du aktuelle Neuerungen, Hinweise und Änderungen der Plattform.",
+  "/partner":
+    "Entdecke die Partner von Heldenhafte Reisen und vernetze dich mit weiteren Projekten rund um Rollenspiel und Community.",
   "/register":
-    "Registriere dich bei Heldenhafte Reisen und starte mit deinem Account auf der Rollenspielplattform."
+    "Registriere dich kostenlos bei Heldenhafte Reisen und starte mit deinem Account in die Rollenspiel-Community für Free RP, ERP und LARP."
 };
 const SEO_SITEMAP_PATHS = [
   "/",
@@ -602,6 +603,7 @@ const SEO_SITEMAP_PATHS = [
   "/impressum",
   "/kontakt",
   "/live-updates",
+  "/partner",
   "/register"
 ];
 const NOINDEX_PATH_PREFIXES = [
@@ -10659,8 +10661,7 @@ app.get("/", async (req, res) => {
   const recentSiteUpdates = getRecentSiteUpdates(30);
   return res.render("home", {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
-    metaDescription:
-      "Entdecke Heldenhafte Reisen, eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen und aktuellen Live Updates.",
+    metaDescription: DEFAULT_SEO_DESCRIPTION,
     stats: getLoginStats(),
     homeContent,
     recentSiteUpdateRevisions: recentSiteUpdates

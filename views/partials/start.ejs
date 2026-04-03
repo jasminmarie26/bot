@@ -9,7 +9,7 @@
     <% const resolvedMetaDescription = String(
       typeof metaDescription !== "undefined" && metaDescription
         ? metaDescription
-        : "Heldenhafte Reisen ist eine deutschsprachige Rollenspielplattform mit Charakteren, Räumen, Festspielen und Live Updates."
+        : "Heldenhafte Reisen ist eine kostenlose deutschsprachige Rollenspiel-Community mit getrennten Bereichen für Free RP, ERP und LARP, Charakterprofilen, Gästebüchern und Community-Austausch."
     ); %>
     <% const resolvedCanonicalUrl = String(typeof canonicalUrl !== "undefined" ? canonicalUrl || "" : "").trim(); %>
     <% const resolvedMetaImageUrl = String(typeof metaImageUrl !== "undefined" ? metaImageUrl || "" : "").trim(); %>
@@ -22,6 +22,7 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: resolvedSiteName,
+      description: resolvedMetaDescription,
       url: resolvedCanonicalUrl || undefined
     }); %>
     <meta charset="UTF-8" />
