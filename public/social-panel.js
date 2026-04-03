@@ -10,13 +10,22 @@
   const friendInput = panel.querySelector("[data-social-friend-input]");
   const feedback = panel.querySelector("[data-social-panel-feedback]");
   const friendsList = panel.querySelector("[data-social-friends-list]");
+  const friendsPager = panel.querySelector("[data-social-friends-pager]");
   const ignoredAccountsList = panel.querySelector("[data-social-ignored-accounts-list]");
+  const ignoredAccountsPager = panel.querySelector("[data-social-ignored-accounts-pager]");
   const ignoredCharactersList = panel.querySelector("[data-social-ignored-characters-list]");
+  const ignoredCharactersPager = panel.querySelector("[data-social-ignored-characters-pager]");
   const tabButtons = Array.from(panel.querySelectorAll("[data-social-tab-button]"));
   const tabPanels = Array.from(panel.querySelectorAll("[data-social-tab-panel]"));
   const badge = document.querySelector("[data-social-panel-badge]");
   const canUseRealtime = typeof io === "function";
   const friendOnlineToastDurationMs = 4200;
+  const socialPageSize = 5;
+  const socialPageState = {
+    friends: 0,
+    "ignored-accounts": 0,
+    "ignored-characters": 0
+  };
   let feedbackTimer = 0;
   let socialState = normalizeSocialState(window.__appSocialState || {});
   let hasReceivedInitialState = false;
@@ -229,6 +238,92 @@
     return { entry, row };
   }
 
+  function getPageWindow(listName, totalCount) {
+    const normalizedListName = normalizeText(listName);
+    const pageCount = Math.max(1, Math.ceil(Math.max(0, totalCount) / socialPageSize));
+    const rawPageIndex = Number(socialPageState[normalizedListName] || 0);
+    const pageIndex = Math.min(Math.max(0, rawPageIndex), pageCount - 1);
+
+    socialPageState[normalizedListName] = pageIndex;
+
+    return {
+      pageIndex,
+      pageCount,
+      startIndex: pageIndex * socialPageSize,
+      endIndex: pageIndex * socialPageSize + socialPageSize
+    };
+  }
+
+  function buildPagerButton(label, title, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "social-panel-pager-btn";
+    button.textContent = label;
+    button.title = title;
+    button.setAttribute("aria-label", title);
+    button.addEventListener("click", handler);
+    return button;
+  }
+
+  function renderPager(pagerNode, listName, totalCount) {
+    if (!pagerNode) {
+      return;
+    }
+
+    pagerNode.replaceChildren();
+    if (totalCount <= socialPageSize) {
+      pagerNode.hidden = true;
+      return;
+    }
+
+    const { pageIndex, pageCount } = getPageWindow(listName, totalCount);
+    const previousButton = buildPagerButton("←", "Vorherige Seite", () => {
+      socialPageState[listName] = Math.max(0, pageIndex - 1);
+      renderSocialState();
+    });
+    const nextButton = buildPagerButton("→", "Nächste Seite", () => {
+      socialPageState[listName] = Math.min(pageCount - 1, pageIndex + 1);
+      renderSocialState();
+    });
+    previousButton.disabled = pageIndex === 0;
+    nextButton.disabled = pageIndex >= pageCount - 1;
+
+    const label = document.createElement("span");
+    label.className = "social-panel-pager-label";
+    label.textContent = `${pageIndex + 1} / ${pageCount}`;
+
+    pagerNode.appendChild(previousButton);
+    pagerNode.appendChild(label);
+    pagerNode.appendChild(nextButton);
+    pagerNode.hidden = false;
+  }
+
+  function renderListEntries({
+    listNode,
+    pagerNode,
+    listName,
+    items,
+    emptyText,
+    renderEntry
+  }) {
+    if (!listNode) {
+      return;
+    }
+
+    listNode.replaceChildren();
+    if (!Array.isArray(items) || !items.length) {
+      listNode.appendChild(createEmptyState(emptyText));
+      renderPager(pagerNode, listName, 0);
+      return;
+    }
+
+    const { startIndex, endIndex } = getPageWindow(listName, items.length);
+    items.slice(startIndex, endIndex).forEach((entryData) => {
+      listNode.appendChild(renderEntry(entryData));
+    });
+    renderPager(pagerNode, listName, items.length);
+  }
+
   function setActiveTab(tabName) {
     const normalizedTabName = normalizeText(tabName);
     if (!normalizedTabName || !tabButtons.length || !tabPanels.length) {
@@ -387,49 +482,65 @@
 
   function renderSocialState() {
     if (friendsList) {
-      friendsList.replaceChildren();
       const visibleFriends = getVisibleFriends();
       if (!socialState.friends.length) {
-        friendsList.appendChild(createEmptyState("Noch keine Freunde gespeichert."));
+        renderListEntries({
+          listNode: friendsList,
+          pagerNode: friendsPager,
+          listName: "friends",
+          items: [],
+          emptyText: "Noch keine Freunde gespeichert.",
+          renderEntry: renderFriendEntry
+        });
       } else if (!visibleFriends.length) {
-        friendsList.appendChild(createEmptyState("Gerade ist keiner deiner Freunde online."));
+        renderListEntries({
+          listNode: friendsList,
+          pagerNode: friendsPager,
+          listName: "friends",
+          items: [],
+          emptyText: "Gerade ist keiner deiner Freunde online.",
+          renderEntry: renderFriendEntry
+        });
       } else {
-        visibleFriends.forEach((friend) => {
-          friendsList.appendChild(renderFriendEntry(friend));
+        renderListEntries({
+          listNode: friendsList,
+          pagerNode: friendsPager,
+          listName: "friends",
+          items: visibleFriends,
+          emptyText: "Gerade ist keiner deiner Freunde online.",
+          renderEntry: renderFriendEntry
         });
       }
     }
 
     if (ignoredAccountsList) {
-      ignoredAccountsList.replaceChildren();
-      if (!socialState.ignored_accounts.length) {
-        ignoredAccountsList.appendChild(createEmptyState("Keine ignorierten Accounts."));
-      } else {
-        socialState.ignored_accounts
+      renderListEntries({
+        listNode: ignoredAccountsList,
+        pagerNode: ignoredAccountsPager,
+        listName: "ignored-accounts",
+        items: socialState.ignored_accounts
           .slice()
-          .sort((leftEntry, rightEntry) => Number(leftEntry.user_id) - Number(rightEntry.user_id))
-          .forEach((entryData) => {
-            ignoredAccountsList.appendChild(renderIgnoredAccountEntry(entryData));
-          });
-      }
+          .sort((leftEntry, rightEntry) => Number(leftEntry.user_id) - Number(rightEntry.user_id)),
+        emptyText: "Keine ignorierten Accounts.",
+        renderEntry: renderIgnoredAccountEntry
+      });
     }
 
     if (ignoredCharactersList) {
-      ignoredCharactersList.replaceChildren();
-      if (!socialState.ignored_characters.length) {
-        ignoredCharactersList.appendChild(createEmptyState("Keine ignorierten Charaktere."));
-      } else {
-        socialState.ignored_characters
+      renderListEntries({
+        listNode: ignoredCharactersList,
+        pagerNode: ignoredCharactersPager,
+        listName: "ignored-characters",
+        items: socialState.ignored_characters
           .slice()
           .sort((leftEntry, rightEntry) =>
             normalizeText(leftEntry?.name).localeCompare(normalizeText(rightEntry?.name), "de", {
               sensitivity: "base"
             })
-          )
-          .forEach((entryData) => {
-            ignoredCharactersList.appendChild(renderIgnoredCharacterEntry(entryData));
-          });
-      }
+          ),
+        emptyText: "Keine ignorierten Charaktere.",
+        renderEntry: renderIgnoredCharacterEntry
+      });
     }
 
     if (badge) {
@@ -449,7 +560,7 @@
     panel.hidden = false;
     toggleButton.classList.add("is-open");
     toggleButton.setAttribute("aria-expanded", "true");
-    setActiveTab(activeTabName || "ignored-accounts");
+    setActiveTab(activeTabName || "friends");
     refreshState().catch(() => {});
   }
 
@@ -794,6 +905,6 @@
   publishSocialState(socialState, {
     allowNotifications: false
   });
-  setActiveTab(activeTabName || "ignored-accounts");
+  setActiveTab(activeTabName || "friends");
   refreshState().catch(() => {});
 })();

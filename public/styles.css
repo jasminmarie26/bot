@@ -1853,6 +1853,11 @@ a:hover {
   border-color: color-mix(in srgb, var(--accent) 72%, var(--field-edge) 28%);
 }
 
+.social-panel-tab-panel {
+  display: grid;
+  gap: 0.22rem;
+}
+
 .social-panel-tab-panel[hidden] {
   display: none !important;
 }
@@ -1865,7 +1870,7 @@ a:hover {
 .social-panel-list-head,
 .social-panel-entry-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) auto;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) auto;
   gap: 0.45rem;
   align-items: center;
 }
@@ -1877,6 +1882,10 @@ a:hover {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.social-panel-list-head span:last-child {
+  text-align: right;
 }
 
 .social-panel-list {
@@ -1963,6 +1972,48 @@ a:hover {
 .social-panel-action-btn.is-active {
   border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
   background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
+}
+
+.social-panel-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  padding-top: 0.06rem;
+}
+
+.social-panel-pager-btn {
+  min-width: 1.9rem;
+  height: 1.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--field-edge));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 24%, var(--panel-bg) 76%);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text) 30%);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.social-panel-pager-btn:hover,
+.social-panel-pager-btn:focus-visible {
+  background: color-mix(in srgb, var(--accent) 72%, var(--panel-bg) 28%);
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--field-edge) 28%);
+}
+
+.social-panel-pager-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.social-panel-pager-label {
+  min-width: 2.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .social-panel-status-dot {
@@ -6636,6 +6687,7 @@ body.theme-future.page-home-screen .home-copyright {
   justify-content: flex-start;
   align-items: flex-start;
   gap: 0.55rem 1rem;
+  margin-left: -0.14rem;
 }
 
 .page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {

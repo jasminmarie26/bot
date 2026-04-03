@@ -3747,6 +3747,65 @@ function normalizeCharacterInput(body) {
   };
 }
 
+const RESERVED_CHARACTER_NAME_ERROR =
+  "Dieser Charaktername enthält reservierte Begriffe wie Admin, Moderator oder Support.";
+const RESERVED_CHARACTER_NAME_FRAGMENTS = [
+  "admin",
+  "administrator",
+  "administration",
+  "verwaltung",
+  "moderat",
+  "support",
+  "staff",
+  "official",
+  "offiziell",
+  "entwickler",
+  "developer",
+  "spielleitung",
+  "gamemaster",
+  "teamleitung",
+  "serverleitung",
+  "communitymanager",
+  "communitymanagement",
+  "owner",
+  "inhaber",
+  "helfer",
+  "helper"
+];
+const RESERVED_CHARACTER_NAME_TOKENS = new Set(["mod", "gm", "sl", "sup"]);
+
+function normalizeReservedCharacterNameValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss");
+}
+
+function collapseReservedCharacterNameValue(value) {
+  return normalizeReservedCharacterNameValue(value).replace(/[^a-z0-9]+/g, "");
+}
+
+function containsReservedCharacterNameTerm(name) {
+  const normalizedName = normalizeReservedCharacterNameValue(name);
+  const collapsedName = collapseReservedCharacterNameValue(name);
+  if (!collapsedName) {
+    return false;
+  }
+
+  if (
+    RESERVED_CHARACTER_NAME_FRAGMENTS.some((fragment) =>
+      collapsedName.includes(collapseReservedCharacterNameValue(fragment))
+    )
+  ) {
+    return true;
+  }
+
+  const tokens = normalizedName.split(/[^a-z0-9]+/).filter(Boolean);
+  return tokens.some((token) => RESERVED_CHARACTER_NAME_TOKENS.has(token));
+}
+
 function findCharacterWithSameName(name, excludedCharacterId = null) {
   const normalizedName = String(name || "").trim();
   if (!normalizedName) return null;
@@ -13450,6 +13509,18 @@ app.post("/characters", requireAuth, (req, res) => {
     });
   }
 
+  if (!req.session.user?.is_admin && containsReservedCharacterNameTerm(payload.name)) {
+    return res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error: RESERVED_CHARACTER_NAME_ERROR,
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      character: payload
+    });
+  }
+
   if (!isAvatarUrlValid(payload.avatar_url)) {
     return res.status(400).render("character-form", {
       title: "Neuer Charakter",
@@ -15112,6 +15183,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
+  const nameChanged = payload.name !== character.name;
   const characterFormValues = renameAvailability.can_change
     ? { ...character, ...payload }
     : { ...character, ...payload, name: character.name };
@@ -15121,6 +15193,19 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       "character-form",
       buildCharacterEditFormViewModel(character, {
         error: "Name ist erforderlich.",
+        festplays,
+        renameAvailability,
+        requestedGuestbookPageId,
+        character: characterFormValues
+      })
+    );
+  }
+
+  if (nameChanged && !req.session.user?.is_admin && containsReservedCharacterNameTerm(payload.name)) {
+    return res.status(400).render(
+      "character-form",
+      buildCharacterEditFormViewModel(character, {
+        error: RESERVED_CHARACTER_NAME_ERROR,
         festplays,
         renameAvailability,
         requestedGuestbookPageId,
@@ -15178,7 +15263,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     );
   }
 
-  const nameChanged = payload.name !== character.name;
   if (nameChanged && !renameAvailability.can_change) {
     return res.status(400).render(
       "character-form",
