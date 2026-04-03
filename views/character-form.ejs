@@ -279,16 +279,6 @@
 
       <div class="gb-editor-actions">
         <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
-        <button
-          class="btn btn-secondary"
-          type="submit"
-          form="guestbook-editor-form"
-          formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
-          formmethod="POST"
-          formtarget="guestbook-preview-<%= character.id %>"
-        >
-          Vorschau
-        </button>
 
         <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
           <input type="hidden" name="page_id" value="<%= activePage.id %>" />
