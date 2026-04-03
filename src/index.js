@@ -51,7 +51,6 @@ const SERVER_OPTIONS = [
   { id: "free-rp", label: "FREE-RP" },
   { id: "erp", label: "ERP" }
 ];
-const LARP_SERVER_ID = "larp";
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
 const LEGACY_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
@@ -382,14 +381,6 @@ function normalizeServer(serverValue) {
   return ALLOWED_SERVER_IDS.has(input) ? input : DEFAULT_SERVER_ID;
 }
 
-function isLarpServerId(serverValue) {
-  return String(serverValue || "").trim().toLowerCase() === LARP_SERVER_ID;
-}
-
-function normalizeCharacterServerId(serverValue) {
-  return isLarpServerId(serverValue) ? LARP_SERVER_ID : normalizeServer(serverValue);
-}
-
 function normalizeFestplayDashboardMode(value) {
   return String(value || "").trim().toLowerCase() === "main" ? "main" : "festplay";
 }
@@ -400,10 +391,6 @@ function parseRequestedFestplayDashboardMode(value) {
 }
 
 function getServerLabel(serverId) {
-  if (isLarpServerId(serverId)) {
-    return "LARP";
-  }
-
   const normalized = normalizeServer(serverId);
   const found = SERVER_OPTIONS.find((server) => server.id === normalized);
   return found?.label || "FREE-RP";
@@ -3744,7 +3731,7 @@ for (const providerStatus of Object.values(OAUTH_PROVIDERS)) {
 function normalizeCharacterInput(body) {
   const parsedFestplayId = Number(body.festplay_id);
   return {
-    server_id: normalizeCharacterServerId(body.server_id),
+    server_id: normalizeServer(body.server_id),
     festplay_id:
       Number.isInteger(parsedFestplayId) && parsedFestplayId > 0
         ? parsedFestplayId
@@ -12965,107 +12952,6 @@ function getDashboardServerSections(userId) {
     .filter(Boolean);
 }
 
-function getLarpCharactersForUser(userId) {
-  const parsedUserId = Number(userId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
-    return [];
-  }
-
-  return db
-    .prepare(
-      `SELECT c.id,
-              c.user_id,
-              c.name,
-              c.server_id,
-              c.is_public,
-              c.updated_at,
-              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
-       FROM characters c
-       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
-       WHERE c.user_id = ? AND c.server_id = ?
-       ORDER BY lower(c.name) ASC, c.id ASC`
-    )
-    .all(parsedUserId, LARP_SERVER_ID)
-    .map((character) => ({
-      ...character,
-      is_owner: true
-    }));
-}
-
-function getPreferredLarpCharacterIdFromSession(req) {
-  const parsedCharacterId = Number(req.session?.preferred_larp_character_id);
-  return Number.isInteger(parsedCharacterId) && parsedCharacterId > 0 ? parsedCharacterId : null;
-}
-
-function rememberPreferredLarpCharacter(req, character) {
-  const parsedCharacterId = Number(character?.id);
-  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
-    return;
-  }
-
-  if (Number(character?.user_id) !== Number(req.session?.user?.id)) {
-    return;
-  }
-
-  if (!isLarpServerId(character?.server_id)) {
-    return;
-  }
-
-  req.session.preferred_larp_character_id = parsedCharacterId;
-}
-
-function getPreferredLarpCharacterForUser(userId, preferredCharacterId = null) {
-  const parsedUserId = Number(userId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
-    return null;
-  }
-
-  const parsedPreferredCharacterId = Number(preferredCharacterId);
-  if (Number.isInteger(parsedPreferredCharacterId) && parsedPreferredCharacterId > 0) {
-    const preferredCharacter = db
-      .prepare(
-        `SELECT c.id,
-                c.user_id,
-                c.name,
-                c.server_id,
-                COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
-         FROM characters c
-         LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
-         WHERE c.id = ? AND c.user_id = ? AND c.server_id = ?
-         LIMIT 1`
-      )
-      .get(parsedPreferredCharacterId, parsedUserId, LARP_SERVER_ID);
-    if (preferredCharacter) {
-      return {
-        ...preferredCharacter,
-        is_owner: true
-      };
-    }
-  }
-
-  const firstCharacter = db
-    .prepare(
-      `SELECT c.id,
-              c.user_id,
-              c.name,
-              c.server_id,
-              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
-       FROM characters c
-       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
-       WHERE c.user_id = ? AND c.server_id = ?
-       ORDER BY lower(c.name) ASC, c.id ASC
-       LIMIT 1`
-    )
-    .get(parsedUserId, LARP_SERVER_ID);
-
-  return firstCharacter
-    ? {
-        ...firstCharacter,
-        is_owner: true
-      }
-    : null;
-}
-
 function getDashboardServerSection(userId, serverId) {
   const normalizedServerId = normalizeServer(serverId);
   const server = SERVER_OPTIONS.find((entry) => entry.id === normalizedServerId);
@@ -13109,105 +12995,8 @@ function getDashboardLarpSection() {
   return {
     title: "LARP Bereich",
     description:
-      "Dein eigener Zugang f\u00fcr Gruppen, Termine, Lagerideen und gemeinsames Spiel abseits der RP-Server.",
-    intro_badge: "LARP-Forum",
-    hero_title: "Das Forum f\u00fcr Orga, Reisen und Charakterspiel",
-    hero_text:
-      "Der LARP-Bereich ist bewusst getrennt vom RP-Bereich aufgebaut und orientiert sich an einer klassischen Forumstruktur mit Kategorien und Unterforen.",
-    note: "Eigenst\u00e4ndiger Zugang ohne Verbindung zum RP-Forum.",
-    cta_href: "/dashboard/larp",
-    cta_label: "LARP-Forum \u00f6ffnen",
-    stats: [
-      {
-        value: "2",
-        label: "Kategorien",
-        note: "Strukturiert wie ein klassisches Forum"
-      },
-      {
-        value: "4",
-        label: "Foren",
-        note: "Von Orga bis Charakterkonzept"
-      },
-      {
-        value: "100%",
-        label: "Getrennt",
-        note: "Eigener Zugang au\u00dferhalb des RP-Bereichs"
-      }
-    ],
-    side_notes: [
-      {
-        title: "Zugang",
-        text: "Dieser Bereich ist ein separater Einstieg und geh\u00f6rt nicht zum RP-Forum."
-      },
-      {
-        title: "Schwerpunkt",
-        text: "Hier landen Cons, Lager, Gruppen, Gewandung, Mitfahrten und Charakterspiel f\u00fcr LARP."
-      }
-    ],
-    categories: [
-      {
-        title: "Planung & Unterwegs",
-        description:
-          "Alles f\u00fcr Vorbereitung, Absprachen und Reisen zu Veranstaltungen.",
-        boards: [
-          {
-            short_label: "LG",
-            flag: "Organisation",
-            access: "Nur LARP",
-            title: "Lager, Gruppen & Orga",
-            description:
-              "Sammle Gruppen, suche Mitspielende und halte Absprachen f\u00fcr Lager, Tavernen und Orga-Runden fest.",
-            scope: "Planung & Gruppen",
-            focus: "Absprachen, Sammelthreads und Organisationsideen.",
-            activity_title: "Treffpunkte und Zust\u00e4ndigkeiten",
-            activity_note: "Hier beginnt die gemeinsame Vorbereitung."
-          },
-          {
-            short_label: "TC",
-            flag: "Reise",
-            access: "Nur LARP",
-            title: "Termine, Cons & Mitfahrten",
-            description:
-              "B\u00fcndle Con-Termine, Fahrgemeinschaften, Packlisten und alle Fragen rund um Anreise und Ablauf.",
-            scope: "Cons & Reisen",
-            focus: "Termine, Mitfahrten und Vorbereitungsfragen.",
-            activity_title: "Von Kalender bis Treffpunkt",
-            activity_note: "F\u00fcr alles, was vor dem Spielstart gekl\u00e4rt werden muss."
-          }
-        ]
-      },
-      {
-        title: "Spielwelt & Charaktere",
-        description:
-          "Raum f\u00fcr Konzepte, Gewandung, Lagerleben und Aush\u00e4nge im LARP-Stil.",
-        boards: [
-          {
-            short_label: "CK",
-            flag: "Charakterspiel",
-            access: "Nur LARP",
-            title: "Charakterkonzepte & Gewandung",
-            description:
-              "Entwickle Rollen, Gewandungen, Hintergrundideen und passende Spielans\u00e4tze f\u00fcr kommende Abenteuer.",
-            scope: "Figuren & Look",
-            focus: "Konzepte, Ausr\u00fcstung und Darstellung im Spiel.",
-            activity_title: "Von Idee bis Auftritt",
-            activity_note: "F\u00fcr Charaktere, die im LARP sichtbar werden sollen."
-          },
-          {
-            short_label: "AG",
-            flag: "Aushang",
-            access: "Nur LARP",
-            title: "Aush\u00e4nge, Gesuche & Lagerleben",
-            description:
-              "Platziere Gesuche, suche Anschluss f\u00fcrs Lager und teile Ideen f\u00fcr gemeinsames Spiel auf dem Gel\u00e4nde.",
-            scope: "Suche & Austausch",
-            focus: "Gesuche, Angebote und spontane Spielimpulse.",
-            activity_title: "Direkte Aufh\u00e4nger f\u00fcrs Spiel",
-            activity_note: "Hier finden sich Kontakte f\u00fcr die n\u00e4chste Szene."
-          }
-        ]
-      }
-    ]
+      "Hier entsteht später dein Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
+    note: "Noch nicht freigeschaltet."
   };
 }
 
@@ -13219,53 +13008,6 @@ app.get("/dashboard", requireAuth, (req, res) => {
     title: "Serverliste",
     serverSections,
     larpSection
-  });
-});
-
-app.get("/dashboard/larp", requireAuth, (req, res) => {
-  const larpSection = getDashboardLarpSection();
-  const larpCharacters = getLarpCharactersForUser(req.session.user.id);
-  const preferredCharacter = getPreferredLarpCharacterForUser(
-    req.session.user.id,
-    getPreferredLarpCharacterIdFromSession(req)
-  );
-
-  if (preferredCharacter) {
-    rememberPreferredLarpCharacter(req, preferredCharacter);
-  }
-
-  return res.render("dashboard-larp", {
-    title: "LARP Bereich",
-    larpSection,
-    larpCharacters,
-    larpPreferredCharacterId: Number(preferredCharacter?.id || 0)
-  });
-});
-
-app.get("/larp-forum", requireAuth, (req, res) => {
-  const requestedCharacterId = Number(req.query.character_id);
-  const preferredCharacterId =
-    Number.isInteger(requestedCharacterId) && requestedCharacterId > 0
-      ? requestedCharacterId
-      : getPreferredLarpCharacterIdFromSession(req);
-  const larpActiveCharacter = getPreferredLarpCharacterForUser(
-    req.session.user.id,
-    preferredCharacterId
-  );
-
-  if (!larpActiveCharacter) {
-    setFlash(req, "error", "Bitte lege zuerst einen LARP-Charakter an oder wähle einen aus.");
-    return res.redirect("/dashboard/larp");
-  }
-
-  rememberPreferredLarpCharacter(req, larpActiveCharacter);
-
-  const larpSection = getDashboardLarpSection();
-
-  return res.render("larp-forum", {
-    title: `LARP Forum: ${larpActiveCharacter.name}`,
-    larpSection,
-    larpActiveCharacter
   });
 });
 
@@ -13736,12 +13478,10 @@ app.get("/sitemap.xml", (req, res) => {
 
 app.get("/characters/new", requireAuth, (req, res) => {
   const festplays = getFestplays();
-  const requestedServer = normalizeCharacterServerId(req.query.server);
-  const defaultReturnTarget =
-    requestedServer === LARP_SERVER_ID ? "/dashboard/larp" : `/dashboard/areas/${requestedServer}`;
+  const requestedServer = normalizeServer(req.query.server);
   const returnTarget = getSafeExplicitReturnTarget(
     req.query.return_to,
-    defaultReturnTarget
+    `/dashboard/areas/${requestedServer}`
   );
   res.render("character-form", {
     title: "Neuer Charakter",
@@ -13769,9 +13509,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
 app.post("/characters", requireAuth, (req, res) => {
   const payload = normalizeCharacterInput(req.body);
   const festplays = getFestplays();
-  const defaultReturnTarget =
-    payload.server_id === LARP_SERVER_ID ? "/dashboard/larp" : `/dashboard/areas/${payload.server_id}`;
-  const returnTarget = getSafeReturnTarget(req, defaultReturnTarget);
+  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${payload.server_id}`);
   payload.festplay_id = null;
 
   if (!payload.name) {
