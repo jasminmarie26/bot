@@ -8373,6 +8373,10 @@ body.page-guestbook-preview::after {
   z-index: 120;
 }
 
+.character-color-row:has(.character-color-panel:not([hidden])) {
+  padding-bottom: 17rem;
+}
+
 .character-color-input-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
