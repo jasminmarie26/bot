@@ -5233,6 +5233,30 @@ body.theme-future.page-home-screen .home-copyright {
   font-size: 0.84rem;
 }
 
+.admin-account-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.admin-account-name-large {
+  gap: 0.6rem;
+}
+
+.admin-account-name-large h1 {
+  margin: 0;
+}
+
+.admin-online-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #3ddc72;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #3ddc72 42%, #0a1a0f), 0 0 8px color-mix(in srgb, #3ddc72 70%, transparent);
+  flex: 0 0 auto;
+}
+
 .admin-table-badges,
 .admin-table-actions {
   display: flex;

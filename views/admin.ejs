@@ -131,7 +131,12 @@
           <% suspiciousUsers.forEach((user) => { %>
             <tr>
               <td>
-                <strong><%= user.username %></strong>
+                <div class="admin-account-name">
+                  <% if (user.is_online) { %>
+                    <span class="admin-online-dot" aria-label="Online" title="Online"></span>
+                  <% } %>
+                  <strong><%= user.username %></strong>
+                </div>
                 <div class="admin-table-subline">
                   <span>#<%= user.account_number %></span>
                   <span>IP: <%= user.last_login_ip || "-" %></span>
@@ -228,7 +233,12 @@
           <% visibleUsers.forEach((user) => { %>
             <tr class="admin-user-row">
               <td>
-                <strong><%= user.username %></strong>
+                <div class="admin-account-name">
+                  <% if (user.is_online) { %>
+                    <span class="admin-online-dot" aria-label="Online" title="Online"></span>
+                  <% } %>
+                  <strong><%= user.username %></strong>
+                </div>
                 <div class="admin-table-subline">
                   <span>#<%= user.account_number %></span>
                   <span>Erstellt: <%= user.created_at || "-" %></span>

@@ -890,6 +890,15 @@ function getConnectedSocketUserIds() {
   return Array.from(connectedUserIds);
 }
 
+function getOnlineAccountUserIds() {
+  return Array.from(
+    new Set([
+      ...getActiveSessionUserIds(),
+      ...getConnectedSocketUserIds()
+    ])
+  );
+}
+
 function getConnectedChatCharacterIds() {
   const sockets = io?.of("/")?.sockets;
   if (!sockets || typeof sockets.values !== "function") {
@@ -17102,7 +17111,11 @@ function getStaffPanelConfig(user) {
 
 function renderStaffOverview(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
-  const allUsers = decorateAdminUsers(getAdminUsersOverview());
+  const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
+  const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
+    ...user,
+    is_online: onlineAccountUserIds.has(Number(user.id))
+  }));
   const suspiciousUsers = allUsers.filter((user) => user.is_suspicious);
   const searchQuery = String(req.query.q || "").trim();
   const filteredUsers = filterStaffOverviewUsers(allUsers, searchQuery);
@@ -17160,7 +17173,11 @@ function renderStaffUserDetails(req, res) {
     return res.redirect(panelConfig.panelBasePath);
   }
 
-  const users = decorateAdminUsers(getAdminUsersOverview());
+  const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
+  const users = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
+    ...user,
+    is_online: onlineAccountUserIds.has(Number(user.id))
+  }));
   const targetUser = users.find((user) => Number(user.id) === targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");

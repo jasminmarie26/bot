@@ -17,7 +17,12 @@
 <section class="panel admin-user-page">
   <div class="header-line">
     <div>
-      <h1><%= targetUser.username %></h1>
+      <div class="admin-account-name admin-account-name-large">
+        <% if (targetUser.is_online) { %>
+          <span class="admin-online-dot" aria-label="Online" title="Online"></span>
+        <% } %>
+        <h1><%= targetUser.username %></h1>
+      </div>
       <p class="muted">Account #<%= targetUser.account_number %></p>
     </div>
     <div class="dashboard-server-actions">
