@@ -4088,7 +4088,7 @@ function saveChatLogBackupForUser(payload = {}) {
     characterName,
     normalizedRoomId,
     String(payload.roomLabel || "").trim(),
-    normalizeServer(payload.serverId),
+    normalizeCharacterServerId(payload.serverId),
     String(payload.startedAt || "").trim(),
     String(payload.endedAt || "").trim(),
     String(payload.endReasonText || "").trim(),
@@ -4138,7 +4138,7 @@ function buildChatLogBackupDetailTarget(characterId, characterName = "", serverI
       searchParams.set("name", normalizedCharacterName);
     }
     if (normalizedServerId) {
-      searchParams.set("server_id", normalizeServer(normalizedServerId));
+      searchParams.set("server_id", normalizeCharacterServerId(normalizedServerId));
     }
   }
 
@@ -4164,7 +4164,7 @@ function getChatLogBackupsForUserCharacter(userId, characterId, options = {}) {
 
   if (parsedCharacterId === 0 && requestedServerId) {
     clauses.push("server_id = ?");
-    values.push(normalizeServer(requestedServerId));
+    values.push(normalizeCharacterServerId(requestedServerId));
   }
 
   return db
@@ -4304,7 +4304,7 @@ const deleteCharacterWithBackupTx = db.transaction((characterId) => {
     snapshot.character.user_id,
     snapshot.character.id,
     sanitizeCharacterBackupName(snapshot.character.name),
-    normalizeServer(snapshot.character.server_id),
+    normalizeCharacterServerId(snapshot.character.server_id),
     JSON.stringify(snapshot)
   );
 
@@ -4345,12 +4345,15 @@ const restoreCharacterBackupTx = db.transaction((backupId, userId) => {
     ...snapshot.character,
     user_id: parsedUserId,
     name: sanitizeCharacterBackupName(snapshot.character.name),
-    server_id: normalizeServer(snapshot.character.server_id),
+    server_id: normalizeCharacterServerId(snapshot.character.server_id),
     festplay_id: null,
     festplay_dashboard_mode: "main"
   };
 
-  const duplicateCharacter = findCharacterWithSameName(restoredCharacter.name);
+  const duplicateCharacter = findCharacterNameConflictForTarget(restoredCharacter.name, {
+    currentUserId: parsedUserId,
+    targetServerId: restoredCharacter.server_id
+  });
   if (duplicateCharacter) {
     const error = new Error("character_name_taken");
     error.code = "CHARACTER_NAME_TAKEN";
