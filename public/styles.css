@@ -6157,14 +6157,19 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .rp-room-list-standard {
-  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: start;
+  gap: 0.55rem 0.85rem;
   overflow: visible;
   padding-right: 0;
 }
 
 .rp-room-list-standard .rp-room-standard-card {
+  flex: 0 1 22rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .rp-room-list-owned {
