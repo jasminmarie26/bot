@@ -7940,7 +7940,7 @@ function renderGuestbookBbcode(rawContent) {
     const floatClass = floatValue ? ` bb-image-${floatValue}` : "";
     const directSrc = escapeHtml(toGuestbookImageSrc(safeUrl));
     const fallbackSrc = escapeHtml(toGuestbookFallbackImageSrc(safeUrl));
-    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" loading="lazy" />`;
+    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" />`;
   });
 
   inlineTags.forEach(([bbTag, htmlTag]) => {
