@@ -6157,8 +6157,14 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .rp-room-list-standard {
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  align-items: start;
   overflow: visible;
   padding-right: 0;
+}
+
+.rp-room-list-standard .rp-room-standard-card {
+  min-width: 0;
 }
 
 .rp-room-list-owned {
@@ -6375,7 +6381,8 @@ body.theme-future.page-home-screen .home-copyright {
 
 .rp-room-link-standard {
   background: color-mix(in srgb, var(--panel-bg) 76%, white 24%);
-  width: min(100%, 560px);
+  width: 100%;
+  min-width: 0;
   gap: 0.22rem;
 }
 
@@ -6406,16 +6413,17 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .rp-room-link-standard .rp-room-link-name {
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .rp-room-link-standard .rp-room-link-meta {
   justify-content: flex-start;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 0.55rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .rp-room-link-standard .rp-room-link-meta small:first-child {
@@ -6425,7 +6433,8 @@ body.theme-future.page-home-screen .home-copyright {
 
 .rp-room-link-standard .rp-room-link-meta small:last-child {
   font-style: italic;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rp-room-custom-card {
