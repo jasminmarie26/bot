@@ -52,6 +52,7 @@ const SERVER_OPTIONS = [
   { id: "erp", label: "ERP" }
 ];
 const LARP_SERVER_ID = "larp";
+const CHARACTER_SERVER_IDS = [LARP_SERVER_ID, ...SERVER_OPTIONS.map((server) => server.id)];
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
 const LEGACY_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
@@ -394,6 +395,15 @@ function normalizeCharacterServerId(serverValue) {
   return isLarpServerId(serverValue) ? LARP_SERVER_ID : normalizeServer(serverValue);
 }
 
+function getStoredCharacterServerId(serverValue) {
+  const input = String(serverValue || "").trim().toLowerCase();
+  if (isLarpServerId(input)) {
+    return LARP_SERVER_ID;
+  }
+
+  return ALLOWED_SERVER_IDS.has(input) ? input : "";
+}
+
 function normalizeFestplayDashboardMode(value) {
   return String(value || "").trim().toLowerCase() === "main" ? "main" : "festplay";
 }
@@ -419,10 +429,10 @@ function normalizePreferredCharacterMap(value) {
     return normalized;
   }
 
-  for (const server of SERVER_OPTIONS) {
-    const candidate = Number(value?.[server.id]);
+  for (const serverId of CHARACTER_SERVER_IDS) {
+    const candidate = Number(value?.[serverId]);
     if (Number.isInteger(candidate) && candidate > 0) {
-      normalized[server.id] = candidate;
+      normalized[serverId] = candidate;
     }
   }
 
@@ -431,9 +441,6 @@ function normalizePreferredCharacterMap(value) {
 
 function getPreferredCharacterIdFromSession(req, serverId = DEFAULT_SERVER_ID) {
   const normalizedServerId = normalizeCharacterServerId(serverId);
-  if (!isRpServerId(normalizedServerId)) {
-    return null;
-  }
   const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
   req.session.preferred_character_ids = preferredMap;
   return preferredMap[normalizedServerId] || null;
@@ -450,14 +457,11 @@ function rememberPreferredCharacter(req, character) {
     return;
   }
 
-  if (isLarpServerId(character?.server_id)) {
-    return;
-  }
-
-  const normalizedServerId = normalizeServer(character.server_id);
+  const normalizedServerId = normalizeCharacterServerId(character.server_id);
   const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
   preferredMap[normalizedServerId] = parsedCharacterId;
   req.session.preferred_character_ids = preferredMap;
+  req.session.preferred_character_server_id = normalizedServerId;
 }
 
 function getStaffCharacterUsageForUser(user, character) {
@@ -8417,7 +8421,18 @@ function getPreferredMenuCharacterForUser(req) {
   }
 
   const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
-  const candidateIds = SERVER_OPTIONS.map((server) => Number(preferredMap[server.id]))
+  const preferredServerId = getStoredCharacterServerId(req.session?.preferred_character_server_id);
+  const candidateServerIds = preferredServerId ? [preferredServerId] : [];
+  CHARACTER_SERVER_IDS.forEach((serverId) => {
+    if (
+      !candidateServerIds.includes(serverId) &&
+      Number.isInteger(Number(preferredMap[serverId])) &&
+      Number(preferredMap[serverId]) > 0
+    ) {
+      candidateServerIds.push(serverId);
+    }
+  });
+  const candidateIds = candidateServerIds.map((serverId) => Number(preferredMap[serverId]))
     .filter((id) => Number.isInteger(id) && id > 0);
 
   for (const characterId of candidateIds) {
@@ -13859,6 +13874,11 @@ app.post("/characters", requireAuth, (req, res) => {
     );
 
   saveCharacterChatColor(Number(info.lastInsertRowid), payload.chat_text_color);
+  rememberPreferredCharacter(req, {
+    id: Number(info.lastInsertRowid),
+    user_id: req.session.user.id,
+    server_id: payload.server_id
+  });
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gespeichert.");
@@ -15610,6 +15630,11 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   );
 
   saveCharacterChatColor(id, payload.chat_text_color);
+  rememberPreferredCharacter(req, {
+    id,
+    user_id: req.session.user.id,
+    server_id: payload.server_id
+  });
 
   const refreshedUser = getUserForSessionById(req.session.user.id);
   if (refreshedUser) {
@@ -15761,6 +15786,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   }
   preferredMap[nextServerId] = id;
   req.session.preferred_character_ids = preferredMap;
+  req.session.preferred_character_server_id = nextServerId;
 
   emitHomeStatsUpdate();
   let successMessage = `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`;

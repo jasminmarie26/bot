@@ -1237,7 +1237,7 @@ db.prepare(
   "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
 ).run();
 db.prepare(
-  "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
+  "UPDATE characters SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS NULL").run();
 db.prepare(
@@ -1248,7 +1248,7 @@ db.prepare(
    )`
 ).run();
 db.prepare(
-  "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
+  "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare("UPDATE chat_rooms SET description = '' WHERE description IS NULL").run();
 db.prepare("UPDATE chat_rooms SET description = teaser WHERE description = '' AND teaser != ''").run();
@@ -1297,7 +1297,7 @@ db.prepare(
    )`
 ).run();
 db.prepare(
-  "UPDATE chat_messages SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp')"
+  "UPDATE chat_messages SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare(
   `INSERT INTO guestbook_pages (character_id, page_number, title, content)
