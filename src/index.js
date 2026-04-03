@@ -890,6 +890,30 @@ function getConnectedSocketUserIds() {
   return Array.from(connectedUserIds);
 }
 
+function getConnectedChatCharacterIds() {
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return [];
+  }
+
+  const connectedCharacterIds = new Set();
+  for (const socket of sockets.values()) {
+    if (!socket?.data?.user || socket?.data?.hasJoinedChat !== true) {
+      continue;
+    }
+
+    const characterId = Number(socket?.data?.activeCharacterId);
+    const serverId = getSocketChatServerId(socket);
+    if (!Number.isInteger(characterId) || characterId < 1 || !serverId) {
+      continue;
+    }
+
+    connectedCharacterIds.add(characterId);
+  }
+
+  return Array.from(connectedCharacterIds);
+}
+
 function getLoggedInUsersCount(activeUserIds = null) {
   if (Array.isArray(activeUserIds)) {
     return activeUserIds.length;
@@ -13482,6 +13506,7 @@ app.get("/members", requireAuth, (req, res) => {
   const isAdmin = req.session.user?.is_admin === true;
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
+  const connectedChatCharacterIds = new Set(getConnectedChatCharacterIds());
   const isUserLoggedIn = (userId) => {
     const parsedUserId = Number(userId);
     return (
@@ -13510,7 +13535,7 @@ app.get("/members", requireAuth, (req, res) => {
     .map((member) => ({
       ...member,
       server_label: getServerLabel(member.server_id),
-      is_logged_in: isUserLoggedIn(member.user_id),
+      is_logged_in: connectedChatCharacterIds.has(Number(member.id)),
       visibility_label:
         Number(member.user_id) === currentUserId
           ? "Dein Charakter"
