@@ -4171,12 +4171,12 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-header h1 {
   margin: 0;
-  font-size: clamp(1.2rem, 2.2vw, 1.75rem);
+  font-size: clamp(1.08rem, 1.95vw, 1.55rem);
 }
 
 .members-header .muted {
   margin-top: 0.35rem;
-  font-size: 0.98rem;
+  font-size: 0.88rem;
 }
 
 .members-search-wrap {
