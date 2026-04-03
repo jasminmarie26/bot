@@ -1,5 +1,7 @@
 <%- include("partials/start") %>
 
+<% const dashboardAreaReturnTarget = `/dashboard/areas/${serverSection.id}`; %>
+
 <section class="header-line dashboard-page-header">
   <div>
     <span class="dashboard-kicker">Rollenspiel</span>
@@ -9,7 +11,7 @@
   <div class="dashboard-server-actions">
     <a
       class="btn dashboard-add-character-btn"
-      href="/characters/new?server=<%= serverSection.id %>"
+      href="/characters/new?server=<%= serverSection.id %>&return_to=<%= encodeURIComponent(dashboardAreaReturnTarget) %>"
       aria-label="Charakter hinzufuegen"
       title="Charakter hinzufuegen"
     >
@@ -103,6 +105,7 @@
                   class="character-mini-delete-form"
                   onsubmit="return confirm('Charakter wirklich löschen?')"
                 >
+                  <input type="hidden" name="return_to" value="<%= dashboardAreaReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
@@ -214,6 +217,7 @@
                         class="character-mini-delete-form"
                         onsubmit="return confirm('Charakter wirklich löschen?')"
                       >
+                        <input type="hidden" name="return_to" value="<%= dashboardAreaReturnTarget %>">
                         <button
                           type="submit"
                           class="character-mini-delete-btn"

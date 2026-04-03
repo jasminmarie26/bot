@@ -12558,6 +12558,15 @@ function getSafeReturnTarget(req, fallback = "/") {
   return fallback;
 }
 
+function getSafeExplicitReturnTarget(value, fallback = "/") {
+  const returnTo = String(value || "").trim();
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    return returnTo;
+  }
+
+  return fallback;
+}
+
 function getDashboardOwnCharacters(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -13470,6 +13479,10 @@ app.get("/sitemap.xml", (req, res) => {
 app.get("/characters/new", requireAuth, (req, res) => {
   const festplays = getFestplays();
   const requestedServer = normalizeServer(req.query.server);
+  const returnTarget = getSafeExplicitReturnTarget(
+    req.query.return_to,
+    `/dashboard/areas/${requestedServer}`
+  );
   res.render("character-form", {
     title: "Neuer Charakter",
     mode: "create",
@@ -13477,6 +13490,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     festplays,
     serverOptions: SERVER_OPTIONS,
     staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+    returnTo: returnTarget,
     character: {
       server_id: requestedServer,
       festplay_id: null,
@@ -13495,6 +13509,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
 app.post("/characters", requireAuth, (req, res) => {
   const payload = normalizeCharacterInput(req.body);
   const festplays = getFestplays();
+  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${payload.server_id}`);
   payload.festplay_id = null;
 
   if (!payload.name) {
@@ -13505,6 +13520,7 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
       character: payload
     });
   }
@@ -13517,6 +13533,7 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
       character: payload
     });
   }
@@ -13529,6 +13546,7 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
       character: payload
     });
   }
@@ -13541,6 +13559,7 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
       character: payload
     });
   }
@@ -13568,7 +13587,7 @@ app.post("/characters", requireAuth, (req, res) => {
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gespeichert.");
-  return res.redirect("/dashboard");
+  return res.redirect(returnTarget);
 });
 
 app.get("/characters/:id", requireAuth, (req, res) => {
@@ -15331,6 +15350,10 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
+  const fallbackReturnTarget = character?.server_id
+    ? `/dashboard/areas/${normalizeServer(character.server_id)}`
+    : "/dashboard";
+  const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
 
   if (!character) {
     return res.status(404).render("404", { title: "Nicht gefunden" });
@@ -15348,7 +15371,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   } catch (error) {
     console.error(error);
     setFlash(req, "error", "Charakter konnte nicht gelöscht werden.");
-    return res.redirect("/dashboard");
+    return res.redirect(returnTarget);
   }
 
   const refreshedUser = getUserForSessionById(req.session.user.id);
@@ -15357,7 +15380,7 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   }
   emitHomeStatsUpdate();
   setFlash(req, "success", "Charakter gelöscht und als Backup gespeichert.");
-  return res.redirect("/dashboard");
+  return res.redirect(returnTarget);
 });
 
 app.post("/characters/:id/move", requireAuth, (req, res) => {

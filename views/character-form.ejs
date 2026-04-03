@@ -20,6 +20,9 @@
   >
     <input type="hidden" name="server_id" value="<%= character.server_id || 'free-rp' %>" />
     <input type="hidden" name="festplay_id" value="<%= character.festplay_id || '' %>" />
+    <% if (typeof returnTo !== "undefined" && returnTo) { %>
+      <input type="hidden" name="return_to" value="<%= returnTo %>" />
+    <% } %>
     <% if (activeGuestbookEditor?.activePage) { %>
       <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookEditor.activePage.id %>" />
     <% } %>
