@@ -59,6 +59,7 @@
   const guestbookPanelImage = String(guestbookSettings?.image_url || guestbookSettings?.inner_image_url || "").trim();
   const guestbookPanelColor = String(guestbookSettings?.background_color || "").trim();
   const guestbookPanelImageCss = guestbookPanelImage ? `url(${JSON.stringify(guestbookPanelImage)})` : "";
+  const guestbookPanelFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
 %>
 <%- include("partials/start", {
   topbarCharacter,
@@ -66,7 +67,7 @@
   topbarBrandHref,
   topbarBrandModifier,
   topbarGuestbookMode: true,
-  pageClass: "page-guestbook-view"
+  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`
 }) %>
 
 <style>
@@ -92,7 +93,7 @@
       <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
 
       <article
-        class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
+        class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
         style="<%= guestbookPageStyle %>"
       >
         <% if (guestbookSettings?.image_url) { %>

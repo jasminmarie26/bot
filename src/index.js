@@ -11860,6 +11860,7 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const directUserId = Number(req.body.user_id);
   const lookup = normalizeSocialLookupValue(req.body.lookup || "");
+  const rawLabel = String(req.body.label || "").trim().slice(0, 80);
   const currentUser = req.session.user || null;
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
     return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
@@ -11890,9 +11891,17 @@ app.post("/api/social/ignored-accounts", requireAuth, (req, res) => {
   }
 
   db.prepare(
-    `INSERT OR IGNORE INTO ignored_accounts (user_id, ignored_user_id)
-     VALUES (?, ?)`
-  ).run(currentUserId, Number(targetUser.id));
+    `INSERT OR IGNORE INTO ignored_accounts (user_id, ignored_user_id, label)
+     VALUES (?, ?, ?)`
+  ).run(currentUserId, Number(targetUser.id), rawLabel);
+
+  if (rawLabel) {
+    db.prepare(
+      `UPDATE ignored_accounts
+       SET label = ?
+       WHERE user_id = ? AND ignored_user_id = ?`
+    ).run(rawLabel, currentUserId, Number(targetUser.id));
+  }
 
   emitSocialStateUpdateForUser(currentUserId);
 
@@ -19362,7 +19371,8 @@ function getIgnoredAccountRowsForUser(userId) {
     .prepare(
       `SELECT u.id AS user_id,
               u.username,
-              u.account_number
+              u.account_number,
+              ia.label
          FROM ignored_accounts ia
          JOIN users u ON u.id = ia.ignored_user_id
         WHERE ia.user_id = ?
@@ -19715,7 +19725,8 @@ function buildSocialStatePayloadForUser(userId) {
   const friends = [...accountFriends, ...characterFriends];
   const ignoredAccounts = getIgnoredAccountRowsForUser(parsedUserId).map((row) => ({
     user_id: Number(row.user_id),
-    username: String(row.username || "").trim()
+    username: String(row.username || "").trim(),
+    label: String(row.label || "").trim()
   }));
   const ignoredCharacters = getIgnoredCharacterRowsForUser(parsedUserId).map((row) => ({
     character_id: Number(row.character_id),

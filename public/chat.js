@@ -2691,7 +2691,7 @@
         if (isIgnoredAccountUserId(selectedOnlineEntry.userId)) {
           await window.appSocialApi.unignoreAccount(selectedOnlineEntry.userId);
         } else {
-          await window.appSocialApi.ignoreAccount(selectedOnlineEntry.userId);
+          await window.appSocialApi.ignoreAccount(selectedOnlineEntry.userId, selectedOnlineEntry.name);
         }
       } catch (_error) {
         // Ignore panel action errors here. The panel handles user-facing feedback.

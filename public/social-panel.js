@@ -427,7 +427,9 @@
 
   function renderIgnoredAccountEntry(entryData) {
     const { entry, row } = createEntryShell();
-    const accountLabel = entryData?.user_id ? `Account #${entryData.user_id}` : "Blockierter Account";
+    const accountLabel = normalizeText(entryData?.label)
+      || normalizeText(entryData?.username)
+      || "Blockierter Account";
 
     const title = document.createElement("strong");
     title.textContent = accountLabel;
@@ -694,7 +696,7 @@
     return result;
   }
 
-  async function ignoreAccount(userId) {
+  async function ignoreAccount(userId, label = "") {
     const parsedUserId = normalizeNumber(userId);
     if (!parsedUserId) {
       throw new Error("Account konnte nicht zugeordnet werden.");
@@ -703,7 +705,8 @@
     const result = await requestJson("/api/social/ignored-accounts", {
       method: "POST",
       body: new URLSearchParams({
-        user_id: String(parsedUserId)
+        user_id: String(parsedUserId),
+        label: String(label || "").trim()
       }).toString()
     });
     publishSocialState(result?.state || {}, {

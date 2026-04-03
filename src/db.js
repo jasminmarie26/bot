@@ -236,6 +236,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS ignored_accounts (
     user_id INTEGER NOT NULL,
     ignored_user_id INTEGER NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, ignored_user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -481,6 +482,11 @@ const guestbookPageColumns = db
 
 const guestbookSettingsColumns = db
   .prepare("PRAGMA table_info(guestbook_settings)")
+  .all()
+  .map((column) => column.name);
+
+const ignoredAccountColumns = db
+  .prepare("PRAGMA table_info(ignored_accounts)")
   .all()
   .map((column) => column.name);
 
@@ -1162,6 +1168,10 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id ON chat_ro
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_character_name_key");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id)");
 
+if (!ignoredAccountColumns.includes("label")) {
+  db.exec("ALTER TABLE ignored_accounts ADD COLUMN label TEXT NOT NULL DEFAULT ''");
+}
+
 db.prepare("UPDATE users SET theme = 'glass-aurora' WHERE theme IS NULL OR theme = ''").run();
 db.prepare("UPDATE users SET is_moderator = 0 WHERE is_moderator IS NULL").run();
 db.prepare("UPDATE users SET admin_display_name = '' WHERE admin_display_name IS NULL").run();
@@ -1258,6 +1268,15 @@ db.prepare(
 db.prepare("UPDATE users SET room_log_email_enabled = 1 WHERE room_log_email_enabled IS NULL").run();
 db.prepare("UPDATE users SET duplicate_accounts_allowed = 0 WHERE duplicate_accounts_allowed IS NULL").run();
 db.prepare("UPDATE users SET oauth_password_pending = 0 WHERE oauth_password_pending IS NULL").run();
+db.prepare(`
+  UPDATE ignored_accounts
+  SET label = (
+    SELECT username
+    FROM users
+    WHERE users.id = ignored_accounts.ignored_user_id
+  )
+  WHERE label IS NULL OR trim(label) = ''
+`).run();
 db.prepare(
   "UPDATE guestbook_entries SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
 ).run();
