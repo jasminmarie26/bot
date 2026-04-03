@@ -1983,6 +1983,163 @@ a:hover {
   background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
 }
 
+.social-panel {
+  width: min(560px, calc(100vw - 0.85rem));
+}
+
+.social-panel .chat-whisper-panel-card {
+  padding: 0.5rem;
+}
+
+.social-panel .chat-whisper-panel-head {
+  gap: 0.42rem;
+  margin-bottom: 0.42rem;
+}
+
+.social-panel .chat-whisper-panel-copy h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.social-panel .chat-whisper-panel-copy p {
+  margin: 0.14rem 0 0;
+  font-size: 0.78rem;
+}
+
+.social-panel-body,
+.social-panel-grid {
+  gap: 0.42rem;
+}
+
+.social-panel-section {
+  gap: 0.2rem;
+}
+
+.social-panel-section h4 {
+  font-size: 0.8rem;
+}
+
+.social-panel-hint,
+.social-panel-feedback {
+  font-size: 0.72rem;
+}
+
+.social-panel-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.34rem;
+}
+
+.social-panel-add-form input {
+  min-height: 2.2rem;
+  font-size: 0.82rem;
+}
+
+.social-panel-add-form .btn {
+  padding: 0.42rem 0.82rem;
+  font-size: 0.8rem;
+}
+
+.social-panel-table {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.social-panel-list-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 0.45rem;
+  padding: 0 0.38rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.social-panel-list {
+  gap: 0.26rem;
+}
+
+.social-panel-list > .muted {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.28rem 0.12rem;
+  font-size: 0.74rem;
+}
+
+.social-panel-entry {
+  padding: 0.36rem 0.44rem;
+  border-radius: 0.66rem;
+}
+
+.social-panel-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.social-panel-cell {
+  min-width: 0;
+}
+
+.social-panel-cell-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.social-panel-cell-meta {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.social-panel-friend-title {
+  gap: 0.32rem;
+}
+
+.social-panel-friend-title strong,
+.social-panel-cell-name strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.social-panel-entry-actions {
+  gap: 0.18rem;
+}
+
+.social-panel-action-btn {
+  font-size: 0.62rem;
+  padding: 0.18rem 0.34rem;
+}
+
+.social-panel-action-btn.is-compact {
+  font-size: 0.58rem;
+  padding: 0.16rem 0.3rem;
+}
+
+@media (max-width: 640px) {
+  .social-panel-list-head {
+    display: none;
+  }
+
+  .social-panel-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .social-panel-entry-row {
+    grid-template-columns: 1fr;
+    gap: 0.22rem;
+  }
+
+  .social-panel-entry-actions {
+    justify-content: flex-start;
+  }
+}
+
 .live-updates-nav-link {
   position: relative;
   display: inline-flex;
@@ -4079,7 +4236,7 @@ body.theme-future.page-home-screen .home-copyright {
 
 .members-header h1 {
   margin: 0;
-  font-size: clamp(1.6rem, 3.1vw, 2.3rem);
+  font-size: clamp(1.2rem, 2.2vw, 1.75rem);
 }
 
 .members-header .muted {
@@ -6590,17 +6747,15 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 .page-roomlist .rp-room-list.rp-room-list-owned {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
   align-items: flex-start;
-  gap: 0.38rem;
+  gap: 0.38rem 0.52rem;
 }
 
 .page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {
-  flex: 0 1 10rem;
-  min-width: min(10rem, 100%);
-  max-width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .page-roomlist .rp-room-standard-card {

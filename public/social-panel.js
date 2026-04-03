@@ -183,6 +183,28 @@
       );
   }
 
+  function createEntryCell(className, content) {
+    const cell = document.createElement("div");
+    cell.className = `social-panel-cell ${className}`;
+    if (content instanceof Node) {
+      cell.appendChild(content);
+    } else {
+      cell.textContent = normalizeText(content);
+    }
+    return cell;
+  }
+
+  function createEntryShell(extraClass = "") {
+    const entry = document.createElement("article");
+    entry.className = `social-panel-entry${extraClass ? ` ${extraClass}` : ""}`;
+
+    const row = document.createElement("div");
+    row.className = "social-panel-entry-row";
+    entry.appendChild(row);
+
+    return { entry, row };
+  }
+
   function renderFriendEntry(friend) {
     const entry = document.createElement("article");
     entry.className = "social-panel-entry social-panel-friend-entry";
@@ -252,66 +274,57 @@
   }
 
   function renderIgnoredAccountEntry(entryData) {
-    const entry = document.createElement("article");
-    entry.className = "social-panel-entry";
-
-    const head = document.createElement("div");
-    head.className = "social-panel-entry-head";
-
-    const copy = document.createElement("div");
-    copy.className = "social-panel-entry-copy";
+    const { entry, row } = createEntryShell();
+    const accountLabel = entryData?.user_id ? `Account #${entryData.user_id}` : "Blockierter Account";
 
     const title = document.createElement("strong");
-    title.textContent = "Blockierter Account";
-    copy.appendChild(title);
-
-    const meta = document.createElement("small");
-    meta.textContent = "Dieser Account wird nur für dich ausgeblendet.";
-    copy.appendChild(meta);
+    title.textContent = accountLabel;
+    row.appendChild(createEntryCell("social-panel-cell-name", title));
+    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
 
     const actions = document.createElement("div");
     actions.className = "social-panel-entry-actions";
     actions.appendChild(
-      buildActionButton("Wieder anzeigen", () => {
-        unignoreAccount(entryData.user_id).catch(() => {});
-      })
+      buildActionButton(
+        "Freigeben",
+        () => {
+          unignoreAccount(entryData.user_id).catch(() => {});
+        },
+        {
+          title: "Account wieder anzeigen",
+          compact: true
+        }
+      )
     );
+    row.appendChild(actions);
 
-    head.appendChild(copy);
-    head.appendChild(actions);
-    entry.appendChild(head);
     return entry;
   }
 
   function renderIgnoredCharacterEntry(entryData) {
-    const entry = document.createElement("article");
-    entry.className = "social-panel-entry";
-
-    const head = document.createElement("div");
-    head.className = "social-panel-entry-head";
-
-    const copy = document.createElement("div");
-    copy.className = "social-panel-entry-copy";
+    const { entry, row } = createEntryShell();
 
     const title = document.createElement("strong");
     title.textContent = entryData.name;
-    copy.appendChild(title);
-
-    const meta = document.createElement("small");
-    meta.textContent = "Dieser Charakter wird nur für dich ausgeblendet.";
-    copy.appendChild(meta);
+    row.appendChild(createEntryCell("social-panel-cell-name", title));
+    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
 
     const actions = document.createElement("div");
     actions.className = "social-panel-entry-actions";
     actions.appendChild(
-      buildActionButton("Wieder anzeigen", () => {
-        unignoreCharacter(entryData.character_id).catch(() => {});
-      })
+      buildActionButton(
+        "Freigeben",
+        () => {
+          unignoreCharacter(entryData.character_id).catch(() => {});
+        },
+        {
+          title: "Charakter wieder anzeigen",
+          compact: true
+        }
+      )
     );
+    row.appendChild(actions);
 
-    head.appendChild(copy);
-    head.appendChild(actions);
-    entry.appendChild(head);
     return entry;
   }
 
@@ -357,14 +370,7 @@
   }
 
   function renderFriendEntry(friend) {
-    const entry = document.createElement("article");
-    entry.className = "social-panel-entry social-panel-friend-entry";
-
-    const head = document.createElement("div");
-    head.className = "social-panel-entry-head social-panel-friend-head";
-
-    const copy = document.createElement("div");
-    copy.className = "social-panel-entry-copy";
+    const { entry, row } = createEntryShell("social-panel-friend-entry");
 
     const titleRow = document.createElement("div");
     titleRow.className = "social-panel-friend-title";
@@ -373,9 +379,8 @@
     const title = document.createElement("strong");
     title.textContent = getFriendDisplayName(friend);
     titleRow.appendChild(title);
-    copy.appendChild(titleRow);
+    row.appendChild(createEntryCell("social-panel-cell-name", titleRow));
 
-    const meta = document.createElement("small");
     const locationParts = [];
     if (friend.server_label) {
       locationParts.push(friend.server_label);
@@ -383,8 +388,9 @@
     if (friend.room_name) {
       locationParts.push(friend.room_name);
     }
-    meta.textContent = locationParts.join(" · ") || "Gerade online";
-    copy.appendChild(meta);
+    row.appendChild(
+      createEntryCell("social-panel-cell-meta", locationParts.join(" · ") || "Gerade online")
+    );
 
     const actions = document.createElement("div");
     actions.className = "social-panel-entry-actions";
@@ -437,10 +443,7 @@
         }
       )
     );
-
-    head.appendChild(copy);
-    head.appendChild(actions);
-    entry.appendChild(head);
+    row.appendChild(actions);
     return entry;
   }
 
@@ -475,9 +478,16 @@
       if (!socialState.ignored_characters.length) {
         ignoredCharactersList.appendChild(createEmptyState("Keine ignorierten Charaktere."));
       } else {
-        socialState.ignored_characters.forEach((entryData) => {
-          ignoredCharactersList.appendChild(renderIgnoredCharacterEntry(entryData));
-        });
+        socialState.ignored_characters
+          .slice()
+          .sort((leftEntry, rightEntry) =>
+            normalizeText(leftEntry?.name).localeCompare(normalizeText(rightEntry?.name), "de", {
+              sensitivity: "base"
+            })
+          )
+          .forEach((entryData) => {
+            ignoredCharactersList.appendChild(renderIgnoredCharacterEntry(entryData));
+          });
       }
     }
 
