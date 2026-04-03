@@ -16542,6 +16542,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     });
   }
 
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
