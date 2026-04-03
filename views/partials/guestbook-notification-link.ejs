@@ -187,29 +187,64 @@
           </section>
 
           <section class="social-panel-section">
-            <h4>Ignorierte Accounts</h4>
-            <div class="social-panel-table">
-              <div class="social-panel-list-head" aria-hidden="true">
-                <span>Eintrag</span>
-                <span>Hinweis</span>
-                <span>Aktion</span>
-              </div>
-              <div class="social-panel-list" data-social-ignored-accounts-list>
-                <p class="muted">Keine ignorierten Accounts.</p>
+            <h4>Ignorieren</h4>
+            <div class="social-panel-tabs" role="tablist" aria-label="Ignorierte Eintr&auml;ge">
+              <button
+                type="button"
+                class="social-panel-tab-btn is-active"
+                data-social-tab-button="ignored-accounts"
+                role="tab"
+                aria-selected="true"
+                aria-controls="social-tab-ignored-accounts"
+              >
+                Ignorierte Accounts
+              </button>
+              <button
+                type="button"
+                class="social-panel-tab-btn"
+                data-social-tab-button="ignored-characters"
+                role="tab"
+                aria-selected="false"
+                aria-controls="social-tab-ignored-characters"
+              >
+                Ignorierte Charaktere
+              </button>
+            </div>
+
+            <div
+              id="social-tab-ignored-accounts"
+              class="social-panel-tab-panel"
+              data-social-tab-panel="ignored-accounts"
+              role="tabpanel"
+            >
+              <div class="social-panel-table">
+                <div class="social-panel-list-head" aria-hidden="true">
+                  <span>Eintrag</span>
+                  <span>Hinweis</span>
+                  <span>Aktion</span>
+                </div>
+                <div class="social-panel-list" data-social-ignored-accounts-list>
+                  <p class="muted">Keine ignorierten Accounts.</p>
+                </div>
               </div>
             </div>
-          </section>
 
-          <section class="social-panel-section">
-            <h4>Ignorierte Charaktere</h4>
-            <div class="social-panel-table">
-              <div class="social-panel-list-head" aria-hidden="true">
-                <span>Eintrag</span>
-                <span>Hinweis</span>
-                <span>Aktion</span>
-              </div>
-              <div class="social-panel-list" data-social-ignored-characters-list>
-                <p class="muted">Keine ignorierten Charaktere.</p>
+            <div
+              id="social-tab-ignored-characters"
+              class="social-panel-tab-panel"
+              data-social-tab-panel="ignored-characters"
+              role="tabpanel"
+              hidden
+            >
+              <div class="social-panel-table">
+                <div class="social-panel-list-head" aria-hidden="true">
+                  <span>Eintrag</span>
+                  <span>Hinweis</span>
+                  <span>Aktion</span>
+                </div>
+                <div class="social-panel-list" data-social-ignored-characters-list>
+                  <p class="muted">Keine ignorierten Charaktere.</p>
+                </div>
               </div>
             </div>
           </section>

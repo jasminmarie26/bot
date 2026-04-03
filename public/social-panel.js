@@ -12,12 +12,18 @@
   const friendsList = panel.querySelector("[data-social-friends-list]");
   const ignoredAccountsList = panel.querySelector("[data-social-ignored-accounts-list]");
   const ignoredCharactersList = panel.querySelector("[data-social-ignored-characters-list]");
+  const tabButtons = Array.from(panel.querySelectorAll("[data-social-tab-button]"));
+  const tabPanels = Array.from(panel.querySelectorAll("[data-social-tab-panel]"));
   const badge = document.querySelector("[data-social-panel-badge]");
   const canUseRealtime = typeof io === "function";
   const friendOnlineToastDurationMs = 4200;
   let feedbackTimer = 0;
   let socialState = normalizeSocialState(window.__appSocialState || {});
   let hasReceivedInitialState = false;
+  let activeTabName =
+    tabButtons.find((button) => button.classList.contains("is-active"))?.dataset?.socialTabButton ||
+    tabButtons[0]?.dataset?.socialTabButton ||
+    "";
 
   function normalizeText(value) {
     return String(value || "").trim();
@@ -205,168 +211,22 @@
     return { entry, row };
   }
 
-  function renderFriendEntry(friend) {
-    const entry = document.createElement("article");
-    entry.className = "social-panel-entry social-panel-friend-entry";
-
-    const head = document.createElement("div");
-    head.className = "social-panel-entry-head social-panel-friend-head";
-
-    const copy = document.createElement("div");
-    copy.className = "social-panel-entry-copy";
-
-    const titleRow = document.createElement("div");
-    titleRow.className = "social-panel-friend-title";
-    titleRow.appendChild(buildStatusDot(friend.is_online));
-
-    const title = document.createElement("strong");
-    title.textContent = getFriendDisplayName(friend);
-    titleRow.appendChild(title);
-    copy.appendChild(titleRow);
-
-    const meta = document.createElement("small");
-    if (friend.is_online) {
-      const locationParts = ["Gerade online"];
-      if (friend.server_label) {
-        locationParts.push(friend.server_label);
-      }
-      if (friend.room_name) {
-        locationParts.push(friend.room_name);
-      }
-      meta.textContent = locationParts.join(" · ");
-    } else {
-      meta.textContent = "Gerade offline";
-    }
-    copy.appendChild(meta);
-
-    const actions = document.createElement("div");
-    actions.className = "social-panel-entry-actions";
-    if (friend.character_id) {
-      const characterIsIgnored = socialState.ignored_character_ids.includes(friend.character_id);
-      actions.appendChild(
-        buildActionButton(characterIsIgnored ? "Charakter frei" : "Charakter blockieren", () => {
-          const action = characterIsIgnored
-            ? unignoreCharacter(friend.character_id)
-            : ignoreCharacter(friend.character_id);
-          action.catch(() => {});
-        })
-      );
-    }
-    const accountIsIgnored = socialState.ignored_account_user_ids.includes(friend.user_id);
-    actions.appendChild(
-      buildActionButton(accountIsIgnored ? "Account frei" : "Account blockieren", () => {
-        const action = accountIsIgnored
-          ? unignoreAccount(friend.user_id)
-          : ignoreAccount(friend.user_id);
-        action.catch(() => {});
-      })
-    );
-    actions.appendChild(
-      buildActionButton("Entfernen", () => {
-        removeFriend(friend.user_id).catch(() => {});
-      })
-    );
-
-    head.appendChild(copy);
-    head.appendChild(actions);
-    entry.appendChild(head);
-    return entry;
-  }
-
-  function renderIgnoredAccountEntry(entryData) {
-    const { entry, row } = createEntryShell();
-    const accountLabel = entryData?.user_id ? `Account #${entryData.user_id}` : "Blockierter Account";
-
-    const title = document.createElement("strong");
-    title.textContent = accountLabel;
-    row.appendChild(createEntryCell("social-panel-cell-name", title));
-    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
-
-    const actions = document.createElement("div");
-    actions.className = "social-panel-entry-actions";
-    actions.appendChild(
-      buildActionButton(
-        "Freigeben",
-        () => {
-          unignoreAccount(entryData.user_id).catch(() => {});
-        },
-        {
-          title: "Account wieder anzeigen",
-          compact: true
-        }
-      )
-    );
-    row.appendChild(actions);
-
-    return entry;
-  }
-
-  function renderIgnoredCharacterEntry(entryData) {
-    const { entry, row } = createEntryShell();
-
-    const title = document.createElement("strong");
-    title.textContent = entryData.name;
-    row.appendChild(createEntryCell("social-panel-cell-name", title));
-    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
-
-    const actions = document.createElement("div");
-    actions.className = "social-panel-entry-actions";
-    actions.appendChild(
-      buildActionButton(
-        "Freigeben",
-        () => {
-          unignoreCharacter(entryData.character_id).catch(() => {});
-        },
-        {
-          title: "Charakter wieder anzeigen",
-          compact: true
-        }
-      )
-    );
-    row.appendChild(actions);
-
-    return entry;
-  }
-
-  function renderSocialState() {
-    if (friendsList) {
-      friendsList.replaceChildren();
-      if (!socialState.friends.length) {
-        friendsList.appendChild(createEmptyState("Noch keine Freunde gespeichert."));
-      } else {
-        socialState.friends.forEach((friend) => {
-          friendsList.appendChild(renderFriendEntry(friend));
-        });
-      }
+  function setActiveTab(tabName) {
+    const normalizedTabName = normalizeText(tabName);
+    if (!normalizedTabName || !tabButtons.length || !tabPanels.length) {
+      return;
     }
 
-    if (ignoredAccountsList) {
-      ignoredAccountsList.replaceChildren();
-      if (!socialState.ignored_accounts.length) {
-        ignoredAccountsList.appendChild(createEmptyState("Keine ignorierten Accounts."));
-      } else {
-        socialState.ignored_accounts.forEach((entryData) => {
-          ignoredAccountsList.appendChild(renderIgnoredAccountEntry(entryData));
-        });
-      }
-    }
+    activeTabName = normalizedTabName;
+    tabButtons.forEach((button) => {
+      const isActive = button.dataset.socialTabButton === normalizedTabName;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
 
-    if (ignoredCharactersList) {
-      ignoredCharactersList.replaceChildren();
-      if (!socialState.ignored_characters.length) {
-        ignoredCharactersList.appendChild(createEmptyState("Keine ignorierten Charaktere."));
-      } else {
-        socialState.ignored_characters.forEach((entryData) => {
-          ignoredCharactersList.appendChild(renderIgnoredCharacterEntry(entryData));
-        });
-      }
-    }
-
-    if (badge) {
-      const onlineCount = socialState.friends.filter((entry) => entry.is_online).length;
-      badge.hidden = onlineCount < 1;
-      badge.textContent = onlineCount > 99 ? "99+" : String(onlineCount || 0);
-    }
+    tabPanels.forEach((panelNode) => {
+      panelNode.hidden = panelNode.dataset.socialTabPanel !== normalizedTabName;
+    });
   }
 
   function renderFriendEntry(friend) {
@@ -444,6 +304,62 @@
       )
     );
     row.appendChild(actions);
+
+    return entry;
+  }
+
+  function renderIgnoredAccountEntry(entryData) {
+    const { entry, row } = createEntryShell();
+    const accountLabel = entryData?.user_id ? `Account #${entryData.user_id}` : "Blockierter Account";
+
+    const title = document.createElement("strong");
+    title.textContent = accountLabel;
+    row.appendChild(createEntryCell("social-panel-cell-name", title));
+    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
+
+    const actions = document.createElement("div");
+    actions.className = "social-panel-entry-actions";
+    actions.appendChild(
+      buildActionButton(
+        "Freigeben",
+        () => {
+          unignoreAccount(entryData.user_id).catch(() => {});
+        },
+        {
+          title: "Account wieder anzeigen",
+          compact: true
+        }
+      )
+    );
+    row.appendChild(actions);
+
+    return entry;
+  }
+
+  function renderIgnoredCharacterEntry(entryData) {
+    const { entry, row } = createEntryShell();
+
+    const title = document.createElement("strong");
+    title.textContent = entryData.name;
+    row.appendChild(createEntryCell("social-panel-cell-name", title));
+    row.appendChild(createEntryCell("social-panel-cell-meta", "Nur für dich ausgeblendet."));
+
+    const actions = document.createElement("div");
+    actions.className = "social-panel-entry-actions";
+    actions.appendChild(
+      buildActionButton(
+        "Freigeben",
+        () => {
+          unignoreCharacter(entryData.character_id).catch(() => {});
+        },
+        {
+          title: "Charakter wieder anzeigen",
+          compact: true
+        }
+      )
+    );
+    row.appendChild(actions);
+
     return entry;
   }
 
@@ -467,9 +383,12 @@
       if (!socialState.ignored_accounts.length) {
         ignoredAccountsList.appendChild(createEmptyState("Keine ignorierten Accounts."));
       } else {
-        socialState.ignored_accounts.forEach((entryData) => {
-          ignoredAccountsList.appendChild(renderIgnoredAccountEntry(entryData));
-        });
+        socialState.ignored_accounts
+          .slice()
+          .sort((leftEntry, rightEntry) => Number(leftEntry.user_id) - Number(rightEntry.user_id))
+          .forEach((entryData) => {
+            ignoredAccountsList.appendChild(renderIgnoredAccountEntry(entryData));
+          });
       }
     }
 
@@ -508,6 +427,7 @@
     panel.hidden = false;
     toggleButton.classList.add("is-open");
     toggleButton.setAttribute("aria-expanded", "true");
+    setActiveTab(activeTabName || "ignored-accounts");
     refreshState().catch(() => {});
   }
 
@@ -737,6 +657,12 @@
     closePanel();
   });
 
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveTab(button.dataset.socialTabButton);
+    });
+  });
+
   panel.addEventListener("click", (event) => {
     if (event.target === panel) {
       closePanel();
@@ -803,5 +729,6 @@
   publishSocialState(socialState, {
     allowNotifications: false
   });
+  setActiveTab(activeTabName || "ignored-accounts");
   refreshState().catch(() => {});
 })();
