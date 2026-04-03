@@ -260,8 +260,10 @@
       : (isTopbarBrandCrescentia ? "crescentia-nameplate" : ""); %>
     <% const topbarBrandClassName = topbarBrandClass; %>
     <% const topbarRoleplayAreaHref =
-      menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
-        ? `/dashboard/areas/${menuCharacter.server_id}`
+      menuCharacter && menuCharacter.server_id === "larp"
+        ? "/dashboard/larp"
+        : menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
+          ? `/dashboard/areas/${menuCharacter.server_id}`
         : "/dashboard"; %>
     <% const topbarAreaLabel = "Serverliste"; %>
     <% const isDashboardPath = Boolean(currentPath && currentPath.startsWith("/dashboard")); %>

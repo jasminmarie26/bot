@@ -25,18 +25,27 @@
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab öffnen"
       : roomlistIdentityName; %>
+  <% const isLarpCharacterView = character.server_id === "larp"; %>
   <% const roomlistAreaHref =
-    character.server_id === "free-rp" || character.server_id === "erp"
-      ? `/dashboard/areas/${character.server_id}`
-      : "#roomlist"; %>
+    isLarpCharacterView
+      ? "/dashboard/larp"
+      : character.server_id === "free-rp" || character.server_id === "erp"
+        ? `/dashboard/areas/${character.server_id}`
+        : "#roomlist"; %>
   <% const roomlistAreaLabel =
-    character.server_id === "free-rp" || character.server_id === "erp"
-      ? "Charakterliste"
-      : "Raumliste"; %>
+    isLarpCharacterView
+      ? "LARP-Bereich"
+      : character.server_id === "free-rp" || character.server_id === "erp"
+        ? "Charakterliste"
+        : "Raumliste"; %>
   <% const roomlistAreaTarget =
-    character.server_id === "free-rp" || character.server_id === "erp" ? "_blank" : ""; %>
+    isLarpCharacterView || character.server_id === "free-rp" || character.server_id === "erp"
+      ? "_blank"
+      : ""; %>
   <% const roomlistAreaRel =
-    character.server_id === "free-rp" || character.server_id === "erp" ? "noopener noreferrer" : ""; %>
+    isLarpCharacterView || character.server_id === "free-rp" || character.server_id === "erp"
+      ? "noopener noreferrer"
+      : ""; %>
   <% const roomlistBoardServerId = currentHeaderCharacter?.server_id || character.server_id; %>
   <% const roomlistBoardCharacterId = isOwner ? character.id : (currentHeaderCharacter ? currentHeaderCharacter.id : 0); %>
   <% const roomlistBoardHref = `/rp-board?server_id=${roomlistBoardServerId}&character_id=${Number(roomlistBoardCharacterId)}`; %>
@@ -49,19 +58,21 @@
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
         <% } %>
-        <a
-          class="rp-board-nav-link"
-          href="<%= roomlistBoardHref %>"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-rp-board-link-root
-          data-rp-board-server-id="<%= roomlistBoardServerId %>"
-          data-rp-board-festplay-id="0"
-          data-rp-board-character-id="<%= Number(roomlistBoardCharacterId) %>"
-        >
-          <span>RP-Aushang</span>
-          <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
-        </a>
+        <% if (!isLarpCharacterView) { %>
+          <a
+            class="rp-board-nav-link"
+            href="<%= roomlistBoardHref %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-rp-board-link-root
+            data-rp-board-server-id="<%= roomlistBoardServerId %>"
+            data-rp-board-festplay-id="0"
+            data-rp-board-character-id="<%= Number(roomlistBoardCharacterId) %>"
+          >
+            <span>RP-Aushang</span>
+            <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+          </a>
+        <% } %>
         <a
           class="live-updates-nav-link"
         href="/live-updates"
@@ -130,7 +141,7 @@
           <% if (characterCreatedAtLabel) { %>
             <span>Charakter erstellt: <%= characterCreatedAtLabel %></span>
           <% } %>
-          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+          <span>Server: <%= character.server_id === "larp" ? "LARP" : (character.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
@@ -146,7 +157,7 @@
             </a>
           <% } %>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
-          <% if (isOwner) { %>
+          <% if (isOwner && !isLarpCharacterView) { %>
             <a
               href="/characters/<%= character.id %>/rooms/new"
               target="_blank"
@@ -210,7 +221,13 @@
     <% } %>
 
     <div class="rp-room-list-wrap">
-      <% if (isOwner) { %>
+      <% if (isLarpCharacterView) { %>
+        <section class="rp-room-section rp-room-section-standard">
+          <p class="muted">Dieser LARP-Charakter l&auml;uft getrennt vom RP- und ERP-Server. R&auml;ume, Festplays und RP-Aushang sind hier nicht verkn&uuml;pft.</p>
+        </section>
+      <% } %>
+
+      <% if (isOwner && !isLarpCharacterView) { %>
         <details class="rp-room-section rp-room-section-standard rp-room-accordion" open>
           <summary class="rp-room-section-summary">
             <span>Meine R&auml;ume</span>
@@ -288,7 +305,7 @@
         </details>
       <% } %>
 
-      <% if (isOwner) { %>
+      <% if (isOwner && !isLarpCharacterView) { %>
         <section class="rp-room-section rp-room-section-standard">
           <h2 class="rp-room-form-title">Raum erstellen</h2>
           <form

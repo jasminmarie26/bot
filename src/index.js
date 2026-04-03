@@ -386,6 +386,10 @@ function isLarpServerId(serverValue) {
   return String(serverValue || "").trim().toLowerCase() === LARP_SERVER_ID;
 }
 
+function isRpServerId(serverValue) {
+  return ALLOWED_SERVER_IDS.has(String(serverValue || "").trim().toLowerCase());
+}
+
 function normalizeCharacterServerId(serverValue) {
   return isLarpServerId(serverValue) ? LARP_SERVER_ID : normalizeServer(serverValue);
 }
@@ -426,7 +430,10 @@ function normalizePreferredCharacterMap(value) {
 }
 
 function getPreferredCharacterIdFromSession(req, serverId = DEFAULT_SERVER_ID) {
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
+  if (!isRpServerId(normalizedServerId)) {
+    return null;
+  }
   const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
   req.session.preferred_character_ids = preferredMap;
   return preferredMap[normalizedServerId] || null;
@@ -4593,6 +4600,7 @@ function getLiveFestplayIdsWithChatPresence() {
 
 function getOwnedFestplaysForUser(userId, serverId = "") {
   const parsedUserId = Number(userId);
+  if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
   return db
@@ -4617,6 +4625,7 @@ function getOwnedFestplaysForUser(userId, serverId = "") {
 
 function getOtherFestplaysForUser(userId, serverId) {
   const parsedUserId = Number(userId);
+  if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeServer(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
   return db
@@ -4923,6 +4932,7 @@ function getOwnedFestplayById(userId, festplayId) {
 }
 
 function getPublicFestplays(serverId = "") {
+  if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
   return db
     .prepare(
@@ -4946,6 +4956,7 @@ function getPublicFestplays(serverId = "") {
 
 function getPublicFestplayById(festplayId, serverId = "") {
   const parsedFestplayId = Number(festplayId);
+  if (isLarpServerId(serverId)) return null;
   const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) return null;
   return decorateFestplayRecord(
@@ -6217,7 +6228,7 @@ function toRoomNameKey(roomName) {
 
 function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription = "") {
   const parsedUserId = Number(userId);
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
   const normalizedRoomNameKey = normalizeRoomNameKey(roomNameKey);
   const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedRoomNameKey) {
@@ -6242,7 +6253,7 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
 }
 
 function dedupeSavedNonFestplayRooms(rooms, serverId) {
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
   const sourceRooms = Array.isArray(rooms) ? rooms : [];
   const dedupedRooms = [];
   const seenRooms = new Map();
@@ -6256,8 +6267,8 @@ function dedupeSavedNonFestplayRooms(rooms, serverId) {
     const roomNameKey = normalizeRoomNameKey(room?.name_key || "") || toRoomNameKey(room?.name || "");
     const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
     const dedupeKey = curatedRoomKeys.has(roomNameKey)
-      ? `${normalizeServer(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
-      : `${normalizeServer(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
+      ? `${normalizeCharacterServerId(room?.server_id || normalizedServerId)}:curated:${roomNameKey}`
+      : `${normalizeCharacterServerId(room?.server_id || normalizedServerId)}:${roomNameKey}:${roomDescriptionKey}`;
     const existingIndex = seenRooms.get(dedupeKey);
 
     if (existingIndex == null) {
@@ -6283,7 +6294,7 @@ function dedupeSavedNonFestplayRooms(rooms, serverId) {
 
 function getSavedNonFestplayRoomsForUser(userId, serverId) {
   const parsedUserId = Number(userId);
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
   const supportsSortOrder = hasChatRoomColumn("sort_order");
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return [];
@@ -6985,6 +6996,9 @@ const CURATED_PUBLIC_ROOM_DEFINITIONS = Object.freeze({
 });
 
 function getStandardRoomsForServer(serverId) {
+  if (isLarpServerId(serverId)) {
+    return [];
+  }
   const normalizedServerId = normalizeServer(serverId);
   return Array.isArray(STANDARD_ROOM_DEFINITIONS[normalizedServerId])
     ? STANDARD_ROOM_DEFINITIONS[normalizedServerId]
@@ -7000,6 +7014,9 @@ function getDefaultStandardRoomForServer(serverId) {
 }
 
 function getCuratedPublicRoomDefinitionsForServer(serverId) {
+  if (isLarpServerId(serverId)) {
+    return [];
+  }
   const normalizedServerId = normalizeServer(serverId);
   return Array.isArray(CURATED_PUBLIC_ROOM_DEFINITIONS[normalizedServerId])
     ? CURATED_PUBLIC_ROOM_DEFINITIONS[normalizedServerId]
@@ -7007,7 +7024,10 @@ function getCuratedPublicRoomDefinitionsForServer(serverId) {
 }
 
 function getCuratedPublicRoomDefinition(room, serverId = null) {
-  const normalizedServerId = normalizeServer(serverId || room?.server_id);
+  const normalizedServerId = normalizeCharacterServerId(serverId || room?.server_id);
+  if (!isRpServerId(normalizedServerId)) {
+    return null;
+  }
   const explicitRoomNameKey = normalizeRoomNameKey(room?.name_key || "");
   const roomNameKey = explicitRoomNameKey || toRoomNameKey(room?.name || "");
   if (!roomNameKey) {
@@ -8295,7 +8315,7 @@ function saveCharacterChatColor(characterId, rawColor) {
 }
 
 function getOwnedCharactersForUser(userId, preferredServerId = DEFAULT_SERVER_ID) {
-  const normalizedPreferredServerId = normalizeServer(preferredServerId);
+  const normalizedPreferredServerId = normalizeCharacterServerId(preferredServerId);
   return db
     .prepare(
       `SELECT id, user_id, name, server_id, is_public, updated_at
@@ -8424,22 +8444,32 @@ function getGuestbookPostingCharacters(req, targetCharacter) {
     return { characters: [], selectedCharacterId: null };
   }
 
-  const targetServerId = normalizeServer(targetCharacter?.server_id);
+  const targetServerId = normalizeCharacterServerId(targetCharacter?.server_id);
   const characters = getOwnedCharactersForUser(currentUserId, targetServerId);
+  const eligibleCharacters = targetServerId === LARP_SERVER_ID
+    ? characters.filter(
+        (entry) => normalizeCharacterServerId(entry.server_id) === LARP_SERVER_ID
+      )
+    : characters;
   const preferredCharacterId = getPreferredCharacterIdFromSession(req, targetServerId);
   let selectedCharacterId = null;
 
-  if (Number.isInteger(preferredCharacterId) && characters.some((entry) => Number(entry.id) === preferredCharacterId)) {
+  if (
+    Number.isInteger(preferredCharacterId) &&
+    eligibleCharacters.some((entry) => Number(entry.id) === preferredCharacterId)
+  ) {
     selectedCharacterId = preferredCharacterId;
   } else {
-    const sameServerCharacter = characters.find(
-      (entry) => normalizeServer(entry.server_id) === targetServerId
+    const sameServerCharacter = eligibleCharacters.find(
+      (entry) => normalizeCharacterServerId(entry.server_id) === targetServerId
     );
-    selectedCharacterId = sameServerCharacter ? Number(sameServerCharacter.id) : Number(characters[0]?.id || 0) || null;
+    selectedCharacterId = sameServerCharacter
+      ? Number(sameServerCharacter.id)
+      : Number(eligibleCharacters[0]?.id || 0) || null;
   }
 
   return {
-    characters,
+    characters: eligibleCharacters,
     selectedCharacterId
   };
 }
@@ -9497,9 +9527,13 @@ function resolveRpBoardContextForUser(userId, serverId, festplayId, characterId)
     return null;
   }
 
-  const normalizedServerId = normalizeServer(serverId || character.server_id);
+  const normalizedServerId = normalizeCharacterServerId(serverId || character.server_id);
   const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
-  const characterServerId = normalizeServer(character.server_id);
+  const characterServerId = normalizeCharacterServerId(character.server_id);
+
+  if (!isRpServerId(normalizedServerId) || !isRpServerId(characterServerId)) {
+    return null;
+  }
 
   if (normalizedFestplayId > 0) {
     if (
@@ -13494,7 +13528,7 @@ app.get("/members", requireAuth, (req, res) => {
         id: adminCharacterId,
         name: user.admin_character_name,
         owner_name: user.username,
-        server_id: normalizeServer(user.admin_character_server_id),
+        server_id: normalizeCharacterServerId(user.admin_character_server_id),
         server_label: getServerLabel(user.admin_character_server_id),
         visibility_label: "Rollencharakter",
         role_label: "Administrator (A)",
@@ -13515,7 +13549,7 @@ app.get("/members", requireAuth, (req, res) => {
         id: moderatorCharacterId,
         name: user.moderator_character_name,
         owner_name: user.username,
-        server_id: normalizeServer(user.moderator_character_server_id),
+        server_id: normalizeCharacterServerId(user.moderator_character_server_id),
         server_label: getServerLabel(user.moderator_character_server_id),
         visibility_label: "Rollencharakter",
         role_label: "Moderator",
@@ -13525,15 +13559,23 @@ app.get("/members", requireAuth, (req, res) => {
   });
 
   const regularMembers = visibleMembers.filter((member) => !staffCharacterIds.has(Number(member.id)));
-  const rpMembers = regularMembers.filter((member) => normalizeServer(member.server_id) === "free-rp");
-  const erpMembers = regularMembers.filter((member) => normalizeServer(member.server_id) === "erp");
+  const rpMembers = regularMembers.filter(
+    (member) => normalizeCharacterServerId(member.server_id) === "free-rp"
+  );
+  const erpMembers = regularMembers.filter(
+    (member) => normalizeCharacterServerId(member.server_id) === "erp"
+  );
+  const larpMembers = regularMembers.filter(
+    (member) => normalizeCharacterServerId(member.server_id) === LARP_SERVER_ID
+  );
 
   return res.render("members", {
     title: "Mitgliederliste",
     staffMembers,
     rpMembers,
     erpMembers,
-    memberCount: staffMembers.length + rpMembers.length + erpMembers.length
+    larpMembers,
+    memberCount: staffMembers.length + rpMembers.length + erpMembers.length + larpMembers.length
   });
 });
 
@@ -13865,7 +13907,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
           AND COALESCE(r.is_festplay_side_chat, 0) = 0
         ORDER BY r.created_at ASC, r.id ASC`
     )
-    .all(req.session.user.id, req.session.user.id, normalizeServer(character.server_id))
+    .all(req.session.user.id, req.session.user.id, normalizeCharacterServerId(character.server_id))
     .map((room) => ({
       ...room,
       is_locked: Number(room.is_locked) === 1,
@@ -18062,7 +18104,7 @@ function getPreferredCharacterForUser(
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return null;
 
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
   const parsedPreferredCharacterId = Number(preferredCharacterId);
   if (Number.isInteger(parsedPreferredCharacterId) && parsedPreferredCharacterId > 0) {
     const preferredCharacter = db
@@ -18102,7 +18144,7 @@ function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, raw
     return [];
   }
 
-  const normalizedServerId = normalizeServer(serverId);
+  const normalizedServerId = normalizeCharacterServerId(serverId);
   const normalizedName = parseInviteCommandArguments(rawName);
   const lookupKey = normalizeInviteTargetLookupKey(normalizedName);
   if (!lookupKey) {

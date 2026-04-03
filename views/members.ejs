@@ -67,6 +67,21 @@
         </div>
       <% } %>
     </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>LARP BEREICH</h2>
+      </header>
+      <% if (!larpMembers || !larpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im LARP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% larpMembers.forEach((member) => { %>
+            <%- include("partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
   </div>
 </section>
 
