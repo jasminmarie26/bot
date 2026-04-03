@@ -236,18 +236,18 @@
     const visibleEntries = Array.isArray(entries)
       ? entries.filter((entry) => !isIgnoredRoomEntry(entry))
       : [];
+    const namedEntries = visibleEntries.filter((entry) => entry?.is_npc !== true);
     const watchMode = String(target?.dataset?.roomWatchMode || "").trim().toLowerCase();
     if (watchMode === "count-only") {
-      const countableEntries = visibleEntries.filter((entry) => entry?.is_npc !== true);
       const countState = document.createElement("span");
       countState.className = "muted";
-      countState.textContent = `User Online: ${countableEntries.length}`;
+      countState.textContent = `User Online: ${namedEntries.length}`;
       target.appendChild(countState);
       scheduleOwnedRoomRowSeparators();
       return;
     }
 
-    if (!visibleEntries.length) {
+    if (!namedEntries.length) {
       const emptyState = document.createElement("span");
       emptyState.className = "muted";
       emptyState.textContent = "Gerade niemand dort.";
@@ -256,9 +256,9 @@
       return;
     }
 
-    visibleEntries.forEach((entry, index) => {
+    namedEntries.forEach((entry, index) => {
       target.appendChild(createOccupantNode(entry));
-      if (index < visibleEntries.length - 1) {
+      if (index < namedEntries.length - 1) {
         const separator = document.createElement("span");
         separator.className = "rp-room-occupant-separator";
         separator.textContent = ", ";

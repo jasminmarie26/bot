@@ -13481,6 +13481,15 @@ app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
+  const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
+  const isUserLoggedIn = (userId) => {
+    const parsedUserId = Number(userId);
+    return (
+      Number.isInteger(parsedUserId) &&
+      parsedUserId > 0 &&
+      (activeSessionUserIds.has(parsedUserId) || connectedSocketUserIds.has(parsedUserId))
+    );
+  };
   const visibleMembers = db
     .prepare(
       `SELECT c.id,
@@ -13551,7 +13560,7 @@ app.get("/members", requireAuth, (req, res) => {
         visibility_label: "Rollencharakter",
         role_label: "Administrator (A)",
         role_style: "admin",
-        is_logged_in: activeSessionUserIds.has(Number(user.id))
+        is_logged_in: isUserLoggedIn(user.id)
       });
     }
 
@@ -13574,7 +13583,7 @@ app.get("/members", requireAuth, (req, res) => {
         visibility_label: "Rollencharakter",
         role_label: "Moderator",
         role_style: "moderator",
-        is_logged_in: activeSessionUserIds.has(Number(user.id))
+        is_logged_in: isUserLoggedIn(user.id)
       });
     }
   });
