@@ -52,20 +52,6 @@
               LARP-Bereich &ouml;ffnen
             </a>
           </div>
-
-          <% if (larpCharacters && larpCharacters.length) { %>
-            <div class="dashboard-larp-character-list">
-              <% larpCharacters.forEach((char) => { %>
-                <a
-                  class="dashboard-larp-character-link"
-                  href="/characters/<%= char.id %>/edit"
-                  title="<%= char.name %> bearbeiten"
-                >
-                  <span><%= char.name %></span>
-                </a>
-              <% }) %>
-            </div>
-          <% } %>
         </div>
       </section>
     </div>
