@@ -6681,43 +6681,18 @@ body.theme-future.page-home-screen .home-copyright {
   padding: 0.48rem 0.54rem;
 }
 
-.page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.page-roomlist .rp-room-list.rp-room-list-owned {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 0.55rem 1rem;
+  gap: 0.38rem;
 }
 
-.page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) .rp-room-standard-card {
-  width: 100%;
-  min-width: 0;
+.page-roomlist .rp-room-list.rp-room-list-owned .rp-room-standard-card {
+  flex: 0 1 10rem;
+  min-width: min(10rem, 100%);
   max-width: 100%;
-}
-
-.page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) .rp-room-custom-titleline {
-  position: relative;
-  gap: 0;
-  padding-left: 1rem;
-}
-
-.page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) .rp-room-lock-indicator {
-  position: absolute;
-  left: 0;
-  top: 0.08rem;
-  width: 0.78rem;
-  height: 0.78rem;
-}
-
-@media (max-width: 980px) {
-  .page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .page-roomlist .rp-room-list.rp-room-list-owned:not(.rp-room-list-owned-compact) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .page-roomlist .rp-room-standard-card {
