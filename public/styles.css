@@ -2472,6 +2472,11 @@ a:hover {
   background-image: url("/theme-avatars/jedi.svg");
 }
 
+.theme-nature .topbar-user-menu-toggle-icon,
+.theme-nature .rp-user-menu-toggle-icon {
+  background-image: url("/theme-avatars/nature.svg");
+}
+
 .theme-larp .topbar-user-menu-toggle-icon,
 .theme-larp .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/larp.svg");

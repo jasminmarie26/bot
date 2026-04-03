@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c8e2a1"/>
+      <stop offset=".52" stop-color="#78a85e"/>
+      <stop offset="1" stop-color="#355233"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="#132015"/>
+  <circle cx="32" cy="32" r="28" fill="url(#bg)" opacity=".24"/>
+  <ellipse cx="32" cy="54" rx="16" ry="5.8" fill="#0d160e" opacity=".24"/>
+  <path d="M18.5 50c2-9.8 7-15 13.5-15s11.5 5.2 13.5 15" fill="#90b86e"/>
+  <path d="M20.2 29.3c2.1-10 7.1-16.2 11.8-16.2s10 6.2 11.8 16.2l-4.8-1.2-7 8-7-8Z" fill="#e8d7b2"/>
+  <path d="M24.5 30.6c0-4.7 3.3-8.4 7.5-8.4s7.5 3.7 7.5 8.4V32c0 4.6-3.3 8.1-7.5 8.1s-7.5-3.5-7.5-8.1Z" fill="#f2dec7"/>
+  <circle cx="29.5" cy="30.7" r="1.2" fill="#2d3428"/>
+  <circle cx="34.5" cy="30.7" r="1.2" fill="#2d3428"/>
+  <path d="M29.6 34.3c1.5.9 3.3.9 4.8 0" stroke="#8a7463" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M24.4 22.5c1.9-2.4 4.4-3.7 7.6-3.7 3.1 0 5.5 1.3 7.4 3.7l-1.3 4H25.7Z" fill="#506f44"/>
+  <path d="M21.4 22.2c-1.8.9-3 2.3-3.5 4.3l4.2-.5Z" fill="#d9ebbf"/>
+  <path d="M42.4 22.3c1.8.8 3 2.2 3.6 4.2l-4.2-.4Z" fill="#d9ebbf"/>
+  <path d="M15.5 20.8c1.7-1 3.5-.8 5 1 .6 1 .8 2 .7 3.2-1.9.4-3.5 0-4.9-1.2-1.2-1-1.5-1.9-.8-3Z" fill="#e7c7d1"/>
+  <path d="M48.5 20.8c-1.7-1-3.5-.8-5 1-.6 1-.8 2-.7 3.2 1.9.4 3.5 0 4.9-1.2 1.2-1 1.5-1.9.8-3Z" fill="#e7c7d1"/>
+  <circle cx="18.7" cy="18.8" r="1.2" fill="#f3e6b6"/>
+  <circle cx="45.3" cy="18.8" r="1.2" fill="#f3e6b6"/>
+</svg>
