@@ -45,6 +45,7 @@ const THEME_OPTIONS = [
   { id: "atari", label: "Atari" },
   { id: "sith", label: "Sith" },
   { id: "jedi", label: "Jedi" },
+  { id: "nature", label: "Nature" },
   { id: "larp", label: "LARP" }
 ];
 const SERVER_OPTIONS = [

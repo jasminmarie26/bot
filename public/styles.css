@@ -1062,6 +1062,190 @@ body.theme-larp .hero-copy.guestbook-entry-body {
   font-size: clamp(0.84rem, 1.05vw, 0.98rem);
 }
 
+body.theme-nature {
+  --bg-base: #101912;
+  --orb-1: rgba(132, 181, 107, 0.18);
+  --orb-2: rgba(233, 180, 187, 0.13);
+  --orb-3: rgba(239, 226, 173, 0.1);
+  --text: #f3f0e5;
+  --muted: #c9cfbb;
+  --link: #e7dcae;
+  --panel-bg: rgba(17, 26, 19, 0.82);
+  --panel-edge: rgba(155, 182, 124, 0.28);
+  --panel-shadow: rgba(0, 0, 0, 0.78);
+  --field-bg: rgba(11, 17, 12, 0.9);
+  --field-edge: rgba(146, 174, 119, 0.32);
+  --accent: #93b86e;
+  --accent-2: #5c7f48;
+  --accent-text: #10210f;
+  --danger: #ca8e91;
+  --danger-2: #94565a;
+  --danger-text: #fff7f7;
+  --success-bg: rgba(84, 129, 76, 0.24);
+  --success-edge: rgba(161, 209, 140, 0.32);
+  --error-bg: rgba(125, 71, 75, 0.3);
+  --error-edge: rgba(209, 147, 152, 0.34);
+  --glass-blur: 8px;
+  background:
+    radial-gradient(760px 420px at 10% 10%, rgba(168, 208, 132, 0.16), transparent 68%),
+    radial-gradient(680px 440px at 88% 14%, rgba(244, 202, 209, 0.12), transparent 66%),
+    radial-gradient(920px 560px at 50% 104%, rgba(34, 48, 30, 0.24), transparent 72%),
+    linear-gradient(180deg, rgba(248, 245, 231, 0.1) 0%, rgba(41, 55, 36, 0.14) 22%, rgba(12, 18, 13, 0.62) 100%),
+    repeating-linear-gradient(
+      118deg,
+      rgba(252, 247, 230, 0.012) 0 2px,
+      transparent 2px 26px
+    ),
+    url("/Nature Wallpaper.jpg") center 10% / cover no-repeat,
+    linear-gradient(145deg, #182118 0%, #202d1f 38%, #161f17 70%, #0f160f 100%);
+  background-attachment: scroll, scroll, scroll, scroll, scroll, fixed, scroll;
+}
+
+body.theme-nature::before {
+  inset: -18% -14%;
+  opacity: 0.72;
+  background:
+    radial-gradient(circle at 14% 16%, rgba(194, 228, 176, 0.14), transparent 16%),
+    radial-gradient(circle at 78% 12%, rgba(247, 210, 215, 0.12), transparent 14%),
+    radial-gradient(circle at 30% 78%, rgba(233, 226, 184, 0.08), transparent 18%),
+    radial-gradient(circle at 86% 72%, rgba(161, 203, 136, 0.08), transparent 16%),
+    linear-gradient(136deg, transparent 0%, rgba(246, 239, 221, 0.06) 32%, transparent 66%),
+    repeating-linear-gradient(
+      122deg,
+      rgba(247, 241, 223, 0.016) 0 2px,
+      transparent 2px 24px
+    ),
+    linear-gradient(
+      180deg,
+      rgba(249, 245, 233, 0.05) 0%,
+      rgba(32, 42, 30, 0.12) 36%,
+      rgba(15, 20, 14, 0.34) 68%,
+      rgba(10, 13, 10, 0.54) 100%
+    );
+  mix-blend-mode: normal;
+  backdrop-filter: blur(12px) saturate(74%) brightness(0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(74%) brightness(0.82);
+  animation-duration: 26s;
+}
+
+body.theme-nature::after {
+  right: 8%;
+  top: 10%;
+  width: 640px;
+  height: 640px;
+  border-radius: 46% 54% 56% 44% / 44% 46% 54% 56%;
+  background:
+    radial-gradient(circle at 36% 34%, rgba(247, 236, 214, 0.12), transparent 20%),
+    radial-gradient(circle at 52% 52%, rgba(171, 205, 144, 0.09), transparent 30%),
+    radial-gradient(circle at 64% 68%, rgba(233, 191, 199, 0.08), transparent 28%),
+    radial-gradient(circle at 50% 76%, rgba(18, 24, 17, 0.2), transparent 60%);
+  filter: blur(48px);
+  opacity: 0.34;
+}
+
+body.theme-nature .topbar,
+body.theme-nature .panel,
+body.theme-nature .card,
+body.theme-nature .hero,
+body.theme-nature .list-item,
+body.theme-nature .character-mini-item,
+body.theme-nature .guestbook-item,
+body.theme-nature .chat-message,
+body.theme-nature .chat-box {
+  box-shadow:
+    0 24px 54px -34px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(246, 236, 214, 0.05);
+}
+
+body.theme-nature .btn {
+  background: linear-gradient(135deg, #a7c97d 0%, #83ad63 52%, #e6c6a1 100%);
+  color: #132112;
+  box-shadow: 0 18px 28px -24px rgba(147, 184, 110, 0.5);
+}
+
+body.theme-nature .ghost-btn,
+body.theme-nature .account-chip,
+body.theme-nature .theme-select {
+  border-color: color-mix(in srgb, var(--panel-edge) 76%, rgba(246, 235, 214, 0.16));
+}
+
+body.theme-nature .brand {
+  text-shadow: 0 0 18px rgba(223, 211, 164, 0.12);
+}
+
+body.theme-nature .hero {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  background:
+    linear-gradient(
+      140deg,
+      rgba(17, 24, 16, 0.84) 0%,
+      rgba(20, 28, 18, 0.72) 46%,
+      rgba(13, 18, 12, 0.58) 100%
+    );
+  border-color: rgba(155, 182, 124, 0.28);
+  backdrop-filter: blur(8px) saturate(116%);
+  -webkit-backdrop-filter: blur(8px) saturate(116%);
+}
+
+body.theme-nature .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(240, 216, 187, 0.09), transparent 16%),
+    radial-gradient(circle at 18% 84%, rgba(162, 201, 139, 0.08), transparent 18%),
+    radial-gradient(circle at 26% 22%, rgba(242, 197, 208, 0.06), transparent 14%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(249, 241, 223, 0.012) 0 1px,
+      transparent 1px 24px
+    ),
+    linear-gradient(180deg, rgba(255, 248, 237, 0.03), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.34) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-nature .hero::after {
+  right: -28px;
+  top: -34px;
+  width: 250px;
+  height: 250px;
+  transform: none;
+  background:
+    radial-gradient(circle, rgba(239, 224, 191, 0.12) 0%, rgba(147, 184, 110, 0.08) 34%, transparent 72%);
+  filter: blur(34px);
+  opacity: 0.24;
+}
+
+body.theme-nature .hero h1,
+body.theme-nature .hero-copy,
+body.theme-nature .hero-actions {
+  position: relative;
+  z-index: 1;
+  width: min(64%, 900px);
+  margin-left: 0;
+  text-align: left;
+}
+
+body.theme-nature .hero h1 {
+  width: auto;
+  max-width: none;
+  white-space: normal;
+}
+
+body.theme-nature .hero-actions {
+  justify-content: flex-start;
+}
+
+body.theme-nature .hero-copy.guestbook-entry-body {
+  font-size: clamp(0.84rem, 1.05vw, 0.98rem);
+}
+
 a {
   color: var(--link);
   text-decoration: none;
