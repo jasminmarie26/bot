@@ -415,7 +415,7 @@
                     <span>Account Nr.: <%= currentUser.account_number %></span>
                     <% if (menuCharacter) { %>
                       <span>Charakter: <%= menuCharacter.name %></span>
-                      <span>Server: <%= menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+                      <span>Server: <%= menuCharacter.server_id === "larp" ? "LARP" : (menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
                     <% } %>
                   </div>
 

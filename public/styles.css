@@ -4847,6 +4847,53 @@ body.theme-future.page-home-screen .home-copyright {
   margin: 0;
 }
 
+.dashboard-larp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.dashboard-larp-character-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+}
+
+.dashboard-larp-character-link {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 180px;
+  padding: 0.72rem 0.86rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 84%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 84%, white 16%);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-bg) 45%, transparent);
+}
+
+.dashboard-larp-character-link:hover,
+.dashboard-larp-character-link:focus-visible {
+  text-decoration: none;
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 10%, var(--field-bg));
+  transform: translateY(-1px);
+}
+
+.dashboard-larp-character-link span {
+  font-weight: 700;
+  color: var(--readable-heading);
+}
+
+.dashboard-larp-character-link small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .dashboard-status-pill {
   display: inline-flex;
   width: fit-content;

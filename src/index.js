@@ -51,6 +51,7 @@ const SERVER_OPTIONS = [
   { id: "free-rp", label: "FREE-RP" },
   { id: "erp", label: "ERP" }
 ];
+const LARP_SERVER_ID = "larp";
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
 const LEGACY_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
@@ -381,6 +382,14 @@ function normalizeServer(serverValue) {
   return ALLOWED_SERVER_IDS.has(input) ? input : DEFAULT_SERVER_ID;
 }
 
+function isLarpServerId(serverValue) {
+  return String(serverValue || "").trim().toLowerCase() === LARP_SERVER_ID;
+}
+
+function normalizeCharacterServerId(serverValue) {
+  return isLarpServerId(serverValue) ? LARP_SERVER_ID : normalizeServer(serverValue);
+}
+
 function normalizeFestplayDashboardMode(value) {
   return String(value || "").trim().toLowerCase() === "main" ? "main" : "festplay";
 }
@@ -391,6 +400,10 @@ function parseRequestedFestplayDashboardMode(value) {
 }
 
 function getServerLabel(serverId) {
+  if (isLarpServerId(serverId)) {
+    return "LARP";
+  }
+
   const normalized = normalizeServer(serverId);
   const found = SERVER_OPTIONS.find((server) => server.id === normalized);
   return found?.label || "FREE-RP";
@@ -427,6 +440,10 @@ function rememberPreferredCharacter(req, character) {
     Number.isInteger(characterOwnerId) &&
     characterOwnerId !== Number(req.session?.user?.id)
   ) {
+    return;
+  }
+
+  if (isLarpServerId(character?.server_id)) {
     return;
   }
 
@@ -1209,10 +1226,13 @@ function getVisibleCharacterStatsForHomeStats(hiddenUserIds = null) {
   return {
     characterCount: visibleCharacters.length,
     freeRpCharacterCount: visibleCharacters.filter(
-      (character) => normalizeServer(character.server_id) === "free-rp"
+      (character) => normalizeCharacterServerId(character.server_id) === "free-rp"
     ).length,
     erpCharacterCount: visibleCharacters.filter(
-      (character) => normalizeServer(character.server_id) === "erp"
+      (character) => normalizeCharacterServerId(character.server_id) === "erp"
+    ).length,
+    larpCharacterCount: visibleCharacters.filter(
+      (character) => normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
     ).length
   };
 }
@@ -1273,6 +1293,7 @@ function buildLoginStats() {
   const characterCount = visibleCharacterStats.characterCount;
   const freeRpCharacterCount = visibleCharacterStats.freeRpCharacterCount;
   const erpCharacterCount = visibleCharacterStats.erpCharacterCount;
+  const larpCharacterCount = visibleCharacterStats.larpCharacterCount;
   const freeRpOnlineCount = getVisibleOnlineUserCountForServers("free-rp", hiddenHomeStatsUserIds);
   const erpOnlineCount = getVisibleOnlineUserCountForServers("erp", hiddenHomeStatsUserIds);
   const rpOnlineCount = getVisibleOnlineUserCountForServers(["free-rp", "erp"], hiddenHomeStatsUserIds);
@@ -1283,7 +1304,7 @@ function buildLoginStats() {
     rpServerCount: freeRpCharacterCount + erpCharacterCount,
     freeRpCharacterCount,
     erpCharacterCount,
-    larpServerCount: 0,
+    larpServerCount: larpCharacterCount,
     freeRpOnlineCount,
     erpOnlineCount,
     rpOnlineCount,
@@ -3731,7 +3752,7 @@ for (const providerStatus of Object.values(OAUTH_PROVIDERS)) {
 function normalizeCharacterInput(body) {
   const parsedFestplayId = Number(body.festplay_id);
   return {
-    server_id: normalizeServer(body.server_id),
+    server_id: normalizeCharacterServerId(body.server_id),
     festplay_id:
       Number.isInteger(parsedFestplayId) && parsedFestplayId > 0
         ? parsedFestplayId
@@ -12619,7 +12640,7 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
     festplays,
     characters: ownCharacters
       .filter((character) => {
-        if (normalizeServer(character.server_id) !== server.id) {
+        if (normalizeCharacterServerId(character.server_id) !== server.id) {
           return false;
         }
 
@@ -12651,6 +12672,22 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
         return Number(left.id) - Number(right.id);
       })
   };
+}
+
+function getLarpCharactersForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT id, user_id, name, server_id, updated_at
+       FROM characters
+       WHERE user_id = ? AND server_id = ?
+       ORDER BY lower(name) ASC, id ASC`
+    )
+    .all(parsedUserId, LARP_SERVER_ID);
 }
 
 function ensureFestplayRoomForCharacter(
@@ -12995,19 +13032,23 @@ function getDashboardLarpSection() {
   return {
     title: "LARP Bereich",
     description:
-      "Hier entsteht später dein Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
-    note: "Noch nicht freigeschaltet."
+      "Hier entsteht dein eigener Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
+    note: "LARP-Charaktere kannst du jetzt schon anlegen. Das Forum folgt als nächster Schritt."
   };
 }
 
 app.get("/dashboard", requireAuth, (req, res) => {
   const serverSections = getDashboardServerSections(req.session.user.id);
   const larpSection = getDashboardLarpSection();
+  const larpCharacters = getLarpCharactersForUser(req.session.user.id);
+  const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("dashboard", {
     title: "Serverliste",
     serverSections,
-    larpSection
+    larpSection,
+    larpCharacters,
+    openLarpSection
   });
 });
 
@@ -13478,10 +13519,13 @@ app.get("/sitemap.xml", (req, res) => {
 
 app.get("/characters/new", requireAuth, (req, res) => {
   const festplays = getFestplays();
-  const requestedServer = normalizeServer(req.query.server);
+  const requestedServer = normalizeCharacterServerId(req.query.server);
+  const fallbackReturnTarget = requestedServer === LARP_SERVER_ID
+    ? "/dashboard?section=larp"
+    : `/dashboard/areas/${requestedServer}`;
   const returnTarget = getSafeExplicitReturnTarget(
     req.query.return_to,
-    `/dashboard/areas/${requestedServer}`
+    fallbackReturnTarget
   );
   res.render("character-form", {
     title: "Neuer Charakter",
@@ -13509,7 +13553,10 @@ app.get("/characters/new", requireAuth, (req, res) => {
 app.post("/characters", requireAuth, (req, res) => {
   const payload = normalizeCharacterInput(req.body);
   const festplays = getFestplays();
-  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${payload.server_id}`);
+  const fallbackReturnTarget = payload.server_id === LARP_SERVER_ID
+    ? "/dashboard?section=larp"
+    : `/dashboard/areas/${payload.server_id}`;
+  const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
   payload.festplay_id = null;
 
   if (!payload.name) {
