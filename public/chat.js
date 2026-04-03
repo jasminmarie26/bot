@@ -125,6 +125,36 @@
     chat: ""
   };
   if (!chatBox || !form || !input) return;
+  const defaultDocumentTitle = String(document.title || "Heldenhafte Reisen").trim() || "Heldenhafte Reisen";
+  let unreadChatTabCount = 0;
+
+  function updateChatTabTitle() {
+    document.title = unreadChatTabCount > 0
+      ? `(${unreadChatTabCount}) ${defaultDocumentTitle}`
+      : defaultDocumentTitle;
+  }
+
+  function isChatTabActive() {
+    return document.visibilityState === "visible" && document.hasFocus();
+  }
+
+  function markUnreadChatTab() {
+    if (isChatTabActive()) {
+      return;
+    }
+
+    unreadChatTabCount += 1;
+    updateChatTabTitle();
+  }
+
+  function clearUnreadChatTab() {
+    if (unreadChatTabCount < 1) {
+      return;
+    }
+
+    unreadChatTabCount = 0;
+    updateChatTabTitle();
+  }
 
   function formatRoleDisplayName(rawName, roleStyle = "") {
     const label = String(rawName || "").trim();
@@ -1626,6 +1656,7 @@
       Number(msg.user_id) !== currentUserId &&
       options?.skipNotifications !== true
     ) {
+      markUnreadChatTab();
       playChatTone();
     }
 
@@ -2514,8 +2545,10 @@
       return;
     }
 
+    clearUnreadChatTab();
     scheduleAfkTimer();
   });
+  window.addEventListener("focus", clearUnreadChatTab);
 
   if (onlineCharList) {
     onlineCharList.addEventListener("click", (event) => {
@@ -2748,6 +2781,7 @@
     }
 
     if (!payload?.outgoing) {
+      markUnreadChatTab();
       playChatTone();
     }
 
