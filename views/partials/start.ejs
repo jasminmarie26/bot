@@ -448,6 +448,25 @@
       </header>
     <% } %>
 
+    <script>
+      (() => {
+        document.addEventListener("DOMContentLoaded", () => {
+          const userMenus = Array.from(document.querySelectorAll(".topbar-user-menu"));
+          if (!userMenus.length) return;
+
+          document.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+
+            userMenus.forEach((menu) => {
+              if (!menu.open || menu.contains(target)) return;
+              menu.open = false;
+            });
+          });
+        });
+      })();
+    </script>
+
     <% if (showAccountDeleteControl) { %>
       <div id="account-delete-modal" class="account-delete-modal" hidden>
         <div class="account-delete-backdrop" data-account-delete-close></div>
