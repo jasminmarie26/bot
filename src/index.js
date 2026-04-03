@@ -4695,8 +4695,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
     }
 
     const characterServerId =
-      normalizeCharacterServerId(row.character_server_id || row.linked_character_server_id) ||
-      normalizedServerId;
+      normalizeServer(row.character_server_id || row.linked_character_server_id) || normalizedServerId;
     const dashboardPosition = getCharacterDashboardPlacement(
       characterServerId,
       normalizedServerId,
@@ -5842,10 +5841,7 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
     return false;
   }
 
-  const characterServerId = normalizeCharacterServerId(character.server_id);
-  if (!isRpServerId(characterServerId)) {
-    return false;
-  }
+  const characterServerId = normalizeServer(character.server_id);
   const lockedFestplayServerId = normalizeFestplayServerId(festplay.server_id);
   if (lockedFestplayServerId && lockedFestplayServerId !== characterServerId) {
     return false;
@@ -5872,7 +5868,7 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
     if (
       existingCreatorCharacter &&
       Number(existingCreatorCharacter.user_id) === parsedOwnerUserId &&
-      normalizeCharacterServerId(existingCreatorCharacter.server_id) === effectiveServerId
+      normalizeServer(existingCreatorCharacter.server_id) === effectiveServerId
     ) {
       permissionCharacterId = existingCreatorCharacterId;
     } else {
