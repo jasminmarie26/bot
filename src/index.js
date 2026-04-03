@@ -11464,14 +11464,42 @@ app.get("/api/social/state", requireAuth, (req, res) => {
 
 app.post("/api/social/friends", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
+  const currentUser = req.session.user || null;
   const directUserId = Number(req.body.user_id);
+  const directCharacterId = Number(req.body.character_id);
   const lookup = normalizeSocialLookupValue(req.body.lookup || "");
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
     return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
   }
 
-  if (!(Number.isInteger(directUserId) && directUserId > 0) && !lookup) {
+  if (
+    !(Number.isInteger(directUserId) && directUserId > 0) &&
+    !(Number.isInteger(directCharacterId) && directCharacterId > 0) &&
+    !lookup
+  ) {
     return res.status(400).json({ ok: false, error: "Bitte einen Charakternamen eingeben." });
+  }
+
+  const allowOwnCharacterFriends = currentUser?.is_admin === 1 || currentUser?.is_admin === true;
+  const ownCharacterTarget =
+    allowOwnCharacterFriends &&
+    ((Number.isInteger(directCharacterId) && directCharacterId > 0
+      ? getCharacterSocialTargetById(directCharacterId)
+      : findCharacterBySocialLookup(lookup)) ||
+      null);
+  if (ownCharacterTarget && Number(ownCharacterTarget.user_id) === currentUserId) {
+    db.prepare(
+      `INSERT OR IGNORE INTO friend_character_links (user_id, friend_character_id)
+       VALUES (?, ?)`
+    ).run(currentUserId, Number(ownCharacterTarget.character_id));
+
+    emitSocialStateUpdateForUser(currentUserId);
+
+    return res.json({
+      ok: true,
+      message: "Freund wurde hinzugefügt.",
+      state: buildSocialStatePayloadForUser(currentUserId)
+    });
   }
 
   const targetUser =
@@ -11496,6 +11524,32 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
   return res.json({
     ok: true,
     message: "Freund wurde hinzugefügt.",
+    state: buildSocialStatePayloadForUser(currentUserId)
+  });
+});
+
+app.post("/api/social/friends/character/:friendCharacterId/delete", requireAuth, (req, res) => {
+  const currentUserId = Number(req.session.user?.id);
+  const friendCharacterId = Number(req.params.friendCharacterId);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return res.status(401).json({ ok: false, error: "Bitte erneut einloggen." });
+  }
+
+  if (!Number.isInteger(friendCharacterId) || friendCharacterId < 1) {
+    return res.status(400).json({ ok: false, error: "Freund konnte nicht zugeordnet werden." });
+  }
+
+  db.prepare(
+    `DELETE FROM friend_character_links
+      WHERE user_id = ?
+        AND friend_character_id = ?`
+  ).run(currentUserId, friendCharacterId);
+
+  emitSocialStateUpdateForUser(currentUserId);
+
+  return res.json({
+    ok: true,
+    message: "Freund entfernt.",
     state: buildSocialStatePayloadForUser(currentUserId)
   });
 });
@@ -18526,6 +18580,27 @@ function getSocialFriendRowsForUser(userId) {
     .all(parsedUserId);
 }
 
+function getSocialFriendCharacterRowsForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id AS friend_character_id,
+              c.name,
+              c.user_id AS owner_user_id,
+              u.username AS owner_username
+         FROM friend_character_links fcl
+         JOIN characters c ON c.id = fcl.friend_character_id
+         JOIN users u ON u.id = c.user_id
+        WHERE fcl.user_id = ?
+        ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedUserId);
+}
+
 function getFriendWatcherUserIdsForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -18647,6 +18722,30 @@ function findUserBySocialLookup(value) {
     .get(normalizedValue);
 }
 
+function findCharacterBySocialLookup(value) {
+  const normalizedValue = normalizeSocialLookupValue(value);
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return db
+    .prepare(
+      `SELECT c.id AS character_id,
+              c.name,
+              c.user_id,
+              u.username AS owner_username,
+              u.account_number AS owner_account_number,
+              u.is_admin,
+              u.is_moderator
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE lower(c.name) = lower(?)
+        ORDER BY c.id ASC
+        LIMIT 1`
+    )
+    .get(normalizedValue);
+}
+
 function getCharacterSocialTargetById(characterId) {
   const parsedCharacterId = Number(characterId);
   if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
@@ -18743,6 +18842,90 @@ function getRealtimePresenceSummaryForUser(userId) {
   };
 }
 
+function getRealtimePresenceSummaryForCharacter(characterId, ownerUserId) {
+  const parsedCharacterId = Number(characterId);
+  const parsedOwnerUserId = Number(ownerUserId);
+  if (
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !Number.isInteger(parsedOwnerUserId) ||
+    parsedOwnerUserId < 1
+  ) {
+    return {
+      is_online: false
+    };
+  }
+
+  const matchingSockets = getAllSocketsForUser(parsedOwnerUserId).filter((memberSocket) => {
+    const memberServerId = getSocketChatServerId(memberSocket) || getSocketPresenceServerId(memberSocket);
+    if (!memberServerId) {
+      return false;
+    }
+
+    return (
+      normalizePresenceCharacterId(getSocketPreferredCharacterId(memberSocket, memberServerId)) ===
+      parsedCharacterId
+    );
+  });
+  if (!matchingSockets.length) {
+    return {
+      is_online: false
+    };
+  }
+
+  matchingSockets.sort((leftSocket, rightSocket) => {
+    const scoreSocket = (memberSocket) => {
+      let score = 0;
+      if (memberSocket?.data?.hasJoinedChat === true) {
+        score += 300;
+      }
+      if (Number.isInteger(memberSocket?.data?.roomId) && memberSocket.data.roomId > 0) {
+        score += 80;
+      }
+      if (getSocketChatServerId(memberSocket)) {
+        score += 30;
+      }
+      if (getSocketPresenceServerId(memberSocket)) {
+        score += 20;
+      }
+      return score;
+    };
+
+    return scoreSocket(rightSocket) - scoreSocket(leftSocket);
+  });
+
+  const primarySocket = matchingSockets[0] || null;
+  const activeServerId = getSocketChatServerId(primarySocket) || getSocketPresenceServerId(primarySocket);
+  if (!primarySocket || !activeServerId) {
+    return {
+      is_online: false
+    };
+  }
+
+  const displayProfile = getCurrentChannelDisplayProfile(
+    primarySocket?.data?.user,
+    activeServerId,
+    parsedCharacterId
+  );
+  const roomId =
+    Number.isInteger(primarySocket?.data?.roomId) && primarySocket.data.roomId > 0
+      ? Number(primarySocket.data.roomId)
+      : null;
+  const room = roomId ? getRoomWithCharacter(roomId) : null;
+
+  return {
+    is_online: true,
+    online_name: String(displayProfile?.label || "").trim(),
+    role_style: String(displayProfile?.role_style || "").trim(),
+    chat_text_color: String(displayProfile?.chat_text_color || "").trim(),
+    character_id: parsedCharacterId,
+    server_id: normalizeServer(activeServerId),
+    server_label: getServerLabel(activeServerId),
+    room_id: roomId,
+    room_name: String(room?.name || "").trim()
+  };
+}
+
 function buildSocialStatePayloadForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -18751,14 +18934,16 @@ function buildSocialStatePayloadForUser(userId) {
       ignored_accounts: [],
       ignored_characters: [],
       friend_user_ids: [],
+      friend_character_ids: [],
       ignored_account_user_ids: [],
       ignored_character_ids: []
     };
   }
 
-  const friends = getSocialFriendRowsForUser(parsedUserId).map((row) => {
+  const accountFriends = getSocialFriendRowsForUser(parsedUserId).map((row) => {
     const presence = getRealtimePresenceSummaryForUser(row.user_id);
     return {
+      friend_type: "user",
       user_id: Number(row.user_id),
       is_online: presence.is_online === true,
       online_name: String(presence.online_name || "").trim(),
@@ -18775,6 +18960,26 @@ function buildSocialStatePayloadForUser(userId) {
       room_name: String(presence.room_name || "").trim()
     };
   });
+  const characterFriends = getSocialFriendCharacterRowsForUser(parsedUserId).map((row) => {
+    const presence = getRealtimePresenceSummaryForCharacter(row.friend_character_id, row.owner_user_id);
+    return {
+      friend_type: "character",
+      user_id: Number(row.owner_user_id),
+      friend_character_id: Number(row.friend_character_id),
+      is_online: presence.is_online === true,
+      online_name: String(presence.online_name || "").trim(),
+      role_style: String(presence.role_style || "").trim(),
+      chat_text_color: String(presence.chat_text_color || "").trim(),
+      character_id: Number(row.friend_character_id),
+      server_id: String(presence.server_id || "").trim(),
+      server_label: String(presence.server_label || "").trim(),
+      room_id: Number.isInteger(Number(presence.room_id)) && Number(presence.room_id) > 0
+        ? Number(presence.room_id)
+        : null,
+      room_name: String(presence.room_name || "").trim()
+    };
+  });
+  const friends = [...accountFriends, ...characterFriends];
   const ignoredAccounts = getIgnoredAccountRowsForUser(parsedUserId).map((row) => ({
     user_id: Number(row.user_id),
     username: String(row.username || "").trim()
@@ -18790,7 +18995,8 @@ function buildSocialStatePayloadForUser(userId) {
     friends,
     ignored_accounts: ignoredAccounts,
     ignored_characters: ignoredCharacters,
-    friend_user_ids: friends.map((entry) => entry.user_id),
+    friend_user_ids: accountFriends.map((entry) => entry.user_id),
+    friend_character_ids: characterFriends.map((entry) => entry.friend_character_id),
     ignored_account_user_ids: ignoredAccounts.map((entry) => entry.user_id),
     ignored_character_ids: ignoredCharacters.map((entry) => entry.character_id)
   };

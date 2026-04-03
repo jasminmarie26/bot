@@ -219,6 +219,15 @@ db.exec(`
     CHECK (user_id != friend_user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS friend_character_links (
+    user_id INTEGER NOT NULL,
+    friend_character_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, friend_character_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_character_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS ignored_accounts (
     user_id INTEGER NOT NULL,
     ignored_user_id INTEGER NOT NULL,
@@ -1104,6 +1113,9 @@ db.exec(
 );
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user ON friend_links(friend_user_id, user_id)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_friend_character_links_character_user ON friend_character_links(friend_character_id, user_id)"
 );
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_ignored_accounts_ignored_user ON ignored_accounts(ignored_user_id, user_id)"

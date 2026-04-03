@@ -52,6 +52,7 @@
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
   let currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
+  const currentUserIsAdmin = document.body?.dataset?.currentUserIsAdmin === "true";
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
@@ -524,6 +525,9 @@
     const friendUserIds = Array.isArray(payload?.friend_user_ids)
       ? payload.friend_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
       : [];
+    const friendCharacterIds = Array.isArray(payload?.friend_character_ids)
+      ? payload.friend_character_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
+      : [];
     const ignoredAccountUserIds = Array.isArray(payload?.ignored_account_user_ids)
       ? payload.ignored_account_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
       : [];
@@ -533,6 +537,7 @@
 
     return {
       friendUserIds: new Set(friendUserIds),
+      friendCharacterIds: new Set(friendCharacterIds),
       ignoredAccountUserIds: new Set(ignoredAccountUserIds),
       ignoredCharacterIds: new Set(ignoredCharacterIds)
     };
@@ -554,6 +559,11 @@
   function isFriendUserId(userId) {
     const parsedUserId = normalizePositiveNumber(userId);
     return Boolean(parsedUserId && socialState.friendUserIds.has(parsedUserId));
+  }
+
+  function isFriendCharacterId(characterId) {
+    const parsedCharacterId = normalizePositiveNumber(characterId);
+    return Boolean(parsedCharacterId && socialState.friendCharacterIds.has(parsedCharacterId));
   }
 
   function isIgnoredAccountUserId(userId) {
@@ -2109,7 +2119,10 @@
     const hasUser = Number.isInteger(selectedOnlineEntry.userId) && selectedOnlineEntry.userId > 0;
     const isOwnEntry = hasUser && selectedOnlineEntry.userId === currentUserId;
     const hasSocialApi = typeof window.appSocialApi === "object" && window.appSocialApi !== null;
-    const isFriend = hasUser && isFriendUserId(selectedOnlineEntry.userId);
+    const canManageOwnCharacterFriend = currentUserIsAdmin && isOwnEntry && hasCharacter;
+    const isFriend =
+      (hasUser && isFriendUserId(selectedOnlineEntry.userId)) ||
+      (canManageOwnCharacterFriend && isFriendCharacterId(selectedOnlineEntry.characterId));
     const ignoresCharacter = hasCharacter && isIgnoredCharacterId(selectedOnlineEntry.characterId);
     const ignoresAccount = hasUser && isIgnoredAccountUserId(selectedOnlineEntry.userId);
 
@@ -2127,7 +2140,7 @@
 
     onlineActionWhisper.disabled = !hasUser;
     if (onlineActionFriend) {
-      onlineActionFriend.disabled = !hasUser || isOwnEntry || !hasSocialApi;
+      onlineActionFriend.disabled = !hasSocialApi || ((!hasUser || isOwnEntry) && !canManageOwnCharacterFriend);
       onlineActionFriend.textContent = isFriend ? "Freund entfernen" : "Als Freund speichern";
     }
     if (onlineActionIgnoreCharacter) {
@@ -2549,7 +2562,18 @@
     onlineActionFriend.addEventListener("click", async () => {
       if (!selectedOnlineEntry || !window.appSocialApi) return;
       try {
-        if (isFriendUserId(selectedOnlineEntry.userId)) {
+        const canManageOwnCharacterFriend =
+          currentUserIsAdmin &&
+          Number.isInteger(selectedOnlineEntry?.characterId) &&
+          selectedOnlineEntry.characterId > 0 &&
+          Number(selectedOnlineEntry?.userId) === currentUserId;
+        if (canManageOwnCharacterFriend) {
+          if (isFriendCharacterId(selectedOnlineEntry.characterId)) {
+            await window.appSocialApi.removeFriendCharacter(selectedOnlineEntry.characterId);
+          } else {
+            await window.appSocialApi.addFriendByCharacterId(selectedOnlineEntry.characterId);
+          }
+        } else if (isFriendUserId(selectedOnlineEntry.userId)) {
           await window.appSocialApi.removeFriend(selectedOnlineEntry.userId);
         } else {
           await window.appSocialApi.addFriendByUserId(selectedOnlineEntry.userId);
