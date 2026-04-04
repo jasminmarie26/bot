@@ -30,7 +30,12 @@
     <nav class="rp-menu" aria-label="Festspiel-Raumliste Navigation">
       <a href="/dashboard/areas/<%= character.server_id %>" target="_blank" rel="noopener noreferrer">Serverliste</a>
       <% if (festplayRoomIsOwner) { %>
-        <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Festspiel</a>
+        <a
+          href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-live-character-href-template="/characters/__CHARACTER_ID__/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor"
+        >Festspiel</a>
       <% } %>
       <a
         class="rp-board-nav-link"
@@ -38,6 +43,7 @@
         target="_blank"
         rel="noopener noreferrer"
         data-rp-board-link-root
+        data-live-character-href-template="/rp-board?server_id=__SERVER_ID__&character_id=__CHARACTER_ID__"
         data-rp-board-server-id="<%= character.server_id %>"
         data-rp-board-festplay-id="0"
         data-rp-board-character-id="<%= Number(character.id) %>"
@@ -113,15 +119,30 @@
             <span>Konto: <%= festplayRoomAccountDisplayName %></span>
           <% } %>
           <span>Festspiel: <%= festplay.name %></span>
-          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+          <span data-live-character-server-label>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
           <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
-          <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
-          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
-          <a href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor" target="_blank" rel="noopener noreferrer">Meine Festplays</a>
+          <a
+            href="/characters/<%= character.id %>/edit"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
+          >Charakter editieren</a>
+          <a
+            href="/characters/<%= character.id %>/guestbook"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-live-character-href-template="/characters/__CHARACTER_ID__/guestbook"
+          >G&auml;stebuch</a>
+          <a
+            href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-live-character-href-template="/characters/__CHARACTER_ID__/festplays?selected_festplay=<%= festplay.id %>#festplay-selected-editor"
+          >Meine Festplays</a>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
         </nav>
 

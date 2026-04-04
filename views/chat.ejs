@@ -35,22 +35,25 @@
     ? "Moderatorenbereich im neuen Tab öffnen"
     : chatIdentityName; %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
-<% const chatRoomListHref = activeCharacter
-  ? (isFestplayContext
-      ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
-      : `/characters/${activeCharacter.id}#roomlist`)
-  : "/dashboard"; %>
-<% const chatRoomListHrefTemplate = activeCharacter
-  ? (isFestplayContext
-      ? `/characters/__CHARACTER_ID__/festplays/${activeRoom.festplay_id}/rooms`
-      : "/characters/__CHARACTER_ID__#roomlist")
-  : ""; %>
+<% const chatCharacterServerId = activeCharacter?.server_id || activeServerId; %>
+<% const chatRoomListHref = isFestplayContext && activeCharacter
+  ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
+  : chatCharacterServerId === "larp"
+    ? "/dashboard/larp"
+    : chatCharacterServerId === "free-rp" || chatCharacterServerId === "erp"
+      ? `/dashboard/areas/${chatCharacterServerId}`
+      : "/dashboard"; %>
+<% const chatRoomListHrefTemplate = isFestplayContext && activeCharacter
+  ? `/characters/__CHARACTER_ID__/festplays/${activeRoom.festplay_id}/rooms`
+  : chatCharacterServerId === "free-rp" || chatCharacterServerId === "erp"
+    ? "/dashboard/areas/__SERVER_ID__"
+    : ""; %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
 <% const chatBoardHref = `/rp-board?server_id=${chatBoardServerId}&character_id=${Number(chatBoardCharacterId)}`; %>
 <% const chatBoardHrefTemplate = activeCharacter
-  ? `/rp-board?server_id=${chatBoardServerId}&character_id=__CHARACTER_ID__`
+  ? "/rp-board?server_id=__SERVER_ID__&character_id=__CHARACTER_ID__"
   : ""; %>
 <% const chatBackgroundColor = /^#[0-9a-f]{6}$/i.test(String(activeCharacter?.chat_background_color || "").trim())
   ? String(activeCharacter.chat_background_color).trim().toUpperCase()
@@ -80,7 +83,12 @@
       >Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
-        <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+        <a
+          href="/characters/<%= activeCharacter.id %>/festplays/public"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-chat-character-href-template="/characters/__CHARACTER_ID__/festplays/public"
+        >Festspiele</a>
       <% } %>
       <a
         class="rp-board-nav-link"
@@ -221,7 +229,7 @@
               <span>Account Nr.: <%= currentUser.account_number %></span>
             <% } %>
           <% if (activeCharacter) { %>
-            <span>Server: <%= activeServerId === "erp" ? "ERP" : "FREE-RP" %></span>
+            <span>Server: <%= activeCharacter.server_id === "larp" ? "LARP" : (activeCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
           <% } %>
         </div>
 

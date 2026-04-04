@@ -1,6 +1,14 @@
 (() => {
   const presenceSource = document.querySelector("[data-server-presence]");
   const headerIdentity = document.querySelector("[data-header-identity]");
+  const userMenuIdentityTargets = Array.from(
+    document.querySelectorAll(".topbar-user-menu-meta > strong, .rp-user-menu-meta > strong")
+  );
+  const liveCharacterLinkTargets = Array.from(document.querySelectorAll("[data-live-character-href-template]"));
+  const liveCharacterNameTargets = Array.from(document.querySelectorAll("[data-live-character-name]"));
+  const liveCharacterServerLabelTargets = Array.from(
+    document.querySelectorAll("[data-live-character-server-label]")
+  );
   let roomWatchTargets = [];
   let roomLockTargets = [];
   let roomLinkTargets = [];
@@ -57,6 +65,87 @@
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
   }
 
+  function normalizeServerLabel(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === "larp") {
+      return "LARP";
+    }
+    if (normalized === "erp") {
+      return "ERP";
+    }
+    if (normalized === "free-rp") {
+      return "FREE-RP";
+    }
+    return normalized ? normalized.toUpperCase() : "FREE-RP";
+  }
+
+  function applySpecialNameDecor(node, rawName) {
+    if (!node) return;
+    const label = String(rawName || node.textContent || "").trim();
+    node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
+    node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
+  }
+
+  function setIdentityNodeAppearance(node, name, { roleStyle = "", chatTextColor = "" } = {}) {
+    if (!node) {
+      return;
+    }
+
+    const nextName = String(name || "").trim();
+    const nextRoleStyle = String(roleStyle || "").trim().toLowerCase();
+    const nextChatTextColor = normalizeChatTextColor(chatTextColor);
+
+    if (!nextName) {
+      return;
+    }
+
+    node.textContent = nextName;
+    node.title = nextName;
+    node.classList.toggle("role-name-admin", nextRoleStyle === "admin");
+    node.classList.toggle("role-name-moderator", nextRoleStyle === "moderator");
+    applySpecialNameDecor(node, nextName);
+
+    if (nextRoleStyle) {
+      node.style.removeProperty("color");
+      return;
+    }
+
+    if (nextChatTextColor) {
+      node.style.color = nextChatTextColor;
+      return;
+    }
+
+    node.style.removeProperty("color");
+  }
+
+  function syncLiveCharacterLinks(characterId, serverIdValue = "") {
+    const nextCharacterId = normalizePositiveNumber(characterId);
+    if (!nextCharacterId) {
+      return;
+    }
+
+    const nextServerId = String(serverIdValue || serverId || "").trim().toLowerCase();
+    liveCharacterLinkTargets.forEach((node) => {
+      const hrefTemplate = String(node?.dataset?.liveCharacterHrefTemplate || "").trim();
+      if (!hrefTemplate) {
+        return;
+      }
+
+      let nextHref = hrefTemplate.replace(/__CHARACTER_ID__/g, String(nextCharacterId));
+      if (nextServerId) {
+        nextHref = nextHref.replace(/__SERVER_ID__/g, nextServerId);
+      }
+
+      node.href = nextHref;
+      if (node.hasAttribute("data-rp-board-character-id")) {
+        node.setAttribute("data-rp-board-character-id", String(nextCharacterId));
+      }
+      if (node.hasAttribute("data-rp-board-server-id") && nextServerId) {
+        node.setAttribute("data-rp-board-server-id", nextServerId);
+      }
+    });
+  }
+
   function normalizeSocialState(payload) {
     const ignoredAccountUserIds = Array.isArray(payload?.ignored_account_user_ids)
       ? payload.ignored_account_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
@@ -92,17 +181,41 @@
   }
 
   function updateHeaderIdentity(payload) {
-    if (!headerIdentity) return;
     const nextName = String(payload?.name || "").trim();
     const nextColor = normalizeChatTextColor(payload?.chat_text_color);
     const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
-    if (!nextName) return;
+    const nextServerId = String(payload?.server_id || serverId || "").trim().toLowerCase();
+    const nextCharacterId = normalizePositiveNumber(payload?.character_id);
 
-    headerIdentity.textContent = nextName;
-    headerIdentity.title = nextName;
-    headerIdentity.classList.toggle("role-name-admin", nextRoleStyle === "admin");
-    headerIdentity.classList.toggle("role-name-moderator", nextRoleStyle === "moderator");
-    headerIdentity.style.color = nextRoleStyle ? "" : nextColor;
+    if (presenceSource && Object.prototype.hasOwnProperty.call(payload || {}, "character_id")) {
+      presenceSource.dataset.activeCharacterId = nextCharacterId ? String(nextCharacterId) : "";
+    }
+
+    syncLiveCharacterLinks(nextCharacterId, nextServerId);
+
+    if (nextName) {
+      setIdentityNodeAppearance(headerIdentity, nextName, {
+        roleStyle: nextRoleStyle,
+        chatTextColor: nextColor
+      });
+      userMenuIdentityTargets.forEach((node) => {
+        setIdentityNodeAppearance(node, nextName, {
+          roleStyle: nextRoleStyle,
+          chatTextColor: nextColor
+        });
+      });
+      liveCharacterNameTargets.forEach((node) => {
+        node.textContent = `Charakter: ${nextName}`;
+        node.title = nextName;
+      });
+    }
+
+    if (nextServerId) {
+      const nextServerLabel = normalizeServerLabel(nextServerId);
+      liveCharacterServerLabelTargets.forEach((node) => {
+        node.textContent = `Server: ${nextServerLabel}`;
+      });
+    }
   }
 
   function createOccupantNode(entry) {

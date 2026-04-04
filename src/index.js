@@ -19609,10 +19609,82 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     name: profile.label || memberSocket?.data?.user?.display_name || memberSocket?.data?.user?.username || "User",
     role_style: profile.role_style || "",
     chat_text_color: profile.chat_text_color || "",
+    server_id: normalizedServerId,
     character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId),
     auto_afk_enabled: normalizeAutoAfkEnabled(memberSocket?.data?.user?.auto_afk_enabled),
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(memberSocket?.data?.user?.afk_timeout_minutes)
   });
+}
+
+function syncPreferredCharacterSelectionForUser(userId, serverId = DEFAULT_SERVER_ID, characterId = null, options = {}) {
+  const parsedUserId = Number(userId);
+  const normalizedServerId = normalizeServer(serverId);
+  const parsedCharacterId = Number(characterId);
+  const focusSocketId = String(options?.focusSocketId || "").trim();
+  const targetCharacter = getPreferredCharacterForUser(parsedUserId, normalizedServerId, parsedCharacterId);
+  if (!targetCharacter?.id) {
+    return null;
+  }
+
+  const sockets = getAllSocketsForUser(parsedUserId);
+  const roomsToRefresh = new Set();
+  const typingRefreshTargets = [];
+
+  sockets.forEach((memberSocket) => {
+    memberSocket.data.preferredCharacterIds = normalizePreferredCharacterMap(memberSocket.data.preferredCharacterIds);
+    memberSocket.data.preferredCharacterIds[normalizedServerId] = Number(targetCharacter.id);
+
+    const memberSocketServerId = getSocketChatServerId(memberSocket) || getSocketPresenceServerId(memberSocket);
+    const shouldActivateSocket =
+      memberSocket.id === focusSocketId ||
+      (memberSocket.data?.hasJoinedChat !== true && memberSocketServerId === normalizedServerId);
+    if (shouldActivateSocket) {
+      memberSocket.data.activeCharacterId = Number(targetCharacter.id);
+    }
+
+    if (memberSocket.request?.session) {
+      const preferredMap = normalizePreferredCharacterMap(memberSocket.request.session.preferred_character_ids);
+      preferredMap[normalizedServerId] = Number(targetCharacter.id);
+      memberSocket.request.session.preferred_character_ids = preferredMap;
+      memberSocket.request.session.preferred_character_server_id = normalizedServerId;
+      memberSocket.request.session.save(() => {});
+    }
+
+    if (shouldActivateSocket) {
+      emitUserDisplayProfileToSocket(memberSocket);
+    }
+
+    const roomId =
+      Number.isInteger(memberSocket.data?.roomId) && memberSocket.data.roomId > 0
+        ? memberSocket.data.roomId
+        : null;
+    const roomServerId = getSocketChatServerId(memberSocket);
+    const standardRoomId = roomId
+      ? ""
+      : getStandardRoomContext(roomServerId || DEFAULT_SERVER_ID, memberSocket.data?.standardRoomId).standardRoomId;
+
+    if (roomServerId) {
+      roomsToRefresh.add(`${roomServerId}:${roomId == null ? `standard:${standardRoomId}` : roomId}`);
+      if (memberSocket.data?.isTyping) {
+        typingRefreshTargets.push({ socket: memberSocket, roomId, serverId: roomServerId, standardRoomId });
+      }
+    }
+  });
+
+  roomsToRefresh.forEach((entry) => {
+    const [roomServerId, roomKey, standardRoomKey = ""] = String(entry).split(":");
+    const roomId = roomKey === "standard" ? null : Number(roomKey);
+    emitOnlineCharacters(roomId, roomServerId, roomId == null ? standardRoomKey : "");
+  });
+
+  typingRefreshTargets.forEach(({ socket, roomId, serverId: roomServerId, standardRoomId }) => {
+    emitChatTypingState(socket, roomId, roomServerId, standardRoomId);
+  });
+
+  emitSocialStateUpdatesForRelatedUsers(parsedUserId);
+  emitHomeStatsUpdate();
+
+  return targetCharacter;
 }
 
 function refreshConnectedUserDisplay(userId) {
@@ -22384,15 +22456,7 @@ io.on("connection", (socket) => {
       }
     }
 
-    socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
-    if (preferredCharacter?.id) {
-      socket.data.preferredCharacterIds[nextServerId] = preferredCharacter.id;
-      socket.data.activeCharacterId = preferredCharacter.id;
-      if (socket.request.session) {
-        socket.request.session.preferred_character_ids = socket.data.preferredCharacterIds;
-        socket.request.session.save(() => {});
-      }
-    } else {
+    if (!preferredCharacter?.id) {
       socket.data.activeCharacterId = null;
     }
 
@@ -22402,6 +22466,11 @@ io.on("connection", (socket) => {
     socket.data.hasJoinedChat = true;
     const previousPresenceServerId = socket.data.presenceServerId;
     socket.data.presenceServerId = nextServerId;
+    if (preferredCharacter?.id) {
+      syncPreferredCharacterSelectionForUser(socket.data.user.id, nextServerId, preferredCharacter.id, {
+        focusSocketId: socket.id
+      });
+    }
     markSocketChatActivity(socket);
     socket.join(socketChannelForRoom(nextRoomId, nextServerId, nextStandardRoomId));
     emitGuestbookNotificationUpdateForUser(socket.data.user.id);
@@ -22861,13 +22930,9 @@ io.on("connection", (socket) => {
         }, currentCharacterId, standardRoomId);
       }
 
-      socket.data.preferredCharacterIds = normalizePreferredCharacterMap(socket.data.preferredCharacterIds);
-      socket.data.preferredCharacterIds[serverId] = Number(targetCharacter.id);
-      socket.data.activeCharacterId = Number(targetCharacter.id);
-      if (socket.request.session) {
-        socket.request.session.preferred_character_ids = socket.data.preferredCharacterIds;
-        socket.request.session.save(() => {});
-      }
+      syncPreferredCharacterSelectionForUser(socket.data.user.id, serverId, targetCharacter.id, {
+        focusSocketId: socket.id
+      });
 
       const nextDisplayProfile = getSocketDisplayProfile(socket, serverId);
       const nextDisplayName = nextDisplayProfile?.label || String(targetCharacter.name || "").trim() || previousDisplayName;

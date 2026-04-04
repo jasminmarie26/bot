@@ -53,6 +53,7 @@
   const standardRoomId = (chatBox?.dataset?.standardRoomId || "").trim().toLowerCase();
   const currentCharacterName = String(chatBox?.dataset?.currentCharacterName || "").trim();
   let currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
+  let currentDisplayServerId = String(chatBox?.dataset?.serverId || serverId || "").trim().toLowerCase();
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
   const currentUserIsAdmin = document.body?.dataset?.currentUserIsAdmin === "true";
   function isStandaloneAppMode() {
@@ -158,9 +159,8 @@
   };
   if (!chatBox || !form || !input) return;
   const defaultDocumentTitle = String(document.title || "Heldenhafte Reisen").trim() || "Heldenhafte Reisen";
-  const siteTitleLabel = defaultDocumentTitle.includes("|")
-    ? String(defaultDocumentTitle.split("|").pop() || defaultDocumentTitle).trim() || defaultDocumentTitle
-    : defaultDocumentTitle;
+  const chatTabSiteLabel = "HR";
+  const siteTitleLabel = chatTabSiteLabel;
   let unreadChatTabCount = 0;
 
   function getCurrentRoomLabel() {
@@ -168,6 +168,24 @@
     return String(titleTextNode?.textContent || chatRoomTitle?.textContent || "")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  function buildPreferredChatTabTitleBase() {
+    const titleParts = [];
+    const nextDisplayName = String(currentDisplayName || chatBox?.dataset?.currentDisplayName || "").trim();
+    const roomLabel = getCurrentRoomLabel();
+
+    if (nextDisplayName) {
+      titleParts.push(nextDisplayName);
+    }
+    if (nextDisplayName || roomLabel) {
+      titleParts.push(chatTabSiteLabel);
+    }
+    if (roomLabel) {
+      titleParts.push(roomLabel);
+    }
+
+    return titleParts.length ? titleParts.join(" \u2022 ") : defaultDocumentTitle;
   }
 
   function buildChatTabTitleBase() {
@@ -178,6 +196,9 @@
     if (nextDisplayName) {
       titleParts.push(nextDisplayName);
     }
+    if (nextDisplayName || roomLabel) {
+      titleParts.push(chatTabSiteLabel);
+    }
     if (roomLabel) {
       titleParts.push(roomLabel);
     }
@@ -186,7 +207,7 @@
   }
 
   function updateChatTabTitle() {
-    const nextBaseTitle = buildChatTabTitleBase();
+    const nextBaseTitle = buildPreferredChatTabTitleBase();
     document.title = unreadChatTabCount > 0
       ? `(${unreadChatTabCount}) ${nextBaseTitle}`
       : nextBaseTitle;
@@ -221,15 +242,25 @@
     }
 
     const nextCharacterId = String(currentActiveCharacterId);
+    const nextServerId = String(currentDisplayServerId || serverId || chatBox?.dataset?.serverId || "")
+      .trim()
+      .toLowerCase();
     chatCharacterLinkTargets.forEach((node) => {
       const hrefTemplate = String(node?.dataset?.chatCharacterHrefTemplate || "").trim();
       if (!hrefTemplate) {
         return;
       }
 
-      node.href = hrefTemplate.replace(/__CHARACTER_ID__/g, nextCharacterId);
+      let nextHref = hrefTemplate.replace(/__CHARACTER_ID__/g, nextCharacterId);
+      if (nextServerId) {
+        nextHref = nextHref.replace(/__SERVER_ID__/g, nextServerId);
+      }
+      node.href = nextHref;
       if (node.hasAttribute("data-rp-board-character-id")) {
         node.setAttribute("data-rp-board-character-id", nextCharacterId);
+      }
+      if (node.hasAttribute("data-rp-board-server-id") && nextServerId) {
+        node.setAttribute("data-rp-board-server-id", nextServerId);
       }
     });
   }
@@ -798,6 +829,10 @@
   }
 
   function updateHeaderIdentity(payload) {
+    const nextServerId = String(payload?.server_id || "").trim().toLowerCase();
+    if (nextServerId) {
+      currentDisplayServerId = nextServerId;
+    }
     updateCurrentPresenceIdentity(payload);
     applyAfkPreferences(payload);
     const nextName = String(payload?.name || "").trim();

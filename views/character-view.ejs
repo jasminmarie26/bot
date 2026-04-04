@@ -56,7 +56,12 @@
         <a href="<%= roomlistAreaHref %>" <%= roomlistAreaTarget ? `target="${roomlistAreaTarget}" rel="${roomlistAreaRel}"` : "" %>><%= roomlistAreaLabel %></a>
         <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
-          <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+          <a
+            href="/characters/<%= character.id %>/festplays/public"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-live-character-href-template="/characters/__CHARACTER_ID__/festplays/public"
+          >Festspiele</a>
         <% } %>
         <% if (!isLarpCharacterView) { %>
           <a
@@ -65,6 +70,7 @@
             target="_blank"
             rel="noopener noreferrer"
             data-rp-board-link-root
+            data-live-character-href-template="/rp-board?server_id=__SERVER_ID__&character_id=__CHARACTER_ID__"
             data-rp-board-server-id="<%= roomlistBoardServerId %>"
             data-rp-board-festplay-id="0"
             data-rp-board-character-id="<%= Number(roomlistBoardCharacterId) %>"
@@ -141,7 +147,7 @@
           <% if (characterCreatedAtLabel) { %>
             <span>Charakter erstellt: <%= characterCreatedAtLabel %></span>
           <% } %>
-          <span>Server: <%= character.server_id === "larp" ? "LARP" : (character.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
+          <span data-live-character-server-label>Server: <%= character.server_id === "larp" ? "LARP" : (character.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
@@ -152,16 +158,23 @@
               href="/characters/<%= character.id %>/edit"
               target="_blank"
               rel="noopener noreferrer"
+              data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
             >
               Charakter editieren
             </a>
           <% } %>
-          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+          <a
+            href="/characters/<%= character.id %>/guestbook"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-live-character-href-template="/characters/__CHARACTER_ID__/guestbook"
+          >G&auml;stebuch</a>
           <% if (isOwner && !isLarpCharacterView) { %>
             <a
               href="/characters/<%= character.id %>/rooms/new"
               target="_blank"
               rel="noopener noreferrer"
+              data-live-character-href-template="/characters/__CHARACTER_ID__/rooms/new"
             >
               Raum erstellen/editieren
             </a>
@@ -171,6 +184,7 @@
               href="/characters/<%= character.id %>/festplays"
               target="_blank"
               rel="noopener noreferrer"
+              data-live-character-href-template="/characters/__CHARACTER_ID__/festplays"
             >Meine Festplays</a>
           <% } %>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>

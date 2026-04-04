@@ -354,7 +354,12 @@
                 <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
                 <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
-                  <a href="/characters/<%= menuCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+                  <a
+                    href="/characters/<%= menuCharacter.id %>/festplays/public"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-live-character-href-template="/characters/__CHARACTER_ID__/festplays/public"
+                  >Festspiele</a>
                 <% } %>
                 <% if (showTopbarRpBoardLink) { %>
                   <a
@@ -363,6 +368,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     data-rp-board-link-root
+                    data-live-character-href-template="/rp-board?server_id=__SERVER_ID__&character_id=__CHARACTER_ID__"
                     data-rp-board-server-id="<%= menuCharacter.server_id %>"
                     data-rp-board-festplay-id="0"
                     data-rp-board-character-id="<%= Number(menuCharacter.id) %>"
@@ -443,8 +449,8 @@
                     <% } %>
                     <span>Account Nr.: <%= currentUser.account_number %></span>
                     <% if (menuCharacter) { %>
-                      <span>Charakter: <%= menuCharacter.name %></span>
-                      <span>Server: <%= menuCharacter.server_id === "larp" ? "LARP" : (menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
+                      <span data-live-character-name>Charakter: <%= menuCharacter.name %></span>
+                      <span data-live-character-server-label>Server: <%= menuCharacter.server_id === "larp" ? "LARP" : (menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
                     <% } %>
                   </div>
 
@@ -454,13 +460,28 @@
                       <a href="/dashboard" target="_blank" rel="noopener noreferrer">Charakterliste</a>
                     <% } %>
                     <% if (menuCharacter) { %>
-                      <a href="/characters/<%= menuCharacter.id %>">Charakter</a>
+                      <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Charakter</a>
                       <% if (canEditMenuCharacter) { %>
-                        <a href="/characters/<%= menuCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+                        <a
+                          href="/characters/<%= menuCharacter.id %>/edit"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
+                        >Charakter editieren</a>
                       <% } %>
-                      <a href="/characters/<%= menuCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+                      <a
+                        href="/characters/<%= menuCharacter.id %>/guestbook"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-live-character-href-template="/characters/__CHARACTER_ID__/guestbook"
+                      >G&auml;stebuch</a>
                       <% if (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp") { %>
-                        <a href="/characters/<%= menuCharacter.id %>/festplays" target="_blank" rel="noopener noreferrer">Meine Festplays</a>
+                        <a
+                          href="/characters/<%= menuCharacter.id %>/festplays"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-live-character-href-template="/characters/__CHARACTER_ID__/festplays"
+                        >Meine Festplays</a>
                       <% } %>
                     <% } %>
                     <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
