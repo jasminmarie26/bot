@@ -1,6 +1,4 @@
 <%
-  const hideTopbar = true;
-  const pageClass = "page-guestbook-preview";
   const isTransparentPurTheme = String(guestbookSettings?.theme_style || "").trim().toLowerCase() === "transparent-pur";
   const isFullyTransparentGuestbookColor = (value) => {
     const normalized = String(value || "").trim().toUpperCase();
@@ -82,35 +80,36 @@
     `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
   ].filter(Boolean).join(";");
 %>
-<%- include("partials/start", { hideTopbar, pageClass, enableRealtime: false }) %>
+<%
+  const guestbookEntryColor = guestbookPageTextColor || "#EED7AE";
+  const guestbookPanelImage = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.image_url || guestbookSettings?.inner_image_url || "").trim();
+  const guestbookPanelColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
+  const guestbookPanelImageCss = guestbookPanelImage ? `url(${JSON.stringify(guestbookPanelImage)})` : "";
+  const guestbookPanelFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
+%>
+<%- include("partials/start", {
+  topbarCharacter,
+  topbarGuestbookMode: true,
+  characterCreatedAtLabel,
+  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`,
+  enableRealtime: false
+}) %>
 
-<section class="guestbook-preview-shell" style="<%= guestbookPreviewShellStyle %>">
-  <header class="guestbook-preview-header">
-    <div class="guestbook-preview-header-row">
-      <div class="guestbook-preview-brandline">
-        <span class="guestbook-preview-name">
-          <% if (guestbookNameWrapperClass) { %>
-            <span class="<%= guestbookNameWrapperClass %>"><%= character.name %></span>
-          <% } else { %>
-            <%= character.name %>
-          <% } %>
-        </span>
-        <span class="guestbook-preview-separator">-</span>
-        <span class="guestbook-preview-label">G&auml;stebuch-Vorschau</span>
-      </div>
+<style>
+  body.page-guestbook-view {
+    --gb-entry-color: <%= guestbookEntryColor %>;
+    --gb-panel-bg-color: <%= guestbookPanelColor %>;
+    --gb-panel-image: <%= guestbookPanelImageCss %>;
+  }
+</style>
 
-      <div class="guestbook-preview-actions">
-        <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zur&uuml;ck zum Editor</a>
-        <a class="btn" href="/characters/<%= character.id %>/guestbook?page_id=<%= pageId %>" target="_blank" rel="noopener noreferrer">Gespeichertes G&auml;stebuch</a>
-      </div>
-    </div>
-
-    <p class="guestbook-preview-subtitle">
-      Ungespeicherte Vorschau von Seite <strong><%= pageNumber %></strong>.
-    </p>
-  </header>
-
-  <div class="guestbook-page-shell guestbook-preview-page-shell">
+<div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookPreviewShellStyle %>">
+  <section class="guestbook-layout">
+    <div class="guestbook-page-shell guestbook-preview-page-shell">
     <%- include("partials/guestbook-page-nav", { guestbookPageNavigation }) %>
 
     <article
@@ -126,8 +125,11 @@
         <p class="muted">Diese Seite ist noch leer.</p>
       <% } %>
     </article>
-  </div>
-</section>
+    </div>
+  </section>
+
+  <section class="guestbook-entry-panel" id="guestbook-entry-panel" hidden aria-hidden="true"></section>
+</div>
 
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 

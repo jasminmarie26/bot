@@ -8259,22 +8259,55 @@ function normalizeBbcodeFontStyleToken(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function sanitizeBbcodeFontStyle(rawFontStyle) {
+function sanitizeBbcodeFontFamily(rawFontStyle) {
+  return String(rawFontStyle || "")
+    .trim()
+    .replace(/\+/g, " ")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/[<>{}\[\]();:"\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 80)
+    .trim();
+}
+
+function resolveBbcodeFontStyle(rawFontStyle) {
   const normalizedToken = normalizeBbcodeFontStyleToken(rawFontStyle);
-  if (!normalizedToken) {
-    return "";
+  if (normalizedToken) {
+    if (GUESTBOOK_FONT_STYLE_OPTIONS.has(normalizedToken)) {
+      return {
+        style: GUESTBOOK_BBCODE_FONT_STYLES[normalizedToken] || "",
+        webFamily: ""
+      };
+    }
+
+    const matchedFontOption = GUESTBOOK_FONT_OPTIONS.find((option) => (
+      normalizeBbcodeFontStyleToken(option?.id) === normalizedToken ||
+      normalizeBbcodeFontStyleToken(option?.label) === normalizedToken
+    ));
+
+    if (matchedFontOption?.id) {
+      return {
+        style: GUESTBOOK_BBCODE_FONT_STYLES[matchedFontOption.id] || "",
+        webFamily: ""
+      };
+    }
   }
 
-  if (GUESTBOOK_FONT_STYLE_OPTIONS.has(normalizedToken)) {
-    return normalizedToken;
+  const safeFontFamily = sanitizeBbcodeFontFamily(rawFontStyle);
+  if (
+    !safeFontFamily ||
+    !/^[A-Za-z0-9][A-Za-z0-9 '&-]*$/i.test(safeFontFamily)
+  ) {
+    return {
+      style: "",
+      webFamily: ""
+    };
   }
 
-  const matchedFontOption = GUESTBOOK_FONT_OPTIONS.find((option) => (
-    normalizeBbcodeFontStyleToken(option?.id) === normalizedToken ||
-    normalizeBbcodeFontStyleToken(option?.label) === normalizedToken
-  ));
-
-  return matchedFontOption?.id || "";
+  return {
+    style: `font-family:${safeFontFamily}, var(--font-ui);`,
+    webFamily: safeFontFamily
+  };
 }
 
 function normalizeCommonBbcodeUrlTypos(rawUrl) {
@@ -8647,10 +8680,12 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   });
 
   html = html.replace(createBbcodeOptionRegex("font"), (full, rawFontStyle, inner) => {
-    const safeFontStyle = sanitizeBbcodeFontStyle(rawFontStyle);
-    const fontStyle = safeFontStyle ? GUESTBOOK_BBCODE_FONT_STYLES[safeFontStyle] || "" : "";
-    if (!fontStyle) return inner;
-    return `<span style="${fontStyle}">${inner}</span>`;
+    const fontConfig = resolveBbcodeFontStyle(rawFontStyle);
+    if (!fontConfig.style) return inner;
+    const fontDataset = fontConfig.webFamily
+      ? ` data-bb-font-family="${escapeHtml(fontConfig.webFamily)}"`
+      : "";
+    return `<span class="bb-font"${fontDataset} style="${escapeHtml(fontConfig.style)}">${inner}</span>`;
   });
 
   html = html.replace(createBbcodeOptionRegex("gradient"), (full, rawSpec, inner) => {
@@ -14639,7 +14674,7 @@ const HELP_BBCODE_EXAMPLES = [
   { title: "Kursiv", code: "[i]Das ist kursiv[/i]" },
   { title: "Unterstrichen", code: "[u]Das ist unterstrichen[/u]" },
   { title: "Farbe", code: "[color=#6ec8ff]Blauer Text[/color]" },
-  { title: "Schrift", code: "[font=cardo]Text in Cardo[/font]" },
+  { title: "Schrift", code: "[font=Great Vibes]Text in Great Vibes[/font]" },
   { title: "Gradient", code: "[0,0,ff7a7a,ffd36e]Leuchtender Titel[/gradient]" },
   { title: "Überschrift 1", code: "[h1]Überschrift 1[/h1]" },
   { title: "Überschrift 2", code: "[h2]Überschrift 2[/h2]" },
@@ -17555,6 +17590,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     previewPage.id,
     (pageId) => `/characters/${id}/guestbook/edit/preview?page_id=${pageId}`
   );
+  const topbarCharacter = getPreferredMenuCharacterForUser(req);
 
   return res.render("guestbook-preview", {
     title: `Vorschau: ${character.name}`,
@@ -17568,6 +17604,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       previewSettings?.page_text_color,
       previewSettings?.theme_style
     ),
+    topbarCharacter,
     previewHtml: renderGuestbookBbcode(previewContent, {
       compactImageLineBreaks: false,
       compactBlockLineBreaks: false
