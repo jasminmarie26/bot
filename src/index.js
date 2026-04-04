@@ -112,6 +112,32 @@ const GUESTBOOK_FONT_OPTIONS = [
   { id: "magie", label: "Magie Script" },
   { id: "vintage-fantasy", label: "Vintage Fantasy" }
 ];
+const GUESTBOOK_BBCODE_FONT_STYLES = Object.freeze({
+  default: "font-family:var(--font-ui);",
+  serif: "font-family:\"Cardo\", \"Times New Roman\", serif;",
+  sans: "font-family:var(--font-ui);",
+  mono: "font-family:\"Consolas\", \"Courier New\", monospace;",
+  audiowide: "font-family:\"Audiowide\", \"Trebuchet MS\", sans-serif;",
+  "berkshire-swash": "font-family:\"Berkshire Swash\", \"Palatino Linotype\", serif;",
+  cardo: "font-family:\"Cardo\", \"Times New Roman\", serif;",
+  "della-respira": "font-family:\"Della Respira\", \"Palatino Linotype\", serif;",
+  flamenco: "font-family:\"Flamenco\", var(--font-ui);",
+  "indie-flower": "font-family:\"Indie Flower\", \"Comic Sans MS\", cursive;",
+  "josefin-slab": "font-family:\"Josefin Slab\", \"Georgia\", serif;",
+  "kelly-slab": "font-family:\"Kelly Slab\", var(--font-ui);",
+  "medieval-sharp": "font-family:\"MedievalSharp\", \"Cinzel\", serif;",
+  "old-standard-tt": "font-family:\"Old Standard TT\", \"Times New Roman\", serif;",
+  "russo-one": "font-family:\"Russo One\", \"Arial Black\", sans-serif;",
+  sunshiney: "font-family:\"Sunshiney\", \"Comic Sans MS\", cursive;",
+  altdeutsch: "font-family:\"UnifrakturCook\", \"Old English Text MT\", serif;",
+  "altdeutsch-royal": "font-family:\"Pirata One\", \"Cinzel\", serif;",
+  jedi: "font-family:\"Poller One\", \"Russo One\", sans-serif;letter-spacing:0.02em;",
+  "jedi-tech": "font-family:\"Orbitron\", \"Audiowide\", sans-serif;letter-spacing:0.02em;",
+  elfisch: "font-family:\"Cinzel Decorative\", \"Cinzel\", serif;",
+  "elfisch-rune": "font-family:\"Metamorphous\", \"Cinzel\", serif;",
+  magie: "font-family:\"Great Vibes\", \"Berkshire Swash\", cursive;",
+  "vintage-fantasy": "font-family:\"IM Fell English SC\", \"Old Standard TT\", serif;"
+});
 const BIRTHDAY_GREETING_OPENERS = [
   "Herzlichen Glückwunsch zum Geburtstag, {name}!",
   "Alles Liebe zum Geburtstag, {name}!",
@@ -8223,6 +8249,34 @@ function sanitizeBbcodeColor(rawColor) {
   return null;
 }
 
+function normalizeBbcodeFontStyleToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function sanitizeBbcodeFontStyle(rawFontStyle) {
+  const normalizedToken = normalizeBbcodeFontStyleToken(rawFontStyle);
+  if (!normalizedToken) {
+    return "";
+  }
+
+  if (GUESTBOOK_FONT_STYLE_OPTIONS.has(normalizedToken)) {
+    return normalizedToken;
+  }
+
+  const matchedFontOption = GUESTBOOK_FONT_OPTIONS.find((option) => (
+    normalizeBbcodeFontStyleToken(option?.id) === normalizedToken ||
+    normalizeBbcodeFontStyleToken(option?.label) === normalizedToken
+  ));
+
+  return matchedFontOption?.id || "";
+}
+
 function normalizeCommonBbcodeUrlTypos(rawUrl) {
   let value = String(rawUrl || "").trim();
   if (!value) return "";
@@ -8400,6 +8454,7 @@ function normalizeBbcodeMarkup(rawContent) {
     "table",
     "quote",
     "color",
+    "font",
     "url",
     "img",
     "code",
@@ -8589,6 +8644,13 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const safeColor = sanitizeBbcodeColor(rawColor);
     if (!safeColor) return inner;
     return `<span style="color:${safeColor}">${inner}</span>`;
+  });
+
+  html = html.replace(createBbcodeOptionRegex("font"), (full, rawFontStyle, inner) => {
+    const safeFontStyle = sanitizeBbcodeFontStyle(rawFontStyle);
+    const fontStyle = safeFontStyle ? GUESTBOOK_BBCODE_FONT_STYLES[safeFontStyle] || "" : "";
+    if (!fontStyle) return inner;
+    return `<span style="${fontStyle}">${inner}</span>`;
   });
 
   html = html.replace(createBbcodeOptionRegex("gradient"), (full, rawSpec, inner) => {
@@ -14577,6 +14639,7 @@ const HELP_BBCODE_EXAMPLES = [
   { title: "Kursiv", code: "[i]Das ist kursiv[/i]" },
   { title: "Unterstrichen", code: "[u]Das ist unterstrichen[/u]" },
   { title: "Farbe", code: "[color=#6ec8ff]Blauer Text[/color]" },
+  { title: "Schrift", code: "[font=cardo]Text in Cardo[/font]" },
   { title: "Gradient", code: "[0,0,ff7a7a,ffd36e]Leuchtender Titel[/gradient]" },
   { title: "Überschrift 1", code: "[h1]Überschrift 1[/h1]" },
   { title: "Überschrift 2", code: "[h2]Überschrift 2[/h2]" },
