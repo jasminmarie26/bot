@@ -54,7 +54,9 @@
     guestbookFrameColor ? `--gb-frame-color:${guestbookFrameColor}` : "",
     guestbookBackgroundColor ? `--gb-background-color:${guestbookBackgroundColor}` : "",
     shouldHideGuestbookThemeShadow ? "--gb-theme-shadow:none" : "",
-    guestbookSettings?.inner_image_url ? `--gb-inner-image:${buildGuestbookCssUrl(guestbookSettings.inner_image_url)}` : "",
+    !isTransparentPurTheme && guestbookSettings?.inner_image_url
+      ? `--gb-inner-image:${buildGuestbookCssUrl(guestbookSettings.inner_image_url)}`
+      : "",
     `--gb-inner-image-opacity:${innerImageOpacity / 100}`,
     `--gb-inner-image-repeat:${innerImageRepeat ? "repeat" : "no-repeat"}`,
     `--gb-inner-image-size:${innerImageRepeat ? "auto" : "cover"}`,
@@ -71,7 +73,9 @@
     : (isGuestbookNameCrescentia ? "crescentia-nameplate" : "");
   const guestbookPreviewShellStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
-    guestbookSettings?.outer_image_url ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}` : "",
+    !isTransparentPurTheme && guestbookSettings?.outer_image_url
+      ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}`
+      : "",
     `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
     `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
     `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
