@@ -7,33 +7,54 @@
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
 
-  <h2>Einstellungen</h2>
-
-  <div class="gb-editor-section">
-    <span class="gb-editor-subheading">Zensur</span>
-    <div class="gb-radio-list">
-      <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
-      <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
-      <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
-    </div>
+  <div class="gb-editor-heading">
+    <h2>Einstellungen</h2>
+    <span class="gb-editor-helptext">Kompakter Aufbau mit allen Design-Funktionen direkt im Blick.</span>
   </div>
 
-  <label>
-    Style
-    <select name="theme_style">
-      <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
-      <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
-      <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
-      <option value="elfenhain" <%= settings.theme_style === "elfenhain" ? "selected" : "" %>>Elfenhain</option>
-      <option value="kupferpatina" <%= settings.theme_style === "kupferpatina" ? "selected" : "" %>>Kupferpatina</option>
-      <option value="bernsteinfeuer" <%= settings.theme_style === "bernsteinfeuer" ? "selected" : "" %>>Bernsteinfeuer</option>
-      <option value="sternsamt" <%= settings.theme_style === "sternsamt" ? "selected" : "" %>>Sternensamt</option>
-      <option value="winterglas" <%= settings.theme_style === "winterglas" ? "selected" : "" %>>Winterglas</option>
-      <option value="tintenmeer" <%= settings.theme_style === "tintenmeer" ? "selected" : "" %>>Tintenmeer</option>
-      <option value="obsidian-ornament" <%= settings.theme_style === "obsidian-ornament" ? "selected" : "" %>>Obsidian Ornament</option>
-    </select>
-  </label>
+  <div class="gb-editor-basics">
+    <div class="gb-editor-card gb-editor-section">
+      <span class="gb-editor-subheading">Zensur</span>
+      <span class="gb-editor-helptext">Direkt f&uuml;r diese Seite festlegen.</span>
+      <div class="gb-radio-list">
+        <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
+        <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
+        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
+      </div>
+    </div>
 
+    <label class="gb-editor-card gb-editor-card-field">
+      <span class="gb-editor-subheading">Style</span>
+      <span class="gb-editor-helptext">Enth&auml;lt jetzt auch ein rahmenloses Transparent-Design.</span>
+      <select name="theme_style">
+        <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
+        <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
+        <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
+        <option value="elfenhain" <%= settings.theme_style === "elfenhain" ? "selected" : "" %>>Elfenhain</option>
+        <option value="kupferpatina" <%= settings.theme_style === "kupferpatina" ? "selected" : "" %>>Kupferpatina</option>
+        <option value="bernsteinfeuer" <%= settings.theme_style === "bernsteinfeuer" ? "selected" : "" %>>Bernsteinfeuer</option>
+        <option value="sternsamt" <%= settings.theme_style === "sternsamt" ? "selected" : "" %>>Sternensamt</option>
+        <option value="winterglas" <%= settings.theme_style === "winterglas" ? "selected" : "" %>>Winterglas</option>
+        <option value="tintenmeer" <%= settings.theme_style === "tintenmeer" ? "selected" : "" %>>Tintenmeer</option>
+        <option value="obsidian-ornament" <%= settings.theme_style === "obsidian-ornament" ? "selected" : "" %>>Obsidian Ornament</option>
+        <option value="transparent-pur" <%= settings.theme_style === "transparent-pur" ? "selected" : "" %>>Transparent Pur</option>
+      </select>
+    </label>
+
+    <label class="gb-editor-card gb-editor-card-field">
+      <span class="gb-editor-subheading">Font</span>
+      <span class="gb-editor-helptext">Schriftwahl f&uuml;r Seite und Vorschau.</span>
+      <select name="font_style">
+        <% (guestbookFontOptions || []).forEach((fontOption) => { %>
+          <option value="<%= fontOption.id %>" <%= settings.font_style === fontOption.id ? "selected" : "" %>>
+            <%= fontOption.label %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
+  </div>
+
+  <div class="gb-editor-grid">
   <div class="gb-color-row">
     <div>
       <span class="gb-editor-subheading">Rahmenfarbe</span>
@@ -93,7 +114,7 @@
   <div class="gb-color-row">
     <div>
       <span class="gb-editor-subheading">Hintergrundfarbe</span>
-      <span class="gb-editor-helptext">Leer = Standard vom gew&auml;hlten Style.</span>
+      <span class="gb-editor-helptext">Beim Transparent-Design bleibt die Seite ohne Farbe leer und offen.</span>
     </div>
 
     <div class="gb-color-input-wrap">
@@ -211,10 +232,12 @@
   </div>
 
   <div class="gb-image-field">
-    <label>
-      Bild innerhalb des Rahmens
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">Bild innerhalb des Rahmens</span>
       <span class="gb-editor-helptext">Bild-URL f&uuml;r die Fl&auml;che direkt im G&auml;stebuchrahmen.</span>
       <span class="gb-editor-helptext">Wird automatisch skaliert, sichtbare Fl&auml;che bis ca. 620px Breite.</span>
+    </div>
+    <div class="gb-image-body">
       <input
         name="inner_image_url"
         value="<%= settings.inner_image_url || '' %>"
@@ -223,33 +246,34 @@
         spellcheck="false"
         autocomplete="off"
       />
-    </label>
+      <div class="gb-image-controls">
+        <label class="gb-image-toggle">
+          <input type="checkbox" name="clear_inner_image" value="1" />
+          Hintergrund l&ouml;schen
+        </label>
 
-    <div class="gb-image-controls">
-      <label class="gb-image-toggle">
-        <input type="checkbox" name="clear_inner_image" value="1" />
-        Hintergrund l&ouml;schen
-      </label>
-
-      <label class="gb-image-opacity-field">
-        Transparenz
-        <input
-          type="number"
-          name="inner_image_opacity"
-          min="0"
-          max="100"
-          step="1"
-          value="<%= Number.isFinite(Number(settings.inner_image_opacity)) ? Number(settings.inner_image_opacity) : 100 %>"
-        />
-      </label>
+        <label class="gb-image-opacity-field">
+          Transparenz
+          <input
+            type="number"
+            name="inner_image_opacity"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number.isFinite(Number(settings.inner_image_opacity)) ? Number(settings.inner_image_opacity) : 100 %>"
+          />
+        </label>
+      </div>
     </div>
   </div>
 
   <div class="gb-image-field">
-    <label>
-      Bild au&szlig;erhalb des Rahmens
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">Bild au&szlig;erhalb des Rahmens</span>
       <span class="gb-editor-helptext">Bild-URL f&uuml;r den Bereich um das G&auml;stebuch herum.</span>
       <span class="gb-editor-helptext">Wird automatisch als Hintergrund skaliert, keine feste Pixelgr&ouml;&szlig;e n&ouml;tig.</span>
+    </div>
+    <div class="gb-image-body">
       <input
         name="outer_image_url"
         value="<%= settings.outer_image_url || '' %>"
@@ -258,60 +282,65 @@
         spellcheck="false"
         autocomplete="off"
       />
-    </label>
+      <div class="gb-image-controls">
+        <label class="gb-image-toggle">
+          <input type="checkbox" name="clear_outer_image" value="1" />
+          Hintergrund l&ouml;schen
+        </label>
 
-    <div class="gb-image-controls">
-      <label class="gb-image-toggle">
-        <input type="checkbox" name="clear_outer_image" value="1" />
-        Hintergrund l&ouml;schen
-      </label>
-
-      <label class="gb-image-opacity-field">
-        Transparenz
-        <input
-          type="number"
-          name="outer_image_opacity"
-          min="0"
-          max="100"
-          step="1"
-          value="<%= Number.isFinite(Number(settings.outer_image_opacity)) ? Number(settings.outer_image_opacity) : 100 %>"
-        />
-      </label>
+        <label class="gb-image-opacity-field">
+          Transparenz
+          <input
+            type="number"
+            name="outer_image_opacity"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number.isFinite(Number(settings.outer_image_opacity)) ? Number(settings.outer_image_opacity) : 100 %>"
+          />
+        </label>
+      </div>
     </div>
   </div>
 
-  <label>
-    Font
-    <select name="font_style">
-      <% (guestbookFontOptions || []).forEach((fontOption) => { %>
-        <option value="<%= fontOption.id %>" <%= settings.font_style === fontOption.id ? "selected" : "" %>>
-          <%= fontOption.label %>
-        </option>
-      <% }) %>
-    </select>
-  </label>
-
-  <p class="gb-editor-link-row">
-    <a
-      class="gb-editor-text-link"
-      href="https://heldenhaftereisen.net/help/gaestebuch-design-bbcode"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      BBCode Hilfe
-    </a>
-  </p>
-  <div>
-    <span class="gb-editor-helptext">Normales BBCode-Bild im G&auml;stebuch: max. 600px Breite</span>
-    <span class="gb-editor-helptext">BBCode-Bild links oder rechts: max. 120px Breite</span>
-    <span class="gb-editor-helptext">Gro&szlig;es Bild oben auf der G&auml;stebuch-Seite: volle Breite, max. 240px H&ouml;he</span>
-    <span class="gb-editor-helptext">Bild innerhalb des Rahmens: wird als Hintergrund &uuml;ber die G&auml;stebuchfl&auml;che gelegt und automatisch skaliert; die Seite selbst liegt bei max. 620px Breite</span>
+  <div class="gb-editor-row gb-editor-notes-row">
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">BBCode</span>
+      <span class="gb-editor-helptext">Hilfe und Bildgr&ouml;&szlig;en kompakt an einer Stelle.</span>
+    </div>
+    <div class="gb-editor-row-content">
+      <p class="gb-editor-link-row">
+        <a
+          class="gb-editor-text-link"
+          href="https://heldenhaftereisen.net/help/gaestebuch-design-bbcode"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          BBCode Hilfe
+        </a>
+      </p>
+      <details class="gb-editor-notes">
+        <summary>Hinweise anzeigen</summary>
+        <div class="gb-editor-notes-list">
+          <span class="gb-editor-helptext">Normales BBCode-Bild im G&auml;stebuch: max. 600px Breite</span>
+          <span class="gb-editor-helptext">BBCode-Bild links oder rechts: max. 120px Breite</span>
+          <span class="gb-editor-helptext">Gro&szlig;es Bild oben auf der G&auml;stebuch-Seite: volle Breite, max. 240px H&ouml;he</span>
+          <span class="gb-editor-helptext">Bild innerhalb des Rahmens: wird als Hintergrund &uuml;ber die G&auml;stebuchfl&auml;che gelegt und automatisch skaliert; die Seite selbst liegt bei max. 620px Breite</span>
+        </div>
+      </details>
+    </div>
   </div>
 
-  <label>
-    Seiteninhalt (BBCode)
-    <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
-  </label>
+  <div class="gb-editor-content-row">
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">Seiteninhalt</span>
+      <span class="gb-editor-helptext">BBCode bleibt voll erhalten, nur die Darstellung des Editors ist kompakter.</span>
+    </div>
+    <div class="gb-editor-row-content">
+      <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
+    </div>
+  </div>
+  </div>
 
   </form>
 

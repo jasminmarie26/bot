@@ -67,7 +67,8 @@ const GUESTBOOK_THEME_TEXT_COLORS = {
   sternsamt: "#D9E1FF",
   winterglas: "#E4F2F6",
   tintenmeer: "#D0EEF4",
-  "obsidian-ornament": "#E7D1A3"
+  "obsidian-ornament": "#E7D1A3",
+  "transparent-pur": "#F4F7FB"
 };
 const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
 const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
@@ -81,7 +82,8 @@ const GUESTBOOK_THEME_STYLE_OPTIONS = new Set([
   "sternsamt",
   "winterglas",
   "tintenmeer",
-  "obsidian-ornament"
+  "obsidian-ornament",
+  "transparent-pur"
 ]);
 const GUESTBOOK_FONT_OPTIONS = [
   { id: "default", label: "Default" },
