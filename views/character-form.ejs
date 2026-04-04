@@ -2,7 +2,78 @@
 
 <% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
 
-<section class="panel character-form-panel">
+<% if (activeGuestbookEditor) { %>
+  <nav
+    class="panel character-editor-journey"
+    data-character-editor-journey
+    data-character-editor-storage-key="character-editor-step-<%= character.id %>"
+    aria-label="Bearbeitungsschritte"
+  >
+    <button
+      type="button"
+      class="character-editor-journey-arrow"
+      data-character-editor-nav="prev"
+      aria-label="Zum vorherigen Schritt"
+    >
+      &#8249;
+    </button>
+
+    <div class="character-editor-journey-track" role="tablist" aria-label="Bearbeitungsschritte">
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="character"
+        aria-controls="character-editor-panel-character"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">1</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Charakter bearbeiten</strong>
+          <small>Basis, Name und Chat</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="guestbook-design"
+        aria-controls="guestbook-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">2</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>G&auml;stebuch Design</strong>
+          <small>Theme, Farben und Stil</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="guestbook-content"
+        aria-controls="guestbook-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">3</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Inhalt &amp; Bilder</strong>
+          <small>Texte, Hinweise und Bilder</small>
+        </span>
+      </button>
+    </div>
+
+    <button
+      type="button"
+      class="character-editor-journey-arrow"
+      data-character-editor-nav="next"
+      aria-label="Zum n&auml;chsten Schritt"
+    >
+      &#8250;
+    </button>
+  </nav>
+<% } %>
+
+<section id="character-editor-panel-character" class="panel character-form-panel" data-character-editor-panel="character">
   <div class="header-line">
     <div>
       <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
@@ -270,11 +341,15 @@
 </section>
 
 <% if (activeGuestbookEditor) { const { pages, activePage, settings } = activeGuestbookEditor; %>
-  <section id="guestbook-design" class="panel character-form-panel character-guestbook-panel">
+  <section
+    id="guestbook-design"
+    class="panel character-form-panel character-guestbook-panel"
+    data-character-editor-panel="guestbook"
+  >
     <div class="header-line character-guestbook-header">
       <div>
-        <h2>G&auml;stebuch-Design</h2>
-        <p>Bearbeite das G&auml;stebuch direkt hier unter dem Charakter, ohne extra Editor-Link.</p>
+        <h2>G&auml;stebuch bearbeiten</h2>
+        <p>Schritt 2 regelt das Design, Schritt 3 Inhalt und Bilder. Alles bleibt direkt hier unter dem Charakter.</p>
       </div>
 
       <div class="gb-editor-actions">
@@ -303,6 +378,7 @@
         <% pages.forEach((page) => { %>
           <a
             class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+            data-character-guestbook-page-link
             href="/characters/<%= character.id %>/edit?guestbook_page_id=<%= page.id %>#guestbook-design"
           >
             <%= page.page_number %>
@@ -311,7 +387,13 @@
       </nav>
     <% } %>
 
-    <%- include("partials/guestbook-editor-form", { character, activePage, settings, guestbookEditorFormClass: "panel form gb-editor-form" }) %>
+    <%- include("partials/guestbook-editor-form", {
+      character,
+      activePage,
+      settings,
+      guestbookEditorFormClass: "panel form gb-editor-form",
+      guestbookEditorUseOuterNavigation: true
+    }) %>
   </section>
 <% } %>
 
@@ -875,6 +957,158 @@
 
     window.addEventListener("resize", syncOpenColorPanels);
     window.addEventListener("scroll", syncOpenColorPanels, true);
+  })();
+</script>
+
+<script>
+  (() => {
+    const journey = document.querySelector("[data-character-editor-journey]");
+    const characterPanel = document.querySelector('[data-character-editor-panel="character"]');
+    const guestbookPanel = document.querySelector('[data-character-editor-panel="guestbook"]');
+
+    if (!journey || !characterPanel || !guestbookPanel) {
+      return;
+    }
+
+    const stepOrder = ["character", "guestbook-design", "guestbook-content"];
+    const stepTriggers = Array.from(journey.querySelectorAll("[data-character-editor-step-trigger]"));
+    const prevButton = journey.querySelector('[data-character-editor-nav="prev"]');
+    const nextButton = journey.querySelector('[data-character-editor-nav="next"]');
+    const guestbookPageLinks = Array.from(document.querySelectorAll("[data-character-guestbook-page-link]"));
+    const storageKey = String(journey.dataset.characterEditorStorageKey || "").trim();
+    let activeStep = stepOrder[0];
+    let syncingGuestbookPage = false;
+
+    const getHashStep = () => {
+      const currentHash = String(window.location.hash || "").trim().toLowerCase();
+      if (currentHash === "#guestbook-content") {
+        return "guestbook-content";
+      }
+      if (currentHash === "#guestbook-design") {
+        return "guestbook-design";
+      }
+      return "";
+    };
+
+    const updateGuestbookPageLinkHashes = (stepName) => {
+      const nextHash = stepName === "guestbook-content" ? "#guestbook-content" : "#guestbook-design";
+
+      guestbookPageLinks.forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) {
+          return;
+        }
+
+        try {
+          const nextUrl = new URL(link.getAttribute("href") || "", window.location.origin);
+          nextUrl.hash = nextHash;
+          link.setAttribute("href", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+        } catch (error) {}
+      });
+    };
+
+    const persistStep = (stepName) => {
+      if (!storageKey) {
+        return;
+      }
+
+      try {
+        window.localStorage.setItem(storageKey, stepName);
+      } catch (error) {}
+    };
+
+    const getStoredStep = () => {
+      if (!storageKey) {
+        return "";
+      }
+
+      try {
+        return window.localStorage.getItem(storageKey) || "";
+      } catch (error) {
+        return "";
+      }
+    };
+
+    const setActiveStep = (stepName, persist = true) => {
+      const nextStep = stepOrder.includes(stepName) ? stepName : stepOrder[0];
+      const nextIndex = stepOrder.indexOf(nextStep);
+      const isGuestbookStep = nextStep !== "character";
+
+      activeStep = nextStep;
+      characterPanel.hidden = isGuestbookStep;
+      guestbookPanel.hidden = !isGuestbookStep;
+
+      stepTriggers.forEach((trigger) => {
+        const triggerStep = String(trigger.dataset.characterEditorStepTrigger || "").trim().toLowerCase();
+        const isActive = triggerStep === nextStep;
+        trigger.classList.toggle("is-active", isActive);
+        trigger.setAttribute("aria-selected", isActive ? "true" : "false");
+        trigger.setAttribute("tabindex", isActive ? "0" : "-1");
+      });
+
+      if (prevButton instanceof HTMLButtonElement) {
+        prevButton.disabled = nextIndex <= 0;
+      }
+
+      if (nextButton instanceof HTMLButtonElement) {
+        nextButton.disabled = nextIndex >= stepOrder.length - 1;
+      }
+
+      if (isGuestbookStep && typeof window.setGuestbookEditorPage === "function") {
+        syncingGuestbookPage = true;
+        window.setGuestbookEditorPage(nextStep === "guestbook-content" ? "content" : "design", { persist });
+        syncingGuestbookPage = false;
+      }
+
+      updateGuestbookPageLinkHashes(nextStep);
+
+      if (persist) {
+        persistStep(nextStep);
+      }
+    };
+
+    stepTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        setActiveStep(String(trigger.dataset.characterEditorStepTrigger || "").trim().toLowerCase() || "character");
+      });
+    });
+
+    if (prevButton instanceof HTMLButtonElement) {
+      prevButton.addEventListener("click", () => {
+        const currentIndex = stepOrder.indexOf(activeStep);
+        setActiveStep(stepOrder[Math.max(0, currentIndex - 1)] || stepOrder[0]);
+      });
+    }
+
+    if (nextButton instanceof HTMLButtonElement) {
+      nextButton.addEventListener("click", () => {
+        const currentIndex = stepOrder.indexOf(activeStep);
+        setActiveStep(stepOrder[Math.min(stepOrder.length - 1, currentIndex + 1)] || stepOrder[stepOrder.length - 1]);
+      });
+    }
+
+    window.addEventListener("guestbook-editor-pagechange", (event) => {
+      if (syncingGuestbookPage || activeStep === "character") {
+        return;
+      }
+
+      const nextPage = String(event.detail?.page || "").trim().toLowerCase();
+      const nextStep = nextPage === "content" ? "guestbook-content" : "guestbook-design";
+
+      if (nextStep !== activeStep) {
+        setActiveStep(nextStep);
+      }
+    });
+
+    const hashStep = getHashStep();
+    const storedStep = String(getStoredStep() || "").trim().toLowerCase();
+    const initialStep =
+      hashStep === "guestbook-content"
+        ? hashStep
+        : stepOrder.includes(storedStep)
+          ? storedStep
+          : hashStep || stepOrder[0];
+
+    setActiveStep(initialStep, false);
   })();
 </script>
 

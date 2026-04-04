@@ -8715,14 +8715,227 @@ body.page-guestbook-preview::after {
 .character-form-panel {
   position: relative;
   overflow: visible;
+  padding: 0.88rem 0.96rem;
 }
 
 .character-form-panel:first-of-type {
   z-index: 2;
 }
 
+.character-editor-journey {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  padding: 0.72rem 0.82rem;
+}
+
+.character-editor-journey-track {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.character-editor-journey-step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.46rem 0.62rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--field-bg) 90%, white 10%);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.character-editor-journey-step:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--field-edge));
+}
+
+.character-editor-journey-step.is-active {
+  border-color: var(--accent-2);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 80%, white 20%),
+    color-mix(in srgb, var(--accent-2) 78%, white 22%)
+  );
+  color: var(--accent-text);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.character-editor-journey-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1.55rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--field-bg));
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.character-editor-journey-step.is-active .character-editor-journey-step-number {
+  background: color-mix(in srgb, white 20%, var(--accent-text) 80%);
+  color: color-mix(in srgb, var(--accent) 70%, black 30%);
+}
+
+.character-editor-journey-step-copy {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.character-editor-journey-step-copy strong,
+.character-editor-journey-step-copy small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-editor-journey-step-copy strong {
+  font-size: 0.84rem;
+  line-height: 1.15;
+}
+
+.character-editor-journey-step-copy small {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.character-editor-journey-step.is-active .character-editor-journey-step-copy small {
+  color: color-mix(in srgb, var(--accent-text) 82%, white 18%);
+}
+
+.character-editor-journey-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 90%, white 10%);
+  color: var(--text);
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease;
+}
+
+.character-editor-journey-arrow:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--field-edge));
+}
+
+.character-editor-journey-arrow:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
 .character-guestbook-panel {
   z-index: 1;
+}
+
+.character-form-panel .header-line {
+  gap: 0.85rem;
+  margin-bottom: 0.74rem;
+}
+
+.character-form-panel .header-line h1 {
+  font-size: clamp(1.42rem, 2.35vw, 1.95rem);
+}
+
+.character-form-panel .header-line h2 {
+  margin: 0;
+  font-size: clamp(1.14rem, 1.95vw, 1.45rem);
+  line-height: 1.08;
+}
+
+.character-form-panel .header-line > div > p {
+  margin-top: 0.12rem;
+  max-width: 38rem;
+  font-size: 0.8rem;
+  line-height: 1.32;
+}
+
+.character-form-panel .form {
+  gap: 0.72rem;
+}
+
+.character-form-panel .form label {
+  gap: 0.28rem;
+}
+
+.character-form-panel :where(
+  input:not([type="color"]):not([type="range"]):not([type="radio"]):not([type="checkbox"]),
+  textarea,
+  select
+) {
+  padding: 0.5rem 0.62rem;
+}
+
+.character-form-panel .btn {
+  padding: 0.44rem 0.92rem;
+}
+
+.character-form-panel .gb-color-preview {
+  min-width: 2.8rem;
+  height: 2.45rem;
+  padding: 0 0.52rem;
+  font-size: 0.8rem;
+}
+
+.character-guestbook-panel .gb-editor-tabs {
+  padding: 0.44rem 0.56rem;
+}
+
+.character-guestbook-panel .gb-editor-tab {
+  min-width: 2rem;
+  padding: 0.36rem 0.56rem;
+}
+
+.character-guestbook-panel .gb-editor-form {
+  gap: 0.6rem;
+  padding: 0.72rem;
+}
+
+.character-guestbook-panel .gb-editor-form h2 {
+  font-size: clamp(1.18rem, 1.65vw, 1.42rem);
+}
+
+.character-guestbook-panel .gb-editor-card {
+  padding: 0.62rem 0.72rem;
+  border-radius: 12px;
+}
+
+.character-guestbook-panel .gb-editor-page-heading h3 {
+  font-size: 0.96rem;
+}
+
+.character-guestbook-panel .gb-editor-helptext {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.character-guestbook-panel .gb-editor-inline-extra-row {
+  margin-top: 0.52rem;
+  gap: 0.56rem;
+}
+
+.character-guestbook-panel .gb-editor-actions {
+  gap: 0.56rem;
 }
 
 .character-editor-grid {
@@ -8741,7 +8954,7 @@ body.page-guestbook-preview::after {
 .character-color-input-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 0.55rem;
+  gap: 0.45rem;
   align-items: center;
 }
 
@@ -8843,6 +9056,24 @@ body.page-guestbook-preview::after {
 }
 
 @media (max-width: 720px) {
+  .character-editor-journey {
+    grid-template-columns: 1fr;
+    padding: 0.64rem;
+  }
+
+  .character-editor-journey-track {
+    grid-template-columns: 1fr;
+  }
+
+  .character-editor-journey-arrow {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .character-form-panel {
+    padding: 0.78rem;
+  }
+
   .gb-editor-form {
     padding: 0.7rem;
   }
@@ -8892,8 +9123,8 @@ body.page-guestbook-preview::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 2.7rem;
+  width: 2.75rem;
+  height: 2.45rem;
   padding: 0.22rem;
   border: 1px solid var(--field-edge);
   border-radius: 10px;
@@ -9073,17 +9304,17 @@ body.page-guestbook-preview::after {
 .character-form-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.55rem;
   align-items: center;
 }
 
 .character-chat-background-field {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 .character-chat-background-option-label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
@@ -9098,6 +9329,7 @@ body.page-guestbook-preview::after {
 .character-chat-background-opacity-controls {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  gap: 0.42rem;
 }
 
 .character-chat-background-opacity-controls input[type="range"] {
@@ -9109,13 +9341,13 @@ body.page-guestbook-preview::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 3.2rem;
-  height: 2.7rem;
-  padding: 0 0.7rem;
+  min-width: 2.8rem;
+  height: 2.45rem;
+  padding: 0 0.62rem;
   border: 1px solid var(--field-edge);
   border-radius: 10px;
   background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -9125,7 +9357,7 @@ body.page-guestbook-preview::after {
   --character-chat-background-color: #efefef;
   --character-chat-background-image-opacity: 1;
   position: relative;
-  min-height: 12rem;
+  min-height: 9.5rem;
   border: 1px solid var(--field-edge);
   border-radius: 16px;
   overflow: hidden;
@@ -9163,7 +9395,7 @@ body.page-guestbook-preview::after {
   z-index: 1;
   display: grid;
   gap: 0.3rem;
-  padding: 0.95rem 1rem;
+  padding: 0.76rem 0.86rem;
   background: linear-gradient(180deg, rgba(239, 239, 239, 0.08), rgba(239, 239, 239, 0.94));
   color: #1a1c20;
 }
@@ -9183,18 +9415,18 @@ body.page-guestbook-preview::after {
 }
 
 .character-chat-background-preview-name {
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1.2;
 }
 
 .character-chat-background-preview-message {
-  font-size: 0.92rem;
-  line-height: 1.4;
+  font-size: 0.84rem;
+  line-height: 1.32;
 }
 
 .character-chat-background-preview-state {
   color: color-mix(in srgb, #1a1c20 72%, var(--muted) 28%);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
 }
 
 .character-guestbook-header {

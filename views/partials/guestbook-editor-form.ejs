@@ -1,3 +1,5 @@
+<% const usesOuterNavigation = typeof guestbookEditorUseOuterNavigation !== "undefined" && guestbookEditorUseOuterNavigation; %>
+
 <form
   id="guestbook-editor-form"
   method="POST"
@@ -5,34 +7,41 @@
   class="<%= guestbookEditorFormClass || 'panel form gb-editor-form' %>"
   data-preview-sync-url="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
   data-editor-page-storage-key="guestbook-editor-pane-<%= character.id %>"
+  data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
 
   <div class="gb-editor-heading">
     <h2>Einstellungen</h2>
-    <span class="gb-editor-helptext">Aufgeteilt in zwei ruhige Seiten, damit der Editor nicht mehr so &uuml;berladen wirkt.</span>
+    <span class="gb-editor-helptext">
+      <%= usesOuterNavigation
+        ? "Schritt 2 und 3 sind getrennt, damit Design und Inhalt sauber hintereinander bleiben."
+        : "Aufgeteilt in zwei ruhige Seiten, damit der Editor nicht mehr so &uuml;berladen wirkt." %>
+    </span>
   </div>
 
-  <div class="gb-editor-page-switch" role="tablist" aria-label="G&auml;stebuch Editor Seiten">
-    <button
-      type="button"
-      class="gb-editor-page-tab"
-      data-gb-editor-page-trigger="design"
-      aria-controls="gb-editor-page-design"
-      aria-selected="false"
-    >
-      1. Design
-    </button>
-    <button
-      type="button"
-      class="gb-editor-page-tab"
-      data-gb-editor-page-trigger="content"
-      aria-controls="gb-editor-page-content"
-      aria-selected="false"
-    >
-      2. Inhalt &amp; Bilder
-    </button>
-  </div>
+  <% if (!usesOuterNavigation) { %>
+    <div class="gb-editor-page-switch" role="tablist" aria-label="G&auml;stebuch Editor Seiten">
+      <button
+        type="button"
+        class="gb-editor-page-tab"
+        data-gb-editor-page-trigger="design"
+        aria-controls="gb-editor-page-design"
+        aria-selected="false"
+      >
+        1. Design
+      </button>
+      <button
+        type="button"
+        class="gb-editor-page-tab"
+        data-gb-editor-page-trigger="content"
+        aria-controls="gb-editor-page-content"
+        aria-selected="false"
+      >
+        2. Inhalt &amp; Bilder
+      </button>
+    </div>
+  <% } %>
 
   <section
     id="gb-editor-page-design"
@@ -41,8 +50,12 @@
     aria-labelledby="gb-editor-page-design-title"
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-design-title">Seite 1: Design</h3>
-      <p class="gb-editor-helptext">Style, Schrift, Zensur und Farben f&uuml;r das G&auml;stebuch.</p>
+      <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: G&auml;stebuch Design" : "Seite 1: Design" %></h3>
+      <p class="gb-editor-helptext">
+        <%= usesOuterNavigation
+          ? "Style, Schrift, Zensur und Farben f&uuml;r das G&auml;stebuch."
+          : "Style, Schrift, Zensur und Farben f&uuml;r das G&auml;stebuch." %>
+      </p>
     </div>
 
     <div class="gb-editor-basics">
@@ -274,7 +287,7 @@
     hidden
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-content-title">Seite 2: Inhalt &amp; Bilder</h3>
+      <h3 id="gb-editor-page-content-title"><%= usesOuterNavigation ? "Schritt 3: Inhalt &amp; Bilder" : "Seite 2: Inhalt &amp; Bilder" %></h3>
       <p class="gb-editor-helptext">Bilder, Hinweise und der eigentliche BBCode-Inhalt der Seite.</p>
     </div>
 
@@ -644,6 +657,15 @@
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
 
+    const getActiveEditorPage = () =>
+      String(
+        editorPages.find((page) => !page.hidden)?.dataset?.gbEditorPage ||
+        editorPages[0]?.dataset?.gbEditorPage ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
     const setActiveEditorPage = (pageName, persist = true) => {
       const normalizedPageName = String(pageName || "").trim().toLowerCase();
       const fallbackPageName = String(editorPages[0]?.dataset?.gbEditorPage || "").trim().toLowerCase();
@@ -668,6 +690,14 @@
           window.localStorage.setItem(editorPageStorageKey, nextPageName);
         } catch (error) {}
       }
+
+      window.dispatchEvent(
+        new CustomEvent("guestbook-editor-pagechange", {
+          detail: {
+            page: nextPageName
+          }
+        })
+      );
     };
 
     if (editorPageTriggers.length && editorPages.length) {
@@ -684,6 +714,16 @@
           setActiveEditorPage(trigger.dataset.gbEditorPageTrigger || "design");
         });
       });
+    }
+
+    if (editorPages.length) {
+      window.setGuestbookEditorPage = (pageName, options = {}) => {
+        const shouldPersist = options && Object.prototype.hasOwnProperty.call(options, "persist")
+          ? Boolean(options.persist)
+          : true;
+        setActiveEditorPage(pageName, shouldPersist);
+      };
+      window.getGuestbookEditorPage = () => getActiveEditorPage();
     }
 
     if (pageContentField) {
