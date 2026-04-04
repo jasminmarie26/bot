@@ -17283,16 +17283,6 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
   memberSocket.data.standardRoomId = "";
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
-  if (pendingDisconnectEntry) {
-    clearPendingChatDisconnect(
-      pendingDisconnectEntry.userId,
-      pendingDisconnectEntry.roomId,
-      pendingDisconnectEntry.serverId,
-      pendingDisconnectEntry.characterId,
-      pendingDisconnectEntry.standardRoomId
-    );
-    finalizeChatDisconnectEntry(pendingDisconnectEntry);
-  }
   maybeRemoveEmptyRoom(previousRoomId);
   return res.sendStatus(204);
 });

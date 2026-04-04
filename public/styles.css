@@ -4037,8 +4037,16 @@ body.theme-future.page-home-screen .home-copyright {
 .staff-name-admin,
 .role-name-admin {
   font-weight: 700;
-  color: #ff9c70 !important;
-  text-shadow: 0 0 0.08em rgba(255, 156, 112, 0.22);
+  display: inline-block;
+  background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
 }
 
 .staff-name-moderator,
@@ -4088,12 +4096,16 @@ body.theme-future.page-home-screen .home-copyright {
   .chat-message strong.has-crescentia-moons,
   .rp-room-occupant.has-crescentia-moons,
   .topbar-user-menu-meta > strong.has-crescentia-moons {
-    background: none !important;
-    background-image: none !important;
-    -webkit-background-clip: initial !important;
-    background-clip: initial !important;
-    -webkit-text-fill-color: currentColor !important;
-    color: #8f9fff !important;
+    background: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+    background-image: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+    background-size: 100% 100% !important;
+    background-repeat: no-repeat !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
     text-shadow: 0 0 0.14em rgba(122, 176, 255, 0.18);
   }
 }
@@ -10313,12 +10325,17 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .chat-online-name.has-noctra-wings,
-.chat-message strong.has-noctra-wings,
+.chat-message strong.has-noctra-wings {
+  font-family: "Pirata One", "Cinzel Decorative", "Palatino Linotype", serif;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
 .chat-online-name.has-crescentia-moons,
 .chat-message strong.has-crescentia-moons {
-  font-family: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
+  font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .page-chat .chat-online-panel {
@@ -11416,17 +11433,55 @@ body.page-guestbook-view .guestbook-entry-heading {
   color: #000000;
 }
 
+.page-chat .role-name-admin {
+  display: inline-block;
+  background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%) !important;
+  background-image: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
 .page-chat .role-name-admin.has-noctra-wings,
 .page-chat .role-name-moderator.has-noctra-wings {
-  background: none !important;
-  background-image: none !important;
-  -webkit-background-clip: initial !important;
-  background-clip: initial !important;
-  -webkit-text-fill-color: currentColor !important;
-  color: #ffb35c !important;
+  background: linear-gradient(90deg, #5f0008 0%, #b40f1f 34%, #f24a1d 72%, #ffb35c 100%) !important;
+  background-image: linear-gradient(90deg, #5f0008 0%, #b40f1f 34%, #f24a1d 72%, #ffb35c 100%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
   text-shadow:
     0 0 0.12em rgba(180, 15, 31, 0.18),
     0 0 0.18em rgba(242, 74, 29, 0.14);
+}
+
+.page-chat .chat-online-name.has-crescentia-moons,
+.page-chat .chat-message strong.has-crescentia-moons,
+.page-chat .rp-header-identity.has-crescentia-moons,
+.page-chat .topbar-user-menu-meta > strong.has-crescentia-moons,
+.page-chat .rp-room-occupant.has-crescentia-moons,
+.page-chat .role-name-admin.has-crescentia-moons,
+.page-chat .role-name-moderator.has-crescentia-moons {
+  background: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+  background-image: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  text-shadow: 0 0 0.14em rgba(122, 176, 255, 0.18);
 }
 
 .chat-box .chat-emote {
