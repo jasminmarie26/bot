@@ -251,12 +251,12 @@
 
     activeServerInstanceId = nextInstanceId;
     serverInstanceReloadPending = true;
+    showServerReloadNotice();
 
     const finishReload = () => {
       if (!serverInstanceReloadPending) {
         return;
       }
-      showServerReloadNotice();
       window.setTimeout(applyReload, 5000);
     };
 
