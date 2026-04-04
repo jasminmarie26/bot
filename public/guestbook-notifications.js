@@ -5,19 +5,27 @@
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
   const systemNotificationFetchUrl = "/guestbook/notifications/system";
+  const sendNotificationUrl = "/guestbook/notifications/send";
   const approvalNotificationType = "festplay_approval";
   const birthdayNotificationType = "birthday_greeting";
   const easterNotificationType = "holiday_easter";
   const christmasNotificationType = "holiday_christmas";
   const nikolausNotificationType = "holiday_nikolaus";
+  const staffMailNotificationType = "staff_mail";
+  const adminSystemMessageNotificationType = "admin_system_message";
   const defaultBirthdayTitle = "Geburtstagsgr\u00fc\u00dfe vom Heldenhafte Reisen Team";
   const defaultBirthdayDecoration = "\uD83C\uDF89 \uD83C\uDF82 \u2728";
+  const canComposeStaffMail = notificationLink.dataset.canComposeStaffMail === "true";
+  const canComposeAdminSystem = notificationLink.dataset.canComposeAdminSystem === "true";
+  const canComposeNotifications = canComposeStaffMail || canComposeAdminSystem;
   const systemNotificationTypes = new Set([
     approvalNotificationType,
     birthdayNotificationType,
     easterNotificationType,
     christmasNotificationType,
-    nikolausNotificationType
+    nikolausNotificationType,
+    staffMailNotificationType,
+    adminSystemMessageNotificationType
   ]);
   const canUseRealtimeUpdates = typeof io === "function";
   let systemPanelElements = null;
@@ -115,6 +123,7 @@
     const latestSignoff = String(payload?.latest?.signoff || "").trim();
     const latestDecoration = String(payload?.latest?.decoration || "").trim();
     const hasVisibleNotification = latestId > 0 && latestType.length > 0;
+    const keepLinkVisible = hasVisibleNotification || canComposeNotifications;
     const title = buildNotificationTitle(
       latestType,
       latestCharacterName,
@@ -125,9 +134,9 @@
     );
 
     notificationLink.href = notificationHref;
-    notificationLink.title = hasVisibleNotification ? title : "Brief";
-    notificationLink.setAttribute("aria-label", hasVisibleNotification ? title : "Brief");
-    notificationLink.setAttribute("aria-disabled", hasVisibleNotification ? "false" : "true");
+    notificationLink.title = hasVisibleNotification ? title : "Briefe";
+    notificationLink.setAttribute("aria-label", hasVisibleNotification ? title : "Briefe");
+    notificationLink.setAttribute("aria-disabled", keepLinkVisible ? "false" : "true");
     notificationLink.dataset.notificationCount = String(count);
     notificationLink.dataset.notificationId = String(latestId);
     notificationLink.dataset.notificationType = latestType;
@@ -146,12 +155,14 @@
       hasVisibleNotification && isSystemNotificationType(latestType)
     );
 
-    notificationLink.hidden = !hasVisibleNotification;
+    notificationLink.hidden = !keepLinkVisible;
 
     if (badge) {
       badge.hidden = count < 1;
       badge.textContent = count > 0 ? formatBadgeCount(count) : "";
     }
+
+    updateCurrentNotificationShortcut();
   }
 
   function getSystemPanelElements() {
@@ -177,6 +188,12 @@
     heading.textContent = "Briefe";
     copy.appendChild(heading);
 
+    const description = document.createElement("p");
+    description.textContent = canComposeNotifications
+      ? "Briefe lesen oder versenden."
+      : "Deine Systembriefe.";
+    copy.appendChild(description);
+
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "chat-whisper-close-btn";
@@ -185,6 +202,172 @@
 
     head.appendChild(copy);
     head.appendChild(closeButton);
+    card.appendChild(head);
+
+    let currentActionWrap = null;
+    let currentActionText = null;
+    let currentActionLink = null;
+    let composeForm = null;
+    let messageTypeSelect = null;
+    let recipientScopeSelect = null;
+    let recipientField = null;
+    let recipientInput = null;
+    let subjectInput = null;
+    let messageInput = null;
+    let composeHint = null;
+    let composeStatus = null;
+    let composeSubmit = null;
+
+    if (canComposeNotifications) {
+      currentActionWrap = document.createElement("div");
+      currentActionWrap.className = "guestbook-notification-current-action";
+      currentActionWrap.hidden = true;
+
+      currentActionText = document.createElement("p");
+      currentActionText.className = "guestbook-notification-current-action-copy";
+
+      currentActionLink = document.createElement("a");
+      currentActionLink.className = "btn guestbook-notification-current-action-link";
+      currentActionLink.href = notificationHref;
+      currentActionLink.textContent = "Öffnen";
+
+      currentActionWrap.appendChild(currentActionText);
+      currentActionWrap.appendChild(currentActionLink);
+
+      const composeSection = document.createElement("section");
+      composeSection.className = "guestbook-notification-compose";
+
+      composeForm = document.createElement("form");
+      composeForm.className = "guestbook-notification-compose-form";
+
+      const composeGrid = document.createElement("div");
+      composeGrid.className = "guestbook-notification-compose-grid";
+
+      const messageTypeField = document.createElement("label");
+      messageTypeField.className = "guestbook-notification-compose-field";
+
+      const messageTypeLabel = document.createElement("span");
+      messageTypeLabel.textContent = "Art";
+
+      messageTypeSelect = document.createElement("select");
+      messageTypeSelect.name = "message_type";
+
+      if (canComposeStaffMail) {
+        const mailOption = document.createElement("option");
+        mailOption.value = staffMailNotificationType;
+        mailOption.textContent = "Brief";
+        messageTypeSelect.appendChild(mailOption);
+      }
+
+      if (canComposeAdminSystem) {
+        const systemOption = document.createElement("option");
+        systemOption.value = adminSystemMessageNotificationType;
+        systemOption.textContent = "Systemnachricht";
+        messageTypeSelect.appendChild(systemOption);
+      }
+
+      messageTypeField.appendChild(messageTypeLabel);
+      messageTypeField.appendChild(messageTypeSelect);
+
+      const recipientScopeField = document.createElement("label");
+      recipientScopeField.className = "guestbook-notification-compose-field";
+
+      const recipientScopeLabel = document.createElement("span");
+      recipientScopeLabel.textContent = "An";
+
+      recipientScopeSelect = document.createElement("select");
+      recipientScopeSelect.name = "recipient_scope";
+
+      const singleOption = document.createElement("option");
+      singleOption.value = "single";
+      singleOption.textContent = "Einzelnen Account";
+      recipientScopeSelect.appendChild(singleOption);
+
+      const rpAllOption = document.createElement("option");
+      rpAllOption.value = "rp_all";
+      rpAllOption.textContent = "Alle auf FREE-RP & ERP";
+      recipientScopeSelect.appendChild(rpAllOption);
+
+      recipientScopeField.appendChild(recipientScopeLabel);
+      recipientScopeField.appendChild(recipientScopeSelect);
+
+      recipientField = document.createElement("label");
+      recipientField.className = "guestbook-notification-compose-field guestbook-notification-compose-field-full";
+
+      const recipientLabel = document.createElement("span");
+      recipientLabel.textContent = "Empfänger";
+
+      recipientInput = document.createElement("input");
+      recipientInput.type = "text";
+      recipientInput.name = "recipient_lookup";
+      recipientInput.maxLength = 80;
+      recipientInput.autocomplete = "off";
+      recipientInput.placeholder = "Accountname, Accountnummer oder Charaktername";
+
+      recipientField.appendChild(recipientLabel);
+      recipientField.appendChild(recipientInput);
+
+      const subjectField = document.createElement("label");
+      subjectField.className = "guestbook-notification-compose-field guestbook-notification-compose-field-full";
+
+      const subjectLabel = document.createElement("span");
+      subjectLabel.textContent = "Betreff";
+
+      subjectInput = document.createElement("input");
+      subjectInput.type = "text";
+      subjectInput.name = "subject";
+      subjectInput.maxLength = 120;
+      subjectInput.autocomplete = "off";
+
+      subjectField.appendChild(subjectLabel);
+      subjectField.appendChild(subjectInput);
+
+      const messageField = document.createElement("label");
+      messageField.className = "guestbook-notification-compose-field guestbook-notification-compose-field-full";
+
+      const messageLabel = document.createElement("span");
+      messageLabel.textContent = "Nachricht";
+
+      messageInput = document.createElement("textarea");
+      messageInput.name = "message";
+      messageInput.rows = 7;
+      messageInput.maxLength = 4000;
+
+      messageField.appendChild(messageLabel);
+      messageField.appendChild(messageInput);
+
+      composeGrid.appendChild(messageTypeField);
+      composeGrid.appendChild(recipientScopeField);
+      composeGrid.appendChild(recipientField);
+      composeGrid.appendChild(subjectField);
+      composeGrid.appendChild(messageField);
+
+      composeHint = document.createElement("p");
+      composeHint.className = "guestbook-notification-compose-hint";
+
+      const composeActions = document.createElement("div");
+      composeActions.className = "guestbook-notification-compose-actions";
+
+      composeStatus = document.createElement("p");
+      composeStatus.className = "muted guestbook-notification-compose-status";
+      composeStatus.hidden = true;
+
+      composeSubmit = document.createElement("button");
+      composeSubmit.type = "submit";
+      composeSubmit.className = "btn";
+      composeSubmit.textContent = "Verschicken";
+
+      composeActions.appendChild(composeStatus);
+      composeActions.appendChild(composeSubmit);
+
+      composeForm.appendChild(composeGrid);
+      composeForm.appendChild(composeHint);
+      composeForm.appendChild(composeActions);
+      composeSection.appendChild(composeForm);
+
+      card.appendChild(currentActionWrap);
+      card.appendChild(composeSection);
+    }
 
     const threadWrap = document.createElement("section");
     threadWrap.className = "chat-whisper-thread-wrap";
@@ -197,7 +380,6 @@
 
     threadShell.appendChild(thread);
     threadWrap.appendChild(threadShell);
-    card.appendChild(head);
     card.appendChild(threadWrap);
     panel.appendChild(card);
     document.body.appendChild(panel);
@@ -215,9 +397,54 @@
 
     systemPanelElements = {
       panel,
-      thread
+      thread,
+      currentActionWrap,
+      currentActionText,
+      currentActionLink,
+      composeForm,
+      messageTypeSelect,
+      recipientScopeSelect,
+      recipientField,
+      recipientInput,
+      subjectInput,
+      messageInput,
+      composeHint,
+      composeStatus,
+      composeSubmit
     };
     return systemPanelElements;
+  }
+
+  function updateCurrentNotificationShortcut() {
+    if (!systemPanelElements?.currentActionWrap || !systemPanelElements.currentActionText || !systemPanelElements.currentActionLink) {
+      return;
+    }
+
+    const currentNotification = getCurrentNotificationSnapshot();
+    const hasVisibleNotification =
+      Number(currentNotification.id || 0) > 0 &&
+      normalizeNotificationType(currentNotification.type).length > 0;
+    const shouldShowShortcut =
+      canComposeNotifications &&
+      hasVisibleNotification &&
+      !isSystemNotificationType(currentNotification.type);
+
+    systemPanelElements.currentActionWrap.hidden = !shouldShowShortcut;
+    if (!shouldShowShortcut) {
+      return;
+    }
+
+    let shortcutText = "Die neueste Benachrichtigung ist kein Brief und kann hier geöffnet werden.";
+    if (currentNotification.type === "guestbook_entry") {
+      shortcutText = currentNotification.character_name
+        ? `Es liegt noch ein Gästebucheintrag für ${currentNotification.character_name} bereit.`
+        : "Es liegt noch ein neuer Gästebucheintrag bereit.";
+    } else if (currentNotification.type === "festplay_application") {
+      shortcutText = "Es liegt noch eine offene Festspiel-Bewerbung bereit.";
+    }
+
+    systemPanelElements.currentActionText.textContent = shortcutText;
+    systemPanelElements.currentActionLink.href = notificationHref;
   }
 
   function buildSystemNotificationCopy(notification) {
@@ -365,6 +592,72 @@
     });
   }
 
+  function setComposeStatus(message, isError = false) {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.composeStatus) {
+      return;
+    }
+
+    const text = String(message || "").trim();
+    panelElements.composeStatus.textContent = text;
+    panelElements.composeStatus.hidden = text.length < 1;
+    panelElements.composeStatus.classList.toggle("is-error", Boolean(isError) && text.length > 0);
+  }
+
+  function syncComposeFormState() {
+    const panelElements = getSystemPanelElements();
+    if (
+      !panelElements.composeForm ||
+      !panelElements.messageTypeSelect ||
+      !panelElements.recipientScopeSelect ||
+      !panelElements.recipientField ||
+      !panelElements.recipientInput ||
+      !panelElements.composeHint
+    ) {
+      return;
+    }
+
+    const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || staffMailNotificationType);
+    const recipientScope = normalizeNotificationType(panelElements.recipientScopeSelect.value || "single");
+    const isSingleRecipient = recipientScope === "single";
+    const isSystemMessage = messageType === adminSystemMessageNotificationType;
+
+    panelElements.recipientField.hidden = !isSingleRecipient;
+    panelElements.recipientInput.disabled = !isSingleRecipient;
+    panelElements.recipientInput.required = isSingleRecipient;
+    if (!isSingleRecipient) {
+      panelElements.recipientInput.value = "";
+    }
+
+    panelElements.composeHint.textContent = isSingleRecipient
+      ? isSystemMessage
+        ? "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
+        : "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
+      : isSystemMessage
+        ? "Geht als Systemnachricht an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren."
+        : "Geht als Brief an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren.";
+  }
+
+  async function sendSystemNotification(formValues) {
+    const response = await window.fetch(sendNotificationUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: new URLSearchParams(formValues).toString()
+    });
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result?.ok) {
+      const error = new Error("send_failed");
+      error.userMessage = String(result?.message || "Die Nachricht konnte nicht verschickt werden.");
+      throw error;
+    }
+
+    return result;
+  }
+
   async function fetchSystemNotifications(markRead) {
     const query = markRead ? "?mark_read=1" : "";
     const response = await window.fetch(`${systemNotificationFetchUrl}${query}`, {
@@ -407,6 +700,7 @@
   async function openSystemNotificationPanel(markRead = true) {
     const panelElements = getSystemPanelElements();
     panelElements.panel.hidden = false;
+    updateCurrentNotificationShortcut();
     renderSystemNotificationList([], { loading: true });
 
     try {
@@ -436,6 +730,12 @@
       Number(currentNotification.id || 0) > 0 &&
       normalizeNotificationType(currentNotification.type).length > 0;
 
+    if (canComposeNotifications) {
+      event.preventDefault();
+      await openSystemNotificationPanel(true);
+      return;
+    }
+
     if (!hasVisibleNotification) {
       event.preventDefault();
       return;
@@ -449,7 +749,66 @@
     await openSystemNotificationPanel(true);
   });
 
-  getSystemPanelElements().thread.addEventListener("click", async (event) => {
+  const panelElements = getSystemPanelElements();
+  if (
+    panelElements.composeForm &&
+    panelElements.messageTypeSelect &&
+    panelElements.recipientScopeSelect &&
+    panelElements.recipientInput &&
+    panelElements.subjectInput &&
+    panelElements.messageInput &&
+    panelElements.composeSubmit
+  ) {
+    syncComposeFormState();
+
+    panelElements.messageTypeSelect.addEventListener("change", () => {
+      syncComposeFormState();
+    });
+
+    panelElements.recipientScopeSelect.addEventListener("change", () => {
+      syncComposeFormState();
+    });
+
+    panelElements.composeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || staffMailNotificationType);
+      const recipientScope = normalizeNotificationType(panelElements.recipientScopeSelect.value || "single");
+
+      panelElements.composeSubmit.disabled = true;
+      setComposeStatus(
+        messageType === adminSystemMessageNotificationType
+          ? "Systemnachricht wird verschickt..."
+          : "Brief wird verschickt..."
+      );
+
+      try {
+        const result = await sendSystemNotification({
+          message_type: messageType,
+          recipient_scope: recipientScope,
+          recipient_lookup: panelElements.recipientInput.value || "",
+          subject: panelElements.subjectInput.value || "",
+          message: panelElements.messageInput.value || ""
+        });
+
+        applyNotificationPayload(result?.payload || {});
+        renderSystemNotificationList(result?.notifications || []);
+        if (recipientScope === "single") {
+          panelElements.recipientInput.value = "";
+        }
+        panelElements.subjectInput.value = "";
+        panelElements.messageInput.value = "";
+        syncComposeFormState();
+        setComposeStatus(result?.message || "Der Brief wurde verschickt.");
+      } catch (error) {
+        setComposeStatus(error?.userMessage || "Die Nachricht konnte nicht verschickt werden.", true);
+      } finally {
+        panelElements.composeSubmit.disabled = false;
+      }
+    });
+  }
+
+  panelElements.thread.addEventListener("click", async (event) => {
     const deleteButton = event.target.closest("[data-system-delete]");
     if (!deleteButton) {
       return;

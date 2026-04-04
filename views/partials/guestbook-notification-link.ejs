@@ -11,9 +11,22 @@
     noteCharacters.some((entry) => Number(entry.id) === candidateId)
   ) || Number(noteCharacters[0]?.id || 0); %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
+  <% const canComposeGuestbookMail = Boolean(currentUser?.is_admin || currentUser?.is_moderator); %>
+  <% const canComposeGuestbookSystemMessage = Boolean(currentUser?.is_admin); %>
   <% const latestNotificationType = latestGuestbookNotification?.type || latestGuestbookNotification?.notification_type || "guestbook_entry"; %>
-  <% const isSystemNotification = latestNotificationType === "festplay_approval" || latestNotificationType === "birthday_greeting"; %>
-  <% const guestbookNotificationTitle = latestNotificationType === "festplay_application"
+  <% const systemNotificationTypes = [
+    "festplay_approval",
+    "birthday_greeting",
+    "holiday_easter",
+    "holiday_christmas",
+    "holiday_nikolaus",
+    "staff_mail",
+    "admin_system_message"
+  ]; %>
+  <% const isSystemNotification = systemNotificationTypes.includes(latestNotificationType); %>
+  <% const guestbookNotificationTitle = !latestGuestbookNotification
+    ? "Briefe"
+    : latestNotificationType === "festplay_application"
     ? latestGuestbookNotification?.festplay_name
       ? latestGuestbookNotification?.applicant_character_name
         ? `Neue Bewerbung von ${latestGuestbookNotification.applicant_character_name} fuer ${latestGuestbookNotification.festplay_name}`
@@ -25,7 +38,7 @@
           ? `${latestGuestbookNotification.actor_name} hat dich fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
           : `Du wurdest fuer ${latestGuestbookNotification.festplay_name} freigeschaltet`
         : "Neue Festspiel-Freischaltung"
-    : latestNotificationType === "birthday_greeting"
+    : isSystemNotification
       ? latestGuestbookNotification?.title || "Geburtstagsgrüße vom Heldenhafte Reisen Team"
     : latestGuestbookNotification?.character_name
       ? `Neuer Gaestebucheintrag fuer ${latestGuestbookNotification.character_name}`
@@ -276,6 +289,8 @@
     aria-label="<%= guestbookNotificationTitle %>"
     title="<%= guestbookNotificationTitle %>"
     data-guestbook-notification-root
+    data-can-compose-staff-mail="<%= canComposeGuestbookMail ? "true" : "false" %>"
+    data-can-compose-admin-system="<%= canComposeGuestbookSystemMessage ? "true" : "false" %>"
     data-notification-count="<%= guestbookNotificationCount || 0 %>"
     data-notification-id="<%= latestGuestbookNotification?.id || 0 %>"
     data-notification-type="<%= latestNotificationType %>"
@@ -289,7 +304,7 @@
     data-notification-wish="<%= latestGuestbookNotification?.wish || "" %>"
     data-notification-signoff="<%= latestGuestbookNotification?.signoff || "" %>"
     data-notification-decoration="<%= latestGuestbookNotification?.decoration || "" %>"
-    <%= latestGuestbookNotification ? "" : "hidden" %>
+    <%= latestGuestbookNotification || canComposeGuestbookMail ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
@@ -300,6 +315,6 @@
         <rect x="3.15" y="6.25" width="17.7" height="11.5" rx="1.55" ry="1.55" />
       </svg>
     </span>
-    <span class="guestbook-notification-badge" data-guestbook-notification-badge><%= guestbookNotificationBadgeText %></span>
+    <span class="guestbook-notification-badge" data-guestbook-notification-badge <%= guestbookNotificationCount > 0 ? "" : "hidden" %>><%= guestbookNotificationBadgeText %></span>
   </a>
 <% } %>

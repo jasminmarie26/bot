@@ -10832,12 +10832,105 @@ body.page-guestbook-view .guestbook-entry-heading {
   width: min(920px, calc(100vw - 2rem));
 }
 
+#guestbook-notification-panel .chat-whisper-panel-card {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
 #guestbook-notification-panel .guestbook-notification-approval-shell {
   max-height: min(56vh, 520px);
 }
 
 #guestbook-notification-panel .whisper-thread {
   max-height: min(48vh, 460px);
+}
+
+.guestbook-notification-current-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.72rem 0.86rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 82%, black 18%);
+}
+
+.guestbook-notification-current-action-copy {
+  margin: 0;
+  min-width: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.guestbook-notification-current-action-link {
+  flex: 0 0 auto;
+}
+
+.guestbook-notification-compose {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.guestbook-notification-compose-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.guestbook-notification-compose-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guestbook-notification-compose-field {
+  display: grid;
+  gap: 0.36rem;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.guestbook-notification-compose-field span {
+  font-weight: 600;
+}
+
+.guestbook-notification-compose-field input,
+.guestbook-notification-compose-field select,
+.guestbook-notification-compose-field textarea {
+  width: 100%;
+}
+
+.guestbook-notification-compose-field-full {
+  grid-column: 1 / -1;
+}
+
+.guestbook-notification-compose-field textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.guestbook-notification-compose-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.guestbook-notification-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.guestbook-notification-compose-status {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.guestbook-notification-compose-status.is-error {
+  color: var(--danger);
 }
 
 .guestbook-notification-system-body {
@@ -10895,6 +10988,10 @@ body.page-guestbook-view .guestbook-entry-heading {
   line-height: 1.7;
 }
 
+.guestbook-notification-system-paragraph {
+  white-space: pre-line;
+}
+
 .guestbook-notification-birthday-body {
   padding: 0.15rem 0;
 }
@@ -10921,6 +11018,18 @@ body.page-guestbook-view .guestbook-entry-heading {
   padding: 0.8rem 0.25rem;
   text-align: center;
   color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .guestbook-notification-current-action,
+  .guestbook-notification-compose-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .guestbook-notification-compose-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .rp-board-panel {

@@ -143,6 +143,8 @@ const BIRTHDAY_GREETING_SIGNOFFS = [
 const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
 const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
 const BIRTHDAY_NOTIFICATION_DECORATION = "🎉 🎂 ✨";
+const STAFF_MAIL_NOTIFICATION_TYPE = "staff_mail";
+const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
   easter: "holiday_easter",
@@ -150,6 +152,10 @@ const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
   nikolaus: "holiday_nikolaus"
 });
 const HOLIDAY_NOTIFICATION_TYPE_SET = new Set(Object.values(HOLIDAY_NOTIFICATION_TYPES));
+const CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET = new Set([
+  STAFF_MAIL_NOTIFICATION_TYPE,
+  ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+]);
 const HOLIDAY_NOTIFICATION_CHECK_INTERVAL_MS = 60 * 1000;
 const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
   {
@@ -1965,6 +1971,139 @@ function createSystemNotification(userId, notificationType, notificationKey, tit
   }
 
   return false;
+}
+
+function createSystemNotificationForUserIds(userIds, notificationType, notificationKey, title, message) {
+  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
+  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
+  const normalizedTitle = String(title || "").trim().slice(0, 160);
+  const normalizedMessage = String(message || "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
+  const normalizedUserIds = Array.from(
+    new Set(
+      (Array.isArray(userIds) ? userIds : [])
+        .map((userId) => Number(userId))
+        .filter((userId) => Number.isInteger(userId) && userId > 0)
+    )
+  );
+
+  if (
+    normalizedUserIds.length < 1 ||
+    !normalizedNotificationType ||
+    !normalizedNotificationKey ||
+    !normalizedTitle ||
+    !normalizedMessage
+  ) {
+    return 0;
+  }
+
+  const insertNotificationStatement = db.prepare(
+    `INSERT INTO system_notifications (
+       user_id,
+       notification_type,
+       notification_key,
+       title,
+       message,
+       is_read,
+       created_at
+     )
+     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
+     ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
+  );
+  const changedUserIds = [];
+  const createNotificationsTx = db.transaction((targetUserIds) => {
+    for (const targetUserId of targetUserIds) {
+      const result = insertNotificationStatement.run(
+        targetUserId,
+        normalizedNotificationType,
+        normalizedNotificationKey,
+        normalizedTitle,
+        normalizedMessage
+      );
+      if (Number(result.changes || 0) > 0) {
+        changedUserIds.push(targetUserId);
+      }
+    }
+  });
+
+  createNotificationsTx(normalizedUserIds);
+
+  for (const userId of changedUserIds) {
+    emitGuestbookNotificationUpdateForUser(userId);
+  }
+
+  return changedUserIds.length;
+}
+
+function buildSystemNotificationUniqueKey(prefix = "system") {
+  const normalizedPrefix = String(prefix || "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "system";
+  if (typeof crypto.randomUUID === "function") {
+    return `${normalizedPrefix}:${crypto.randomUUID()}`;
+  }
+  return `${normalizedPrefix}:${Date.now()}:${crypto.randomBytes(6).toString("hex")}`;
+}
+
+function normalizeStaffNotificationSubject(value) {
+  return String(value || "").replace(/\r\n?/g, " ").trim().slice(0, 120);
+}
+
+function normalizeStaffNotificationMessage(value) {
+  return String(value || "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
+}
+
+function canSendGuestbookStaffMail(user) {
+  return Boolean(user?.is_admin || user?.is_moderator);
+}
+
+function canSendGuestbookAdminSystemMessage(user) {
+  return Boolean(user?.is_admin);
+}
+
+function buildGuestbookNotificationSenderLabel(user) {
+  const displayName = String(user?.display_name || "").trim();
+  const username = String(user?.username || "").trim();
+  return displayName || username || "Heldenhafte Reisen Team";
+}
+
+function getRpBroadcastRecipientUserIds() {
+  return db
+    .prepare(
+      `SELECT DISTINCT user_id
+         FROM (
+           SELECT c.user_id AS user_id
+             FROM characters c
+            WHERE c.server_id IN ('free-rp', 'erp')
+              AND c.user_id IS NOT NULL
+           UNION
+           SELECT u.id AS user_id
+             FROM users u
+            WHERE u.is_admin = 1
+               OR u.is_moderator = 1
+         )
+        WHERE user_id IS NOT NULL
+        ORDER BY user_id ASC`
+    )
+    .all()
+    .map((row) => Number(row?.user_id))
+    .filter((userId) => Number.isInteger(userId) && userId > 0);
+}
+
+function isUserOnRpServers(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const row = db
+    .prepare(
+      `SELECT 1
+         FROM characters
+        WHERE user_id = ?
+          AND server_id IN ('free-rp', 'erp')
+        LIMIT 1`
+    )
+    .get(parsedUserId);
+
+  return Boolean(row);
 }
 
 function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new Date(), options = {}) {
@@ -9665,6 +9804,17 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
     };
   }
 
+  if (CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(normalizedType)) {
+    return {
+      id: Number(notification.id),
+      type: normalizedType,
+      title: String(notification.title || "").trim(),
+      message: String(notification.message || "").trim(),
+      is_read: Number(notification.is_read) === 1,
+      created_at: String(notification.created_at || "").trim()
+    };
+  }
+
   if (normalizedType === "guestbook_entry") {
     return {
       id: Number(notification.id),
@@ -10005,6 +10155,13 @@ function deleteSystemInboxNotification(notificationId, userId, notificationType)
        SET is_read = 1,
            title = '',
            message = ''
+       WHERE id = ?
+         AND user_id = ?
+         AND notification_type = ?`
+    ).run(parsedNotificationId, parsedUserId, normalizedType);
+  } else if (CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(normalizedType)) {
+    result = db.prepare(
+      `DELETE FROM system_notifications
        WHERE id = ?
          AND user_id = ?
          AND notification_type = ?`
@@ -13058,6 +13215,19 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
     return res.redirect(req.get("referer") || "/dashboard");
   }
 
+  if (CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(notificationType)) {
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
+    const customTitle = String(latestNotification.title || "").trim();
+    const customMessage = String(latestNotification.message || "").trim();
+    const flashText = [customTitle, customMessage].filter(Boolean).join(": ");
+    setFlash(
+      req,
+      "success",
+      flashText || "Du hast einen neuen Brief erhalten."
+    );
+    return res.redirect(req.get("referer") || "/dashboard");
+  }
+
   markGuestbookNotificationAsRead(latestNotification.id, req.session.user.id);
 
   const targetCharacterId = Number(latestNotification.character_id);
@@ -13104,6 +13274,11 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
     markFestplayApplicationNotificationAsRead(notificationId, req.session.user.id);
   } else if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
     markSystemNotificationAsRead(notificationId, req.session.user.id);
+  } else if (
+    HOLIDAY_NOTIFICATION_TYPE_SET.has(notificationType) ||
+    CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(notificationType)
+  ) {
+    markSystemNotificationAsRead(notificationId, req.session.user.id);
   } else {
     markGuestbookNotificationAsRead(notificationId, req.session.user.id);
   }
@@ -13111,6 +13286,152 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
   return res.json({
     ok: true,
     payload: buildGuestbookNotificationPayloadForUser(req.session.user.id)
+  });
+});
+
+app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
+  if (!canSendGuestbookStaffMail(req.session.user)) {
+    return res.status(403).json({
+      ok: false,
+      error: "forbidden",
+      message: "Nur Admins und Moderatoren dürfen Briefe verschicken."
+    });
+  }
+
+  const messageType = String(req.body.message_type || STAFF_MAIL_NOTIFICATION_TYPE).trim().toLowerCase();
+  const recipientScope = String(req.body.recipient_scope || "single").trim().toLowerCase();
+  const recipientLookup = normalizeSocialLookupValue(req.body.recipient_lookup);
+  const subject = normalizeStaffNotificationSubject(req.body.subject);
+  const message = normalizeStaffNotificationMessage(req.body.message);
+
+  if (
+    messageType !== STAFF_MAIL_NOTIFICATION_TYPE &&
+    messageType !== ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+  ) {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid-message-type",
+      message: "Der Nachrichtentyp ist ungültig."
+    });
+  }
+
+  if (
+    messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE &&
+    !canSendGuestbookAdminSystemMessage(req.session.user)
+  ) {
+    return res.status(403).json({
+      ok: false,
+      error: "forbidden",
+      message: "Nur Admins dürfen Systemnachrichten verschicken."
+    });
+  }
+
+  if (recipientScope !== "single" && recipientScope !== "rp_all") {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid-recipient-scope",
+      message: "Das Ziel für den Brief ist ungültig."
+    });
+  }
+
+  if (!subject) {
+    return res.status(400).json({
+      ok: false,
+      error: "missing-subject",
+      message: "Bitte trage einen Betreff ein."
+    });
+  }
+
+  if (!message) {
+    return res.status(400).json({
+      ok: false,
+      error: "missing-message",
+      message: "Bitte trage eine Nachricht ein."
+    });
+  }
+
+  const activeCharacter = getPreferredMenuCharacterForUser(req);
+  const senderLabel = buildGuestbookNotificationSenderLabel(req.session.user);
+  const notificationTitle =
+    messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+      ? `Systemnachricht: ${subject}`.slice(0, 160)
+      : `Brief von ${senderLabel}: ${subject}`.slice(0, 160);
+  let recipientUserIds = [];
+  let successMessage = "Der Brief wurde verschickt.";
+
+  if (recipientScope === "single") {
+    if (!recipientLookup) {
+      return res.status(400).json({
+        ok: false,
+        error: "missing-recipient",
+        message: "Bitte trage einen Empfänger ein."
+      });
+    }
+
+    const targetUser = findUserBySocialLookup(recipientLookup);
+    if (!targetUser) {
+      return res.status(404).json({
+        ok: false,
+        error: "recipient-not-found",
+        message: "Der Empfänger wurde nicht gefunden."
+      });
+    }
+
+    if (!isUserOnRpServers(targetUser.id)) {
+      return res.status(400).json({
+        ok: false,
+        error: "recipient-not-on-rp",
+        message: "Der Empfänger muss einen Charakter auf FREE-RP oder ERP haben."
+      });
+    }
+
+    recipientUserIds = [Number(targetUser.id)];
+    successMessage =
+      messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+        ? `Die Systemnachricht wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`
+        : `Der Brief wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`;
+  } else {
+    recipientUserIds = getRpBroadcastRecipientUserIds();
+    if (recipientUserIds.length < 1) {
+      return res.status(400).json({
+        ok: false,
+        error: "no-rp-recipients",
+        message: "Es wurden keine Accounts auf FREE-RP oder ERP gefunden."
+      });
+    }
+
+    successMessage =
+      messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+        ? `Die Systemnachricht wurde an ${recipientUserIds.length} Accounts verschickt.`
+        : `Der Brief wurde an ${recipientUserIds.length} Accounts verschickt.`;
+  }
+
+  const createdCount = createSystemNotificationForUserIds(
+    recipientUserIds,
+    messageType,
+    buildSystemNotificationUniqueKey(messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE ? "admin-system" : "staff-mail"),
+    notificationTitle,
+    message
+  );
+
+  if (createdCount < 1) {
+    return res.status(500).json({
+      ok: false,
+      error: "send-failed",
+      message: "Die Nachricht konnte gerade nicht verschickt werden."
+    });
+  }
+
+  return res.json({
+    ok: true,
+    sent_count: createdCount,
+    message: successMessage,
+    notifications: buildSystemInboxListForUser(req.session.user.id, {
+      activeCharacter
+    }),
+    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id, {
+      activeCharacter
+    })
   });
 });
 
