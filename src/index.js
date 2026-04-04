@@ -4348,10 +4348,18 @@ function getStaffUserLogBackups(options = {}) {
   cleanupExpiredStaffUserLogBackups();
 
   const searchQuery = String(options.query || "").trim().slice(0, 120);
+  const serverFilter = ["free-rp", "erp"].includes(String(options.serverId || "").trim().toLowerCase())
+    ? String(options.serverId || "").trim().toLowerCase()
+    : "";
   const clauses = [
     `datetime(COALESCE(NULLIF(ended_at, ''), created_at)) >= datetime('now', ?)`
   ];
   const values = [`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`];
+
+  if (serverFilter) {
+    clauses.push(`lower(COALESCE(server_id, '')) = ?`);
+    values.push(serverFilter);
+  }
 
   if (searchQuery) {
     const likeValue = `%${searchQuery}%`;
@@ -17527,8 +17535,14 @@ function renderStaffOverview(req, res) {
 function renderStaffUserBackups(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
   const searchQuery = String(req.query.q || "").trim().slice(0, 120);
+  const activeServerFilter = ["free-rp", "erp"].includes(String(req.query.server || "").trim().toLowerCase())
+    ? String(req.query.server || "").trim().toLowerCase()
+    : "";
   const retentionSince = addUtcCalendarMonths(new Date(), -STAFF_USER_LOG_BACKUP_RETENTION_MONTHS);
-  const userBackupLogs = getStaffUserLogBackups({ query: searchQuery }).map((entry) => {
+  const userBackupLogs = getStaffUserLogBackups({
+    query: searchQuery,
+    serverId: activeServerFilter
+  }).map((entry) => {
     const participantDetails = Array.isArray(entry.participant_details)
       ? entry.participant_details.map((participant) => ({
         ...participant,
@@ -17593,6 +17607,7 @@ function renderStaffUserBackups(req, res) {
     userDetailsBasePath: panelConfig.userDetailsBasePath,
     activeStaffTab: "user-backups",
     searchQuery,
+    activeServerFilter,
     userBackupLogs,
     filteredLogCount: userBackupLogs.length,
     starterCount: starterKeys.size,

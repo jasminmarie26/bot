@@ -4,7 +4,18 @@
   const overviewBasePath = panelBasePath || "/staff";
   const userBackupBasePath = `${overviewBasePath}/user-backups`;
   const currentSearchQuery = String(searchQuery || "");
+  const selectedServerFilter = String(activeServerFilter || "").trim().toLowerCase();
   const visibleLogs = Array.isArray(userBackupLogs) ? userBackupLogs : [];
+  const buildUserBackupFilterUrl = (serverFilter = "") => {
+    const params = [];
+    if (currentSearchQuery) {
+      params.push(`q=${encodeURIComponent(currentSearchQuery)}`);
+    }
+    if (serverFilter) {
+      params.push(`server=${encodeURIComponent(serverFilter)}`);
+    }
+    return params.length ? `${userBackupBasePath}?${params.join("&")}` : userBackupBasePath;
+  };
 %>
 
 <section class="panel account-layout">
@@ -83,7 +94,22 @@
     </div>
   </div>
 
+  <div class="admin-table-actions" aria-label="Serverfilter">
+    <a class="btn<%= selectedServerFilter ? ' btn-secondary' : '' %>" href="<%= buildUserBackupFilterUrl("") %>">Alle</a>
+    <a
+      class="btn<%= selectedServerFilter === 'free-rp' ? '' : ' btn-secondary' %>"
+      href="<%= buildUserBackupFilterUrl('free-rp') %>"
+    >FREE-RP</a>
+    <a
+      class="btn<%= selectedServerFilter === 'erp' ? '' : ' btn-secondary' %>"
+      href="<%= buildUserBackupFilterUrl('erp') %>"
+    >ERP</a>
+  </div>
+
   <form method="GET" action="<%= userBackupBasePath %>" class="admin-tools">
+    <% if (selectedServerFilter) { %>
+      <input type="hidden" name="server" value="<%= selectedServerFilter %>" />
+    <% } %>
     <label class="admin-search">
       <span>Suchen</span>
       <input
@@ -105,9 +131,13 @@
 
   <p class="muted">
     <% if (visibleLogs.length) { %>
-      <%= visibleLogs.length %> Log<%= visibleLogs.length === 1 ? "" : "s" %> gefunden.
+      <%= visibleLogs.length %> Log<%= visibleLogs.length === 1 ? "" : "s" %> gefunden<%= selectedServerFilter === "free-rp" ? " in FREE-RP" : selectedServerFilter === "erp" ? " in ERP" : "" %>.
     <% } else if (currentSearchQuery) { %>
       Keine Log-Kopie passt auf deine Suche.
+    <% } else if (selectedServerFilter === "free-rp") { %>
+      Noch keine Staff-Log-Kopien in FREE-RP vorhanden.
+    <% } else if (selectedServerFilter === "erp") { %>
+      Noch keine Staff-Log-Kopien in ERP vorhanden.
     <% } else { %>
       Noch keine Staff-Log-Kopien vorhanden.
     <% } %>
