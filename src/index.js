@@ -4051,6 +4051,22 @@ function parseStoredJsonArray(rawValue) {
   }
 }
 
+function parseStoredJsonObjectArray(rawValue) {
+  const prepared = String(rawValue || "").trim();
+  if (!prepared) return [];
+
+  try {
+    const parsed = JSON.parse(prepared);
+    return Array.isArray(parsed)
+      ? parsed.filter((entry) => entry && typeof entry === "object").map((entry) => ({ ...entry }))
+      : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+const STAFF_USER_LOG_BACKUP_RETENTION_MONTHS = 3;
+
 const insertChatLogBackupStatement = db.prepare(
   `INSERT INTO chat_log_backups (
      user_id,
@@ -4072,6 +4088,37 @@ const insertChatLogBackupStatement = db.prepare(
      email_error
    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
+
+const insertStaffUserLogBackupStatement = db.prepare(
+  `INSERT INTO staff_user_log_backups (
+     room_id,
+     standard_room_id,
+     room_label,
+     server_id,
+     started_at,
+     ended_at,
+     started_by_user_id,
+     started_by_account_number,
+     started_by_username,
+     started_by_name,
+     participant_count,
+     participant_names_json,
+     participant_details_json,
+     entry_count,
+     end_reason_text,
+     log_text,
+     entries_json
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+);
+
+const cleanupExpiredStaffUserLogBackupsStatement = db.prepare(
+  `DELETE FROM staff_user_log_backups
+    WHERE datetime(COALESCE(NULLIF(ended_at, ''), created_at)) < datetime('now', ?)`
+);
+
+function cleanupExpiredStaffUserLogBackups() {
+  cleanupExpiredStaffUserLogBackupsStatement.run(`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`);
+}
 
 const selectActiveRoomLogsStatement = db.prepare(
   `SELECT room_id,
@@ -4155,6 +4202,54 @@ function saveChatLogBackupForUser(payload = {}) {
   );
 
   return true;
+}
+
+function saveStaffUserLogBackup(payload = {}) {
+  const participantNames = Array.from(
+    new Set((Array.isArray(payload.participantNames) ? payload.participantNames : [])
+      .map((entry) => String(entry || "").trim())
+      .filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const participantDetails = (Array.isArray(payload.participantDetails) ? payload.participantDetails : [])
+    .map((entry) => ({
+      user_id: Number(entry?.user_id) || 0,
+      account_number: String(entry?.account_number || "").trim(),
+      username: String(entry?.username || "").trim(),
+      character_id: Number(entry?.character_id) || 0,
+      display_name: String(entry?.display_name || "").trim()
+    }))
+    .filter((entry) => entry.display_name)
+    .sort((left, right) =>
+      left.display_name.localeCompare(right.display_name, "de", { sensitivity: "base" })
+    );
+
+  try {
+    insertStaffUserLogBackupStatement.run(
+      Number(payload.roomId) || 0,
+      String(payload.standardRoomId || "").trim(),
+      String(payload.roomLabel || "").trim(),
+      normalizeCharacterServerId(payload.serverId),
+      String(payload.startedAt || "").trim(),
+      String(payload.endedAt || "").trim(),
+      Number(payload.startedByUserId) || 0,
+      String(payload.startedByAccountNumber || "").trim(),
+      String(payload.startedByUsername || "").trim(),
+      String(payload.startedByName || "").trim(),
+      participantDetails.length,
+      JSON.stringify(participantNames),
+      JSON.stringify(participantDetails),
+      Array.isArray(payload.entries) ? payload.entries.length : 0,
+      String(payload.endReasonText || "").trim(),
+      String(payload.logText || "").trim(),
+      JSON.stringify(Array.isArray(payload.entries) ? payload.entries : [])
+    );
+
+    cleanupExpiredStaffUserLogBackups();
+    return true;
+  } catch (error) {
+    console.error("Konnte Staff-User-Log-Backup nicht speichern:", error);
+    return false;
+  }
 }
 
 function getChatLogBackupCharactersForUser(userId) {
@@ -4248,6 +4343,62 @@ function getChatLogBackupsForUserCharacter(userId, characterId, options = {}) {
       participant_names: parseStoredJsonArray(row.participant_names_json)
     }));
 }
+
+function getStaffUserLogBackups(options = {}) {
+  cleanupExpiredStaffUserLogBackups();
+
+  const searchQuery = String(options.query || "").trim().slice(0, 120);
+  const clauses = [
+    `datetime(COALESCE(NULLIF(ended_at, ''), created_at)) >= datetime('now', ?)`
+  ];
+  const values = [`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`];
+
+  if (searchQuery) {
+    const likeValue = `%${searchQuery}%`;
+    clauses.push(`(
+      room_label LIKE ? COLLATE NOCASE OR
+      started_by_name LIKE ? COLLATE NOCASE OR
+      started_by_username LIKE ? COLLATE NOCASE OR
+      started_by_account_number LIKE ? COLLATE NOCASE OR
+      participant_names_json LIKE ? COLLATE NOCASE OR
+      participant_details_json LIKE ? COLLATE NOCASE
+    )`);
+    values.push(likeValue, likeValue, likeValue, likeValue, likeValue, likeValue);
+  }
+
+  return db
+    .prepare(
+      `SELECT id,
+              room_id,
+              standard_room_id,
+              room_label,
+              server_id,
+              started_at,
+              ended_at,
+              started_by_user_id,
+              started_by_account_number,
+              started_by_username,
+              started_by_name,
+              participant_count,
+              participant_names_json,
+              participant_details_json,
+              entry_count,
+              end_reason_text,
+              log_text,
+              created_at
+         FROM staff_user_log_backups
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY COALESCE(NULLIF(ended_at, ''), created_at) DESC, id DESC`
+    )
+    .all(...values)
+    .map((row) => ({
+      ...row,
+      participant_names: parseStoredJsonArray(row.participant_names_json),
+      participant_details: parseStoredJsonObjectArray(row.participant_details_json)
+    }));
+}
+
+cleanupExpiredStaffUserLogBackups();
 
 function parseCharacterBackupSnapshot(rawValue) {
   const prepared = String(rawValue || "").trim();
@@ -17334,6 +17485,7 @@ function renderStaffOverview(req, res) {
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
     userDetailsBasePath: panelConfig.userDetailsBasePath,
+    activeStaffTab: "overview",
     backLabel: panelConfig.backLabel,
     canEditUsers: panelConfig.canEditUsers,
     canResetPasswords: panelConfig.canResetPasswords,
@@ -17360,6 +17512,84 @@ function renderStaffOverview(req, res) {
       red: redUsers.length,
       violet: violetUsers.length
     }
+  });
+}
+
+function renderStaffUserBackups(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
+  const searchQuery = String(req.query.q || "").trim().slice(0, 120);
+  const retentionSince = addUtcCalendarMonths(new Date(), -STAFF_USER_LOG_BACKUP_RETENTION_MONTHS);
+  const userBackupLogs = getStaffUserLogBackups({ query: searchQuery }).map((entry) => {
+    const participantDetails = Array.isArray(entry.participant_details)
+      ? entry.participant_details.map((participant) => ({
+        ...participant,
+        display_name: String(participant?.display_name || "").trim(),
+        username: String(participant?.username || "").trim(),
+        account_number: String(participant?.account_number || "").trim()
+      }))
+      : [];
+    const startedByName = String(entry.started_by_name || "").trim();
+    const startedByUsername = String(entry.started_by_username || "").trim();
+    const startedByAccountNumber = String(entry.started_by_account_number || "").trim();
+    const starterLabel = startedByName || startedByUsername || "Unbekannt";
+
+    return {
+      ...entry,
+      participant_details: participantDetails,
+      participant_count: Number(entry.participant_count) || participantDetails.length,
+      entry_count: Number(entry.entry_count) || 0,
+      started_at_label: formatGermanDateTime(entry.started_at || entry.created_at),
+      ended_at_label: formatGermanDateTime(entry.ended_at || entry.created_at),
+      server_label: getServerLabel(entry.server_id),
+      starter_label: starterLabel,
+      starter_meta_parts: [
+        startedByUsername && startedByUsername !== starterLabel ? `@${startedByUsername}` : "",
+        startedByAccountNumber ? `#${startedByAccountNumber}` : ""
+      ].filter(Boolean)
+    };
+  });
+  const starterKeys = new Set(
+    userBackupLogs
+      .map((entry) =>
+        String(
+          entry.started_by_account_number ||
+            entry.started_by_username ||
+            entry.started_by_name ||
+            entry.id
+        ).trim().toLowerCase()
+      )
+      .filter(Boolean)
+  );
+  const participantKeys = new Set();
+
+  userBackupLogs.forEach((entry) => {
+    (Array.isArray(entry.participant_details) ? entry.participant_details : []).forEach((participant) => {
+      const participantKey = String(
+        participant?.account_number ||
+          participant?.username ||
+          participant?.display_name
+      )
+        .trim()
+        .toLowerCase();
+      if (participantKey) {
+        participantKeys.add(participantKey);
+      }
+    });
+  });
+
+  return res.render("staff-user-backups", {
+    title: `${panelConfig.panelTitle}: USER BACKUP`,
+    panelTitle: panelConfig.panelTitle,
+    panelBasePath: panelConfig.panelBasePath,
+    userDetailsBasePath: panelConfig.userDetailsBasePath,
+    activeStaffTab: "user-backups",
+    searchQuery,
+    userBackupLogs,
+    filteredLogCount: userBackupLogs.length,
+    starterCount: starterKeys.size,
+    participantCount: participantKeys.size,
+    retentionMonths: STAFF_USER_LOG_BACKUP_RETENTION_MONTHS,
+    retentionSinceLabel: retentionSince ? formatGermanDateTime(retentionSince) : ""
   });
 }
 
@@ -17447,6 +17677,8 @@ app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
+app.get("/admin/user-backups", requireAuth, requireAdmin, renderStaffUserBackups);
+app.get("/staff/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
 
 app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
 app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
@@ -20248,7 +20480,7 @@ function getRoomLogRecipients(userIds) {
   const placeholders = parsedIds.map(() => "?").join(", ");
   return db
     .prepare(
-      `SELECT id, username, email, room_log_email_enabled
+      `SELECT id, username, email, account_number, room_log_email_enabled
        FROM users
        WHERE id IN (${placeholders})`
     )
@@ -20671,6 +20903,41 @@ async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = 
     new Set(participantEntries.map((entry) => String(entry.displayName || "").trim()).filter(Boolean))
   )
     .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const participantDetails = participantEntries
+    .map((entry) => {
+      const recipient = recipientMap.get(Number(entry.userId));
+      return {
+        user_id: Number(entry.userId) || 0,
+        account_number: String(recipient?.account_number || "").trim(),
+        username: String(recipient?.username || "").trim(),
+        character_id: Number(entry.characterId) || 0,
+        display_name: String(entry.displayName || recipient?.username || "Unbekannt").trim() || "Unbekannt"
+      };
+    })
+    .sort((left, right) =>
+      String(left.display_name || "").localeCompare(String(right.display_name || ""), "de", {
+        sensitivity: "base"
+      })
+    );
+  const startedByRecipient = recipientMap.get(Number(roomLog.startedByUserId));
+
+  saveStaffUserLogBackup({
+    roomId: roomLog.roomId,
+    standardRoomId: roomLog.standardRoomId,
+    roomLabel: roomLog.roomLabel,
+    serverId: roomLog.serverId,
+    startedAt: roomLog.startedAt,
+    endedAt,
+    startedByUserId: roomLog.startedByUserId,
+    startedByAccountNumber: startedByRecipient?.account_number,
+    startedByUsername: startedByRecipient?.username,
+    startedByName: roomLog.startedByName,
+    participantNames,
+    participantDetails,
+    endReasonText,
+    logText,
+    entries: roomLog.messages
+  });
   const mailerConfigured = Boolean(getVerificationMailer());
   let backupSavedCount = 0;
   let deliveredCount = 0;

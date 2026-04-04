@@ -1,0 +1,199 @@
+<%- include("partials/start") %>
+
+<%
+  const overviewBasePath = panelBasePath || "/staff";
+  const userBackupBasePath = `${overviewBasePath}/user-backups`;
+  const currentSearchQuery = String(searchQuery || "");
+  const visibleLogs = Array.isArray(userBackupLogs) ? userBackupLogs : [];
+%>
+
+<section class="panel account-layout">
+  <div class="header-line">
+    <div>
+      <h1>USER BACKUP</h1>
+      <p class="muted">
+        Hier landen Staff-Kopien aller beendeten Raum-Logs. Sichtbar nur f&uuml;r Admins und Moderatoren.
+      </p>
+    </div>
+  </div>
+
+  <nav class="dashboard-role-switch" aria-label="Staff Navigation">
+    <a
+      class="dashboard-role-link<%= activeStaffTab === "overview" ? " is-active" : "" %>"
+      href="<%= overviewBasePath %>"
+    >
+      <span class="dashboard-role-tab-title">&Uuml;bersicht</span>
+    </a>
+    <a
+      class="dashboard-role-link<%= activeStaffTab === "user-backups" ? " is-active" : "" %>"
+      href="<%= userBackupBasePath %>"
+    >
+      <span class="dashboard-role-tab-title">USER BACKUP</span>
+    </a>
+  </nav>
+
+  <div class="help-table-wrap">
+    <table class="help-table admin-overview-table">
+      <thead>
+        <tr>
+          <th>Bereich</th>
+          <th>Wert</th>
+          <th>Hinweis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Logs sichtbar</td>
+          <td><strong><%= filteredLogCount %></strong></td>
+          <td>Alle Staff-Log-Kopien der letzten <%= retentionMonths %> Monate.</td>
+        </tr>
+        <tr>
+          <td>Starter</td>
+          <td><strong><%= starterCount %></strong></td>
+          <td>So viele unterschiedliche User haben in diesem Zeitraum Logs gestartet.</td>
+        </tr>
+        <tr>
+          <td>Beteiligte</td>
+          <td><strong><%= participantCount %></strong></td>
+          <td>Alle beteiligten Namen aus den sichtbaren Log-Kopien.</td>
+        </tr>
+        <tr>
+          <td>Aufbewahrung</td>
+          <td><strong><%= retentionMonths %> Monate</strong></td>
+          <td>
+            <% if (retentionSinceLabel) { %>
+              Alles vor <%= retentionSinceLabel %> f&auml;llt automatisch heraus.
+            <% } else { %>
+              &Auml;ltere Staff-Kopien werden automatisch entfernt.
+            <% } %>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel account-layout">
+  <div class="header-line">
+    <div>
+      <h2>Gespeicherte Logs</h2>
+      <p class="muted">
+        Private Backup-Tabs der User bleiben davon getrennt. Hier liegt nur die Staff-Sicht auf Raum-Logs.
+      </p>
+    </div>
+  </div>
+
+  <form method="GET" action="<%= userBackupBasePath %>" class="admin-tools">
+    <label class="admin-search">
+      <span>Suchen</span>
+      <input
+        name="q"
+        class="admin-search-input"
+        type="search"
+        autocomplete="off"
+        placeholder="Raum, Starter, Accountnummer oder Beteiligte"
+        value="<%= currentSearchQuery %>"
+      />
+    </label>
+    <div class="admin-table-actions">
+      <button class="btn" type="submit">Suchen</button>
+      <% if (currentSearchQuery) { %>
+        <a class="btn btn-secondary" href="<%= userBackupBasePath %>">Zur&uuml;cksetzen</a>
+      <% } %>
+    </div>
+  </form>
+
+  <p class="muted">
+    <% if (visibleLogs.length) { %>
+      <%= visibleLogs.length %> Log<%= visibleLogs.length === 1 ? "" : "s" %> gefunden.
+    <% } else if (currentSearchQuery) { %>
+      Keine Log-Kopie passt auf deine Suche.
+    <% } else { %>
+      Noch keine Staff-Log-Kopien vorhanden.
+    <% } %>
+  </p>
+
+  <% if (visibleLogs.length) { %>
+    <div class="backup-log-list staff-user-log-list">
+      <% visibleLogs.forEach((entry) => { %>
+        <details class="backup-log-entry staff-user-log-entry">
+          <summary class="backup-log-entry-summary">
+            <div class="backup-log-entry-copy">
+              <strong class="backup-log-entry-title"><%= entry.room_label || "Chat-Log" %></strong>
+              <span class="character-log-meta">
+                <%= entry.server_label %>
+                &middot;
+                <%= entry.ended_at_label || entry.started_at_label || "-" %>
+                &middot;
+                <%= entry.entry_count %> Zeilen
+              </span>
+              <span class="character-log-meta">
+                Starter: <%= entry.starter_label %>
+                <% if (entry.starter_meta_parts && entry.starter_meta_parts.length) { %>
+                  (<%= entry.starter_meta_parts.join(" / ") %>)
+                <% } %>
+              </span>
+
+              <% if (entry.participant_details && entry.participant_details.length) { %>
+                <div class="staff-user-log-participants">
+                  <% entry.participant_details.forEach((participant) => { %>
+                    <span class="staff-user-log-participant-chip"><%= participant.display_name %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+
+            <span class="backup-log-badge">
+              <%= entry.participant_count %> Person<%= Number(entry.participant_count) === 1 ? "" : "en" %>
+            </span>
+          </summary>
+
+          <div class="backup-log-entry-body">
+            <p class="backup-log-meta-line">
+              <strong>Zeitraum:</strong>
+              <span><%= entry.started_at_label || "-" %> bis <%= entry.ended_at_label || entry.started_at_label || "-" %></span>
+            </p>
+            <p class="backup-log-meta-line">
+              <strong>Starter:</strong>
+              <span><%= entry.starter_label %></span>
+              <% if (entry.starter_meta_parts && entry.starter_meta_parts.length) { %>
+                <span><%= entry.starter_meta_parts.join(" / ") %></span>
+              <% } %>
+            </p>
+            <p class="backup-log-meta-line">
+              <strong>Server:</strong>
+              <span><%= entry.server_label %></span>
+            </p>
+            <% if (entry.end_reason_text) { %>
+              <p class="backup-log-meta-line">
+                <strong>Ende:</strong>
+                <span><%= entry.end_reason_text %></span>
+              </p>
+            <% } %>
+
+            <% if (entry.participant_details && entry.participant_details.length) { %>
+              <div class="staff-user-log-participant-grid">
+                <% entry.participant_details.forEach((participant) => { %>
+                  <article class="staff-user-log-participant-card">
+                    <strong><%= participant.display_name %></strong>
+                    <% if (participant.username || participant.account_number) { %>
+                      <small>
+                        <% if (participant.username) { %>@<%= participant.username %><% } %>
+                        <% if (participant.username && participant.account_number) { %> / <% } %>
+                        <% if (participant.account_number) { %>#<%= participant.account_number %><% } %>
+                      </small>
+                    <% } %>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <pre class="backup-log-text"><%= entry.log_text || "Keine Log-Zeilen gespeichert." %></pre>
+          </div>
+        </details>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include("partials/end") %>

@@ -288,6 +288,20 @@
       !topbarGuestbookModeActive &&
       isDashboardPath
     ); %>
+    <% const showTopbarStaffAreaLink = Boolean(
+      currentUser &&
+      (currentUser.is_admin || currentUser.is_moderator)
+    ); %>
+    <% const topbarStaffAreaHref = currentUser
+      ? (currentUser.is_admin ? "/admin" : "/staff")
+      : ""; %>
+    <% const topbarStaffAreaLabel = currentUser
+      ? (currentUser.is_admin ? "Admin" : "Moderator")
+      : ""; %>
+    <% const showTopbarStaffUserBackupLink = Boolean(showTopbarStaffAreaLink); %>
+    <% const topbarStaffUserBackupHref = currentUser
+      ? (currentUser.is_admin ? "/admin/user-backups" : "/staff/user-backups")
+      : ""; %>
     <% const showTopbarRpBoardLink = Boolean(
       !topbarGuestbookModeActive &&
       menuCharacter &&
@@ -355,8 +369,11 @@
                   </a>
                 <% } %>
               <% } %>
-              <% if (currentUser.is_admin) { %>
-                <a href="/admin">Admin</a>
+              <% if (showTopbarStaffAreaLink) { %>
+                <a href="<%= topbarStaffAreaHref %>"><%= topbarStaffAreaLabel %></a>
+              <% } %>
+              <% if (showTopbarStaffUserBackupLink) { %>
+                <a href="<%= topbarStaffUserBackupHref %>">USER BACKUP</a>
               <% } %>
             <% } else { %>
               <a href="/login">Login</a>

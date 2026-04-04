@@ -404,6 +404,28 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS staff_user_log_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL DEFAULT 0,
+    standard_room_id TEXT NOT NULL DEFAULT '',
+    room_label TEXT NOT NULL DEFAULT '',
+    server_id TEXT NOT NULL DEFAULT 'free-rp',
+    started_at TEXT NOT NULL DEFAULT '',
+    ended_at TEXT NOT NULL DEFAULT '',
+    started_by_user_id INTEGER NOT NULL DEFAULT 0,
+    started_by_account_number TEXT NOT NULL DEFAULT '',
+    started_by_username TEXT NOT NULL DEFAULT '',
+    started_by_name TEXT NOT NULL DEFAULT '',
+    participant_count INTEGER NOT NULL DEFAULT 0,
+    participant_names_json TEXT NOT NULL DEFAULT '[]',
+    participant_details_json TEXT NOT NULL DEFAULT '[]',
+    entry_count INTEGER NOT NULL DEFAULT 0,
+    end_reason_text TEXT NOT NULL DEFAULT '',
+    log_text TEXT NOT NULL DEFAULT '',
+    entries_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS active_chat_room_logs (
     room_id INTEGER NOT NULL DEFAULT 0,
     server_id TEXT NOT NULL DEFAULT 'free-rp',
@@ -434,6 +456,10 @@ db.exec(`
     ON chat_log_backups(user_id, character_id, ended_at, id);
   CREATE INDEX IF NOT EXISTS idx_chat_log_backups_user_created_at
     ON chat_log_backups(user_id, created_at, id);
+  CREATE INDEX IF NOT EXISTS idx_staff_user_log_backups_timeline
+    ON staff_user_log_backups(ended_at, created_at, id);
+  CREATE INDEX IF NOT EXISTS idx_staff_user_log_backups_starter
+    ON staff_user_log_backups(started_by_user_id, created_at, id);
   CREATE INDEX IF NOT EXISTS idx_guestbook_character_id ON guestbook_entries(character_id);
   CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_room_permissions_room_user

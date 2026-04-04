@@ -62,6 +62,21 @@
     </div>
   </div>
 
+  <nav class="dashboard-role-switch" aria-label="Staff Navigation">
+    <a
+      class="dashboard-role-link<%= activeStaffTab === 'overview' ? ' is-active' : '' %>"
+      href="<%= overviewBasePath %>"
+    >
+      <span class="dashboard-role-tab-title">&Uuml;bersicht</span>
+    </a>
+    <a
+      class="dashboard-role-link<%= activeStaffTab === 'user-backups' ? ' is-active' : '' %>"
+      href="<%= `${overviewBasePath}/user-backups` %>"
+    >
+      <span class="dashboard-role-tab-title">USER BACKUP</span>
+    </a>
+  </nav>
+
   <div class="help-table-wrap">
     <table class="help-table admin-overview-table">
       <thead>
