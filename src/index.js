@@ -143,6 +143,47 @@ const BIRTHDAY_GREETING_SIGNOFFS = [
 const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
 const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
 const BIRTHDAY_NOTIFICATION_DECORATION = "🎉 🎂 ✨";
+const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
+  easter: "holiday_easter",
+  christmas: "holiday_christmas",
+  nikolaus: "holiday_nikolaus"
+});
+const HOLIDAY_NOTIFICATION_TYPE_SET = new Set(Object.values(HOLIDAY_NOTIFICATION_TYPES));
+const HOLIDAY_NOTIFICATION_CHECK_INTERVAL_MS = 60 * 1000;
+const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
+  {
+    type: HOLIDAY_NOTIFICATION_TYPES.easter,
+    title: "🐣 Schöne Ostergrüße vom Heldenhafte Reisen Team",
+    message:
+      "🐰 🌷 Das Heldenhafte Reisen Team wünscht dir schöne Ostern, ruhige Feiertage und viele warme Herzensmomente.",
+    matchesDate(referenceDate) {
+      const easterSunday = getEasterSundayDate(referenceDate.getFullYear());
+      return (
+        referenceDate.getFullYear() === easterSunday.getFullYear() &&
+        referenceDate.getMonth() === easterSunday.getMonth() &&
+        referenceDate.getDate() === easterSunday.getDate()
+      );
+    }
+  },
+  {
+    type: HOLIDAY_NOTIFICATION_TYPES.christmas,
+    title: "🎄 Frohe Weihnachten vom Heldenhafte Reisen Team",
+    message:
+      "✨ 🎁 Das Heldenhafte Reisen Team wünscht dir frohe Weihnachten, besinnliche Stunden und ganz viel Wärme für Herz und Seele.",
+    matchesDate(referenceDate) {
+      return referenceDate.getMonth() === 11 && referenceDate.getDate() === 24;
+    }
+  },
+  {
+    type: HOLIDAY_NOTIFICATION_TYPES.nikolaus,
+    title: "🎅 Schöne Nikolausgrüße vom Heldenhafte Reisen Team",
+    message:
+      "🍫 🥾 Das Heldenhafte Reisen Team wünscht dir einen schönen Nikolaustag voller kleiner Freuden, Wärme und süßer Momente.",
+    matchesDate(referenceDate) {
+      return referenceDate.getMonth() === 11 && referenceDate.getDate() === 6;
+    }
+  }
+]);
 const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
   GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
 );
@@ -1684,6 +1725,168 @@ function getBirthdayNotificationDateKey(referenceDate = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getEasterSundayDate(year) {
+  const parsedYear = Number(year);
+  const safeYear = Number.isInteger(parsedYear) && parsedYear > 1582
+    ? parsedYear
+    : new Date().getFullYear();
+  const century = Math.floor(safeYear / 100);
+  const yearOfCentury = safeYear % 100;
+  const leapYearCorrection = Math.floor(century / 4);
+  const skippedLeapYears = century % 4;
+  const moonCorrection = Math.floor((century + 8) / 25);
+  const moonPhaseOffset = Math.floor((century - moonCorrection + 1) / 3);
+  const epact =
+    (19 * (safeYear % 19) + century - leapYearCorrection - moonPhaseOffset + 15) % 30;
+  const yearQuarter = Math.floor(yearOfCentury / 4);
+  const yearRemainder = yearOfCentury % 4;
+  const weekdayOffset =
+    (32 + 2 * skippedLeapYears + 2 * yearQuarter - epact - yearRemainder) % 7;
+  const easterCorrection = Math.floor((safeYear % 19 + 11 * epact + 22 * weekdayOffset) / 451);
+  const month = Math.floor((epact + weekdayOffset - 7 * easterCorrection + 114) / 31);
+  const day = ((epact + weekdayOffset - 7 * easterCorrection + 114) % 31) + 1;
+  return new Date(safeYear, month - 1, day);
+}
+
+function getActiveHolidayNotificationConfig(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  return HOLIDAY_NOTIFICATION_CONFIGS.find((entry) => entry.matchesDate(now)) || null;
+}
+
+function createSystemNotificationForAllUsers(notificationType, notificationKey, title, message) {
+  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
+  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
+  const normalizedTitle = String(title || "").trim().slice(0, 160);
+  const normalizedMessage = String(message || "").trim().slice(0, 4000);
+
+  if (
+    !normalizedNotificationType ||
+    !normalizedNotificationKey ||
+    !normalizedTitle ||
+    !normalizedMessage
+  ) {
+    return 0;
+  }
+
+  const userRows = db.prepare("SELECT id FROM users").all();
+  if (!Array.isArray(userRows) || userRows.length < 1) {
+    return 0;
+  }
+
+  const insertNotificationStatement = db.prepare(
+    `INSERT INTO system_notifications (
+       user_id,
+       notification_type,
+       notification_key,
+       title,
+       message,
+       is_read,
+       created_at
+     )
+     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
+     ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
+  );
+  const changedUserIds = [];
+  const createNotificationsTx = db.transaction((rows) => {
+    for (const row of rows) {
+      const userId = Number(row?.id);
+      if (!Number.isInteger(userId) || userId < 1) {
+        continue;
+      }
+
+      const result = insertNotificationStatement.run(
+        userId,
+        normalizedNotificationType,
+        normalizedNotificationKey,
+        normalizedTitle,
+        normalizedMessage
+      );
+      if (Number(result.changes || 0) > 0) {
+        changedUserIds.push(userId);
+      }
+    }
+  });
+
+  createNotificationsTx(userRows);
+
+  for (const userId of changedUserIds) {
+    emitGuestbookNotificationUpdateForUser(userId);
+  }
+
+  return changedUserIds.length;
+}
+
+function deleteExpiredHolidayNotifications(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  const holidayTypes = Array.from(HOLIDAY_NOTIFICATION_TYPE_SET);
+  if (holidayTypes.length < 1) {
+    return 0;
+  }
+
+  const activeHoliday = getActiveHolidayNotificationConfig(now);
+  const placeholders = holidayTypes.map(() => "?").join(", ");
+  const params = [...holidayTypes];
+  let keepClause = "";
+  if (activeHoliday) {
+    keepClause = " AND NOT (notification_type = ? AND notification_key = ?)";
+    params.push(activeHoliday.type, getBirthdayNotificationDateKey(now));
+  }
+
+  const affectedUserIds = db
+    .prepare(
+      `SELECT DISTINCT user_id
+       FROM system_notifications
+       WHERE notification_type IN (${placeholders})${keepClause}`
+    )
+    .all(...params)
+    .map((row) => Number(row?.user_id))
+    .filter((userId) => Number.isInteger(userId) && userId > 0);
+
+  const result = db
+    .prepare(
+      `DELETE FROM system_notifications
+       WHERE notification_type IN (${placeholders})${keepClause}`
+    )
+    .run(...params);
+
+  if (Number(result.changes || 0) > 0) {
+    for (const userId of affectedUserIds) {
+      emitGuestbookNotificationUpdateForUser(userId);
+    }
+  }
+
+  return Number(result.changes || 0);
+}
+
+let lastProcessedHolidayNotificationDateKey = "";
+
+function processScheduledHolidayNotifications(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  const dateKey = getBirthdayNotificationDateKey(now);
+  if (dateKey === lastProcessedHolidayNotificationDateKey) {
+    return;
+  }
+
+  deleteExpiredHolidayNotifications(now);
+  const activeHoliday = getActiveHolidayNotificationConfig(now);
+  if (activeHoliday) {
+    createSystemNotificationForAllUsers(
+      activeHoliday.type,
+      dateKey,
+      activeHoliday.title,
+      activeHoliday.message
+    );
+  }
+
+  lastProcessedHolidayNotificationDateKey = dateKey;
+}
+
 function createSystemNotification(userId, notificationType, notificationKey, title, message) {
   const parsedUserId = Number(userId);
   const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
@@ -1747,6 +1950,26 @@ function createBirthdayGreetingNotificationIfNeeded(userId, referenceDate = new 
     getBirthdayNotificationDateKey(referenceDate),
     BIRTHDAY_NOTIFICATION_TITLE,
     buildBirthdayGreetingPlainTextForUser(parsedUserId, options)
+  );
+}
+
+function createActiveHolidayNotificationIfNeeded(userId, referenceDate = new Date()) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const activeHoliday = getActiveHolidayNotificationConfig(referenceDate);
+  if (!activeHoliday) {
+    return false;
+  }
+
+  return createSystemNotification(
+    parsedUserId,
+    activeHoliday.type,
+    getBirthdayNotificationDateKey(referenceDate),
+    activeHoliday.title,
+    activeHoliday.message
   );
 }
 
@@ -9386,6 +9609,17 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
     };
   }
 
+  if (HOLIDAY_NOTIFICATION_TYPE_SET.has(normalizedType)) {
+    return {
+      id: Number(notification.id),
+      type: normalizedType,
+      title: String(notification.title || "").trim(),
+      message: String(notification.message || "").trim(),
+      is_read: Number(notification.is_read) === 1,
+      created_at: String(notification.created_at || "").trim()
+    };
+  }
+
   if (normalizedType === "guestbook_entry") {
     return {
       id: Number(notification.id),
@@ -9720,6 +9954,16 @@ function deleteSystemInboxNotification(notificationId, userId, notificationType)
          AND user_id = ?
          AND notification_type = ?`
     ).run(parsedNotificationId, parsedUserId, BIRTHDAY_NOTIFICATION_TYPE);
+  } else if (HOLIDAY_NOTIFICATION_TYPE_SET.has(normalizedType)) {
+    result = db.prepare(
+      `UPDATE system_notifications
+       SET is_read = 1,
+           title = '',
+           message = ''
+       WHERE id = ?
+         AND user_id = ?
+         AND notification_type = ?`
+    ).run(parsedNotificationId, parsedUserId, normalizedType);
   } else if (normalizedType === "festplay_approval") {
     result = db.prepare(
       `DELETE FROM festplay_application_notifications
@@ -10775,9 +11019,11 @@ app.use((req, res, next) => {
   }
 
   if (req.session.user?.id) {
-    createBirthdayGreetingNotificationIfNeeded(req.session.user.id, new Date(), {
+    const notificationReferenceDate = new Date();
+    createBirthdayGreetingNotificationIfNeeded(req.session.user.id, notificationReferenceDate, {
       activeCharacter: getPreferredMenuCharacterForUser(req)
     });
+    createActiveHolidayNotificationIfNeeded(req.session.user.id, notificationReferenceDate);
   }
 
   res.locals.currentUser = req.session.user || null;
@@ -12741,6 +12987,19 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
       req,
       "success",
       birthdayGreetingText || "Herzlichen Glückwunsch zum Geburtstag!"
+    );
+    return res.redirect(req.get("referer") || "/dashboard");
+  }
+
+  if (HOLIDAY_NOTIFICATION_TYPE_SET.has(notificationType)) {
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
+    const holidayTitle = String(latestNotification.title || "").trim();
+    const holidayMessage = String(latestNotification.message || "").trim();
+    const flashText = [holidayTitle, holidayMessage].filter(Boolean).join(": ");
+    setFlash(
+      req,
+      "success",
+      flashText || "Du hast einen neuen Feiertagsgruß erhalten."
     );
     return res.redirect(req.get("referer") || "/dashboard");
   }
@@ -24054,6 +24313,7 @@ server.listen(port, () => {
   ensureCuratedPublicRooms();
   pruneEmptyRooms();
   void refreshDiscordHomeStats(true);
+  processScheduledHolidayNotifications(new Date());
   const purgedSessionCount = purgeInactiveStoredSessions();
   if (purgedSessionCount > 0) {
     console.log(`Inaktive Sitzungen bereinigt: ${purgedSessionCount}`);
@@ -24075,6 +24335,9 @@ server.listen(port, () => {
       emitHomeStatsUpdate();
     }
   }, SESSION_STORE_CLEANUP_INTERVAL_MS);
+  setInterval(() => {
+    processScheduledHolidayNotifications(new Date());
+  }, HOLIDAY_NOTIFICATION_CHECK_INTERVAL_MS).unref();
   setInterval(() => {
     void purgeInactiveFestplays()
       .then((result) => {

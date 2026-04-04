@@ -2888,26 +2888,12 @@
   }
 
   if (chatRoomListLink) {
-    chatRoomListLink.addEventListener("click", (event) => {
-      const nextUrl = buildCurrentChatRoomListUrl();
-      chatRoomListLink.href = nextUrl;
-      event.preventDefault();
-
-      const linkTarget = String(chatRoomListLink.getAttribute("target") || "").trim();
-      if (linkTarget && linkTarget !== "_self") {
-        const openedWindow = window.open(nextUrl, linkTarget, "noopener,noreferrer");
-        if (openedWindow) {
-          try {
-            openedWindow.opener = null;
-          } catch (_error) {
-            // Ignore opener assignment failures.
-          }
-          return;
-        }
-      }
-
-      window.location.assign(nextUrl);
-    });
+    const syncRoomListHref = () => {
+      chatRoomListLink.href = buildCurrentChatRoomListUrl();
+    };
+    chatRoomListLink.addEventListener("click", syncRoomListHref);
+    chatRoomListLink.addEventListener("auxclick", syncRoomListHref);
+    chatRoomListLink.addEventListener("pointerdown", syncRoomListHref);
   }
 
   if (onlineActionGuestbook) {

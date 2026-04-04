@@ -7,8 +7,18 @@
   const systemNotificationFetchUrl = "/guestbook/notifications/system";
   const approvalNotificationType = "festplay_approval";
   const birthdayNotificationType = "birthday_greeting";
+  const easterNotificationType = "holiday_easter";
+  const christmasNotificationType = "holiday_christmas";
+  const nikolausNotificationType = "holiday_nikolaus";
   const defaultBirthdayTitle = "Geburtstagsgr\u00fc\u00dfe vom Heldenhafte Reisen Team";
   const defaultBirthdayDecoration = "\uD83C\uDF89 \uD83C\uDF82 \u2728";
+  const systemNotificationTypes = new Set([
+    approvalNotificationType,
+    birthdayNotificationType,
+    easterNotificationType,
+    christmasNotificationType,
+    nikolausNotificationType
+  ]);
   const canUseRealtimeUpdates = typeof io === "function";
   let systemPanelElements = null;
 
@@ -17,8 +27,7 @@
   }
 
   function isSystemNotificationType(notificationType) {
-    const normalizedType = normalizeNotificationType(notificationType);
-    return normalizedType === approvalNotificationType || normalizedType === birthdayNotificationType;
+    return systemNotificationTypes.has(normalizeNotificationType(notificationType));
   }
 
   function buildNotificationTitle(
@@ -58,6 +67,10 @@
 
     if (normalizedType === birthdayNotificationType) {
       return trimmedNotificationTitle || defaultBirthdayTitle;
+    }
+
+    if (isSystemNotificationType(normalizedType)) {
+      return trimmedNotificationTitle || "Systembrief";
     }
 
     return trimmedCharacterName
@@ -235,6 +248,14 @@
         intro: trimmedNotificationIntro || trimmedNotificationMessage || "Herzlichen Gl\u00fcckwunsch zum Geburtstag!",
         wish: trimmedNotificationWish,
         signoff: trimmedNotificationSignoff
+      };
+    }
+
+    if (isSystemNotificationType(normalizedType)) {
+      return {
+        meta: trimmedNotificationTitle || "Systembrief",
+        mode: "plain",
+        message: trimmedNotificationMessage || ""
       };
     }
 
