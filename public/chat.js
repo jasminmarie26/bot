@@ -326,6 +326,7 @@
         reason: String(parsed.reason || "").trim(),
         disconnectAt,
         scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
+        characterId: toPositiveIntegerOrNull(parsed.characterId),
         messages
       };
     } catch (_error) {
@@ -757,6 +758,14 @@
   let pendingChatReloadRecovery = consumeChatReloadSnapshot();
   let serverRestartReloadInProgress = false;
 
+  if (Number.isInteger(pendingChatReloadRecovery?.characterId) && pendingChatReloadRecovery.characterId > 0) {
+    currentActiveCharacterId = pendingChatReloadRecovery.characterId;
+    currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
+    if (chatBox) {
+      chatBox.dataset.activeCharacterId = String(currentActiveCharacterId);
+    }
+  }
+
   function rememberRenderedChatMessage(message) {
     const snapshot = sanitizeChatMessageForRestore(message);
     if (!snapshot) {
@@ -776,6 +785,10 @@
         reason: String(reason || "").trim() || "page-reload",
         disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
         scrollTop: chatBox.scrollTop,
+        characterId:
+          Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
+            ? currentActiveCharacterId
+            : null,
         messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
       })
     );
