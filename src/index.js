@@ -143,6 +143,7 @@ const BIRTHDAY_GREETING_SIGNOFFS = [
 const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
 const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
 const BIRTHDAY_NOTIFICATION_DECORATION = "🎉 🎂 ✨";
+const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
   easter: "holiday_easter",
   christmas: "holiday_christmas",
@@ -157,11 +158,12 @@ const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
     message:
       "🐰 🌷 Das Heldenhafte Reisen Team wünscht dir schöne Ostern, ruhige Feiertage und viele warme Herzensmomente.",
     matchesDate(referenceDate) {
-      const easterSunday = getEasterSundayDate(referenceDate.getFullYear());
+      const currentDateParts = getPrimaryTimeZoneDateParts(referenceDate);
+      const easterSunday = getEasterSundayDate(currentDateParts.year);
       return (
-        referenceDate.getFullYear() === easterSunday.getFullYear() &&
-        referenceDate.getMonth() === easterSunday.getMonth() &&
-        referenceDate.getDate() === easterSunday.getDate()
+        currentDateParts.year === easterSunday.getFullYear() &&
+        currentDateParts.month === easterSunday.getMonth() + 1 &&
+        currentDateParts.day === easterSunday.getDate()
       );
     }
   },
@@ -171,7 +173,8 @@ const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
     message:
       "✨ 🎁 Das Heldenhafte Reisen Team wünscht dir frohe Weihnachten, besinnliche Stunden und ganz viel Wärme für Herz und Seele.",
     matchesDate(referenceDate) {
-      return referenceDate.getMonth() === 11 && referenceDate.getDate() === 24;
+      const currentDateParts = getPrimaryTimeZoneDateParts(referenceDate);
+      return currentDateParts.month === 12 && currentDateParts.day === 24;
     }
   },
   {
@@ -180,7 +183,8 @@ const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
     message:
       "🍫 🥾 Das Heldenhafte Reisen Team wünscht dir einen schönen Nikolaustag voller kleiner Freuden, Wärme und süßer Momente.",
     matchesDate(referenceDate) {
-      return referenceDate.getMonth() === 11 && referenceDate.getDate() === 6;
+      const currentDateParts = getPrimaryTimeZoneDateParts(referenceDate);
+      return currentDateParts.month === 12 && currentDateParts.day === 6;
     }
   }
 ]);
@@ -1725,6 +1729,36 @@ function getBirthdayNotificationDateKey(referenceDate = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getPrimaryTimeZoneDateParts(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_PRIMARY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const formattedParts = formatter.formatToParts(now);
+  const partMap = {};
+  formattedParts.forEach((part) => {
+    if (part.type !== "literal") {
+      partMap[part.type] = part.value;
+    }
+  });
+
+  return {
+    year: Number(partMap.year) || now.getFullYear(),
+    month: Number(partMap.month) || now.getMonth() + 1,
+    day: Number(partMap.day) || now.getDate()
+  };
+}
+
+function getHolidayNotificationDateKey(referenceDate = new Date()) {
+  const dateParts = getPrimaryTimeZoneDateParts(referenceDate);
+  return `${String(dateParts.year).padStart(4, "0")}-${String(dateParts.month).padStart(2, "0")}-${String(dateParts.day).padStart(2, "0")}`;
+}
+
 function getEasterSundayDate(year) {
   const parsedYear = Number(year);
   const safeYear = Number.isInteger(parsedYear) && parsedYear > 1582
@@ -1833,7 +1867,7 @@ function deleteExpiredHolidayNotifications(referenceDate = new Date()) {
   let keepClause = "";
   if (activeHoliday) {
     keepClause = " AND NOT (notification_type = ? AND notification_key = ?)";
-    params.push(activeHoliday.type, getBirthdayNotificationDateKey(now));
+    params.push(activeHoliday.type, getHolidayNotificationDateKey(now));
   }
 
   const affectedUserIds = db
@@ -1868,7 +1902,7 @@ function processScheduledHolidayNotifications(referenceDate = new Date()) {
   const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
     ? referenceDate
     : new Date();
-  const dateKey = getBirthdayNotificationDateKey(now);
+  const dateKey = getHolidayNotificationDateKey(now);
   if (dateKey === lastProcessedHolidayNotificationDateKey) {
     return;
   }
@@ -1967,7 +2001,7 @@ function createActiveHolidayNotificationIfNeeded(userId, referenceDate = new Dat
   return createSystemNotification(
     parsedUserId,
     activeHoliday.type,
-    getBirthdayNotificationDateKey(referenceDate),
+    getHolidayNotificationDateKey(referenceDate),
     activeHoliday.title,
     activeHoliday.message
   );
