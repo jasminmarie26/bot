@@ -138,7 +138,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
           />
           <input
             id="guestbook-frame-color-alpha-number"
@@ -147,7 +147,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
             inputmode="numeric"
             aria-label="Rahmenfarbe Transparenz in Prozent"
           />
@@ -198,7 +198,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
           />
           <input
             id="guestbook-background-color-alpha-number"
@@ -207,7 +207,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
             inputmode="numeric"
             aria-label="Hintergrundfarbe Transparenz in Prozent"
           />
@@ -258,7 +258,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
           />
           <input
             id="guestbook-surround-color-alpha-number"
@@ -267,7 +267,7 @@
             min="0"
             max="100"
             step="1"
-            value="100"
+            value="0"
             inputmode="numeric"
             aria-label="Fl&auml;chenfarbe Transparenz in Prozent"
           />
@@ -474,14 +474,16 @@
     const alphaHexToPercent = (value) => {
       const parsed = Number.parseInt(String(value || "").trim(), 16);
       if (!Number.isFinite(parsed)) {
-        return 100;
+        return 0;
       }
-      return Math.min(100, Math.max(0, Math.round((parsed / 255) * 100)));
+      const opacityPercent = Math.min(100, Math.max(0, Math.round((parsed / 255) * 100)));
+      return 100 - opacityPercent;
     };
 
     const percentToAlphaHex = (value) => {
-      const clamped = Math.min(100, Math.max(0, Number.parseInt(String(value ?? "").trim(), 10) || 0));
-      return Math.round((clamped / 100) * 255)
+      const clampedTransparency = Math.min(100, Math.max(0, Number.parseInt(String(value ?? "").trim(), 10) || 0));
+      const opacityPercent = 100 - clampedTransparency;
+      return Math.round((opacityPercent / 100) * 255)
         .toString(16)
         .padStart(2, "0")
         .toUpperCase();
@@ -525,7 +527,7 @@
             isActive: true,
             isValid: true,
             hexColor: normalizedHex,
-            alphaPercent: 100
+            alphaPercent: 0
           };
         }
 
@@ -543,7 +545,7 @@
           isActive: false,
           isValid: String(value || "").trim() === "",
           hexColor: normalizeHexColor(defaultColor) || "#000000",
-          alphaPercent: 100
+          alphaPercent: 0
         };
       };
 
@@ -626,7 +628,7 @@
             isActive: false,
             isValid: true,
             hexColor: defaultColor,
-            alphaPercent: 100
+            alphaPercent: 0
           },
           true
         );

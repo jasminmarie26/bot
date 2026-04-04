@@ -8056,6 +8056,7 @@ function getCharacterByExactNameForServer(name, serverId) {
 function renderGuestbookBbcode(rawContent, options = {}) {
   const normalizedContent = normalizeBbcodeMarkup(String(rawContent || "").slice(0, 12000));
   const compactImageLineBreaks = options?.compactImageLineBreaks !== false;
+  const compactBlockLineBreaks = options?.compactBlockLineBreaks !== false;
   let html = escapeHtml(normalizedContent).replace(/\r\n?/g, "\n");
 
   const inlineTags = [
@@ -8165,14 +8166,16 @@ function renderGuestbookBbcode(rawContent, options = {}) {
       "$1"
     );
   }
-  html = html.replace(
-    /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)/gi,
-    "$1"
-  );
-  html = html.replace(
-    /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
-    "$1"
-  );
+  if (compactBlockLineBreaks) {
+    html = html.replace(
+      /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)/gi,
+      "$1"
+    );
+    html = html.replace(
+      /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
+      "$1"
+    );
+  }
   html = html
     .replace(new RegExp(BBCODE_LITERAL_OPEN_TOKEN, "g"), "[")
     .replace(new RegExp(BBCODE_LITERAL_CLOSE_TOKEN, "g"), "]");
@@ -16476,7 +16479,8 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     activeGuestbookPage: {
       ...activeGuestbookPage,
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
-        compactImageLineBreaks: false
+        compactImageLineBreaks: false,
+        compactBlockLineBreaks: false
       })
     },
     guestbookPageNavigation,
@@ -16780,7 +16784,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       previewSettings?.page_text_color,
       previewSettings?.theme_style
     ),
-    previewHtml: renderGuestbookBbcode(previewContent, { compactImageLineBreaks: false }),
+    previewHtml: renderGuestbookBbcode(previewContent, {
+      compactImageLineBreaks: false,
+      compactBlockLineBreaks: false
+    }),
     previewBackUrl: buildGuestbookEditorReturnUrl(req, character, previewPage.id)
   });
 });
