@@ -36,10 +36,10 @@
     : chatIdentityName; %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
 <% const chatRoomListHref = activeCharacter
-  ? `/characters/${activeCharacter.id}`
+  ? `/characters/${activeCharacter.id}#roomlist`
   : "/dashboard"; %>
 <% const chatRoomListHrefTemplate = activeCharacter
-  ? "/characters/__CHARACTER_ID__"
+  ? "/characters/__CHARACTER_ID__#roomlist"
   : ""; %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
@@ -72,6 +72,7 @@
         href="<%= chatRoomListHref %>"
         target="_blank"
         rel="noopener noreferrer"
+        data-chat-roomlist-link
         <%= chatRoomListHrefTemplate ? `data-chat-character-href-template="${chatRoomListHrefTemplate}"` : "" %>
       >Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>

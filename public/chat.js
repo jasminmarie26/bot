@@ -47,6 +47,7 @@
   const roomInviteDeclineBtn = document.getElementById("room-invite-decline");
   const headerIdentity = document.querySelector("[data-header-identity]");
   const userMenuIdentity = document.querySelector("[data-chat-user-menu-identity]");
+  const chatRoomListLink = document.querySelector("[data-chat-roomlist-link]");
   const chatCharacterLinkTargets = Array.from(document.querySelectorAll("[data-chat-character-href-template]"));
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
@@ -236,6 +237,12 @@
     }
   }
 
+  function buildCurrentChatRoomListUrl() {
+    return Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
+      ? `/characters/${currentActiveCharacterId}#roomlist`
+      : "/dashboard";
+  }
+
   function syncChatCharacterLinks() {
     if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
       return;
@@ -248,6 +255,11 @@
     chatCharacterLinkTargets.forEach((node) => {
       const hrefTemplate = String(node?.dataset?.chatCharacterHrefTemplate || "").trim();
       if (!hrefTemplate) {
+        return;
+      }
+
+      if (node.hasAttribute("data-chat-roomlist-link")) {
+        node.href = buildCurrentChatRoomListUrl();
         return;
       }
 
@@ -2872,6 +2884,29 @@
       }
 
       openOnlineMenu(trigger);
+    });
+  }
+
+  if (chatRoomListLink) {
+    chatRoomListLink.addEventListener("click", (event) => {
+      const nextUrl = buildCurrentChatRoomListUrl();
+      chatRoomListLink.href = nextUrl;
+      event.preventDefault();
+
+      const linkTarget = String(chatRoomListLink.getAttribute("target") || "").trim();
+      if (linkTarget && linkTarget !== "_self") {
+        const openedWindow = window.open(nextUrl, linkTarget, "noopener,noreferrer");
+        if (openedWindow) {
+          try {
+            openedWindow.opener = null;
+          } catch (_error) {
+            // Ignore opener assignment failures.
+          }
+          return;
+        }
+      }
+
+      window.location.assign(nextUrl);
     });
   }
 
