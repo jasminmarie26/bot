@@ -282,6 +282,11 @@
     <% const showTopbarGuestbookCreatedAt = Boolean(
       topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
     ); %>
+    <% const hideTopbarGuestbookControl = Boolean(
+      topbarGuestbookModeActive &&
+      typeof topbarGuestbookControlHidden !== "undefined" &&
+      topbarGuestbookControlHidden
+    ); %>
     <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive); %>
     <% const showTopbarBackupLink = Boolean(
       currentUser &&
@@ -332,20 +337,22 @@
           <% if (!topbarGuestbookModeActive) { %>
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
           <% } else { %>
-            <div class="topbar-guestbook-control">
-              <button
-                type="button"
-                class="guestbook-entry-toggle"
-                data-guestbook-panel-toggle
-                aria-controls="guestbook-entry-panel"
-                aria-expanded="false"
-                aria-label="Gästebuch-Einträge öffnen"
-                title="Gästebuch-Einträge öffnen"
-              >
-                <span class="guestbook-entry-toggle-icon" aria-hidden="true"></span>
-              </button>
-              <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
-            </div>
+            <% if (!hideTopbarGuestbookControl) { %>
+              <div class="topbar-guestbook-control">
+                <button
+                  type="button"
+                  class="guestbook-entry-toggle"
+                  data-guestbook-panel-toggle
+                  aria-controls="guestbook-entry-panel"
+                  aria-expanded="false"
+                  aria-label="Gästebuch-Einträge öffnen"
+                  title="Gästebuch-Einträge öffnen"
+                >
+                  <span class="guestbook-entry-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <span class="guestbook-entry-heading">G&auml;stebuch-Eintr&auml;ge</span>
+              </div>
+            <% } %>
             <% if (showTopbarGuestbookCreatedAt) { %>
               <div class="topbar-guestbook-created-wrap">
                 <span class="topbar-guestbook-created-at">

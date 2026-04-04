@@ -6,6 +6,7 @@ const http = require("http");
 const express = require("express");
 const session = require("express-session");
 const SQLiteStore = require("connect-sqlite3")(session);
+const AdmZip = require("adm-zip");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -138,6 +139,20 @@ const GUESTBOOK_BBCODE_FONT_STYLES = Object.freeze({
   magie: "font-family:\"Great Vibes\", \"Berkshire Swash\", cursive;",
   "vintage-fantasy": "font-family:\"IM Fell English SC\", \"Old Standard TT\", serif;"
 });
+const BBCODE_FONT_SAFE_FAMILY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 '&-]*$/i;
+const BBCODE_1001FREEFONTS_BASE_URL = "https://www.1001freefonts.com";
+const BBCODE_1001FREEFONTS_CACHE_ROOT = path.join(__dirname, "..", "data", "bbcode-font-cache");
+const BBCODE_1001FREEFONTS_MISS_TTL_MS = 6 * 60 * 60 * 1000;
+const BBCODE_1001FREEFONTS_MAX_ZIP_SIZE_BYTES = 15 * 1024 * 1024;
+const BBCODE_1001FREEFONTS_FORMAT_BY_EXTENSION = Object.freeze({
+  ".woff2": "woff2",
+  ".woff": "woff",
+  ".otf": "opentype",
+  ".ttf": "truetype"
+});
+const BBCODE_1001FREEFONTS_EXTENSION_PRIORITY = Object.freeze([".woff2", ".woff", ".otf", ".ttf"]);
+const bbcode1001FreeFontsPendingLoads = new Map();
+const bbcode1001FreeFontsMisses = new Map();
 const BIRTHDAY_GREETING_OPENERS = [
   "Herzlichen Glückwunsch zum Geburtstag, {name}!",
   "Alles Liebe zum Geburtstag, {name}!",
@@ -724,6 +739,7 @@ const sessionMiddleware = session({
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
 app.use(express.urlencoded({ extended: false }));
+fs.mkdirSync(BBCODE_1001FREEFONTS_CACHE_ROOT, { recursive: true });
 app.get("/healthz", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   return res.status(200).json({
@@ -745,6 +761,7 @@ for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
   );
 }
 app.use(express.static(path.join(__dirname, "..", "public")));
+app.use("/bbcode-font-cache", express.static(BBCODE_1001FREEFONTS_CACHE_ROOT));
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
   if (isSessionTabHeartbeatExpired(req.session)) {
@@ -8270,6 +8287,286 @@ function sanitizeBbcodeFontFamily(rawFontStyle) {
     .trim();
 }
 
+function isSafeBbcodeFontFamily(value) {
+  return BBCODE_FONT_SAFE_FAMILY_PATTERN.test(String(value || ""));
+}
+
+function getBbcode1001FreeFontsSlugCandidates(rawFamilyName) {
+  const safeFamilyName = sanitizeBbcodeFontFamily(rawFamilyName);
+  if (!safeFamilyName) {
+    return [];
+  }
+
+  const normalizedBase = safeFamilyName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const candidates = new Set();
+  const appendCandidate = (value) => {
+    const nextCandidate = String(value || "")
+      .toLowerCase()
+      .replace(/['’]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+    if (nextCandidate) {
+      candidates.add(nextCandidate);
+    }
+  };
+
+  appendCandidate(normalizedBase);
+  appendCandidate(normalizedBase.replace(/&/g, " and "));
+  appendCandidate(normalizedBase.replace(/&/g, " "));
+  appendCandidate(normalizedBase.replace(/&/g, ""));
+
+  const normalizedToken = normalizeBbcodeFontStyleToken(safeFamilyName);
+  if (normalizedToken) {
+    candidates.add(normalizedToken.slice(0, 80));
+  }
+
+  return Array.from(candidates);
+}
+
+function getBbcode1001FreeFontsMetadataPath(slug) {
+  return path.join(BBCODE_1001FREEFONTS_CACHE_ROOT, `${slug}.json`);
+}
+
+function readBbcode1001FreeFontsMetadata(slug) {
+  const metadataPath = getBbcode1001FreeFontsMetadataPath(slug);
+  if (!fs.existsSync(metadataPath)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+    const fileName = String(parsed?.fileName || "").trim();
+    const format = String(parsed?.format || "").trim();
+    if (!fileName || !format) {
+      return null;
+    }
+
+    const filePath = path.join(BBCODE_1001FREEFONTS_CACHE_ROOT, fileName);
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    return {
+      fileName,
+      format
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeBbcode1001FreeFontsMetadata(slug, metadata) {
+  const payload = {
+    fileName: String(metadata?.fileName || "").trim(),
+    format: String(metadata?.format || "").trim(),
+    sourceDetailUrl: String(metadata?.sourceDetailUrl || "").trim(),
+    sourceZipUrl: String(metadata?.sourceZipUrl || "").trim(),
+    cachedAt: new Date().toISOString()
+  };
+
+  fs.writeFileSync(
+    getBbcode1001FreeFontsMetadataPath(slug),
+    JSON.stringify(payload, null, 2),
+    "utf8"
+  );
+}
+
+function parseBbcode1001FreeFontsDetailPage(html) {
+  const resolvedHtml = String(html || "");
+  if (!resolvedHtml) {
+    return null;
+  }
+
+  const downloadMatch = resolvedHtml.match(/href=['"](?<path>\/(?:de\/)?d\/(?<fontId>\d+)\/[^"'<>]+\.zip)['"]/i);
+  if (!downloadMatch?.groups?.path) {
+    return null;
+  }
+
+  const familyNameMatch = resolvedHtml.match(/<title>\s*([^<|]+?)\s+Schriftart\s*\|/i);
+  return {
+    fontId: String(downloadMatch.groups.fontId || "").trim(),
+    downloadPath: String(downloadMatch.groups.path || "").trim(),
+    familyName: sanitizeBbcodeFontFamily(familyNameMatch?.[1] || "")
+  };
+}
+
+function pickBbcode1001FreeFontsArchiveEntry(zip) {
+  const fontEntries = zip.getEntries().filter((entry) => {
+    if (!entry || entry.isDirectory) {
+      return false;
+    }
+
+    const extension = path.extname(String(entry.entryName || "")).toLowerCase();
+    return Boolean(BBCODE_1001FREEFONTS_FORMAT_BY_EXTENSION[extension]);
+  });
+
+  if (!fontEntries.length) {
+    return null;
+  }
+
+  fontEntries.sort((leftEntry, rightEntry) => {
+    const leftPriority = BBCODE_1001FREEFONTS_EXTENSION_PRIORITY.indexOf(
+      path.extname(String(leftEntry.entryName || "")).toLowerCase()
+    );
+    const rightPriority = BBCODE_1001FREEFONTS_EXTENSION_PRIORITY.indexOf(
+      path.extname(String(rightEntry.entryName || "")).toLowerCase()
+    );
+    const normalizedLeftPriority = leftPriority === -1 ? 999 : leftPriority;
+    const normalizedRightPriority = rightPriority === -1 ? 999 : rightPriority;
+    if (normalizedLeftPriority !== normalizedRightPriority) {
+      return normalizedLeftPriority - normalizedRightPriority;
+    }
+    return String(leftEntry.entryName || "").length - String(rightEntry.entryName || "").length;
+  });
+
+  return fontEntries[0];
+}
+
+function getBbcode1001FreeFontsMissState(cacheKey) {
+  const missEntry = bbcode1001FreeFontsMisses.get(cacheKey);
+  if (!missEntry) {
+    return null;
+  }
+
+  if (Date.now() - missEntry.createdAt > BBCODE_1001FREEFONTS_MISS_TTL_MS) {
+    bbcode1001FreeFontsMisses.delete(cacheKey);
+    return null;
+  }
+
+  return missEntry;
+}
+
+async function ensureBbcode1001FreeFontsCacheEntry(rawFamilyName) {
+  const safeFamilyName = sanitizeBbcodeFontFamily(rawFamilyName);
+  if (!safeFamilyName || !isSafeBbcodeFontFamily(safeFamilyName)) {
+    return null;
+  }
+
+  const slugCandidates = getBbcode1001FreeFontsSlugCandidates(safeFamilyName);
+  if (!slugCandidates.length) {
+    return null;
+  }
+
+  for (const slugCandidate of slugCandidates) {
+    const cachedEntry = readBbcode1001FreeFontsMetadata(slugCandidate);
+    if (cachedEntry) {
+      return cachedEntry;
+    }
+  }
+
+  const cacheKey = slugCandidates[0];
+  if (getBbcode1001FreeFontsMissState(cacheKey)) {
+    return null;
+  }
+
+  const existingLoad = bbcode1001FreeFontsPendingLoads.get(cacheKey);
+  if (existingLoad) {
+    return existingLoad;
+  }
+
+  const loadPromise = (async () => {
+    for (const slugCandidate of slugCandidates) {
+      const cachedEntry = readBbcode1001FreeFontsMetadata(slugCandidate);
+      if (cachedEntry) {
+        return cachedEntry;
+      }
+
+      const detailUrl = new URL(`/de/${slugCandidate}.font`, BBCODE_1001FREEFONTS_BASE_URL);
+      let detailHtml = "";
+      try {
+        const detailResponse = await fetch(detailUrl, {
+          headers: {
+            "user-agent": "Mozilla/5.0 (compatible; HeldenhafteReisenBot/1.0)"
+          }
+        });
+        if (!detailResponse.ok) {
+          continue;
+        }
+        detailHtml = await detailResponse.text();
+      } catch (error) {
+        continue;
+      }
+
+      const detailPage = parseBbcode1001FreeFontsDetailPage(detailHtml);
+      if (!detailPage?.downloadPath) {
+        continue;
+      }
+
+      const resolvedSlugCandidates = getBbcode1001FreeFontsSlugCandidates(detailPage.familyName);
+      if (resolvedSlugCandidates.length && !resolvedSlugCandidates.includes(slugCandidate)) {
+        continue;
+      }
+
+      try {
+        const zipUrl = new URL(detailPage.downloadPath, BBCODE_1001FREEFONTS_BASE_URL);
+        const zipResponse = await fetch(zipUrl, {
+          headers: {
+            "user-agent": "Mozilla/5.0 (compatible; HeldenhafteReisenBot/1.0)",
+            referer: detailUrl.toString(),
+            accept: "application/zip,application/octet-stream;q=0.9,*/*;q=0.8"
+          }
+        });
+        if (!zipResponse.ok) {
+          continue;
+        }
+
+        const zipBuffer = Buffer.from(await zipResponse.arrayBuffer());
+        if (!zipBuffer.length || zipBuffer.length > BBCODE_1001FREEFONTS_MAX_ZIP_SIZE_BYTES) {
+          continue;
+        }
+
+        const zipArchive = new AdmZip(zipBuffer);
+        const fontEntry = pickBbcode1001FreeFontsArchiveEntry(zipArchive);
+        if (!fontEntry) {
+          continue;
+        }
+
+        const fileExtension = path.extname(String(fontEntry.entryName || "")).toLowerCase();
+        const format = BBCODE_1001FREEFONTS_FORMAT_BY_EXTENSION[fileExtension];
+        if (!format) {
+          continue;
+        }
+
+        const cachedFileName = `${detailPage.fontId || slugCandidate}-${slugCandidate}${fileExtension}`;
+        const cachedFilePath = path.join(BBCODE_1001FREEFONTS_CACHE_ROOT, cachedFileName);
+        if (!fs.existsSync(cachedFilePath)) {
+          fs.writeFileSync(cachedFilePath, fontEntry.getData());
+        }
+
+        const metadata = {
+          fileName: cachedFileName,
+          format,
+          sourceDetailUrl: detailUrl.toString(),
+          sourceZipUrl: zipUrl.toString()
+        };
+        writeBbcode1001FreeFontsMetadata(slugCandidate, metadata);
+        bbcode1001FreeFontsMisses.delete(cacheKey);
+        return metadata;
+      } catch (error) {
+        console.error("1001freefonts cache build failed", {
+          familyName: safeFamilyName,
+          slugCandidate,
+          error
+        });
+      }
+    }
+
+    bbcode1001FreeFontsMisses.set(cacheKey, { createdAt: Date.now() });
+    return null;
+  })();
+
+  bbcode1001FreeFontsPendingLoads.set(cacheKey, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    bbcode1001FreeFontsPendingLoads.delete(cacheKey);
+  }
+}
+
 function resolveBbcodeFontStyle(rawFontStyle) {
   const normalizedToken = normalizeBbcodeFontStyleToken(rawFontStyle);
   if (normalizedToken) {
@@ -8296,7 +8593,7 @@ function resolveBbcodeFontStyle(rawFontStyle) {
   const safeFontFamily = sanitizeBbcodeFontFamily(rawFontStyle);
   if (
     !safeFontFamily ||
-    !/^[A-Za-z0-9][A-Za-z0-9 '&-]*$/i.test(safeFontFamily)
+    !isSafeBbcodeFontFamily(safeFontFamily)
   ) {
     return {
       style: "",
@@ -19003,6 +19300,35 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
 
   setFlash(req, "success", `Gästebuch von ${character.name} wurde geleert.`);
   return res.redirect("/admin");
+});
+
+app.get("/bbcode-fonts/1001freefonts.css", async (req, res) => {
+  const requestedFamily = sanitizeBbcodeFontFamily(req.query.family || "");
+  if (!requestedFamily || !isSafeBbcodeFontFamily(requestedFamily)) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.type("text/css").send("");
+  }
+
+  try {
+    const cachedFont = await ensureBbcode1001FreeFontsCacheEntry(requestedFamily);
+    if (!cachedFont?.fileName || !cachedFont?.format) {
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.type("text/css").send("");
+    }
+
+    const fontAssetUrl = `/bbcode-font-cache/${encodeURIComponent(cachedFont.fileName)}`;
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.type("text/css").send(
+      `@font-face{font-family:${JSON.stringify(requestedFamily)};src:url(${JSON.stringify(fontAssetUrl)}) format(${JSON.stringify(cachedFont.format)});font-display:swap;}`
+    );
+  } catch (error) {
+    console.error("1001freefonts stylesheet build failed", {
+      familyName: requestedFamily,
+      error
+    });
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.type("text/css").send("");
+  }
 });
 
 app.use((req, res) => {

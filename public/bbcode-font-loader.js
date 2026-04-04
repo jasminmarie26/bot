@@ -1,5 +1,6 @@
 (() => {
   const loadedFamilies = new Set();
+  const loadedStylesheets = new Set();
 
   const normalizeFamily = (value) => String(value || "")
     .trim()
@@ -9,6 +10,20 @@
 
   const isSafeFamily = (value) => /^[A-Za-z0-9][A-Za-z0-9 '&-]*$/i.test(value);
 
+  const appendStylesheet = (href) => {
+    const normalizedHref = String(href || "").trim();
+    if (!normalizedHref || loadedStylesheets.has(normalizedHref)) {
+      return;
+    }
+
+    loadedStylesheets.add(normalizedHref);
+
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = normalizedHref;
+    document.head.appendChild(link);
+  };
+
   const loadFamily = (familyName) => {
     const normalizedFamily = normalizeFamily(familyName);
     if (!normalizedFamily || !isSafeFamily(normalizedFamily) || loadedFamilies.has(normalizedFamily)) {
@@ -16,11 +31,12 @@
     }
 
     loadedFamilies.add(normalizedFamily);
-
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(normalizedFamily).replace(/%20/g, "+")}&display=swap`;
-    document.head.appendChild(link);
+    appendStylesheet(
+      `https://fonts.googleapis.com/css2?family=${encodeURIComponent(normalizedFamily).replace(/%20/g, "+")}&display=swap`
+    );
+    appendStylesheet(
+      `/bbcode-fonts/1001freefonts.css?family=${encodeURIComponent(normalizedFamily)}`
+    );
   };
 
   const scanRoot = (root) => {
