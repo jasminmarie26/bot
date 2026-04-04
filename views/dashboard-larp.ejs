@@ -1,6 +1,15 @@
 <%- include("partials/start") %>
 
 <% const dashboardLarpReturnTarget = "/dashboard/larp"; %>
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
+<% const larpAccessTitle = hasLarpStaffAccess ? "LARP-Bereich für Staff" : "LARP-Testzugang für User"; %>
+<% const larpAccessDescription = hasLarpStaffAccess
+  ? "Admins und Moderatoren nutzen den LARP-Bereich aktuell regulär. Für alle anderen bleibt er bis zur Freigabe nur als Testzugang offen."
+  : "Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben. Du nutzt ihn bis zur Freigabe als Testzugang." %>
+<% const larpAccessWarning = hasLarpStaffAccess
+  ? larpSection.note
+  : "Wichtig: Wenn du den Bereich wieder verlässt, werden deine Test-Charaktere gelöscht, bis der Server freigegeben wird." %>
 
 <section class="header-line dashboard-page-header">
   <div>
@@ -36,6 +45,17 @@
 </section>
 
 <section class="dashboard-block">
+  <section class="panel dashboard-server-panel dashboard-subpanel">
+    <div class="header-line">
+      <div>
+        <span class="dashboard-status-pill"><%= larpStatusLabel %></span>
+        <h3><%= larpAccessTitle %></h3>
+        <p class="muted"><%= larpAccessDescription %></p>
+        <p class="muted"><%= larpAccessWarning %></p>
+      </div>
+    </div>
+  </section>
+
   <details class="dashboard-festplay-overview dashboard-character-overview" open>
     <summary class="dashboard-festplay-overview-header">
       <div class="dashboard-festplay-overview-title">

@@ -1,6 +1,8 @@
 <%- include("partials/start", { enableRealtime: false }) %>
 
 <% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const isLarpTestCharacter = character.server_id === "larp" && !hasLarpStaffAccess; %>
 
 <% if (activeGuestbookEditor) { %>
   <nav
@@ -79,6 +81,24 @@
       <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
     </div>
   </div>
+
+  <% if (isLarpTestCharacter) { %>
+    <section class="panel dashboard-server-panel dashboard-subpanel">
+      <div class="header-line">
+        <div>
+          <span class="dashboard-status-pill">Testzugang</span>
+          <h3>LARP-Testcharakter</h3>
+          <p class="muted">
+            Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben.
+            Bis zur Freigabe nutzt du hier einen Testzugang.
+          </p>
+          <p class="muted">
+            Wichtig: Wenn du den Bereich wieder verlässt, werden diese Test-Charaktere gelöscht.
+          </p>
+        </div>
+      </div>
+    </section>
+  <% } %>
 
   <% if (error) { %>
     <div class="inline-error"><%= error %></div>

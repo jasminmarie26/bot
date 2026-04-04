@@ -1,5 +1,12 @@
 <%- include("partials/start") %>
 
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
+<% const larpActionLabel = hasLarpStaffAccess ? "LARP-Bereich öffnen" : "LARP-Testzugang öffnen"; %>
+<% const larpAccessNote = hasLarpStaffAccess
+  ? larpSection.note
+  : "Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben. Bis zur Freigabe kannst du ihn mit einem Testzugang betreten. Wenn du den Bereich wieder verlässt, werden diese Test-Charaktere gelöscht."; %>
+
 <section class="header-line dashboard-page-header">
   <div>
     <h1>Serverliste</h1>
@@ -44,12 +51,12 @@
       <section class="panel dashboard-larp-panel dashboard-subpanel">
         <div class="dashboard-larp-orb" aria-hidden="true"></div>
         <div class="dashboard-larp-copy">
-          <span class="dashboard-status-pill">Bereich bereit</span>
-          <p class="muted"><%= larpSection.note %></p>
+          <span class="dashboard-status-pill"><%= larpStatusLabel %></span>
+          <p class="muted"><%= larpAccessNote %></p>
 
           <div class="dashboard-larp-actions">
             <a class="btn btn-secondary" href="/dashboard/larp">
-              LARP-Bereich &ouml;ffnen
+              <%= larpActionLabel %>
             </a>
           </div>
         </div>
