@@ -4088,12 +4088,12 @@ body.theme-future.page-home-screen .home-copyright {
   .chat-message strong.has-crescentia-moons,
   .rp-room-occupant.has-crescentia-moons,
   .topbar-user-menu-meta > strong.has-crescentia-moons {
-    background: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
-    background-image: linear-gradient(90deg, #330075 0%, #7a58ff 42%, #000158 100%) !important;
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    color: transparent !important;
+    background: none !important;
+    background-image: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: currentColor !important;
+    color: #8f9fff !important;
     text-shadow: 0 0 0.14em rgba(122, 176, 255, 0.18);
   }
 }
