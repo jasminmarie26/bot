@@ -8045,8 +8045,9 @@ function getCharacterByExactNameForServer(name, serverId) {
     .get(normalizedName, normalizedServerId);
 }
 
-function renderGuestbookBbcode(rawContent) {
+function renderGuestbookBbcode(rawContent, options = {}) {
   const normalizedContent = normalizeBbcodeMarkup(String(rawContent || "").slice(0, 12000));
+  const compactImageLineBreaks = options?.compactImageLineBreaks !== false;
   let html = escapeHtml(normalizedContent).replace(/\r\n?/g, "\n");
 
   const inlineTags = [
@@ -8146,14 +8147,16 @@ function renderGuestbookBbcode(rawContent) {
   });
 
   html = html.replace(/\n/g, "<br>");
-  html = html.replace(
-    /<br>\s*(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)/gi,
-    "$1"
-  );
-  html = html.replace(
-    /(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)\s*<br>/gi,
-    "$1"
-  );
+  if (compactImageLineBreaks) {
+    html = html.replace(
+      /<br>\s*(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)/gi,
+      "$1"
+    );
+    html = html.replace(
+      /(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)\s*<br>/gi,
+      "$1"
+    );
+  }
   html = html.replace(
     /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)/gi,
     "$1"
@@ -16464,7 +16467,9 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     },
     activeGuestbookPage: {
       ...activeGuestbookPage,
-      content_html: renderGuestbookBbcode(activeGuestbookPage.content || "")
+      content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
+        compactImageLineBreaks: false
+      })
     },
     guestbookPageNavigation,
     guestbookSettings,
@@ -16738,12 +16743,16 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const previewSettings = canUseStoredPreview
     ? { ...baseSettings, ...(storedPreview.settings || {}) }
     : baseSettings;
-  const storedPreviewContent = canUseStoredPreview
+  const hasStoredPreviewContent =
+    canUseStoredPreview &&
+    storedPreview &&
+    Object.prototype.hasOwnProperty.call(storedPreview, "page_content");
+  const storedPreviewContent = hasStoredPreviewContent
     ? String(storedPreview.page_content || "")
     : "";
   const savedPageContent = String(previewPage.content || "");
-  const previewContent = canUseStoredPreview
-    ? (storedPreviewContent.trim() ? storedPreviewContent : savedPageContent)
+  const previewContent = hasStoredPreviewContent
+    ? storedPreviewContent
     : savedPageContent;
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     pages,
@@ -16763,7 +16772,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       previewSettings?.page_text_color,
       previewSettings?.theme_style
     ),
-    previewHtml: renderGuestbookBbcode(previewContent),
+    previewHtml: renderGuestbookBbcode(previewContent, { compactImageLineBreaks: false }),
     previewBackUrl: buildGuestbookEditorReturnUrl(req, character, previewPage.id)
   });
 });
