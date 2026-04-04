@@ -4,57 +4,90 @@
   action="/characters/<%= character.id %>/guestbook/edit/save"
   class="<%= guestbookEditorFormClass || 'panel form gb-editor-form' %>"
   data-preview-sync-url="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+  data-editor-page-storage-key="guestbook-editor-pane-<%= character.id %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
 
   <div class="gb-editor-heading">
     <h2>Einstellungen</h2>
-    <span class="gb-editor-helptext">Kompakter Aufbau mit allen Design-Funktionen direkt im Blick.</span>
+    <span class="gb-editor-helptext">Aufgeteilt in zwei ruhige Seiten, damit der Editor nicht mehr so &uuml;berladen wirkt.</span>
   </div>
 
-  <div class="gb-editor-basics">
-    <div class="gb-editor-card gb-editor-section">
-      <span class="gb-editor-subheading">Zensur</span>
-      <span class="gb-editor-helptext">Direkt f&uuml;r diese Seite festlegen.</span>
-      <div class="gb-radio-list">
-        <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
-        <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
-        <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
-      </div>
+  <div class="gb-editor-page-switch" role="tablist" aria-label="G&auml;stebuch Editor Seiten">
+    <button
+      type="button"
+      class="gb-editor-page-tab"
+      data-gb-editor-page-trigger="design"
+      aria-controls="gb-editor-page-design"
+      aria-selected="false"
+    >
+      1. Design
+    </button>
+    <button
+      type="button"
+      class="gb-editor-page-tab"
+      data-gb-editor-page-trigger="content"
+      aria-controls="gb-editor-page-content"
+      aria-selected="false"
+    >
+      2. Inhalt &amp; Bilder
+    </button>
+  </div>
+
+  <section
+    id="gb-editor-page-design"
+    class="gb-editor-page"
+    data-gb-editor-page="design"
+    aria-labelledby="gb-editor-page-design-title"
+  >
+    <div class="gb-editor-page-heading">
+      <h3 id="gb-editor-page-design-title">Seite 1: Design</h3>
+      <p class="gb-editor-helptext">Style, Schrift, Zensur und Farben f&uuml;r das G&auml;stebuch.</p>
     </div>
 
-    <label class="gb-editor-card gb-editor-card-field">
-      <span class="gb-editor-subheading">Style</span>
-      <span class="gb-editor-helptext">Enth&auml;lt jetzt auch ein rahmenloses Transparent-Design.</span>
-      <select name="theme_style">
-        <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
-        <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
-        <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
-        <option value="elfenhain" <%= settings.theme_style === "elfenhain" ? "selected" : "" %>>Elfenhain</option>
-        <option value="kupferpatina" <%= settings.theme_style === "kupferpatina" ? "selected" : "" %>>Kupferpatina</option>
-        <option value="bernsteinfeuer" <%= settings.theme_style === "bernsteinfeuer" ? "selected" : "" %>>Bernsteinfeuer</option>
-        <option value="sternsamt" <%= settings.theme_style === "sternsamt" ? "selected" : "" %>>Sternensamt</option>
-        <option value="winterglas" <%= settings.theme_style === "winterglas" ? "selected" : "" %>>Winterglas</option>
-        <option value="tintenmeer" <%= settings.theme_style === "tintenmeer" ? "selected" : "" %>>Tintenmeer</option>
-        <option value="obsidian-ornament" <%= settings.theme_style === "obsidian-ornament" ? "selected" : "" %>>Obsidian Ornament</option>
-        <option value="transparent-pur" <%= settings.theme_style === "transparent-pur" ? "selected" : "" %>>Transparent Pur</option>
-      </select>
-    </label>
+    <div class="gb-editor-basics">
+      <div class="gb-editor-card gb-editor-section">
+        <span class="gb-editor-subheading">Zensur</span>
+        <span class="gb-editor-helptext">Direkt f&uuml;r diese Seite festlegen.</span>
+        <div class="gb-radio-list">
+          <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
+          <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
+          <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
+        </div>
+      </div>
 
-    <label class="gb-editor-card gb-editor-card-field">
-      <span class="gb-editor-subheading">Font</span>
-      <span class="gb-editor-helptext">Schriftwahl f&uuml;r Seite und Vorschau.</span>
-      <select name="font_style">
-        <% (guestbookFontOptions || []).forEach((fontOption) => { %>
-          <option value="<%= fontOption.id %>" <%= settings.font_style === fontOption.id ? "selected" : "" %>>
-            <%= fontOption.label %>
-          </option>
-        <% }) %>
-      </select>
-    </label>
-  </div>
+      <label class="gb-editor-card gb-editor-card-field">
+        <span class="gb-editor-subheading">Style</span>
+        <span class="gb-editor-helptext">Enth&auml;lt jetzt auch ein rahmenloses Transparent-Design.</span>
+        <select name="theme_style">
+          <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
+          <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
+          <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
+          <option value="elfenhain" <%= settings.theme_style === "elfenhain" ? "selected" : "" %>>Elfenhain</option>
+          <option value="kupferpatina" <%= settings.theme_style === "kupferpatina" ? "selected" : "" %>>Kupferpatina</option>
+          <option value="bernsteinfeuer" <%= settings.theme_style === "bernsteinfeuer" ? "selected" : "" %>>Bernsteinfeuer</option>
+          <option value="sternsamt" <%= settings.theme_style === "sternsamt" ? "selected" : "" %>>Sternensamt</option>
+          <option value="winterglas" <%= settings.theme_style === "winterglas" ? "selected" : "" %>>Winterglas</option>
+          <option value="tintenmeer" <%= settings.theme_style === "tintenmeer" ? "selected" : "" %>>Tintenmeer</option>
+          <option value="obsidian-ornament" <%= settings.theme_style === "obsidian-ornament" ? "selected" : "" %>>Obsidian Ornament</option>
+          <option value="transparent-pur" <%= settings.theme_style === "transparent-pur" ? "selected" : "" %>>Transparent Pur</option>
+        </select>
+      </label>
 
-  <div class="gb-editor-grid">
+      <label class="gb-editor-card gb-editor-card-field">
+        <span class="gb-editor-subheading">Font</span>
+        <span class="gb-editor-helptext">Schriftwahl f&uuml;r Seite und Vorschau.</span>
+        <select name="font_style">
+          <% (guestbookFontOptions || []).forEach((fontOption) => { %>
+            <option value="<%= fontOption.id %>" <%= settings.font_style === fontOption.id ? "selected" : "" %>>
+              <%= fontOption.label %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+
+    <div class="gb-editor-grid">
   <div class="gb-color-row">
     <div>
       <span class="gb-editor-subheading">Rahmenfarbe</span>
@@ -230,7 +263,22 @@
       </label>
     </div>
   </div>
+    </div>
+  </section>
 
+  <section
+    id="gb-editor-page-content"
+    class="gb-editor-page"
+    data-gb-editor-page="content"
+    aria-labelledby="gb-editor-page-content-title"
+    hidden
+  >
+    <div class="gb-editor-page-heading">
+      <h3 id="gb-editor-page-content-title">Seite 2: Inhalt &amp; Bilder</h3>
+      <p class="gb-editor-helptext">Bilder, Hinweise und der eigentliche BBCode-Inhalt der Seite.</p>
+    </div>
+
+    <div class="gb-editor-grid">
   <div class="gb-image-field">
     <div class="gb-editor-row-meta">
       <span class="gb-editor-subheading">Bild innerhalb des Rahmens</span>
@@ -340,7 +388,8 @@
       <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
     </div>
   </div>
-  </div>
+    </div>
+  </section>
 
   </form>
 
@@ -588,9 +637,54 @@
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029") %>;
     const editorForm = document.getElementById("guestbook-editor-form");
+    const editorPageTriggers = Array.from(document.querySelectorAll("[data-gb-editor-page-trigger]"));
+    const editorPages = Array.from(document.querySelectorAll("[data-gb-editor-page]"));
+    const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
+
+    const setActiveEditorPage = (pageName, persist = true) => {
+      const normalizedPageName = String(pageName || "").trim().toLowerCase();
+      const fallbackPageName = String(editorPages[0]?.dataset?.gbEditorPage || "").trim().toLowerCase();
+      const nextPageName = editorPages.some((page) => String(page.dataset.gbEditorPage || "").trim().toLowerCase() === normalizedPageName)
+        ? normalizedPageName
+        : fallbackPageName;
+
+      editorPages.forEach((page) => {
+        const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === nextPageName;
+        page.hidden = !isActive;
+        page.classList.toggle("is-active", isActive);
+      });
+
+      editorPageTriggers.forEach((trigger) => {
+        const isActive = String(trigger.dataset.gbEditorPageTrigger || "").trim().toLowerCase() === nextPageName;
+        trigger.classList.toggle("is-active", isActive);
+        trigger.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+
+      if (persist && editorPageStorageKey) {
+        try {
+          window.localStorage.setItem(editorPageStorageKey, nextPageName);
+        } catch (error) {}
+      }
+    };
+
+    if (editorPageTriggers.length && editorPages.length) {
+      let initialEditorPage = "";
+      if (editorPageStorageKey) {
+        try {
+          initialEditorPage = window.localStorage.getItem(editorPageStorageKey) || "";
+        } catch (error) {}
+      }
+      setActiveEditorPage(initialEditorPage || "design", false);
+
+      editorPageTriggers.forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+          setActiveEditorPage(trigger.dataset.gbEditorPageTrigger || "design");
+        });
+      });
+    }
 
     if (pageContentField) {
       pageContentField.value = initialPageContent;

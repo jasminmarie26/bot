@@ -8499,6 +8499,55 @@ body.page-guestbook-preview::after {
   gap: 0.2rem;
 }
 
+.gb-editor-page-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.gb-editor-page-tab {
+  min-width: 9.5rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 88%, white 12%);
+  color: var(--text);
+  padding: 0.52rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease;
+}
+
+.gb-editor-page-tab:hover {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--field-edge));
+  transform: translateY(-1px);
+}
+
+.gb-editor-page-tab.is-active {
+  border-color: var(--accent-2);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 82%, white 18%), color-mix(in srgb, var(--accent-2) 78%, white 22%));
+  color: var(--accent-text);
+}
+
+.gb-editor-page {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.gb-editor-page[hidden] {
+  display: none !important;
+}
+
+.gb-editor-page-heading {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.gb-editor-page-heading h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
 .gb-editor-basics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8796,6 +8845,16 @@ body.page-guestbook-preview::after {
 @media (max-width: 720px) {
   .gb-editor-form {
     padding: 0.7rem;
+  }
+
+  .gb-editor-page-switch {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .gb-editor-page-tab {
+    width: 100%;
+    min-width: 0;
   }
 
   .gb-editor-basics {
