@@ -204,6 +204,10 @@
     return Math.min(100, Math.max(0, parsed));
   }
 
+  function sanitizeFontFamily(value) {
+    return String(value || "").trim().slice(0, 200);
+  }
+
   function applyCharacterBackgroundAppearance(payload) {
     const payloadCharacterId = Number(payload?.character_id);
     if (
@@ -327,6 +331,7 @@
         disconnectAt,
         scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
         characterId: toPositiveIntegerOrNull(parsed.characterId),
+        chatFontFamily: sanitizeFontFamily(parsed.chatFontFamily),
         messages
       };
     } catch (_error) {
@@ -766,6 +771,93 @@
     }
   }
 
+  function hasNightEyeMarker() {
+    if (!(document.body instanceof HTMLElement)) {
+      return false;
+    }
+
+    const combinedClassNames = `${document.documentElement.className || ""} ${document.body.className || ""}`
+      .trim()
+      .toLowerCase();
+    if (combinedClassNames.includes("night-eye")) {
+      return true;
+    }
+
+    return Boolean(
+      document.querySelector(
+        '[id*="night-eye"], [class*="night-eye"], [data-night-eye], style[id*="night-eye"], link[id*="night-eye"]'
+      )
+    );
+  }
+
+  function applyChatGradientFallbackIfNeeded() {
+    if (!(document.body instanceof HTMLElement)) {
+      return;
+    }
+
+    let shouldUseFallback = hasNightEyeMarker();
+
+    if (!shouldUseFallback) {
+      const probe = document.createElement("span");
+      probe.className = "chat-online-name has-crescentia-moons";
+      probe.textContent = "Crescentia";
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      probe.style.pointerEvents = "none";
+      probe.style.whiteSpace = "nowrap";
+      probe.style.left = "-9999px";
+      document.body.appendChild(probe);
+
+      try {
+        const computed = window.getComputedStyle(probe);
+        const backgroundImage = String(computed.backgroundImage || "").trim().toLowerCase();
+        const backgroundClip = String(
+          computed.backgroundClip || computed.getPropertyValue("background-clip") || ""
+        ).trim().toLowerCase();
+        const webkitBackgroundClip = String(
+          computed.webkitBackgroundClip || computed.getPropertyValue("-webkit-background-clip") || ""
+        ).trim().toLowerCase();
+        const webkitTextFillColor = String(
+          computed.webkitTextFillColor || computed.getPropertyValue("-webkit-text-fill-color") || ""
+        ).trim().toLowerCase();
+        const hasGradient = backgroundImage && backgroundImage !== "none";
+        const clipsToText = backgroundClip.includes("text") || webkitBackgroundClip.includes("text");
+        const transparentFill = webkitTextFillColor.includes("transparent");
+        shouldUseFallback = hasGradient && transparentFill && !clipsToText;
+      } catch (_error) {
+        shouldUseFallback = false;
+      } finally {
+        probe.remove();
+      }
+    }
+
+    document.body.classList.toggle("chat-gradient-fallback", shouldUseFallback);
+  }
+
+  function applyRecoveredChatFontFamily() {
+    if (pendingChatReloadRecovery?.reason !== "server-instance-reload") {
+      return;
+    }
+
+    const recoveredFontFamily = sanitizeFontFamily(pendingChatReloadRecovery?.chatFontFamily);
+    if (!recoveredFontFamily) {
+      return;
+    }
+
+    if (chatBox) {
+      chatBox.style.fontFamily = recoveredFontFamily;
+    }
+    if (input) {
+      input.style.fontFamily = recoveredFontFamily;
+    }
+    if (whisperInput) {
+      whisperInput.style.fontFamily = recoveredFontFamily;
+    }
+  }
+
+  applyChatGradientFallbackIfNeeded();
+  applyRecoveredChatFontFamily();
+
   function rememberRenderedChatMessage(message) {
     const snapshot = sanitizeChatMessageForRestore(message);
     if (!snapshot) {
@@ -789,6 +881,7 @@
           Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
             ? currentActiveCharacterId
             : null,
+        chatFontFamily: chatBox ? sanitizeFontFamily(window.getComputedStyle(chatBox).fontFamily) : "",
         messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
       })
     );

@@ -11519,6 +11519,46 @@ body.is-standalone-app.page-chat .role-name-moderator.has-crescentia-moons {
   color: #8f9fff !important;
 }
 
+body.chat-gradient-fallback.page-chat .role-name-admin {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ff9c70 !important;
+  text-shadow: 0 0 0.08em rgba(255, 156, 112, 0.22);
+}
+
+body.chat-gradient-fallback.page-chat .chat-online-name.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .chat-message strong.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .rp-header-identity.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .topbar-user-menu-meta > strong.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .rp-room-occupant.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .role-name-admin.has-noctra-wings,
+body.chat-gradient-fallback.page-chat .role-name-moderator.has-noctra-wings {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ffb35c !important;
+}
+
+body.chat-gradient-fallback.page-chat .chat-online-name.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .chat-message strong.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .rp-header-identity.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .topbar-user-menu-meta > strong.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .rp-room-occupant.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .role-name-admin.has-crescentia-moons,
+body.chat-gradient-fallback.page-chat .role-name-moderator.has-crescentia-moons {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #8f9fff !important;
+}
+
 .chat-box .chat-emote {
   color: color-mix(in srgb, #17191d 82%, var(--accent));
 }
