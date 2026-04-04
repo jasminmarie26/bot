@@ -17031,6 +17031,10 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     previousStandardRoomId
   );
 
+  const shouldSkipDisconnectPresence =
+    memberSocket.data.skipDisconnectPresence === true &&
+    !memberSocket.data.user?.is_admin &&
+    !memberSocket.data.user?.is_moderator;
   const pendingDisconnectEntry = schedulePendingChatDisconnect({
     userId: memberSocket.data.user.id,
     characterId: previousCharacterId,
@@ -17039,7 +17043,7 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     standardRoomId: previousStandardRoomId,
     displayName: disconnectDisplayProfile.label || `User ${memberSocket.data.user?.id || "?"}`,
     chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
-    skipPresence: memberSocket.data.skipDisconnectPresence === true
+    skipPresence: shouldSkipDisconnectPresence
   });
 
   memberSocket.data.immediateDisconnectHandled = true;
@@ -23526,6 +23530,10 @@ io.on("connection", (socket) => {
         return;
       }
       const disconnectDisplayProfile = getSocketDisplayProfile(socket, previousServerId);
+      const shouldSkipDisconnectPresence =
+        socket.data.skipDisconnectPresence === true &&
+        !socket.data.user?.is_admin &&
+        !socket.data.user?.is_moderator;
       schedulePendingChatDisconnect({
         userId: socket.data.user.id,
         characterId: previousCharacterId,
@@ -23534,7 +23542,7 @@ io.on("connection", (socket) => {
         standardRoomId: previousStandardRoomId,
         displayName: disconnectDisplayProfile.label || `User ${socket.data.user?.id || "?"}`,
         chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
-        skipPresence: socket.data.skipDisconnectPresence
+        skipPresence: shouldSkipDisconnectPresence
       });
       touchFestplayActivityForRoom(previousRoom);
       maybeRemoveEmptyRoom(previousRoomId);
