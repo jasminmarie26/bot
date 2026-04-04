@@ -1,5 +1,10 @@
 <%- include("partials/start") %>
 
+<% const isLarpView = Boolean(typeof isLarpBackupView !== "undefined" && isLarpBackupView); %>
+<% const resolvedBackupReturnTarget = typeof backupReturnTarget !== "undefined" && backupReturnTarget
+  ? backupReturnTarget
+  : "/character-backups"; %>
+
 <section class="header-line dashboard-page-header">
   <div>
     <h1>Gelöschte Charaktere</h1>
@@ -7,16 +12,18 @@
   </div>
 </section>
 
-<nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
-  <a
-    class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
-    href="/character-backups"
-  >Charaktere</a>
-  <a
-    class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
-    href="/character-backups/logs"
-  >Logs</a>
-</nav>
+<% if (!isLarpView) { %>
+  <nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
+    <a
+      class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
+      href="/character-backups"
+    >Charaktere</a>
+    <a
+      class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
+      href="/character-backups/logs"
+    >Logs</a>
+  </nav>
+<% } %>
 
 <section class="dashboard-block">
   <details class="dashboard-festplay-overview dashboard-character-overview" open>
@@ -45,6 +52,7 @@
                   class="character-mini-move-form"
                   onsubmit="return confirm('Charakter wirklich wiederherstellen?')"
                 >
+                  <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-move-btn"
@@ -60,6 +68,7 @@
                   class="character-mini-delete-form"
                   onsubmit="return confirm('Backup endgültig löschen? Danach kann der Charakter nie wieder wiederhergestellt werden.')"
                 >
+                  <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
@@ -76,6 +85,21 @@
       <% } %>
     </div>
   </details>
+
+  <% if (isLarpView) { %>
+    <details class="dashboard-festplay-overview dashboard-character-overview" open>
+      <summary class="dashboard-festplay-overview-header">
+        <div class="dashboard-festplay-overview-title">
+          <h3>Gelöschter Account</h3>
+        </div>
+        <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+      </summary>
+
+      <div class="dashboard-server-panel dashboard-character-overview-body">
+        <p class="muted">Hier kannst du deinen gelöschten Account widerherstellen.</p>
+      </div>
+    </details>
+  <% } %>
 </section>
 
 <%- include("partials/end") %>

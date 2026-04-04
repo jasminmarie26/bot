@@ -288,6 +288,13 @@
       !topbarGuestbookModeActive &&
       isDashboardPath
     ); %>
+    <% const topbarBackupHref = (
+      (typeof isLarpBackupView !== "undefined" && isLarpBackupView) ||
+      (currentPath && currentPath.startsWith("/dashboard/larp")) ||
+      (menuCharacter && menuCharacter.server_id === "larp")
+    )
+      ? "/character-backups?server=larp"
+      : "/character-backups"; %>
     <% const showTopbarStaffAreaLink = Boolean(
       currentUser &&
       (currentUser.is_admin || currentUser.is_moderator)
@@ -389,7 +396,7 @@
               <a href="/register">Registrieren</a>
             <% } %>
             <% if (showTopbarBackupLink) { %>
-              <a href="/character-backups" target="_blank" rel="noopener noreferrer">Backup</a>
+              <a href="<%= topbarBackupHref %>" target="_blank" rel="noopener noreferrer">Backup</a>
             <% } %>
             <% if (showTopbarLiveUpdatesLink) { %>
               <a

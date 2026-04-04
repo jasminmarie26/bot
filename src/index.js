@@ -4282,9 +4282,19 @@ function getCharacterById(id) {
     .get(id);
 }
 
-function getCharacterBackupsForUser(userId) {
+function getCharacterBackupsForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+
+  const requestedServerId = String(options?.serverId || "").trim().toLowerCase();
+  const filterServerId = CHARACTER_SERVER_IDS.includes(requestedServerId)
+    ? requestedServerId
+    : "";
+  const values = [parsedUserId];
+  const serverClause = filterServerId ? "AND server_id = ?" : "";
+  if (filterServerId) {
+    values.push(filterServerId);
+  }
 
   return db
     .prepare(
@@ -4298,9 +4308,10 @@ function getCharacterBackupsForUser(userId) {
          FROM character_backups
         WHERE user_id = ?
           AND trim(COALESCE(restored_at, '')) = ''
+          ${serverClause}
         ORDER BY deleted_at DESC, id DESC`
     )
-    .all(parsedUserId);
+    .all(...values);
 }
 
 function parseStoredJsonArray(rawValue) {
@@ -12601,12 +12612,19 @@ app.get("/rp-board", requireAuth, (req, res) => {
 });
 
 app.get("/character-backups", requireAuth, (req, res) => {
-  const characterBackups = getCharacterBackupsForUser(req.session.user.id);
+  const requestedServerId = String(req.query.server || "").trim().toLowerCase();
+  const isLarpBackupView = requestedServerId === LARP_SERVER_ID;
+  const characterBackups = getCharacterBackupsForUser(req.session.user.id, {
+    serverId: isLarpBackupView ? LARP_SERVER_ID : ""
+  });
+  const backupReturnTarget = isLarpBackupView ? "/character-backups?server=larp" : "/character-backups";
 
   return res.render("character-backups", {
     title: "Gelöschte Charaktere",
     activeTab: "characters",
-    characterBackups
+    characterBackups,
+    isLarpBackupView,
+    backupReturnTarget
   });
 });
 
@@ -12714,9 +12732,10 @@ app.post("/character-backups/logs/:logId/delete", requireAuth, (req, res) => {
 
 app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {
   const backupId = Number(req.params.backupId);
+  const returnTarget = getSafeReturnTarget(req, "/character-backups");
   if (!Number.isInteger(backupId) || backupId < 1) {
     setFlash(req, "error", "Backup wurde nicht gefunden.");
-    return res.redirect("/character-backups");
+    return res.redirect(returnTarget);
   }
 
   try {
@@ -12728,34 +12747,35 @@ app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {
     refreshConnectedUserDisplay(req.session.user.id);
     emitHomeStatsUpdate();
     setFlash(req, "success", `Charakter ${restoredCharacter.name} wurde wiederhergestellt.`);
-    return res.redirect("/character-backups");
+    return res.redirect(returnTarget);
   } catch (error) {
     if (error?.code === "BACKUP_NOT_FOUND") {
       setFlash(req, "error", "Backup wurde nicht gefunden.");
-      return res.redirect("/character-backups");
+      return res.redirect(returnTarget);
     }
 
     if (error?.code === "BACKUP_INVALID") {
       setFlash(req, "error", "Dieses Backup ist beschädigt und kann nicht wiederhergestellt werden.");
-      return res.redirect("/character-backups");
+      return res.redirect(returnTarget);
     }
 
     if (error?.code === "CHARACTER_NAME_TAKEN") {
       setFlash(req, "error", "Der Charaktername ist bereits vergeben. Das Backup kann gerade nicht wiederhergestellt werden.");
-      return res.redirect("/character-backups");
+      return res.redirect(returnTarget);
     }
 
     console.error(error);
     setFlash(req, "error", "Backup konnte nicht wiederhergestellt werden.");
-    return res.redirect("/character-backups");
+    return res.redirect(returnTarget);
   }
 });
 
 app.post("/character-backups/:backupId/delete", requireAuth, (req, res) => {
   const backupId = Number(req.params.backupId);
+  const returnTarget = getSafeReturnTarget(req, "/character-backups");
   if (!Number.isInteger(backupId) || backupId < 1) {
     setFlash(req, "error", "Backup wurde nicht gefunden.");
-    return res.redirect("/character-backups");
+    return res.redirect(returnTarget);
   }
 
   const info = db
@@ -12768,11 +12788,11 @@ app.post("/character-backups/:backupId/delete", requireAuth, (req, res) => {
 
   if (!info.changes) {
     setFlash(req, "error", "Backup wurde nicht gefunden.");
-    return res.redirect("/character-backups");
+    return res.redirect(returnTarget);
   }
 
   setFlash(req, "success", "Backup endgültig gelöscht.");
-  return res.redirect("/character-backups");
+  return res.redirect(returnTarget);
 });
 
 app.get("/rp-board/state", requireAuth, (req, res) => {
@@ -13764,7 +13784,7 @@ function getDashboardLarpSection() {
     title: "LARP Bereich",
     description:
       "Hier entsteht dein eigener Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
-    note: "Im LARP-Bereich nutzt jeder Account ein eigenes LARP-Profil. Das Forum folgt als nächster Schritt."
+    note: "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere. Das Forum folgt als nächster Schritt."
   };
 }
 
