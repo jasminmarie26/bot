@@ -2,14 +2,13 @@
 
 <% const dashboardLarpReturnTarget = "/dashboard/larp"; %>
 <% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const canCreateLarpProfile = larpCharacters.length < 1; %>
 <% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
-<% const larpAccessTitle = hasLarpStaffAccess ? "LARP-Bereich für Staff" : "LARP-Testzugang für User"; %>
-<% const larpAccessDescription = hasLarpStaffAccess
-  ? "Admins und Moderatoren nutzen den LARP-Bereich aktuell regulär. Für alle anderen bleibt er bis zur Freigabe nur als Testzugang offen."
-  : "Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben. Du nutzt ihn bis zur Freigabe als Testzugang." %>
+<% const larpAccessTitle = "Ein LARP-Profil pro Account"; %>
+<% const larpAccessDescription = "Im LARP-Bereich nutzt jeder Account ein einzelnes LARP-Profil statt mehrerer Charaktere." %>
 <% const larpAccessWarning = hasLarpStaffAccess
-  ? larpSection.note
-  : "Wichtig: Wenn du den Bereich wieder verlässt, werden deine Test-Charaktere gelöscht, bis der Server freigegeben wird." %>
+  ? "Der Bereich ist für Staff regulär freigeschaltet."
+  : "Bis zur Freigabe nutzt du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht." %>
 
 <section class="header-line dashboard-page-header">
   <div>
@@ -18,14 +17,16 @@
     <p class="muted"><%= larpSection.description %></p>
   </div>
   <div class="dashboard-server-actions">
-    <a
-      class="btn dashboard-add-character-btn"
-      href="/characters/new?server=larp&return_to=<%= encodeURIComponent(dashboardLarpReturnTarget) %>"
-      aria-label="LARP-Charakter hinzufuegen"
-      title="LARP-Charakter hinzufuegen"
-    >
-      +
-    </a>
+    <% if (canCreateLarpProfile) { %>
+      <a
+        class="btn dashboard-add-character-btn"
+        href="/characters/new?server=larp&return_to=<%= encodeURIComponent(dashboardLarpReturnTarget) %>"
+        aria-label="LARP-Profil anlegen"
+        title="LARP-Profil anlegen"
+      >
+        +
+      </a>
+    <% } %>
     <form
       method="POST"
       action="/dashboard/larp/guestbook-code-email"
@@ -59,15 +60,14 @@
   <details class="dashboard-festplay-overview dashboard-character-overview" open>
     <summary class="dashboard-festplay-overview-header">
       <div class="dashboard-festplay-overview-title">
-        <h3>Meine Charaktere</h3>
-        <span class="dashboard-festplay-count">(<%= larpCharacters.length %>)</span>
+        <h3>Mein LARP-Profil</h3>
       </div>
       <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
     </summary>
 
     <div class="dashboard-server-panel dashboard-character-overview-body">
       <% if (!larpCharacters.length) { %>
-        <p class="muted">Noch keine Charaktere im LARP-Bereich.</p>
+        <p class="muted">Noch kein LARP-Profil vorhanden.</p>
       <% } else { %>
         <div class="character-mini-grid">
           <% larpCharacters.forEach((char) => { %>
@@ -91,7 +91,7 @@
                     <button
                       type="submit"
                       class="character-mini-move-btn"
-                      aria-label="Charakter verschieben"
+                      aria-label="Profil verschieben"
                       title="Zielbereich auswaehlen"
                     >
                       &harr;
@@ -117,14 +117,14 @@
                   method="POST"
                   action="/characters/<%= char.id %>/delete"
                   class="character-mini-delete-form"
-                  onsubmit="return confirm('Charakter wirklich loeschen?')"
+                  onsubmit="return confirm('Profil wirklich loeschen?')"
                 >
                   <input type="hidden" name="return_to" value="<%= dashboardLarpReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
-                    aria-label="Charakter loeschen"
-                    title="Charakter loeschen"
+                    aria-label="Profil loeschen"
+                    title="Profil loeschen"
                   >
                     X
                   </button>
@@ -171,12 +171,12 @@
     aria-modal="true"
     aria-labelledby="dashboard-larp-move-title"
   >
-    <h2 id="dashboard-larp-move-title">Charakter verschieben</h2>
+    <h2 id="dashboard-larp-move-title">Profil verschieben</h2>
     <p class="muted" id="dashboard-larp-move-copy">
-      Wohin soll dieser Charakter verschoben werden?
+      Wohin soll dieses Profil verschoben werden?
     </p>
     <p class="muted dashboard-confirm-note" id="dashboard-larp-move-note">
-      Du kannst den Charakter in einen RP-Bereich verschieben.
+      Du kannst das Profil in einen RP-Bereich verschieben.
     </p>
     <div class="dashboard-confirm-actions">
       <button type="button" class="btn btn-secondary" data-larp-dashboard-close>
@@ -222,12 +222,12 @@
         }
 
         copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
-        note.textContent = "Du kannst den Charakter nach Free RP oder ERP verschieben.";
+        note.textContent = "Du kannst das Profil nach Free RP oder ERP verschieben.";
 
         freeButton.disabled = false;
         erpButton.disabled = !erpMoveAllowed;
         if (!erpMoveAllowed) {
-          note.textContent = "Du kannst den Charakter nach Free RP verschieben. ERP ist für Accounts unter 18 nicht verfügbar.";
+          note.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist für Accounts unter 18 nicht verfügbar.";
         }
 
         modal.hidden = false;

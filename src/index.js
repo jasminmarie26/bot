@@ -53,6 +53,7 @@ const SERVER_OPTIONS = [
   { id: "erp", label: "ERP" }
 ];
 const LARP_SERVER_ID = "larp";
+const LARP_PROFILE_LIMIT_ERROR = "Im LARP-Bereich ist nur ein Profil pro Account möglich.";
 const CHARACTER_SERVER_IDS = [LARP_SERVER_ID, ...SERVER_OPTIONS.map((server) => server.id)];
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
@@ -13126,6 +13127,36 @@ function getLarpCharactersForUser(userId) {
     }));
 }
 
+function userHasLarpProfile(userId, excludedCharacterId = null) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return false;
+  }
+
+  const parsedExcludedCharacterId = Number(excludedCharacterId);
+  if (Number.isInteger(parsedExcludedCharacterId) && parsedExcludedCharacterId > 0) {
+    return Number(
+      db
+        .prepare(
+          `SELECT COUNT(*) AS count
+           FROM characters
+           WHERE user_id = ? AND server_id = ? AND id != ?`
+        )
+        .get(parsedUserId, LARP_SERVER_ID, parsedExcludedCharacterId)?.count || 0
+    ) > 0;
+  }
+
+  return Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM characters
+         WHERE user_id = ? AND server_id = ?`
+      )
+      .get(parsedUserId, LARP_SERVER_ID)?.count || 0
+  ) > 0;
+}
+
 function getDashboardLarpGuilds(userId) {
   void userId;
   return [];
@@ -13474,7 +13505,7 @@ function getDashboardLarpSection() {
     title: "LARP Bereich",
     description:
       "Hier entsteht dein eigener Bereich für LARP-Gruppen, Termine, Lagerideen und gemeinsame Abenteuer abseits der RP-Server.",
-    note: "LARP-Charaktere kannst du jetzt schon anlegen. Das Forum folgt als nächster Schritt."
+    note: "Im LARP-Bereich nutzt jeder Account ein eigenes LARP-Profil. Das Forum folgt als nächster Schritt."
   };
 }
 
@@ -14059,6 +14090,12 @@ app.get("/characters/new", requireAuth, (req, res) => {
     req.query.return_to,
     fallbackReturnTarget
   );
+
+  if (requestedServer === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
+    setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
+    return res.redirect("/dashboard/larp");
+  }
+
   res.render("character-form", {
     title: "Neuer Charakter",
     mode: "create",
@@ -14091,6 +14128,11 @@ app.post("/characters", requireAuth, (req, res) => {
   const fallbackReturnTarget = getCharacterAreaReturnTarget(payload.server_id);
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
   payload.festplay_id = null;
+
+  if (payload.server_id === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
+    setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
+    return res.redirect("/dashboard/larp");
+  }
 
   if (!payload.name) {
     return res.status(400).render("character-form", {
@@ -16123,6 +16165,11 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   if (nextServerId === "erp" && (viewerAge === null || viewerAge < 18)) {
     setFlash(req, "error", "ERP ist erst ab 18 Jahren verfügbar.");
+    return res.redirect(returnTarget);
+  }
+
+  if (nextServerId === LARP_SERVER_ID && currentServerId !== LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
+    setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
     return res.redirect(returnTarget);
   }
 

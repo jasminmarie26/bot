@@ -4,8 +4,8 @@
 <% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
 <% const larpActionLabel = hasLarpStaffAccess ? "LARP-Bereich öffnen" : "LARP-Testzugang öffnen"; %>
 <% const larpAccessNote = hasLarpStaffAccess
-  ? larpSection.note
-  : "Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben. Bis zur Freigabe kannst du ihn mit einem Testzugang betreten. Wenn du den Bereich wieder verlässt, werden diese Test-Charaktere gelöscht."; %>
+  ? "Im LARP-Bereich nutzt jeder Account genau ein LARP-Profil."
+  : "Im LARP-Bereich nutzt jeder Account genau ein LARP-Profil. Bis zur Freigabe betrittst du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht."; %>
 
 <section class="header-line dashboard-page-header">
   <div>

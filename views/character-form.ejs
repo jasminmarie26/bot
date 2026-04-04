@@ -2,7 +2,11 @@
 
 <% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
 <% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
-<% const isLarpTestCharacter = character.server_id === "larp" && !hasLarpStaffAccess; %>
+<% const isLarpProfile = character.server_id === "larp"; %>
+<% const isLarpTestCharacter = isLarpProfile && !hasLarpStaffAccess; %>
+<% const characterFormHeading = isLarpProfile
+  ? (mode === "create" ? "Neues LARP-Profil" : "LARP-Profil bearbeiten")
+  : (mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten"); %>
 
 <% if (activeGuestbookEditor) { %>
   <nav
@@ -30,7 +34,7 @@
       >
         <span class="character-editor-journey-step-number">1</span>
         <span class="character-editor-journey-step-copy">
-          <strong>Charakter bearbeiten</strong>
+          <strong><%= isLarpProfile ? "Profil bearbeiten" : "Charakter bearbeiten" %></strong>
           <small>Basis, Name und Chat</small>
         </span>
       </button>
@@ -78,23 +82,24 @@
 <section id="character-editor-panel-character" class="panel character-form-panel" data-character-editor-panel="character">
   <div class="header-line">
     <div>
-      <h1><%= mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten" %></h1>
+      <h1><%= characterFormHeading %></h1>
     </div>
   </div>
 
-  <% if (isLarpTestCharacter) { %>
+  <% if (isLarpProfile) { %>
     <section class="panel dashboard-server-panel dashboard-subpanel">
       <div class="header-line">
         <div>
-          <span class="dashboard-status-pill">Testzugang</span>
-          <h3>LARP-Testcharakter</h3>
+          <span class="dashboard-status-pill"><%= hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang" %></span>
+          <h3>LARP-Profil</h3>
           <p class="muted">
-            Der volle LARP-Bereich ist aktuell nur für Admins und Moderatoren freigegeben.
-            Bis zur Freigabe nutzt du hier einen Testzugang.
+            Im LARP-Bereich nutzt jeder Account genau ein LARP-Profil statt mehrerer Charaktere.
           </p>
-          <p class="muted">
-            Wichtig: Wenn du den Bereich wieder verlässt, werden diese Test-Charaktere gelöscht.
-          </p>
+          <% if (isLarpTestCharacter) { %>
+            <p class="muted">
+              Wichtig: Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht.
+            </p>
+          <% } %>
         </div>
       </div>
     </section>
