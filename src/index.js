@@ -8041,6 +8041,17 @@ function normalizeChatBackgroundColor(rawColor) {
   return normalizeOptionalGuestbookColor(rawColor) || "#EFEFEF";
 }
 
+function normalizeOptionalGuestbookPageColor(rawColor) {
+  const prepared = String(rawColor || "").trim();
+  if (!prepared) {
+    return "";
+  }
+  if (/^#[0-9a-f]{6}$/i.test(prepared) || /^#[0-9a-f]{8}$/i.test(prepared)) {
+    return prepared.toUpperCase();
+  }
+  return "";
+}
+
 function normalizeGuestbookOption(input, allowedValues, fallback) {
   const value = String(input || "").trim().toLowerCase();
   return allowedValues.has(value) ? value : fallback;
@@ -8082,9 +8093,9 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   );
   const existingChatTextColor = normalizeGuestbookColor(existingSettings?.chat_text_color);
   const existingPageTextColor = normalizeGuestbookColor(existingSettings?.page_text_color);
-  const existingFrameColor = normalizeOptionalGuestbookColor(existingSettings?.frame_color);
-  const existingBackgroundColor = normalizeOptionalGuestbookColor(existingSettings?.background_color);
-  const existingSurroundColor = normalizeOptionalGuestbookColor(existingSettings?.surround_color);
+  const existingFrameColor = normalizeOptionalGuestbookPageColor(existingSettings?.frame_color);
+  const existingBackgroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.background_color);
+  const existingSurroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.surround_color);
   const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
   const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
   const existingInnerImageRepeat = 0;
@@ -8129,13 +8140,13 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
     ? normalizeGuestbookColor(safeBody.chat_text_color)
     : existingChatTextColor;
   const frameColor = hasFrameColorField
-    ? normalizeOptionalGuestbookColor(safeBody.frame_color)
+    ? normalizeOptionalGuestbookPageColor(safeBody.frame_color)
     : existingFrameColor;
   const backgroundColor = hasBackgroundColorField
-    ? normalizeOptionalGuestbookColor(safeBody.background_color)
+    ? normalizeOptionalGuestbookPageColor(safeBody.background_color)
     : existingBackgroundColor;
   const surroundColor = hasSurroundColorField
-    ? normalizeOptionalGuestbookColor(safeBody.surround_color)
+    ? normalizeOptionalGuestbookPageColor(safeBody.surround_color)
     : existingSurroundColor;
   const innerImageOpacity = hasInnerImageOpacityField
     ? normalizeGuestbookOpacity(safeBody.inner_image_opacity, existingInnerImageOpacity)
@@ -8204,9 +8215,9 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
     chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
     page_text_color: normalizeGuestbookColor(baseSettings?.page_text_color),
-    frame_color: normalizeOptionalGuestbookColor(page?.frame_color),
-    background_color: normalizeOptionalGuestbookColor(page?.background_color),
-    surround_color: normalizeOptionalGuestbookColor(page?.surround_color),
+    frame_color: normalizeOptionalGuestbookPageColor(page?.frame_color),
+    background_color: normalizeOptionalGuestbookPageColor(page?.background_color),
+    surround_color: normalizeOptionalGuestbookPageColor(page?.surround_color),
     page_style: normalizeGuestbookOption(page?.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, "scroll"),
     theme_style: normalizeGuestbookOption(page?.theme_style, GUESTBOOK_THEME_STYLE_OPTIONS, "pergament-gold"),
     font_style: normalizeGuestbookOption(baseSettings?.font_style, GUESTBOOK_FONT_STYLE_OPTIONS, "default"),

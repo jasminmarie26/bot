@@ -45,8 +45,8 @@
         id="guestbook-frame-color-text"
         name="frame_color"
         value="<%= settings.frame_color || '' %>"
-        maxlength="7"
-        placeholder="#7A6855"
+        maxlength="9"
+        placeholder="#7A6855CC"
         spellcheck="false"
         autocomplete="off"
       />
@@ -54,13 +54,39 @@
         id="guestbook-frame-color-picker"
         class="gb-color-picker"
         type="color"
-        value="<%= settings.frame_color || '#7A6855' %>"
+        value="<%= /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(String(settings.frame_color || '').trim()) ? String(settings.frame_color).trim().slice(0, 7) : '#7A6855' %>"
         aria-label="Rahmenfarbe ausw&auml;hlen"
       />
       <span id="guestbook-frame-color-preview" class="gb-color-preview gb-color-preview-swatch" aria-hidden="true"></span>
       <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-frame-color">
         Standard
       </button>
+      <label class="gb-color-alpha-field" for="guestbook-frame-color-alpha">
+        Transparenz
+        <div class="gb-color-alpha-controls">
+          <input
+            id="guestbook-frame-color-alpha"
+            class="gb-color-alpha-range"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+          />
+          <input
+            id="guestbook-frame-color-alpha-number"
+            class="gb-color-alpha-number"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+            inputmode="numeric"
+            aria-label="Rahmenfarbe Transparenz in Prozent"
+          />
+          <span class="gb-color-alpha-unit">%</span>
+        </div>
+      </label>
     </div>
   </div>
 
@@ -75,8 +101,8 @@
         id="guestbook-background-color-text"
         name="background_color"
         value="<%= settings.background_color || '' %>"
-        maxlength="7"
-        placeholder="#3E3935"
+        maxlength="9"
+        placeholder="#3E3935CC"
         spellcheck="false"
         autocomplete="off"
       />
@@ -84,7 +110,7 @@
         id="guestbook-background-color-picker"
         class="gb-color-picker"
         type="color"
-        value="<%= settings.background_color || '#3E3935' %>"
+        value="<%= /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(String(settings.background_color || '').trim()) ? String(settings.background_color).trim().slice(0, 7) : '#3E3935' %>"
         aria-label="Hintergrundfarbe ausw&auml;hlen"
       />
       <span
@@ -95,6 +121,32 @@
       <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-background-color">
         Standard
       </button>
+      <label class="gb-color-alpha-field" for="guestbook-background-color-alpha">
+        Transparenz
+        <div class="gb-color-alpha-controls">
+          <input
+            id="guestbook-background-color-alpha"
+            class="gb-color-alpha-range"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+          />
+          <input
+            id="guestbook-background-color-alpha-number"
+            class="gb-color-alpha-number"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+            inputmode="numeric"
+            aria-label="Hintergrundfarbe Transparenz in Prozent"
+          />
+          <span class="gb-color-alpha-unit">%</span>
+        </div>
+      </label>
     </div>
   </div>
 
@@ -109,8 +161,8 @@
         id="guestbook-surround-color-text"
         name="surround_color"
         value="<%= settings.surround_color || '' %>"
-        maxlength="7"
-        placeholder="#2C2118"
+        maxlength="9"
+        placeholder="#2C2118CC"
         spellcheck="false"
         autocomplete="off"
       />
@@ -118,7 +170,7 @@
         id="guestbook-surround-color-picker"
         class="gb-color-picker"
         type="color"
-        value="<%= settings.surround_color || '#2C2118' %>"
+        value="<%= /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(String(settings.surround_color || '').trim()) ? String(settings.surround_color).trim().slice(0, 7) : '#2C2118' %>"
         aria-label="Fl&auml;chenfarbe ausw&auml;hlen"
       />
       <span
@@ -129,6 +181,32 @@
       <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-surround-color">
         Standard
       </button>
+      <label class="gb-color-alpha-field" for="guestbook-surround-color-alpha">
+        Transparenz
+        <div class="gb-color-alpha-controls">
+          <input
+            id="guestbook-surround-color-alpha"
+            class="gb-color-alpha-range"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+          />
+          <input
+            id="guestbook-surround-color-alpha-number"
+            class="gb-color-alpha-number"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            value="100"
+            inputmode="numeric"
+            aria-label="Fl&auml;chenfarbe Transparenz in Prozent"
+          />
+          <span class="gb-color-alpha-unit">%</span>
+        </div>
+      </label>
     </div>
   </div>
 
@@ -297,53 +375,184 @@
       return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : "";
     };
 
+    const normalizeColorWithAlpha = (value) => {
+      const normalized = String(value || "").trim().toUpperCase();
+      return /^#[0-9A-F]{8}$/.test(normalized) ? normalized : "";
+    };
+
+    const alphaHexToPercent = (value) => {
+      const parsed = Number.parseInt(String(value || "").trim(), 16);
+      if (!Number.isFinite(parsed)) {
+        return 100;
+      }
+      return Math.min(100, Math.max(0, Math.round((parsed / 255) * 100)));
+    };
+
+    const percentToAlphaHex = (value) => {
+      const clamped = Math.min(100, Math.max(0, Number.parseInt(String(value ?? "").trim(), 10) || 0));
+      return Math.round((clamped / 100) * 255)
+        .toString(16)
+        .padStart(2, "0")
+        .toUpperCase();
+    };
+
+    const normalizeAlphaPercent = (value) =>
+      Math.min(100, Math.max(0, Number.parseInt(String(value ?? "").trim(), 10) || 0));
+
+    const buildColorValue = (hexColor, alphaPercent) => {
+      const normalizedHex = normalizeHexColor(hexColor);
+      if (!normalizedHex) {
+        return "";
+      }
+      const normalizedAlpha = normalizeAlphaPercent(alphaPercent);
+      return normalizedAlpha >= 100
+        ? normalizedHex
+        : `${normalizedHex}${percentToAlphaHex(normalizedAlpha)}`;
+    };
+
     const bindColorField = (key, defaultColor) => {
       const textInput = document.getElementById(`${key}-text`);
       const pickerInput = document.getElementById(`${key}-picker`);
       const preview = document.getElementById(`${key}-preview`);
+      const alphaRangeInput = document.getElementById(`${key}-alpha`);
+      const alphaNumberInput = document.getElementById(`${key}-alpha-number`);
       const resetButton = document.querySelector(`[data-color-reset="${key}"]`);
 
-      if (!textInput || !pickerInput || !preview || !resetButton) {
-        return;
+      if (!textInput || !pickerInput || !preview || !alphaRangeInput || !alphaNumberInput || !resetButton) {
+        return null;
       }
 
-      const renderColor = (value, force = false) => {
-        const normalized = normalizeHexColor(value);
-        if (force) {
-          textInput.value = normalized || "";
-        }
-        if (normalized) {
-          pickerInput.value = normalized.toLowerCase();
-        } else {
-          pickerInput.value = defaultColor.toLowerCase();
-        }
-        preview.style.backgroundColor = normalized || defaultColor;
-        preview.style.opacity = normalized ? "1" : "0.42";
+      const renderSwatch = (colorValue, isActive) => {
+        preview.style.setProperty("--gb-color-preview-color", colorValue);
+        preview.style.opacity = isActive ? "1" : "0.42";
       };
 
-      renderColor(textInput.value, true);
+      const parseColorState = (value) => {
+        const normalizedHex = normalizeHexColor(value);
+        if (normalizedHex) {
+          return {
+            isActive: true,
+            isValid: true,
+            hexColor: normalizedHex,
+            alphaPercent: 100
+          };
+        }
+
+        const normalizedWithAlpha = normalizeColorWithAlpha(value);
+        if (normalizedWithAlpha) {
+          return {
+            isActive: true,
+            isValid: true,
+            hexColor: normalizedWithAlpha.slice(0, 7),
+            alphaPercent: alphaHexToPercent(normalizedWithAlpha.slice(7))
+          };
+        }
+
+        return {
+          isActive: false,
+          isValid: String(value || "").trim() === "",
+          hexColor: normalizeHexColor(defaultColor) || "#000000",
+          alphaPercent: 100
+        };
+      };
+
+      const applyColorState = (state, force = true) => {
+        const fallbackHex = normalizeHexColor(defaultColor) || "#000000";
+        const nextHex = normalizeHexColor(state?.hexColor) || fallbackHex;
+        const nextAlpha = normalizeAlphaPercent(state?.alphaPercent);
+        const nextValue = state?.isActive ? buildColorValue(nextHex, nextAlpha) : "";
+
+        if (force) {
+          textInput.value = nextValue;
+        }
+        pickerInput.value = nextHex.toLowerCase();
+        alphaRangeInput.value = String(nextAlpha);
+        alphaNumberInput.value = String(nextAlpha);
+        renderSwatch(buildColorValue(nextHex, nextAlpha) || nextHex, Boolean(state?.isActive));
+      };
+
+      const syncFromText = (force = false) => {
+        const state = parseColorState(textInput.value);
+        if (!state.isValid && !force) {
+          renderSwatch(normalizeHexColor(defaultColor) || "#000000", false);
+          return;
+        }
+        applyColorState(state, force);
+      };
+
+      applyColorState(parseColorState(textInput.value), true);
 
       textInput.addEventListener("input", () => {
-        renderColor(textInput.value, false);
+        syncFromText(false);
       });
 
       textInput.addEventListener("blur", () => {
-        renderColor(textInput.value, true);
+        syncFromText(true);
       });
 
       pickerInput.addEventListener("input", () => {
-        textInput.value = pickerInput.value.toUpperCase();
-        renderColor(textInput.value, true);
+        const currentState = parseColorState(textInput.value);
+        applyColorState(
+          {
+            isActive: true,
+            isValid: true,
+            hexColor: pickerInput.value,
+            alphaPercent: currentState.isActive ? currentState.alphaPercent : normalizeAlphaPercent(alphaRangeInput.value)
+          },
+          true
+        );
+      });
+
+      const handleAlphaInput = (rawValue) => {
+        const normalizedAlpha = normalizeAlphaPercent(rawValue);
+        const currentState = parseColorState(textInput.value);
+        applyColorState(
+          {
+            isActive: true,
+            isValid: true,
+            hexColor: currentState.isActive ? currentState.hexColor : pickerInput.value,
+            alphaPercent: normalizedAlpha
+          },
+          true
+        );
+      };
+
+      alphaRangeInput.addEventListener("input", () => {
+        handleAlphaInput(alphaRangeInput.value);
+      });
+
+      alphaNumberInput.addEventListener("input", () => {
+        handleAlphaInput(alphaNumberInput.value);
+      });
+
+      alphaNumberInput.addEventListener("blur", () => {
+        handleAlphaInput(alphaNumberInput.value);
       });
 
       resetButton.addEventListener("click", () => {
-        renderColor("", true);
+        applyColorState(
+          {
+            isActive: false,
+            isValid: true,
+            hexColor: defaultColor,
+            alphaPercent: 100
+          },
+          true
+        );
       });
+
+      return {
+        commit() {
+          syncFromText(true);
+        }
+      };
     };
 
-    bindColorField("guestbook-frame-color", "#7A6855");
-    bindColorField("guestbook-background-color", "#3E3935");
-    bindColorField("guestbook-surround-color", "#2C2118");
+    const colorFieldControllers = [
+      bindColorField("guestbook-frame-color", "#7A6855"),
+      bindColorField("guestbook-background-color", "#3E3935"),
+      bindColorField("guestbook-surround-color", "#2C2118")
+    ].filter(Boolean);
 
     const initialPageContent = <%- JSON.stringify(String(activePage.content || ""))
       .replace(/<\//g, "<\\/")
@@ -389,7 +598,14 @@
       }, delay);
     };
 
+    if (editorForm) {
+      editorForm.addEventListener("submit", () => {
+        colorFieldControllers.forEach((controller) => controller.commit());
+      });
+    }
+
     if (editorForm && previewSyncUrl) {
+
       editorForm.addEventListener("input", () => {
         schedulePreviewSync();
       });

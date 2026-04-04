@@ -8635,7 +8635,42 @@ body.page-guestbook-preview::after {
 }
 
 .gb-color-preview-swatch {
+  --gb-color-preview-color: transparent;
   color: transparent;
+  background:
+    linear-gradient(var(--gb-color-preview-color), var(--gb-color-preview-color)),
+    linear-gradient(45deg, #d7dbe2 25%, transparent 25%, transparent 75%, #d7dbe2 75%, #d7dbe2),
+    linear-gradient(45deg, #d7dbe2 25%, transparent 25%, transparent 75%, #d7dbe2 75%, #d7dbe2);
+  background-position: center, 0 0, 7px 7px;
+  background-size: auto, 14px 14px, 14px 14px;
+  background-color: #f6f7f9;
+}
+
+.gb-color-alpha-field {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.35rem;
+  margin-top: -0.1rem;
+  font-size: 0.88rem;
+}
+
+.gb-color-alpha-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.7rem auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.gb-color-alpha-range {
+  width: 100%;
+}
+
+.gb-color-alpha-number {
+  width: 100%;
+}
+
+.gb-color-alpha-unit {
+  color: var(--muted);
 }
 
 .gb-color-reset {
@@ -8649,6 +8684,10 @@ body.page-guestbook-preview::after {
 
   .gb-color-input-wrap {
     grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .gb-color-alpha-controls {
+    grid-template-columns: minmax(0, 1fr) 4.2rem auto;
   }
 
   .gb-color-reset {
