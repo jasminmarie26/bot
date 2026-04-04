@@ -555,6 +555,7 @@ function getAcmeChallengeRoots() {
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
+const SOCKET_SESSION_HEARTBEAT_INTERVAL_MS = 1000 * 60 * 4;
 const SESSION_COOKIE_NAME = "connect.sid";
 const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
 const FESTPLAY_INACTIVITY_MONTHS = 6;
@@ -2315,6 +2316,45 @@ function markSessionTabHeartbeat(sessionData, now = Date.now()) {
     return;
   }
   sessionData.last_tab_heartbeat_at = now;
+}
+
+function getSocketAdminImpersonatorUserId(socket) {
+  const parsedAdminUserId = Number(socket?.data?.adminImpersonatorUserId);
+  return Number.isInteger(parsedAdminUserId) && parsedAdminUserId > 0
+    ? parsedAdminUserId
+    : null;
+}
+
+function touchSocketSessionHeartbeat(socket, now = Date.now()) {
+  const sessionData = socket?.request?.session;
+  if (!sessionData?.user) {
+    return 0;
+  }
+
+  const parsedTimestamp = Number(now);
+  const nextTimestamp =
+    Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : Date.now();
+  const lastSavedAt = Number(socket?.data?.lastSessionHeartbeatSaveAt || 0);
+  const lastSessionHeartbeatAt = getSessionLastTabHeartbeatAt(sessionData);
+  const referenceHeartbeatAt = Math.max(lastSavedAt, lastSessionHeartbeatAt);
+
+  if (
+    Number.isFinite(referenceHeartbeatAt) &&
+    referenceHeartbeatAt > 0 &&
+    nextTimestamp - referenceHeartbeatAt < SOCKET_SESSION_HEARTBEAT_INTERVAL_MS
+  ) {
+    return referenceHeartbeatAt;
+  }
+
+  markSessionTabHeartbeat(sessionData, nextTimestamp);
+  sessionData.cookie.maxAge = getSessionMaxAgeForUser(sessionData.user);
+  if (socket?.data) {
+    socket.data.lastSessionHeartbeatSaveAt = nextTimestamp;
+  }
+  if (typeof sessionData.save === "function") {
+    sessionData.save(() => {});
+  }
+  return nextTimestamp;
 }
 
 function isXmlHttpRequest(req) {
@@ -18209,8 +18249,13 @@ app.use((err, req, res, next) => {
 io.use((socket, next) => {
   sessionMiddleware(socket.request, {}, () => {
     socket.data.user = socket.request.session?.user || null;
+    socket.data.adminImpersonatorUserId =
+      Number(socket.request.session?.admin_impersonator_user_id) || null;
     socket.data.preferredCharacterIds = normalizePreferredCharacterMap(
       socket.request.session?.preferred_character_ids
+    );
+    socket.data.lastSessionHeartbeatSaveAt = getSessionLastTabHeartbeatAt(
+      socket.request.session
     );
     socket.data.activeCharacterId = null;
     next();
@@ -18547,6 +18592,7 @@ function markSocketChatActivity(socket, timestamp = Date.now()) {
   const nextTimestamp =
     Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : Date.now();
   socket.data.lastChatActivityAt = nextTimestamp;
+  touchSocketSessionHeartbeat(socket, nextTimestamp);
   return nextTimestamp;
 }
 
@@ -19035,6 +19081,8 @@ function getConflictingChatSocketsForCharacter(
     ? ""
     : getStandardRoomContext(normalizedServerId, targetStandardRoomId).standardRoomId;
   const excludedId = String(excludedSocketId || "").trim();
+  const initiatingSocket = excludedId ? io?.of("/")?.sockets?.get(excludedId) || null : null;
+  const initiatingAdminImpersonatorUserId = getSocketAdminImpersonatorUserId(initiatingSocket);
 
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedCharacterId) {
     return [];
@@ -19047,6 +19095,13 @@ function getConflictingChatSocketsForCharacter(
     }
 
     if (excludedId && memberSocket.id === excludedId) {
+      continue;
+    }
+
+    if (
+      initiatingAdminImpersonatorUserId ||
+      getSocketAdminImpersonatorUserId(memberSocket)
+    ) {
       continue;
     }
 

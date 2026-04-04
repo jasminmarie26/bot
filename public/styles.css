@@ -4037,11 +4037,8 @@ body.theme-future.page-home-screen .home-copyright {
 .staff-name-admin,
 .role-name-admin {
   font-weight: 700;
-  background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent !important;
+  color: #ff9c70 !important;
+  text-shadow: 0 0 0.08em rgba(255, 156, 112, 0.22);
 }
 
 .staff-name-moderator,
@@ -11421,12 +11418,12 @@ body.page-guestbook-view .guestbook-entry-heading {
 
 .page-chat .role-name-admin.has-noctra-wings,
 .page-chat .role-name-moderator.has-noctra-wings {
-  background: linear-gradient(90deg, #5f0008 0%, #b40f1f 34%, #f24a1d 72%, #ffb35c 100%) !important;
-  background-image: linear-gradient(90deg, #5f0008 0%, #b40f1f 34%, #f24a1d 72%, #ffb35c 100%) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ffb35c !important;
   text-shadow:
     0 0 0.12em rgba(180, 15, 31, 0.18),
     0 0 0.18em rgba(242, 74, 29, 0.14);
