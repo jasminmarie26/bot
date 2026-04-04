@@ -73,7 +73,7 @@
     : (isGuestbookNameCrescentia ? "crescentia-nameplate" : "");
   const guestbookPreviewShellStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
-    !isTransparentPurTheme && guestbookSettings?.outer_image_url
+    guestbookSettings?.outer_image_url
       ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}`
       : "",
     `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
