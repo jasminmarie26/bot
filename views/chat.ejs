@@ -40,10 +40,18 @@
       ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
       : `/characters/${activeCharacter.id}#roomlist`)
   : "/dashboard"; %>
+<% const chatRoomListHrefTemplate = activeCharacter
+  ? (isFestplayContext
+      ? `/characters/__CHARACTER_ID__/festplays/${activeRoom.festplay_id}/rooms`
+      : "/characters/__CHARACTER_ID__#roomlist")
+  : ""; %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
 <% const chatBoardHref = `/rp-board?server_id=${chatBoardServerId}&character_id=${Number(chatBoardCharacterId)}`; %>
+<% const chatBoardHrefTemplate = activeCharacter
+  ? `/rp-board?server_id=${chatBoardServerId}&character_id=__CHARACTER_ID__`
+  : ""; %>
 <% const chatBackgroundColor = /^#[0-9a-f]{6}$/i.test(String(activeCharacter?.chat_background_color || "").trim())
   ? String(activeCharacter.chat_background_color).trim().toUpperCase()
   : "#EFEFEF"; %>
@@ -64,7 +72,12 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
-      <a href="<%= chatRoomListHref %>" target="_blank" rel="noopener noreferrer">Raumliste</a>
+      <a
+        href="<%= chatRoomListHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        <%= chatRoomListHrefTemplate ? `data-chat-character-href-template="${chatRoomListHrefTemplate}"` : "" %>
+      >Raumliste</a>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <% if (activeCharacter && (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp")) { %>
         <a href="/characters/<%= activeCharacter.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
@@ -75,6 +88,7 @@
         target="_blank"
         rel="noopener noreferrer"
         data-rp-board-link-root
+        <%= chatBoardHrefTemplate ? `data-chat-character-href-template="${chatBoardHrefTemplate}"` : "" %>
         data-rp-board-server-id="<%= chatBoardServerId %>"
         data-rp-board-festplay-id="0"
         data-rp-board-character-id="<%= Number(chatBoardCharacterId) %>"
@@ -199,6 +213,7 @@
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
           <strong
+            data-chat-user-menu-identity
             class="<%= chatIdentityRoleStyle ? `role-name-${chatIdentityRoleStyle}` : "" %>"
             style="<%= chatIdentityColor ? `color:${chatIdentityColor};` : "" %>"
           ><%= chatIdentityName %></strong>
@@ -214,20 +229,39 @@
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
           <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
-            <a href="/characters/<%= activeCharacter.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+            <a
+              href="/characters/<%= activeCharacter.id %>/edit"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-chat-character-href-template="/characters/__CHARACTER_ID__/edit"
+            >Charakter editieren</a>
           <% } %>
           <% if (activeCharacter) { %>
-            <a href="/characters/<%= activeCharacter.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+            <a
+              href="/characters/<%= activeCharacter.id %>/guestbook"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-chat-character-href-template="/characters/__CHARACTER_ID__/guestbook"
+            >G&auml;stebuch</a>
             <% if (activeCharacter.is_owner && isFestplayContext) { %>
-              <a href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms">Festspiel-R&auml;ume</a>
+              <a
+                href="/characters/<%= activeCharacter.id %>/festplays/<%= activeRoom.festplay_id %>/rooms"
+                data-chat-character-href-template="/characters/__CHARACTER_ID__/festplays/<%= activeRoom.festplay_id %>/rooms"
+              >Festspiel-R&auml;ume</a>
             <% } else if (activeCharacter.is_owner) { %>
-              <a href="/characters/<%= activeCharacter.id %>/rooms/new" target="_blank" rel="noopener noreferrer">Raum erstellen/editieren</a>
+              <a
+                href="/characters/<%= activeCharacter.id %>/rooms/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-chat-character-href-template="/characters/__CHARACTER_ID__/rooms/new"
+              >Raum erstellen/editieren</a>
             <% } %>
             <% if (activeCharacter.server_id === "free-rp" || activeCharacter.server_id === "erp") { %>
               <a
                 href="/characters/<%= activeCharacter.id %>/festplays"
                 target="_blank"
                 rel="noopener noreferrer"
+                data-chat-character-href-template="/characters/__CHARACTER_ID__/festplays"
               >Meine Festplays</a>
             <% } %>
           <% } %>
@@ -256,9 +290,11 @@
                 <path d="M12 13.15v2.8"/>
               </svg></span>
             <% } %>
-            <%= activeRoom
-              ? activeRoom.name
-              : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
+            <span class="chat-room-title-text">
+              <%= activeRoom
+                ? activeRoom.name
+                : (standardRoom ? standardRoom.name : `${activeServerId === "erp" ? "ERP" : "FREE-RP"} Chat`) %>
+            </span>
           </h1>
           <% const chatRoomDescription = activeRoom?.teaser || ""; %>
           <% const chatSidebarDescription = activeRoom

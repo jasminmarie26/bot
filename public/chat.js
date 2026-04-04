@@ -46,6 +46,8 @@
   const roomInviteAcceptBtn = document.getElementById("room-invite-accept");
   const roomInviteDeclineBtn = document.getElementById("room-invite-decline");
   const headerIdentity = document.querySelector("[data-header-identity]");
+  const userMenuIdentity = document.querySelector("[data-chat-user-menu-identity]");
+  const chatCharacterLinkTargets = Array.from(document.querySelectorAll("[data-chat-character-href-template]"));
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
   const standardRoomId = (chatBox?.dataset?.standardRoomId || "").trim().toLowerCase();
@@ -156,12 +158,80 @@
   };
   if (!chatBox || !form || !input) return;
   const defaultDocumentTitle = String(document.title || "Heldenhafte Reisen").trim() || "Heldenhafte Reisen";
+  const siteTitleLabel = defaultDocumentTitle.includes("|")
+    ? String(defaultDocumentTitle.split("|").pop() || defaultDocumentTitle).trim() || defaultDocumentTitle
+    : defaultDocumentTitle;
   let unreadChatTabCount = 0;
 
+  function getCurrentRoomLabel() {
+    const titleTextNode = chatRoomTitle?.querySelector(".chat-room-title-text");
+    return String(titleTextNode?.textContent || chatRoomTitle?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function buildChatTabTitleBase() {
+    const titleParts = [];
+    const nextDisplayName = String(currentDisplayName || chatBox?.dataset?.currentDisplayName || "").trim();
+    const roomLabel = getCurrentRoomLabel();
+
+    if (nextDisplayName) {
+      titleParts.push(nextDisplayName);
+    }
+    if (roomLabel) {
+      titleParts.push(roomLabel);
+    }
+
+    return titleParts.length ? `${titleParts.join(" • ")} | ${siteTitleLabel}` : defaultDocumentTitle;
+  }
+
   function updateChatTabTitle() {
+    const nextBaseTitle = buildChatTabTitleBase();
     document.title = unreadChatTabCount > 0
-      ? `(${unreadChatTabCount}) ${defaultDocumentTitle}`
-      : defaultDocumentTitle;
+      ? `(${unreadChatTabCount}) ${nextBaseTitle}`
+      : nextBaseTitle;
+  }
+
+  function syncChatUrlCharacterId() {
+    if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
+      return;
+    }
+
+    try {
+      const currentUrl = new URL(window.location.href);
+      const nextCharacterId = String(currentActiveCharacterId);
+      if (currentUrl.searchParams.get("character_id") === nextCharacterId) {
+        return;
+      }
+
+      currentUrl.searchParams.set("character_id", nextCharacterId);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+      );
+    } catch (_error) {
+      // Ignore history replacement failures.
+    }
+  }
+
+  function syncChatCharacterLinks() {
+    if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
+      return;
+    }
+
+    const nextCharacterId = String(currentActiveCharacterId);
+    chatCharacterLinkTargets.forEach((node) => {
+      const hrefTemplate = String(node?.dataset?.chatCharacterHrefTemplate || "").trim();
+      if (!hrefTemplate) {
+        return;
+      }
+
+      node.href = hrefTemplate.replace(/__CHARACTER_ID__/g, nextCharacterId);
+      if (node.hasAttribute("data-rp-board-character-id")) {
+        node.setAttribute("data-rp-board-character-id", nextCharacterId);
+      }
+    });
   }
 
   function isChatTabActive() {
@@ -202,10 +272,6 @@
       return fallback;
     }
     return Math.min(100, Math.max(0, parsed));
-  }
-
-  function sanitizeFontFamily(value) {
-    return String(value || "").trim().slice(0, 200);
   }
 
   function applyCharacterBackgroundAppearance(payload) {
@@ -331,7 +397,6 @@
         disconnectAt,
         scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
         characterId: toPositiveIntegerOrNull(parsed.characterId),
-        chatFontFamily: sanitizeFontFamily(parsed.chatFontFamily),
         messages
       };
     } catch (_error) {
@@ -381,6 +446,9 @@
           ? String(currentActiveCharacterId)
           : "";
     }
+
+    syncChatUrlCharacterId();
+    syncChatCharacterLinks();
 
     if (previousPresenceKey !== currentPresenceKey) {
       setTypingStateForUser(previousPresenceKey, false);
@@ -704,21 +772,53 @@
     node.style.color = normalizeChatTextColor(rawColor);
   }
 
+  function setIdentityNodeAppearance(node, name, { roleStyle = "", chatTextColor = "" } = {}) {
+    if (!node) {
+      return;
+    }
+
+    const nextName = String(name || "").trim();
+    const nextRoleStyle = String(roleStyle || "").trim().toLowerCase();
+    const nextChatTextColor = String(chatTextColor || "").trim();
+
+    node.classList.remove("role-name-admin", "role-name-moderator", "has-noctra-wings", "has-crescentia-moons");
+    if (nextRoleStyle === "admin" || nextRoleStyle === "moderator") {
+      node.classList.add(`role-name-${nextRoleStyle}`);
+    }
+
+    node.textContent = nextName;
+    node.title = nextName;
+    applySpecialNameDecor(node, nextName);
+
+    if (nextChatTextColor) {
+      node.style.color = nextChatTextColor;
+    } else {
+      node.style.removeProperty("color");
+    }
+  }
+
   function updateHeaderIdentity(payload) {
     updateCurrentPresenceIdentity(payload);
     applyAfkPreferences(payload);
-    if (!headerIdentity) return;
     const nextName = String(payload?.name || "").trim();
-    const nextColor = normalizeChatTextColor(payload?.chat_text_color);
+    const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
+    const nextColor = String(payload?.chat_text_color || "").trim();
     if (!nextName) return;
 
     currentDisplayName = nextName;
-    headerIdentity.textContent = nextName;
-    headerIdentity.title = nextName;
-    headerIdentity.style.color = nextColor;
+    setIdentityNodeAppearance(headerIdentity, nextName, {
+      roleStyle: nextRoleStyle,
+      chatTextColor: nextColor
+    });
+    setIdentityNodeAppearance(userMenuIdentity, nextName, {
+      roleStyle: nextRoleStyle,
+      chatTextColor: nextColor
+    });
     if (chatBox) {
       chatBox.dataset.currentDisplayName = nextName;
+      chatBox.dataset.currentCharacterName = nextName;
     }
+    updateChatTabTitle();
   }
 
   function applyAfkPreferences(payload) {
@@ -834,29 +934,12 @@
     document.body.classList.toggle("chat-gradient-fallback", shouldUseFallback);
   }
 
-  function applyRecoveredChatFontFamily() {
-    if (pendingChatReloadRecovery?.reason !== "server-instance-reload") {
-      return;
-    }
-
-    const recoveredFontFamily = sanitizeFontFamily(pendingChatReloadRecovery?.chatFontFamily);
-    if (!recoveredFontFamily) {
-      return;
-    }
-
-    if (chatBox) {
-      chatBox.style.fontFamily = recoveredFontFamily;
-    }
-    if (input) {
-      input.style.fontFamily = recoveredFontFamily;
-    }
-    if (whisperInput) {
-      whisperInput.style.fontFamily = recoveredFontFamily;
-    }
-  }
-
   applyChatGradientFallbackIfNeeded();
-  applyRecoveredChatFontFamily();
+  applySpecialNameDecor(headerIdentity, currentDisplayName);
+  applySpecialNameDecor(userMenuIdentity, currentDisplayName);
+  syncChatUrlCharacterId();
+  syncChatCharacterLinks();
+  updateChatTabTitle();
 
   function rememberRenderedChatMessage(message) {
     const snapshot = sanitizeChatMessageForRestore(message);
@@ -881,7 +964,6 @@
           Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
             ? currentActiveCharacterId
             : null,
-        chatFontFamily: chatBox ? sanitizeFontFamily(window.getComputedStyle(chatBox).fontFamily) : "",
         messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
       })
     );
@@ -1895,6 +1977,8 @@
 
       titleTextNode.textContent = roomNameText;
     }
+
+    updateChatTabTitle();
 
     if (!chatRoomHeading || !chatRoomDivider || !Object.prototype.hasOwnProperty.call(payload || {}, "roomDescription")) {
       return;

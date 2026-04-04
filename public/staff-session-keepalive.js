@@ -1,10 +1,12 @@
 (() => {
   const KEEPALIVE_INTERVAL_MS = 1000 * 60 * 5;
+  const ACTIVITY_TOUCH_INTERVAL_MS = 1000 * 60;
   let lastTouchAt = 0;
+  let activityTouchQueued = false;
 
-  const touchSession = async (force = false) => {
+  const touchSession = async ({ force = false, minimumIntervalMs = KEEPALIVE_INTERVAL_MS - 1000 * 5 } = {}) => {
     const now = Date.now();
-    if (!force && now - lastTouchAt < KEEPALIVE_INTERVAL_MS - 1000 * 5) {
+    if (!force && now - lastTouchAt < minimumIntervalMs) {
       return;
     }
 
@@ -28,19 +30,35 @@
     }
   };
 
+  const queueActivityTouch = () => {
+    if (activityTouchQueued) {
+      return;
+    }
+
+    activityTouchQueued = true;
+    window.requestAnimationFrame(() => {
+      activityTouchQueued = false;
+      void touchSession({ minimumIntervalMs: ACTIVITY_TOUCH_INTERVAL_MS });
+    });
+  };
+
   window.setInterval(() => {
     void touchSession();
   }, KEEPALIVE_INTERVAL_MS);
 
+  ["pointerdown", "keydown", "input", "change", "submit"].forEach((eventName) => {
+    document.addEventListener(eventName, queueActivityTouch, eventName === "pointerdown" ? { passive: true } : undefined);
+  });
+
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      void touchSession(true);
+      void touchSession({ force: true });
     }
   });
 
   window.addEventListener("focus", () => {
-    void touchSession(true);
+    void touchSession({ force: true });
   });
 
-  void touchSession(true);
+  void touchSession({ force: true });
 })();
