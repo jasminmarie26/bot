@@ -72,7 +72,7 @@
       <label class="gb-editor-card gb-editor-card-field">
         <span class="gb-editor-subheading">Style</span>
         <span class="gb-editor-helptext">Enth&auml;lt jetzt auch ein rahmenloses Transparent-Design.</span>
-        <select name="theme_style">
+        <select name="theme_style" data-guestbook-theme-style>
           <option value="pergament-gold" <%= settings.theme_style === "pergament-gold" ? "selected" : "" %>>Pergament Gold</option>
           <option value="rosenlack" <%= settings.theme_style === "rosenlack" ? "selected" : "" %>>Rosenlack</option>
           <option value="mondsilber" <%= settings.theme_style === "mondsilber" ? "selected" : "" %>>Mondsilber</option>
@@ -101,7 +101,7 @@
     </div>
 
     <div class="gb-editor-grid">
-  <div class="gb-color-row">
+  <div class="gb-color-row" data-gb-theme-color-row>
     <div>
       <span class="gb-editor-subheading">Rahmenfarbe</span>
       <span class="gb-editor-helptext">Leer = Standard vom gew&auml;hlten Style.</span>
@@ -157,7 +157,7 @@
     </div>
   </div>
 
-  <div class="gb-color-row">
+  <div class="gb-color-row" data-gb-theme-color-row>
     <div>
       <span class="gb-editor-subheading">Hintergrundfarbe</span>
       <span class="gb-editor-helptext">Beim Transparent-Design bleibt die Seite ohne Farbe leer und offen.</span>
@@ -217,7 +217,7 @@
     </div>
   </div>
 
-  <div class="gb-color-row">
+  <div class="gb-color-row" data-gb-theme-color-row>
     <div>
       <span class="gb-editor-subheading">Fl&auml;che hinter dem Rahmen</span>
       <span class="gb-editor-helptext">F&auml;rbt den gro&szlig;en Bereich um das G&auml;stebuch, aber nicht den Header oben.</span>
@@ -634,9 +634,23 @@
         );
       });
 
+      const rowElement = textInput.closest("[data-gb-theme-color-row]");
+
       return {
         commit() {
           syncFromText(true);
+        },
+        setDisabled(isDisabled) {
+          const nextDisabled = Boolean(isDisabled);
+          textInput.disabled = nextDisabled;
+          pickerInput.disabled = nextDisabled;
+          alphaRangeInput.disabled = nextDisabled;
+          alphaNumberInput.disabled = nextDisabled;
+          resetButton.disabled = nextDisabled;
+          if (rowElement) {
+            rowElement.classList.toggle("is-disabled", nextDisabled);
+            rowElement.setAttribute("aria-disabled", nextDisabled ? "true" : "false");
+          }
         }
       };
     };
@@ -654,10 +668,19 @@
     const editorForm = document.getElementById("guestbook-editor-form");
     const editorPageTriggers = Array.from(document.querySelectorAll("[data-gb-editor-page-trigger]"));
     const editorPages = Array.from(document.querySelectorAll("[data-gb-editor-page]"));
+    const themeStyleField = editorForm?.querySelector("[data-guestbook-theme-style]") || null;
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
+
+    const syncThemeSensitiveFields = () => {
+      const isTransparentPurTheme =
+        String(themeStyleField?.value || "").trim().toLowerCase() === "transparent-pur";
+      colorFieldControllers.forEach((controller) => {
+        controller.setDisabled(isTransparentPurTheme);
+      });
+    };
 
     const getActiveEditorPage = () =>
       String(
@@ -766,6 +789,13 @@
     if (editorForm) {
       editorForm.addEventListener("submit", () => {
         colorFieldControllers.forEach((controller) => controller.commit());
+      });
+    }
+
+    if (themeStyleField) {
+      syncThemeSensitiveFields();
+      themeStyleField.addEventListener("change", () => {
+        syncThemeSensitiveFields();
       });
     }
 

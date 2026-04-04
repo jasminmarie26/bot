@@ -8704,6 +8704,18 @@ body.page-guestbook-preview::after {
   align-items: center;
 }
 
+.gb-color-row.is-disabled {
+  opacity: 0.64;
+}
+
+.gb-color-row.is-disabled .gb-color-input-wrap {
+  filter: grayscale(1);
+}
+
+.gb-color-row.is-disabled .gb-editor-helptext::after {
+  content: " Bei Transparent Pur deaktiviert.";
+}
+
 .gb-color-picker {
   width: 3rem;
   height: 2.7rem;

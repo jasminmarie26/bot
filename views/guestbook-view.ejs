@@ -74,7 +74,9 @@
 <%
   const guestbookEntryColor = guestbookPageTextColor || "#EED7AE";
   const guestbookPanelImage = String(guestbookSettings?.image_url || guestbookSettings?.inner_image_url || "").trim();
-  const guestbookPanelColor = String(guestbookSettings?.background_color || "").trim();
+  const guestbookPanelColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
   const guestbookPanelImageCss = guestbookPanelImage ? `url(${JSON.stringify(guestbookPanelImage)})` : "";
   const guestbookPanelFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
 %>
