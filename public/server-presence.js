@@ -1,6 +1,7 @@
 (() => {
   const presenceSource = document.querySelector("[data-server-presence]");
   const headerIdentity = document.querySelector("[data-header-identity]");
+  const isRoomListPage = document.body?.classList?.contains("page-roomlist") === true;
   const userMenuIdentityTargets = Array.from(
     document.querySelectorAll(".topbar-user-menu-meta > strong, .rp-user-menu-meta > strong")
   );
@@ -426,7 +427,9 @@
     syncPresenceSubscriptions();
   });
 
-  socket.on("user:display-profile", updateHeaderIdentity);
+  if (!isRoomListPage) {
+    socket.on("user:display-profile", updateHeaderIdentity);
+  }
 
   socket.on("room:watch:update", (payload) => {
     const roomKey = payload?.roomId == null ? "" : String(payload.roomId);
