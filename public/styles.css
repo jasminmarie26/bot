@@ -11484,6 +11484,41 @@ body.page-guestbook-view .guestbook-entry-heading {
   text-shadow: 0 0 0.14em rgba(122, 176, 255, 0.18);
 }
 
+body.is-standalone-app.page-chat .role-name-admin {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ff9c70 !important;
+  text-shadow: 0 0 0.08em rgba(255, 156, 112, 0.22);
+}
+
+body.is-standalone-app.page-chat .role-name-admin.has-noctra-wings,
+body.is-standalone-app.page-chat .role-name-moderator.has-noctra-wings {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ffb35c !important;
+}
+
+body.is-standalone-app.page-chat .chat-online-name.has-crescentia-moons,
+body.is-standalone-app.page-chat .chat-message strong.has-crescentia-moons,
+body.is-standalone-app.page-chat .rp-header-identity.has-crescentia-moons,
+body.is-standalone-app.page-chat .topbar-user-menu-meta > strong.has-crescentia-moons,
+body.is-standalone-app.page-chat .rp-room-occupant.has-crescentia-moons,
+body.is-standalone-app.page-chat .role-name-admin.has-crescentia-moons,
+body.is-standalone-app.page-chat .role-name-moderator.has-crescentia-moons {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #8f9fff !important;
+}
+
 .chat-box .chat-emote {
   color: color-mix(in srgb, #17191d 82%, var(--accent));
 }

@@ -53,6 +53,36 @@
   let currentDisplayName = String(chatBox?.dataset?.currentDisplayName || currentCharacterName || "").trim();
   const currentUserId = Number(chatBox?.dataset?.currentUserId || "");
   const currentUserIsAdmin = document.body?.dataset?.currentUserIsAdmin === "true";
+  function isStandaloneAppMode() {
+    try {
+      if (window.matchMedia) {
+        const displayModeQueries = [
+          "(display-mode: standalone)",
+          "(display-mode: fullscreen)",
+          "(display-mode: window-controls-overlay)"
+        ];
+        if (displayModeQueries.some((query) => window.matchMedia(query).matches)) {
+          return true;
+        }
+      }
+    } catch (_error) {
+      // Ignore display-mode detection errors and fall through to other checks.
+    }
+
+    try {
+      if (window.navigator?.standalone === true) {
+        return true;
+      }
+    } catch (_error) {
+      // Ignore iOS standalone detection errors.
+    }
+
+    return String(document.referrer || "").startsWith("android-app://");
+  }
+
+  if (isStandaloneAppMode()) {
+    document.body?.classList.add("is-standalone-app");
+  }
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
