@@ -298,7 +298,10 @@
     <% const topbarStaffAreaLabel = currentUser
       ? (currentUser.is_admin ? "Admin" : "Moderator")
       : ""; %>
-    <% const showTopbarStaffUserBackupLink = Boolean(showTopbarStaffAreaLink); %>
+    <% const showTopbarStaffUserBackupLink = Boolean(
+      showTopbarStaffAreaLink &&
+      isDashboardPath
+    ); %>
     <% const topbarStaffUserBackupHref = currentUser
       ? (currentUser.is_admin ? "/admin/user-backups" : "/staff/user-backups")
       : ""; %>
