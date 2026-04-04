@@ -18055,11 +18055,33 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     saved_at: Date.now()
   };
 
-  if (String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest") {
-    return res.status(204).end();
-  }
+  const isPreviewSyncRequest =
+    String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest";
 
-  return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}`);
+  return req.session.save((error) => {
+    if (error) {
+      console.error("guestbook preview session save failed", {
+        characterId: id,
+        pageId: activePage.id,
+        error
+      });
+
+      if (isPreviewSyncRequest) {
+        return res.status(500).end();
+      }
+
+      return res.status(500).render("error", {
+        title: "Serverfehler",
+        message: "Die Vorschau konnte gerade nicht geladen werden."
+      });
+    }
+
+    if (isPreviewSyncRequest) {
+      return res.status(204).end();
+    }
+
+    return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}`);
+  });
 });
 
 app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
