@@ -834,6 +834,7 @@
       currentDisplayServerId = nextServerId;
     }
     updateCurrentPresenceIdentity(payload);
+    applyCharacterBackgroundAppearance(payload);
     applyAfkPreferences(payload);
     const nextName = String(payload?.name || "").trim();
     const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();

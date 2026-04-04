@@ -19605,12 +19605,27 @@ function emitUserDisplayProfileToSocket(memberSocket) {
       ? normalizeServer(memberSocket.data.presenceServerId)
       : DEFAULT_SERVER_ID;
   const profile = getSocketHeaderDisplayProfile(memberSocket);
+  const selectedCharacterId = getSocketPreferredCharacterId(memberSocket, normalizedServerId);
+  const selectedCharacter =
+    Number.isInteger(Number(selectedCharacterId)) && Number(selectedCharacterId) > 0
+      ? getCharacterById(Number(selectedCharacterId))
+      : null;
+  const selectedCharacterAppearance =
+    selectedCharacter && Number(selectedCharacter.user_id) === Number(memberSocket?.data?.user?.id)
+      ? selectedCharacter
+      : null;
   memberSocket.emit("user:display-profile", {
     name: profile.label || memberSocket?.data?.user?.display_name || memberSocket?.data?.user?.username || "User",
     role_style: profile.role_style || "",
     chat_text_color: profile.chat_text_color || "",
     server_id: normalizedServerId,
     character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId),
+    chat_background_url: String(selectedCharacterAppearance?.chat_background_url || "").trim(),
+    chat_background_color: normalizeChatBackgroundColor(selectedCharacterAppearance?.chat_background_color),
+    chat_background_image_opacity: normalizeGuestbookOpacity(
+      selectedCharacterAppearance?.chat_background_image_opacity,
+      100
+    ),
     auto_afk_enabled: normalizeAutoAfkEnabled(memberSocket?.data?.user?.auto_afk_enabled),
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(memberSocket?.data?.user?.afk_timeout_minutes)
   });

@@ -35,19 +35,12 @@
     ? "Moderatorenbereich im neuen Tab öffnen"
     : chatIdentityName; %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
-<% const chatCharacterServerId = activeCharacter?.server_id || activeServerId; %>
-<% const chatRoomListHref = isFestplayContext && activeCharacter
-  ? `/characters/${activeCharacter.id}/festplays/${activeRoom.festplay_id}/rooms`
-  : chatCharacterServerId === "larp"
-    ? "/dashboard/larp"
-    : chatCharacterServerId === "free-rp" || chatCharacterServerId === "erp"
-      ? `/dashboard/areas/${chatCharacterServerId}`
-      : "/dashboard"; %>
-<% const chatRoomListHrefTemplate = isFestplayContext && activeCharacter
-  ? `/characters/__CHARACTER_ID__/festplays/${activeRoom.festplay_id}/rooms`
-  : chatCharacterServerId === "free-rp" || chatCharacterServerId === "erp"
-    ? "/dashboard/areas/__SERVER_ID__"
-    : ""; %>
+<% const chatRoomListHref = activeCharacter
+  ? `/characters/${activeCharacter.id}`
+  : "/dashboard"; %>
+<% const chatRoomListHrefTemplate = activeCharacter
+  ? "/characters/__CHARACTER_ID__"
+  : ""; %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
 <% const chatBoardCharacterId = activeCharacter ? activeCharacter.id : 0; %>
