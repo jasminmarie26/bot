@@ -6,6 +6,7 @@
   action="/characters/<%= character.id %>/guestbook/edit/save"
   class="<%= guestbookEditorFormClass || 'panel form gb-editor-form' %>"
   data-preview-sync-url="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+  data-html-source-url="/characters/<%= character.id %>/guestbook/edit/render-html?page_id=<%= activePage.id %>"
   data-editor-page-storage-key="guestbook-editor-pane-<%= character.id %>"
   data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
 >
@@ -493,6 +494,7 @@
       </div>
       <div class="gb-bbcode-editor-shell" data-gb-bbcode-editor-shell>
         <textarea class="gb-bbcode-textarea" data-gb-bbcode-textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
+        <textarea class="gb-bbcode-source-view" data-gb-bbcode-source-view rows="12" readonly spellcheck="false"></textarea>
       </div>
     </div>
   </div>
@@ -768,9 +770,14 @@
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
     const bbcodeEditorShell = editorForm?.querySelector("[data-gb-bbcode-editor-shell]") || null;
+    const bbcodeSourceField = editorForm?.querySelector("[data-gb-bbcode-source-view]") || null;
     const bbcodeToolbarMenus = Array.from(editorForm?.querySelectorAll(".gb-bbcode-menu") || []);
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
+    const htmlSourceUrl = String(editorForm?.dataset?.htmlSourceUrl || "").trim();
     let previewSyncTimeout = null;
+    let sourceViewSelectionStart = 0;
+    let sourceViewSelectionEnd = 0;
+    let sourceViewRequestId = 0;
 
     const syncThemeSensitiveFields = () => {
       const isTransparentPurTheme =
@@ -859,6 +866,213 @@
       }
 
       pageContentField.focus({ preventScroll: true });
+    };
+
+    const focusSourceField = () => {
+      if (!bbcodeSourceField) {
+        return;
+      }
+
+      bbcodeSourceField.focus({ preventScroll: true });
+    };
+
+    const isSourceViewActive = () => Boolean(bbcodeEditorShell?.classList.contains("is-source-view"));
+
+    const rememberPageContentSelection = () => {
+      if (!pageContentField) {
+        return;
+      }
+
+      const currentValue = String(pageContentField.value || "");
+      sourceViewSelectionStart = Number.isInteger(pageContentField.selectionStart)
+        ? pageContentField.selectionStart
+        : currentValue.length;
+      sourceViewSelectionEnd = Number.isInteger(pageContentField.selectionEnd)
+        ? pageContentField.selectionEnd
+        : currentValue.length;
+    };
+
+    const HTML_SOURCE_BLOCK_TAGS = new Set([
+      "BLOCKQUOTE",
+      "DETAILS",
+      "DIV",
+      "H1",
+      "H2",
+      "H3",
+      "HR",
+      "LI",
+      "OL",
+      "P",
+      "PRE",
+      "SUMMARY",
+      "TABLE",
+      "TBODY",
+      "TD",
+      "TFOOT",
+      "TH",
+      "THEAD",
+      "TR",
+      "UL"
+    ]);
+    const HTML_SOURCE_PRESERVE_CHILD_STRUCTURE_TAGS = new Set([
+      "CODE",
+      "OL",
+      "PRE",
+      "SUMMARY",
+      "TABLE",
+      "TBODY",
+      "TFOOT",
+      "THEAD",
+      "TR",
+      "UL"
+    ]);
+    const HTML_SOURCE_VOID_TAGS = new Set(["BR", "HR", "IMG"]);
+    const HTML_SOURCE_RAW_TEXT_TAGS = new Set(["CODE", "PRE"]);
+
+    const appendNormalizedHtmlSourceChildren = (sourceParent, targetParent, wrapInlineChildren = true) => {
+      let paragraphNode = null;
+
+      const flushParagraphNode = () => {
+        if (paragraphNode && paragraphNode.childNodes.length) {
+          targetParent.appendChild(paragraphNode);
+        }
+        paragraphNode = null;
+      };
+
+      Array.from(sourceParent.childNodes || []).forEach((childNode) => {
+        if (childNode.nodeType === Node.TEXT_NODE) {
+          const textValue = String(childNode.textContent || "");
+          if (!textValue) {
+            return;
+          }
+
+          if (!wrapInlineChildren) {
+            if (textValue.trim()) {
+              targetParent.appendChild(document.createTextNode(textValue));
+            }
+            return;
+          }
+
+          if (!textValue.trim() && !paragraphNode) {
+            return;
+          }
+
+          paragraphNode ||= document.createElement("p");
+          paragraphNode.appendChild(document.createTextNode(textValue));
+          return;
+        }
+
+        if (!(childNode instanceof HTMLElement)) {
+          return;
+        }
+
+        const tagName = childNode.tagName.toUpperCase();
+        if (tagName === "BR") {
+          if (wrapInlineChildren) {
+            paragraphNode ||= document.createElement("p");
+            paragraphNode.appendChild(document.createElement("br"));
+          } else {
+            targetParent.appendChild(document.createElement("br"));
+          }
+          return;
+        }
+
+        const normalizedChild = createNormalizedHtmlSourceElement(childNode);
+        if (HTML_SOURCE_BLOCK_TAGS.has(tagName)) {
+          flushParagraphNode();
+          targetParent.appendChild(normalizedChild);
+          return;
+        }
+
+        if (!wrapInlineChildren) {
+          targetParent.appendChild(normalizedChild);
+          return;
+        }
+
+        paragraphNode ||= document.createElement("p");
+        paragraphNode.appendChild(normalizedChild);
+      });
+
+      flushParagraphNode();
+    };
+
+    const createNormalizedHtmlSourceElement = (sourceElement) => {
+      const clone = document.createElement(sourceElement.tagName.toLowerCase());
+      Array.from(sourceElement.attributes || []).forEach((attribute) => {
+        clone.setAttribute(attribute.name, attribute.value);
+      });
+
+      const tagName = sourceElement.tagName.toUpperCase();
+      if (HTML_SOURCE_VOID_TAGS.has(tagName)) {
+        return clone;
+      }
+
+      if (HTML_SOURCE_RAW_TEXT_TAGS.has(tagName)) {
+        clone.textContent = sourceElement.textContent || "";
+        return clone;
+      }
+
+      appendNormalizedHtmlSourceChildren(
+        sourceElement,
+        clone,
+        !HTML_SOURCE_PRESERVE_CHILD_STRUCTURE_TAGS.has(tagName)
+      );
+      return clone;
+    };
+
+    const formatRenderedHtmlAsSource = (renderedHtml) => {
+      const sourceMarkup = String(renderedHtml || "").trim();
+      if (!sourceMarkup) {
+        return "";
+      }
+
+      const container = document.createElement("div");
+      container.innerHTML = sourceMarkup;
+
+      const normalizedRoot = document.createElement("div");
+      appendNormalizedHtmlSourceChildren(container, normalizedRoot, true);
+      return normalizedRoot.innerHTML.trim();
+    };
+
+    const renderSourceViewHtml = async () => {
+      if (!editorForm || !pageContentField || !bbcodeSourceField || !htmlSourceUrl) {
+        return;
+      }
+
+      const currentRequestId = ++sourceViewRequestId;
+      bbcodeSourceField.value = "HTML wird geladen...";
+
+      try {
+        const formBody = new URLSearchParams(new FormData(editorForm));
+        const response = await fetch(htmlSourceUrl, {
+          method: "POST",
+          body: formBody,
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTML source render failed with status ${response.status}`);
+        }
+
+        const payload = await response.json();
+        if (currentRequestId !== sourceViewRequestId || !isSourceViewActive()) {
+          return;
+        }
+
+        bbcodeSourceField.value = formatRenderedHtmlAsSource(payload?.html || "");
+        bbcodeSourceField.scrollTop = 0;
+        bbcodeSourceField.scrollLeft = 0;
+      } catch (error) {
+        if (currentRequestId !== sourceViewRequestId || !isSourceViewActive()) {
+          return;
+        }
+
+        bbcodeSourceField.value = "Die HTML-Ansicht konnte gerade nicht geladen werden.";
+      }
     };
 
     const createHistorySnapshot = () => {
@@ -996,13 +1210,24 @@
     };
 
     const toggleSourceView = () => {
-      if (!bbcodeEditorShell) {
+      if (!bbcodeEditorShell || !pageContentField || !bbcodeSourceField || !htmlSourceUrl) {
         return;
       }
 
-      bbcodeEditorShell.classList.toggle("is-source-view");
+      if (isSourceViewActive()) {
+        sourceViewRequestId += 1;
+        bbcodeEditorShell.classList.remove("is-source-view");
+        syncBbcodeToolbarButtons();
+        focusPageContentField();
+        pageContentField.setSelectionRange(sourceViewSelectionStart, sourceViewSelectionEnd);
+        return;
+      }
+
+      rememberPageContentSelection();
+      bbcodeEditorShell.classList.add("is-source-view");
       syncBbcodeToolbarButtons();
-      focusPageContentField();
+      focusSourceField();
+      renderSourceViewHtml();
     };
 
     const toggleFullscreen = () => {
@@ -1112,6 +1337,10 @@
 
       if (buttonAction === "fullscreen-toggle") {
         toggleFullscreen();
+        return;
+      }
+
+      if (isSourceViewActive()) {
         return;
       }
 
@@ -1316,6 +1545,9 @@
     if (pageContentField) {
       pageContentField.addEventListener("input", () => {
         recordHistoryState();
+        if (isSourceViewActive()) {
+          renderSourceViewHtml();
+        }
       });
 
       pageContentField.addEventListener("keydown", (event) => {

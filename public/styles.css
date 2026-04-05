@@ -9462,11 +9462,32 @@ body.gb-editor-fullscreen-open {
   background: transparent;
 }
 
-.gb-bbcode-editor-shell.is-source-view .gb-bbcode-textarea {
+.gb-bbcode-source-view {
+  display: none;
+  width: 100%;
+  min-height: 18rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
   font-family: "Consolas", "Courier New", monospace;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.gb-bbcode-editor-shell.is-source-view textarea[data-gb-bbcode-textarea] {
+  display: none;
+}
+
+.gb-bbcode-editor-shell.is-source-view .gb-bbcode-source-view {
+  display: block;
 }
 
 .gb-bbcode-editor-shell.is-fullscreen .gb-bbcode-textarea {
+  min-height: calc(100dvh - 5rem);
+}
+
+.gb-bbcode-editor-shell.is-fullscreen .gb-bbcode-source-view {
   min-height: calc(100dvh - 5rem);
 }
 

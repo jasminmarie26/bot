@@ -17983,6 +17983,27 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
   });
 });
 
+app.post("/characters/:id/guestbook/edit/render-html", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).json({ html: "" });
+  }
+
+  if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
+    return res.status(403).json({ html: "" });
+  }
+
+  const pageContent = normalizeGuestbookPageContentInput(req.body.page_content, 12000);
+  return res.json({
+    html: renderGuestbookBbcode(pageContent, {
+      compactImageLineBreaks: false,
+      compactBlockLineBreaks: false
+    })
+  });
+});
+
 app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
