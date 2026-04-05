@@ -9287,8 +9287,7 @@ body.gb-editor-fullscreen-open {
   align-items: flex-start;
   gap: 0.18rem;
   padding: 0.18rem;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: visible;
   background: rgba(110, 110, 107, 0.92);
   min-width: 0;
   width: 100%;
