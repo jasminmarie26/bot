@@ -10974,9 +10974,46 @@ body.page-guestbook-view .guestbook-entry-heading {
   gap: 0.75rem;
 }
 
+.guestbook-notification-compose-toggle {
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 82%, black 18%);
+  overflow: hidden;
+}
+
+.guestbook-notification-compose-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.78rem 0.86rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.guestbook-notification-compose-summary::-webkit-details-marker {
+  display: none;
+}
+
+.guestbook-notification-compose-summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.guestbook-notification-compose-toggle[open] .guestbook-notification-compose-summary::after {
+  content: "−";
+}
+
 .guestbook-notification-compose-form {
   display: grid;
   gap: 0.75rem;
+  padding: 0 0.86rem 0.86rem;
 }
 
 .guestbook-notification-compose-grid {
