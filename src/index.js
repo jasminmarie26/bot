@@ -1660,6 +1660,55 @@ function buildPublicBirthdayDisplay(rawBirthDate, values, referenceDate = new Da
   };
 }
 
+function shouldShowBirthdayCakeForCharacter(
+  characterId,
+  accountUser = null,
+  {
+    userId = null,
+    hasJoinedChat = null,
+    connectedCharacterIds = null,
+    referenceDate = new Date()
+  } = {}
+) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return false;
+  }
+
+  const resolvedAccountUser =
+    accountUser && typeof accountUser === "object"
+      ? accountUser
+      : (Number.isInteger(Number(userId)) && Number(userId) > 0
+          ? getAccountUserById(Number(userId))
+          : null);
+  if (!resolvedAccountUser) {
+    return false;
+  }
+
+  const birthdayDisplay = buildPublicBirthdayDisplay(
+    resolvedAccountUser.birth_date,
+    resolvedAccountUser,
+    referenceDate
+  );
+  if (!birthdayDisplay.showCake) {
+    return false;
+  }
+
+  if (hasJoinedChat === true) {
+    return true;
+  }
+
+  if (hasJoinedChat === false) {
+    return false;
+  }
+
+  const connectedCharacterIdSet =
+    connectedCharacterIds instanceof Set
+      ? connectedCharacterIds
+      : new Set(getConnectedChatCharacterIds());
+  return connectedCharacterIdSet.has(parsedCharacterId);
+}
+
 function getBirthdayGreetingCharacterForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -15199,6 +15248,17 @@ app.get("/members", requireAuth, (req, res) => {
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
   const connectedChatCharacterIds = new Set(getConnectedChatCharacterIds());
+  const birthdayAccountUserCache = new Map();
+  const getBirthdayAccountUser = (userId) => {
+    const parsedUserId = Number(userId);
+    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+      return null;
+    }
+    if (!birthdayAccountUserCache.has(parsedUserId)) {
+      birthdayAccountUserCache.set(parsedUserId, getAccountUserById(parsedUserId) || null);
+    }
+    return birthdayAccountUserCache.get(parsedUserId);
+  };
   const isUserLoggedIn = (userId) => {
     const parsedUserId = Number(userId);
     return (
@@ -15228,6 +15288,13 @@ app.get("/members", requireAuth, (req, res) => {
       ...member,
       server_label: getServerLabel(member.server_id),
       is_logged_in: connectedChatCharacterIds.has(Number(member.id)),
+      show_birthday_cake: shouldShowBirthdayCakeForCharacter(
+        member.id,
+        getBirthdayAccountUser(member.user_id),
+        {
+          connectedCharacterIds: connectedChatCharacterIds
+        }
+      ),
       visibility_label:
         Number(member.user_id) === currentUserId
           ? "Dein Charakter"
@@ -15278,7 +15345,14 @@ app.get("/members", requireAuth, (req, res) => {
         visibility_label: "Rollencharakter",
         role_label: "Administrator (A)",
         role_style: "admin",
-        is_logged_in: isUserLoggedIn(user.id)
+        is_logged_in: isUserLoggedIn(user.id),
+        show_birthday_cake: shouldShowBirthdayCakeForCharacter(
+          adminCharacterId,
+          getBirthdayAccountUser(user.id),
+          {
+            connectedCharacterIds: connectedChatCharacterIds
+          }
+        )
       });
     }
 
@@ -15301,7 +15375,14 @@ app.get("/members", requireAuth, (req, res) => {
         visibility_label: "Rollencharakter",
         role_label: "Moderator",
         role_style: "moderator",
-        is_logged_in: isUserLoggedIn(user.id)
+        is_logged_in: isUserLoggedIn(user.id),
+        show_birthday_cake: shouldShowBirthdayCakeForCharacter(
+          moderatorCharacterId,
+          getBirthdayAccountUser(user.id),
+          {
+            connectedCharacterIds: connectedChatCharacterIds
+          }
+        )
       });
     }
   });
@@ -17956,6 +18037,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
   const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
+  const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
+    character.id,
+    getAccountUserById(character.user_id)
+  );
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     guestbookPages,
     activeGuestbookPage.id,
@@ -17970,7 +18055,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
     publicBirthdayRows: publicBirthdayDisplay.rows,
-    showBirthdayCake: publicBirthdayDisplay.showCake,
+    showBirthdayCake: characterBirthdayCakeVisible,
     isOwner: guestbookAccessState.isOwner,
     guestbookAccessState,
     guestbookEntries,
@@ -18301,13 +18386,17 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   );
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
   const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
+  const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
+    character.id,
+    getAccountUserById(character.user_id)
+  );
 
   return res.render("guestbook-preview", {
     title: `Vorschau: ${character.name}`,
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
     publicBirthdayRows: publicBirthdayDisplay.rows,
-    showBirthdayCake: publicBirthdayDisplay.showCake,
+    showBirthdayCake: characterBirthdayCakeVisible,
     pageId: previewPage.id,
     pageNumber: previewPage.page_number,
     guestbookPageNavigation,
@@ -18716,6 +18805,13 @@ app.get("/chat", requireAuth, (req, res) => {
     activeServerId,
     standardRoom?.id || ""
   );
+  const activeCharacterBirthdayCake = shouldShowBirthdayCakeForCharacter(
+    activeCharacter?.id,
+    req.session.user?.id ? getAccountUserById(req.session.user.id) : null,
+    {
+      hasJoinedChat: true
+    }
+  );
 
   return res.render("chat", {
     title: activeRoom
@@ -18727,6 +18823,7 @@ app.get("/chat", requireAuth, (req, res) => {
     activeRoom,
     activeRoomDescriptionHtml: activeRoom?.teaser ? renderGuestbookBbcode(activeRoom.teaser) : "",
     activeCharacter,
+    activeCharacterBirthdayCake,
     activeServerId,
     standardRoom,
     onlineCharacters
@@ -21111,8 +21208,19 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     selectedCharacter && Number(selectedCharacter.user_id) === Number(memberSocket?.data?.user?.id)
       ? selectedCharacter
       : null;
+  const birthdayAccountUser = memberSocket?.data?.user?.id
+    ? getAccountUserById(memberSocket.data.user.id)
+    : null;
+  const showBirthdayCake = shouldShowBirthdayCakeForCharacter(
+    selectedCharacterAppearance?.id || selectedCharacter?.id,
+    birthdayAccountUser,
+    {
+      hasJoinedChat: memberSocket?.data?.hasJoinedChat === true
+    }
+  );
   memberSocket.emit("user:display-profile", {
     name: profile.label || memberSocket?.data?.user?.display_name || memberSocket?.data?.user?.username || "User",
+    show_birthday_cake: showBirthdayCake,
     role_style: profile.role_style || "",
     chat_text_color: profile.chat_text_color || "",
     server_id: normalizedServerId,
@@ -23010,6 +23118,7 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, sta
   }
   const onlineCharacters = [];
   const seenPresenceKeys = new Set();
+  const birthdayAccountUserCache = new Map();
   for (const memberSocket of sockets) {
     const user = memberSocket?.data?.user;
     const socketServerId = getSocketChannelServerId(memberSocket, roomId, serverId);
@@ -23026,14 +23135,26 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, sta
       socketServerId,
       presenceIdentity.characterId
     );
+    if (!birthdayAccountUserCache.has(userId)) {
+      birthdayAccountUserCache.set(userId, getAccountUserById(userId) || null);
+    }
+    const birthdayAccountUser = birthdayAccountUserCache.get(userId);
     const displayProfile = getSocketDisplayProfile(memberSocket, socketServerId);
     const activeCharacterId = chosenCharacter?.id || presenceIdentity.characterId || null;
+    const showBirthdayCake = shouldShowBirthdayCakeForCharacter(
+      activeCharacterId,
+      birthdayAccountUser,
+      {
+        hasJoinedChat: memberSocket?.data?.hasJoinedChat === true
+      }
+    );
 
     onlineCharacters.push({
       presence_key: presenceIdentity.key,
       user_id: userId,
       name: displayProfile.label || `User ${userId}`,
       character_id: activeCharacterId,
+      show_birthday_cake: showBirthdayCake,
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
       has_room_rights: room ? canBypassRoomLock(user, room) : false,
@@ -23088,6 +23209,7 @@ function sanitizeOnlineCharacterEntries(entries) {
       character_id: Number.isInteger(Number(entry.character_id)) && Number(entry.character_id) > 0
         ? Number(entry.character_id)
         : null,
+      show_birthday_cake: entry.show_birthday_cake === true,
       role_style: String(entry.role_style || "").trim(),
       chat_text_color: String(entry.chat_text_color || "").trim(),
       has_room_rights: entry.has_room_rights === true,

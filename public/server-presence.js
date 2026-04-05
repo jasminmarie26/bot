@@ -87,7 +87,19 @@
     node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
   }
 
-  function setIdentityNodeAppearance(node, name, { roleStyle = "", chatTextColor = "" } = {}) {
+  function getBirthdayCakeLabel(label, showBirthdayCake) {
+    const nextLabel = String(label || "").trim();
+    if (!nextLabel) {
+      return "";
+    }
+    return showBirthdayCake ? `${String.fromCodePoint(0x1F382)} ${nextLabel}` : nextLabel;
+  }
+
+  function setIdentityNodeAppearance(
+    node,
+    name,
+    { roleStyle = "", chatTextColor = "", showBirthdayCake = false } = {}
+  ) {
     if (!node) {
       return;
     }
@@ -100,8 +112,8 @@
       return;
     }
 
-    node.textContent = nextName;
-    node.title = nextName;
+    node.textContent = getBirthdayCakeLabel(nextName, showBirthdayCake);
+    node.title = getBirthdayCakeLabel(nextName, showBirthdayCake);
     node.classList.toggle("role-name-admin", nextRoleStyle === "admin");
     node.classList.toggle("role-name-moderator", nextRoleStyle === "moderator");
     applySpecialNameDecor(node, nextName);
@@ -187,6 +199,7 @@
     const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
     const nextServerId = String(payload?.server_id || serverId || "").trim().toLowerCase();
     const nextCharacterId = normalizePositiveNumber(payload?.character_id);
+    const showBirthdayCake = payload?.show_birthday_cake === true;
 
     if (presenceSource && Object.prototype.hasOwnProperty.call(payload || {}, "character_id")) {
       presenceSource.dataset.activeCharacterId = nextCharacterId ? String(nextCharacterId) : "";
@@ -197,17 +210,19 @@
     if (nextName) {
       setIdentityNodeAppearance(headerIdentity, nextName, {
         roleStyle: nextRoleStyle,
-        chatTextColor: nextColor
+        chatTextColor: nextColor,
+        showBirthdayCake
       });
       userMenuIdentityTargets.forEach((node) => {
         setIdentityNodeAppearance(node, nextName, {
           roleStyle: nextRoleStyle,
-          chatTextColor: nextColor
+          chatTextColor: nextColor,
+          showBirthdayCake
         });
       });
       liveCharacterNameTargets.forEach((node) => {
-        node.textContent = `Charakter: ${nextName}`;
-        node.title = nextName;
+        node.textContent = `Charakter: ${getBirthdayCakeLabel(nextName, showBirthdayCake)}`;
+        node.title = getBirthdayCakeLabel(nextName, showBirthdayCake);
       });
     }
 
@@ -221,6 +236,10 @@
 
   function createOccupantNode(entry) {
     const displayName = String(entry?.name || "").replace(/\s*\(M\)\s*$/i, "").trim() || "Unbekannt";
+    const displayNameWithBirthdayCake = getBirthdayCakeLabel(
+      displayName,
+      entry?.show_birthday_cake === true
+    );
     const characterId = Number(entry?.character_id);
     const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
     const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
@@ -233,7 +252,7 @@
     if (isAfk) {
       nameNode.classList.add("is-afk");
     }
-    nameNode.textContent = displayName;
+    nameNode.textContent = displayNameWithBirthdayCake;
     function appendOccupantContent(target) {
       if (isAfk) {
         const icon = document.createElement("span");

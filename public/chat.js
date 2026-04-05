@@ -803,6 +803,7 @@
       user_id: normalizePositiveNumber(node.dataset.userId) || 0,
       character_id: normalizePositiveNumber(node.dataset.characterId),
       name: String(node.dataset.name || node.textContent || "").trim(),
+      show_birthday_cake: String(node.dataset.showBirthdayCake || "").trim() === "1",
       role_style: String(node.dataset.roleStyle || "").trim(),
       chat_text_color: String(node.dataset.chatTextColor || "").trim(),
       is_afk: node.querySelector(".chat-afk-clock") != null,
@@ -815,7 +816,19 @@
     node.style.color = normalizeChatTextColor(rawColor);
   }
 
-  function setIdentityNodeAppearance(node, name, { roleStyle = "", chatTextColor = "" } = {}) {
+  function getBirthdayCakeLabel(label, showBirthdayCake) {
+    const nextLabel = String(label || "").trim();
+    if (!nextLabel) {
+      return "";
+    }
+    return showBirthdayCake ? `${String.fromCodePoint(0x1F382)} ${nextLabel}` : nextLabel;
+  }
+
+  function setIdentityNodeAppearance(
+    node,
+    name,
+    { roleStyle = "", chatTextColor = "", showBirthdayCake = false } = {}
+  ) {
     if (!node) {
       return;
     }
@@ -829,8 +842,8 @@
       node.classList.add(`role-name-${nextRoleStyle}`);
     }
 
-    node.textContent = nextName;
-    node.title = nextName;
+    node.textContent = getBirthdayCakeLabel(nextName, showBirthdayCake);
+    node.title = getBirthdayCakeLabel(nextName, showBirthdayCake);
     applySpecialNameDecor(node, nextName);
 
     if (nextChatTextColor) {
@@ -851,19 +864,22 @@
     const nextName = String(payload?.name || "").trim();
     const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
     const nextColor = String(payload?.chat_text_color || "").trim();
+    const showBirthdayCake = payload?.show_birthday_cake === true;
     if (!nextName) return;
 
-    currentDisplayName = nextName;
+    currentDisplayName = getBirthdayCakeLabel(nextName, showBirthdayCake);
     setIdentityNodeAppearance(headerIdentity, nextName, {
       roleStyle: nextRoleStyle,
-      chatTextColor: nextColor
+      chatTextColor: nextColor,
+      showBirthdayCake
     });
     setIdentityNodeAppearance(userMenuIdentity, nextName, {
       roleStyle: nextRoleStyle,
-      chatTextColor: nextColor
+      chatTextColor: nextColor,
+      showBirthdayCake
     });
     if (chatBox) {
-      chatBox.dataset.currentDisplayName = nextName;
+      chatBox.dataset.currentDisplayName = getBirthdayCakeLabel(nextName, showBirthdayCake);
       chatBox.dataset.currentCharacterName = nextName;
     }
     updateChatTabTitle();
@@ -2723,11 +2739,13 @@
       const characterId = Number(entry?.character_id);
       const presenceKey = resolvePresenceKey(entry);
       const label = String(entry?.name || "").trim();
+      const showBirthdayCake = entry?.show_birthday_cake === true;
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
       const isAfk = entry?.is_afk === true;
       const isNpc = entry?.is_npc === true;
       const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
+      const displayNameWithBirthdayCake = getBirthdayCakeLabel(displayName, showBirthdayCake);
       const node = document.createElement(isNpc ? "div" : "button");
       const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
@@ -2739,7 +2757,7 @@
       node.classList.add("chat-online-item");
       if (isNpc) {
         node.classList.add("is-npc");
-        node.setAttribute("aria-label", `${displayName} (Raumfigur)`);
+        node.setAttribute("aria-label", `${displayNameWithBirthdayCake} (Raumfigur)`);
         node.title = "Raumfigur";
       } else {
         node.classList.add("chat-online-trigger");
@@ -2763,6 +2781,7 @@
             userId,
             characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
             name: displayName,
+            showBirthdayCake,
             isAfk
           });
         }
@@ -2771,13 +2790,14 @@
       node.dataset.characterId = Number.isInteger(characterId) && characterId > 0 ? String(characterId) : "";
       node.dataset.presenceKey = presenceKey;
       node.dataset.name = displayName;
+      node.dataset.showBirthdayCake = showBirthdayCake ? "1" : "0";
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
       afkClockNode.className = "chat-afk-clock";
       afkClockNode.setAttribute("aria-hidden", "true");
       afkClockNode.textContent = "\u25F7";
       applyChatTextColor(textNode, chatTextColor);
-      textNode.textContent = displayName;
+      textNode.textContent = displayNameWithBirthdayCake;
       applySpecialNameDecor(textNode, displayName);
       if (isAfk) {
         contentNode.appendChild(afkClockNode);

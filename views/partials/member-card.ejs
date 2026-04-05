@@ -13,6 +13,6 @@
     class="members-card-name <%= member.role_style ? `role-name-${member.role_style}` : '' %>"
     href="/characters/<%= member.id %>/guestbook"
   >
-    <%= member.name %>
+    <%= member.show_birthday_cake ? `${String.fromCodePoint(0x1F382)} ${member.name}` : member.name %>
   </a>
 </span>
