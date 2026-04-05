@@ -8751,6 +8751,15 @@ function getYouTubeEmbedUrl(rawValue) {
   return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : "";
 }
 
+function renderYouTubeEmbedMarkup(rawValue) {
+  const embedUrl = getYouTubeEmbedUrl(rawValue);
+  if (!embedUrl) {
+    return "";
+  }
+
+  return `<div class="bb-youtube"><iframe src="${escapeHtml(embedUrl)}" title="YouTube Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+}
+
 function toGuestbookImageSrc(safeUrl) {
   const value = String(safeUrl || "").trim();
   if (!value) return "";
@@ -9080,9 +9089,8 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     "<span class=\"bb-fn\" tabindex=\"0\"><span class=\"bb-fn-icon\" aria-hidden=\"true\">i</span><span class=\"bb-fn-popup\">$1</span></span>"
   );
   html = html.replace(createBbcodeWrapRegex("youtube"), (full, rawUrl) => {
-    const embedUrl = getYouTubeEmbedUrl(rawUrl);
-    if (!embedUrl) return rawUrl;
-    return `<div class="bb-youtube"><iframe src="${escapeHtml(embedUrl)}" title="YouTube Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+    const embedMarkup = renderYouTubeEmbedMarkup(rawUrl);
+    return embedMarkup || rawUrl;
   });
 
   html = html.replace(createBbcodeOptionRegex("button"), (full, rawSpec, inner) => {
@@ -9146,6 +9154,14 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     if (!gradient) return inner;
     return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
   });
+
+  html = html.replace(
+    /(^|\n)([ \t]*)((?:https?:\/\/|\/\/)?(?:www\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s<]+)(?=[ \t]*(?:\n|$))/gi,
+    (full, prefix, indentation, rawUrl) => {
+      const embedMarkup = renderYouTubeEmbedMarkup(rawUrl);
+      return embedMarkup ? `${prefix}${indentation}${embedMarkup}` : full;
+    }
+  );
 
   html = html.replace(/\n/g, "<br>");
   if (compactImageLineBreaks) {
@@ -15142,9 +15158,14 @@ const HELP_BBCODE_EXAMPLES = [
     title: "Bild rechts",
     code: "[img float=right]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]Text neben Bild rechts"
   },
+  { title: "YouTube", code: "[youtube]https://www.youtube.com/watch?v=dQw4w9WgXcQ[/youtube]" },
   { title: "Link", code: "[url=https://heldenhaftereisen.net]Startseite[/url]" },
   { title: "Zitat", code: "[quote]Ein stilles Zitat.[/quote]" },
   { title: "Code", code: "[code]Beispielcode[/code]" },
+  { title: "Story", code: "[story]Text im Story-Kasten[/story]" },
+  { title: "Dark Box", code: "[dark]Text in der Dark Box[/dark]" },
+  { title: "Light Box", code: "[light]Text in der Light Box[/light]" },
+  { title: "Button", code: "[button=https://heldenhaftereisen.net|↗]Zum Link[/button]" },
   { title: "Spoiler", code: "[spoiler=Mehr anzeigen]Versteckter Inhalt[/spoiler]" },
   { title: "Ab 18", code: "[ab18]Ab 18 Inhalt[/ab18]" },
   { title: "Linie", code: "[hr]" }
