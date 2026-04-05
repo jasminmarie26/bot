@@ -9252,6 +9252,8 @@ body.gb-editor-fullscreen-open {
 .gb-bbcode-toolbar-wrap {
   display: grid;
   gap: 0.38rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .gb-bbcode-toolbar-shell {
@@ -9259,6 +9261,10 @@ body.gb-editor-fullscreen-open {
   border-radius: 10px;
   background: transparent;
   overflow: visible;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gb-bbcode-toolbar-shell summary {
@@ -9282,8 +9288,13 @@ body.gb-editor-fullscreen-open {
   gap: 0.18rem;
   padding: 0.18rem;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
   background: rgba(110, 110, 107, 0.92);
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gb-bbcode-toolbar-group {
