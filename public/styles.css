@@ -9283,13 +9283,12 @@ body.gb-editor-fullscreen-open {
 
 .gb-bbcode-toolbar {
   display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.18rem;
   padding: 0.18rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
+  overflow-x: hidden;
+  overflow-y: visible;
   background: rgba(110, 110, 107, 0.92);
   min-width: 0;
   width: 100%;
@@ -9299,10 +9298,12 @@ body.gb-editor-fullscreen-open {
 
 .gb-bbcode-toolbar-group {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.12rem;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gb-bbcode-btn {
