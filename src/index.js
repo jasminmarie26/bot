@@ -648,6 +648,7 @@ function getAcmeChallengeRoots() {
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
+const SESSION_OPEN_TAB_STALE_MS = SESSION_MAX_AGE_MS;
 const SOCKET_SESSION_HEARTBEAT_INTERVAL_MS = 1000 * 60 * 4;
 const SESSION_COOKIE_NAME = "connect.sid";
 const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
@@ -2740,13 +2741,110 @@ function getSessionLastTabHeartbeatAt(sessionData) {
   return Number.isFinite(inferredHeartbeatAt) && inferredHeartbeatAt > 0 ? inferredHeartbeatAt : 0;
 }
 
-function isSessionTabHeartbeatExpired(sessionData, now = Date.now()) {
-  if (!sessionData?.user) return false;
-  const lastHeartbeatAt = getSessionLastTabHeartbeatAt(sessionData);
-  if (!Number.isFinite(lastHeartbeatAt) || lastHeartbeatAt <= 0) {
+function normalizeSessionOpenTabId(rawTabId) {
+  const normalizedTabId = String(rawTabId || "").trim();
+  if (!normalizedTabId || normalizedTabId.length > 120) {
+    return "";
+  }
+
+  return /^[A-Za-z0-9_-]+$/.test(normalizedTabId) ? normalizedTabId : "";
+}
+
+function normalizeSessionOpenTabs(sessionData, now = Date.now()) {
+  const rawTabs =
+    sessionData?.open_tab_ids && typeof sessionData.open_tab_ids === "object"
+      ? sessionData.open_tab_ids
+      : {};
+  const parsedNow = Number(now);
+  const nextTimestamp = Number.isFinite(parsedNow) && parsedNow > 0 ? parsedNow : Date.now();
+  const normalizedTabs = {};
+
+  Object.entries(rawTabs).forEach(([rawTabId, rawTimestamp]) => {
+    const tabId = normalizeSessionOpenTabId(rawTabId);
+    const lastSeenAt = Number(rawTimestamp);
+    if (
+      !tabId ||
+      !Number.isFinite(lastSeenAt) ||
+      lastSeenAt <= 0 ||
+      nextTimestamp - lastSeenAt > SESSION_OPEN_TAB_STALE_MS
+    ) {
+      return;
+    }
+
+    normalizedTabs[tabId] = lastSeenAt;
+  });
+
+  if (sessionData && JSON.stringify(rawTabs) !== JSON.stringify(normalizedTabs)) {
+    sessionData.open_tab_ids = normalizedTabs;
+  }
+
+  return normalizedTabs;
+}
+
+function hasSessionOpenTabs(sessionData, now = Date.now()) {
+  return Object.keys(normalizeSessionOpenTabs(sessionData, now)).length > 0;
+}
+
+function markSessionOpenTab(sessionData, rawTabId, now = Date.now()) {
+  if (!sessionData?.user) {
     return false;
   }
-  return now - lastHeartbeatAt >= SESSION_TAB_IDLE_TIMEOUT_MS;
+
+  const tabId = normalizeSessionOpenTabId(rawTabId);
+  if (!tabId) {
+    return false;
+  }
+
+  const parsedNow = Number(now);
+  const nextTimestamp = Number.isFinite(parsedNow) && parsedNow > 0 ? parsedNow : Date.now();
+  const openTabs = normalizeSessionOpenTabs(sessionData, nextTimestamp);
+  openTabs[tabId] = nextTimestamp;
+  sessionData.open_tab_ids = openTabs;
+  delete sessionData.last_all_tabs_closed_at;
+  return true;
+}
+
+function clearSessionOpenTab(sessionData, rawTabId, now = Date.now()) {
+  if (!sessionData) {
+    return false;
+  }
+
+  const tabId = normalizeSessionOpenTabId(rawTabId);
+  if (!tabId) {
+    return false;
+  }
+
+  const parsedNow = Number(now);
+  const nextTimestamp = Number.isFinite(parsedNow) && parsedNow > 0 ? parsedNow : Date.now();
+  const openTabs = normalizeSessionOpenTabs(sessionData, nextTimestamp);
+  if (!Object.prototype.hasOwnProperty.call(openTabs, tabId)) {
+    return false;
+  }
+
+  delete openTabs[tabId];
+  sessionData.open_tab_ids = openTabs;
+  if (!Object.keys(openTabs).length) {
+    sessionData.last_all_tabs_closed_at = nextTimestamp;
+  }
+  return true;
+}
+
+function isSessionTabHeartbeatExpired(sessionData, now = Date.now()) {
+  if (!sessionData?.user) return false;
+  if (hasSessionOpenTabs(sessionData, now)) {
+    return false;
+  }
+
+  const explicitClosedAt = Number(sessionData?.last_all_tabs_closed_at || 0);
+  const lastHeartbeatAt = getSessionLastTabHeartbeatAt(sessionData);
+  const referenceTimestamp = Math.max(
+    Number.isFinite(explicitClosedAt) ? explicitClosedAt : 0,
+    Number.isFinite(lastHeartbeatAt) ? lastHeartbeatAt : 0
+  );
+  if (!Number.isFinite(referenceTimestamp) || referenceTimestamp <= 0) {
+    return false;
+  }
+  return now - referenceTimestamp >= SESSION_TAB_IDLE_TIMEOUT_MS;
 }
 
 function markSessionTabHeartbeat(sessionData, now = Date.now()) {
@@ -2818,6 +2916,8 @@ function respondToInactiveSession(req, res) {
   }
 
   clearAdminImpersonationSession(req.session);
+  delete req.session.open_tab_ids;
+  delete req.session.last_all_tabs_closed_at;
   delete req.session.last_tab_heartbeat_at;
   delete req.session.user;
 
@@ -12812,6 +12912,7 @@ app.post("/session/touch", (req, res) => {
     return res.redirect("/login");
   }
 
+  markSessionOpenTab(req.session, req.body?.tab_id);
   markSessionTabHeartbeat(req.session);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   return req.session.save((error) => {
@@ -12826,6 +12927,17 @@ app.post("/session/touch", (req, res) => {
       });
     }
 
+    return res.status(204).end();
+  });
+});
+
+app.post("/session/tab-close", (req, res) => {
+  if (!req.session?.user) {
+    return res.status(204).end();
+  }
+
+  clearSessionOpenTab(req.session, req.body?.tab_id);
+  return req.session.save(() => {
     return res.status(204).end();
   });
 });
