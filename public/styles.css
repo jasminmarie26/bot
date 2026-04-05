@@ -9297,13 +9297,7 @@ body.gb-editor-fullscreen-open {
 }
 
 .gb-bbcode-toolbar-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.12rem;
-  align-items: center;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
+  display: contents;
 }
 
 .gb-bbcode-btn {
