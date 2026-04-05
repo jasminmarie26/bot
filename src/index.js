@@ -8654,6 +8654,74 @@ function sanitizeBbcodeImageUrl(rawUrl) {
   }
 }
 
+function decodeBasicHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function extractYouTubeVideoId(rawValue) {
+  const value = decodeBasicHtmlEntities(String(rawValue || "").trim());
+  if (!value) return "";
+
+  if (/^[A-Za-z0-9_-]{11}$/.test(value)) {
+    return value;
+  }
+
+  let normalized = value;
+  if (/^\/\//.test(normalized)) {
+    normalized = `https:${normalized}`;
+  } else if (
+    !/^https?:\/\//i.test(normalized) &&
+    /^(?:www\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be)\//i.test(normalized)
+  ) {
+    normalized = `https://${normalized}`;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = String(parsed.hostname || "").trim().toLowerCase().replace(/^www\./, "");
+    const pathSegments = String(parsed.pathname || "")
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    if (hostname === "youtu.be") {
+      const shortId = String(pathSegments[0] || "").trim();
+      return /^[A-Za-z0-9_-]{11}$/.test(shortId) ? shortId : "";
+    }
+
+    if (!/youtube(?:-nocookie)?\.com$/.test(hostname)) {
+      return "";
+    }
+
+    const watchId = String(parsed.searchParams.get("v") || "").trim();
+    if (/^[A-Za-z0-9_-]{11}$/.test(watchId)) {
+      return watchId;
+    }
+
+    const pathId = String(pathSegments[1] || "").trim();
+    if (
+      ["embed", "shorts", "live", "v"].includes(String(pathSegments[0] || "").trim().toLowerCase()) &&
+      /^[A-Za-z0-9_-]{11}$/.test(pathId)
+    ) {
+      return pathId;
+    }
+  } catch (error) {
+    return "";
+  }
+
+  return "";
+}
+
+function getYouTubeEmbedUrl(rawValue) {
+  const videoId = extractYouTubeVideoId(rawValue);
+  return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : "";
+}
+
 function toGuestbookImageSrc(safeUrl) {
   const value = String(safeUrl || "").trim();
   if (!value) return "";
@@ -8946,6 +9014,11 @@ function renderGuestbookBbcode(rawContent, options = {}) {
 
   html = replaceInnermostBbcodeWrap(html, "quote", "<blockquote>$1</blockquote>");
   html = replaceInnermostBbcodeWrap(html, "code", "<code>$1</code>");
+  html = html.replace(createBbcodeWrapRegex("youtube"), (full, rawUrl) => {
+    const embedUrl = getYouTubeEmbedUrl(rawUrl);
+    if (!embedUrl) return rawUrl;
+    return `<div class="bb-youtube"><iframe src="${escapeHtml(embedUrl)}" title="YouTube Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+  });
 
   html = html.replace(/\[\s*url\s*=\s*([^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
     const safeUrl = sanitizeBbcodeUrl(rawUrl);

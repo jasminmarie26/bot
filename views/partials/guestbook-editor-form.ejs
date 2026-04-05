@@ -398,6 +398,35 @@
       <span class="gb-editor-helptext">BBCode bleibt voll erhalten, nur die Darstellung des Editors ist kompakter.</span>
     </div>
     <div class="gb-editor-row-content">
+      <div class="gb-bbcode-toolbar-wrap">
+        <details class="gb-bbcode-toolbar-shell" open>
+          <summary>BBCode Werkzeuge</summary>
+          <div class="gb-bbcode-toolbar" data-gb-bbcode-toolbar aria-label="BBCode Werkzeugleiste">
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="b" title="Fett">Fett</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="i" title="Kursiv">Kursiv</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="u" title="Unterstrichen">U</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="s" title="Durchgestrichen">S</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="left" title="Linksbündig">Links</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="center" title="Zentriert">Mitte</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="right" title="Rechtsbündig">Rechts</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="block" title="Blocksatz">Block</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="quote" title="Zitat">Zitat</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-option="color" title="Farbe">Farbe</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-option="font" title="Schrift">Font</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-link="url" title="Link einfügen">Link</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image" title="Bild einfügen">Bild</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image-left" title="Bild links einfügen">Bild links</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image-right" title="Bild rechts einfügen">Bild rechts</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-media="youtube" title="YouTube Video einfügen">YouTube</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-option="spoiler" title="Spoiler einfügen">Spoiler</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h1" title="Überschrift 1">H1</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h2" title="Überschrift 2">H2</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h3" title="Überschrift 3">H3</button>
+            <button type="button" class="gb-bbcode-btn" data-bbcode-insert="hr" title="Linie einfügen">Linie</button>
+          </div>
+        </details>
+        <span class="gb-editor-helptext">Text markieren und dann den passenden Button anklicken. Link, Bild und YouTube fragen die Adresse direkt ab.</span>
+      </div>
       <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
     </div>
   </div>
@@ -671,6 +700,7 @@
     const themeStyleField = editorForm?.querySelector("[data-guestbook-theme-style]") || null;
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
+    const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
 
@@ -755,6 +785,182 @@
       pageContentField.value = initialPageContent;
     }
 
+    const focusPageContentField = () => {
+      if (!pageContentField) {
+        return;
+      }
+
+      pageContentField.focus({ preventScroll: true });
+    };
+
+    const updatePageContentField = (nextValue, selectionStart, selectionEnd = selectionStart) => {
+      if (!pageContentField) {
+        return;
+      }
+
+      pageContentField.value = nextValue;
+      focusPageContentField();
+      pageContentField.setSelectionRange(selectionStart, selectionEnd);
+      pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    const getSelectionState = () => {
+      if (!pageContentField) {
+        return null;
+      }
+
+      const currentValue = String(pageContentField.value || "");
+      const selectionStart = Number.isInteger(pageContentField.selectionStart)
+        ? pageContentField.selectionStart
+        : currentValue.length;
+      const selectionEnd = Number.isInteger(pageContentField.selectionEnd)
+        ? pageContentField.selectionEnd
+        : currentValue.length;
+
+      return {
+        value: currentValue,
+        selectionStart,
+        selectionEnd,
+        selectedText: currentValue.slice(selectionStart, selectionEnd)
+      };
+    };
+
+    const wrapSelectionWithBbcode = (openTag, closeTag, placeholder = "Text") => {
+      const selectionState = getSelectionState();
+      if (!selectionState) {
+        return;
+      }
+
+      const selectedText = selectionState.selectedText || placeholder;
+      const nextValue =
+        `${selectionState.value.slice(0, selectionState.selectionStart)}${openTag}${selectedText}${closeTag}${selectionState.value.slice(selectionState.selectionEnd)}`;
+      const selectionOffset = selectionState.selectionStart + openTag.length;
+      updatePageContentField(
+        nextValue,
+        selectionOffset,
+        selectionOffset + selectedText.length
+      );
+    };
+
+    const insertBbcodeAtSelection = (snippet, cursorOffset = null) => {
+      const selectionState = getSelectionState();
+      if (!selectionState) {
+        return;
+      }
+
+      const nextValue =
+        `${selectionState.value.slice(0, selectionState.selectionStart)}${snippet}${selectionState.value.slice(selectionState.selectionEnd)}`;
+      const nextCursor = selectionState.selectionStart + (
+        Number.isInteger(cursorOffset) ? cursorOffset : snippet.length
+      );
+      updatePageContentField(nextValue, nextCursor, nextCursor);
+    };
+
+    const handleBbcodeToolbarAction = (button) => {
+      if (!button || !pageContentField) {
+        return;
+      }
+
+      const wrapTag = String(button.dataset.bbcodeWrap || "").trim().toLowerCase();
+      if (wrapTag) {
+        const placeholders = {
+          b: "Text",
+          i: "Text",
+          u: "Text",
+          s: "Text",
+          left: "Text",
+          center: "Text",
+          right: "Text",
+          block: "Text",
+          quote: "Zitat",
+          h1: "Überschrift 1",
+          h2: "Überschrift 2",
+          h3: "Überschrift 3"
+        };
+        wrapSelectionWithBbcode(`[${wrapTag}]`, `[/${wrapTag}]`, placeholders[wrapTag] || "Text");
+        return;
+      }
+
+      const optionType = String(button.dataset.bbcodeOption || "").trim().toLowerCase();
+      if (optionType === "color") {
+        const colorValue = window.prompt("Farbe eingeben, z. B. #6ec8ff", "#6ec8ff");
+        if (!colorValue) {
+          return;
+        }
+        wrapSelectionWithBbcode(`[color=${colorValue.trim()}]`, "[/color]", "Text");
+        return;
+      }
+
+      if (optionType === "font") {
+        const fontValue = window.prompt("Schriftname eingeben, z. B. Great Vibes", "Great Vibes");
+        if (!fontValue) {
+          return;
+        }
+        wrapSelectionWithBbcode(`[font=${fontValue.trim()}]`, "[/font]", "Text");
+        return;
+      }
+
+      if (optionType === "spoiler") {
+        const spoilerTitle = window.prompt("Spoiler-Titel eingeben", "Mehr anzeigen");
+        if (!spoilerTitle) {
+          return;
+        }
+        wrapSelectionWithBbcode(`[spoiler=${spoilerTitle.trim()}]`, "[/spoiler]", "Versteckter Inhalt");
+        return;
+      }
+
+      const linkType = String(button.dataset.bbcodeLink || "").trim().toLowerCase();
+      if (linkType === "url") {
+        const linkUrl = window.prompt("Link eingeben", "https://");
+        if (!linkUrl) {
+          return;
+        }
+        const selectionState = getSelectionState();
+        if (!selectionState) {
+          return;
+        }
+        const linkLabel = selectionState.selectedText || window.prompt("Link-Text eingeben", "Link");
+        if (!linkLabel) {
+          return;
+        }
+        const snippet = `[url=${linkUrl.trim()}]${linkLabel}[/url]`;
+        const nextValue =
+          `${selectionState.value.slice(0, selectionState.selectionStart)}${snippet}${selectionState.value.slice(selectionState.selectionEnd)}`;
+        const labelStart = selectionState.selectionStart + `[url=${linkUrl.trim()}]`.length;
+        updatePageContentField(nextValue, labelStart, labelStart + linkLabel.length);
+        return;
+      }
+
+      const mediaType = String(button.dataset.bbcodeMedia || "").trim().toLowerCase();
+      if (mediaType === "image" || mediaType === "image-left" || mediaType === "image-right") {
+        const imageUrl = window.prompt("Bild-URL eingeben", "https://");
+        if (!imageUrl) {
+          return;
+        }
+        const imageTag = mediaType === "image-left"
+          ? `[img float=left]${imageUrl.trim()}[/img]`
+          : mediaType === "image-right"
+            ? `[img float=right]${imageUrl.trim()}[/img]`
+            : `[img]${imageUrl.trim()}[/img]`;
+        insertBbcodeAtSelection(imageTag);
+        return;
+      }
+
+      if (mediaType === "youtube") {
+        const youtubeUrl = window.prompt("YouTube-Link oder Video-ID eingeben", "https://www.youtube.com/watch?v=");
+        if (!youtubeUrl) {
+          return;
+        }
+        insertBbcodeAtSelection(`[youtube]${youtubeUrl.trim()}[/youtube]`);
+        return;
+      }
+
+      const insertType = String(button.dataset.bbcodeInsert || "").trim().toLowerCase();
+      if (insertType === "hr") {
+        insertBbcodeAtSelection("[hr]");
+      }
+    };
+
     const syncPreviewDraft = () => {
       if (!editorForm || !previewSyncUrl) {
         return;
@@ -810,6 +1016,18 @@
       });
 
       schedulePreviewSync(0);
+    }
+
+    if (bbcodeToolbar && pageContentField) {
+      bbcodeToolbar.addEventListener("click", (event) => {
+        const trigger = event.target.closest("button[data-bbcode-wrap], button[data-bbcode-option], button[data-bbcode-link], button[data-bbcode-media], button[data-bbcode-insert]");
+        if (!(trigger instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        event.preventDefault();
+        handleBbcodeToolbarAction(trigger);
+      });
     }
 
     if (pageContentField) {
