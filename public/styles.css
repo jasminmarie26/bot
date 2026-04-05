@@ -8146,6 +8146,12 @@ body.theme-atari .guestbook-entry-panel {
   margin-top: 0.15rem;
 }
 
+.guestbook-entry-body sub,
+.guestbook-entry-body sup {
+  font-size: 0.75em;
+  line-height: 1;
+}
+
 .bb-left {
   text-align: left;
 }
@@ -8171,6 +8177,19 @@ body.theme-atari .guestbook-entry-panel {
   display: block;
   font-size: inherit;
   line-height: inherit;
+}
+
+.bb-list {
+  margin: 0.4rem 0 0.4rem 1.3rem;
+  padding: 0;
+}
+
+.bb-list li + li {
+  margin-top: 0.22rem;
+}
+
+.bb-list-ordered {
+  list-style: decimal;
 }
 
 .bb-table {
@@ -8271,6 +8290,130 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-spoiler-ab18 {
   border-color: color-mix(in srgb, var(--danger) 55%, var(--field-edge));
+}
+
+.bb-code-block {
+  margin: 0.45rem 0;
+  padding: 0.72rem 0.86rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--field-bg) 82%, black 18%);
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.bb-code-block code {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.bb-story-box,
+.bb-dark-box,
+.bb-light-box {
+  margin: 0.5rem 0;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+}
+
+.bb-story-box {
+  border: 1px solid color-mix(in srgb, var(--field-edge) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 90%, white 10%);
+  box-shadow: 0 12px 26px -20px var(--panel-shadow);
+}
+
+.bb-dark-box {
+  border: 5px solid color-mix(in srgb, var(--text) 24%, transparent);
+  background: color-mix(in srgb, black 34%, var(--panel-bg) 66%);
+  color: color-mix(in srgb, white 88%, var(--text) 12%);
+}
+
+.bb-light-box {
+  border: 5px solid color-mix(in srgb, white 76%, transparent);
+  background: color-mix(in srgb, white 12%, var(--panel-bg) 88%);
+}
+
+.bb-fn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.bb-fn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 76%, black 24%);
+  color: color-mix(in srgb, white 88%, var(--text) 12%);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+}
+
+.bb-fn-popup {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.55rem);
+  transform: translateX(-50%);
+  min-width: 12rem;
+  max-width: min(18rem, calc(100vw - 3rem));
+  padding: 0.6rem 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 74%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-bg) 94%, white 6%);
+  box-shadow: 0 18px 30px -22px var(--panel-shadow);
+  opacity: 0;
+  pointer-events: none;
+  color: var(--text);
+  line-height: 1.45;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 2;
+}
+
+.bb-fn:hover .bb-fn-popup,
+.bb-fn:focus-visible .bb-fn-popup {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.bb-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.32rem 0;
+  padding: 0.52rem 0.86rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 20%, var(--panel-bg) 80%);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.bb-button:hover,
+.bb-button:focus-visible {
+  text-decoration: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 30%, var(--panel-bg) 70%);
+}
+
+.bb-button-icon {
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .bb-hr {
@@ -9101,6 +9244,10 @@ body.page-guestbook-preview::after {
   min-height: 18rem;
 }
 
+body.gb-editor-fullscreen-open {
+  overflow: hidden;
+}
+
 .gb-bbcode-toolbar-wrap {
   display: grid;
   gap: 0.38rem;
@@ -9110,7 +9257,7 @@ body.page-guestbook-preview::after {
   border: 1px solid color-mix(in srgb, var(--field-edge) 74%, transparent);
   border-radius: 12px;
   background: color-mix(in srgb, var(--field-bg) 90%, white 10%);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .gb-bbcode-toolbar-shell summary {
@@ -9128,13 +9275,21 @@ body.page-guestbook-preview::after {
 }
 
 .gb-bbcode-toolbar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 0.38rem;
   padding: 0 0.52rem 0.52rem;
 }
 
+.gb-bbcode-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
 .gb-bbcode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: auto;
   padding: 0.38rem 0.68rem;
   border: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
@@ -9152,7 +9307,8 @@ body.page-guestbook-preview::after {
     background 160ms ease;
 }
 
-.gb-bbcode-btn:hover {
+.gb-bbcode-btn:hover,
+.gb-bbcode-btn.is-active {
   border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
   background: color-mix(in srgb, var(--accent) 14%, var(--panel-bg) 86%);
   transform: translateY(-1px);
@@ -9161,6 +9317,99 @@ body.page-guestbook-preview::after {
 .gb-bbcode-btn:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 76%, white 24%);
   outline-offset: 2px;
+}
+
+.gb-bbcode-btn:disabled {
+  opacity: 0.48;
+  cursor: default;
+  transform: none;
+}
+
+.gb-bbcode-menu {
+  position: relative;
+}
+
+.gb-bbcode-menu > summary {
+  list-style: none;
+}
+
+.gb-bbcode-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gb-bbcode-menu-list {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 6;
+  min-width: 13rem;
+  padding: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-bg) 94%, white 6%);
+  box-shadow: 0 18px 30px -22px var(--panel-shadow);
+  display: grid;
+  gap: 0.22rem;
+}
+
+.gb-bbcode-menu-item {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gb-bbcode-menu-item:hover,
+.gb-bbcode-menu-item:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg) 88%);
+  outline: none;
+}
+
+.gb-bbcode-editor-shell {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 74%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--field-bg) 90%, white 10%);
+  overflow: hidden;
+}
+
+.gb-bbcode-editor-shell.is-source-view {
+  background: color-mix(in srgb, black 26%, var(--field-bg) 74%);
+}
+
+.gb-bbcode-editor-shell.is-fullscreen {
+  position: fixed;
+  inset: 1rem;
+  z-index: 130;
+  padding: 0.85rem;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel-bg) 96%, black 4%);
+  box-shadow: 0 30px 60px -28px var(--panel-shadow);
+}
+
+.gb-bbcode-textarea {
+  width: 100%;
+  min-height: 18rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.gb-bbcode-editor-shell.is-source-view .gb-bbcode-textarea {
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.gb-bbcode-editor-shell.is-fullscreen .gb-bbcode-textarea {
+  min-height: calc(100dvh - 5rem);
 }
 
 @media (max-width: 720px) {
@@ -9227,9 +9476,27 @@ body.page-guestbook-preview::after {
     gap: 0.32rem;
   }
 
+  .gb-bbcode-toolbar-group {
+    gap: 0.32rem;
+  }
+
   .gb-bbcode-btn {
     flex: 1 1 auto;
     min-width: 5.2rem;
+  }
+
+  .gb-bbcode-menu {
+    flex: 1 1 auto;
+  }
+
+  .gb-bbcode-menu-list {
+    position: static;
+    min-width: 0;
+  }
+
+  .gb-bbcode-editor-shell.is-fullscreen {
+    inset: 0.55rem;
+    padding: 0.65rem;
   }
 
   .gb-color-reset {

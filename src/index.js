@@ -8266,6 +8266,35 @@ function sanitizeBbcodeColor(rawColor) {
   return null;
 }
 
+function parseBbcodeButtonSpec(rawSpec) {
+  const normalizedSpec = String(rawSpec || "").trim();
+  if (!normalizedSpec) {
+    return {
+      url: "",
+      icon: ""
+    };
+  }
+
+  const segments = normalizedSpec
+    .split("|")
+    .map((segment) => String(segment || "").trim())
+    .filter(Boolean);
+
+  const rawUrl = segments[0] || "";
+  const rawIcon = segments.slice(1).join(" ").trim();
+  const safeUrl = sanitizeBbcodeUrl(rawUrl);
+  const safeIcon = String(rawIcon || "")
+    .replace(/[<>{}\[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 24);
+
+  return {
+    url: safeUrl || "",
+    icon: safeIcon
+  };
+}
+
 function normalizeBbcodeFontStyleToken(value) {
   return String(value || "")
     .trim()
@@ -8845,25 +8874,36 @@ function normalizeBbcodeMarkup(rawContent) {
   const supportedTags = [
     "gradient",
     "spoiler",
+    "youtube",
+    "button",
     "center",
     "right",
-    "left",
+    "light",
     "block",
+    "story",
+    "list",
     "table",
     "quote",
     "color",
     "font",
+    "icode",
+    "code",
+    "left",
     "url",
     "img",
-    "code",
-    "gb",
+    "sub",
+    "sup",
+    "dark",
+    "ab18",
     "hr",
     "tr",
     "td",
+    "li",
+    "gb",
+    "fn",
     "h1",
     "h2",
     "h3",
-    "ab18",
     "b",
     "i",
     "u",
@@ -8964,7 +9004,9 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     ["b", "strong"],
     ["i", "em"],
     ["u", "u"],
-    ["s", "s"]
+    ["s", "s"],
+    ["sub", "sub"],
+    ["sup", "sup"]
   ];
 
   html = html.replace(createBbcodeSingleRegex("hr"), "<hr class=\"bb-hr\">");
@@ -8976,11 +9018,28 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     ["left", "<div class=\"bb-left\">$1</div>"],
     ["center", "<div class=\"bb-center\">$1</div>"],
     ["right", "<div class=\"bb-right\">$1</div>"],
-    ["block", "<div class=\"bb-block\">$1</div>"]
+    ["block", "<div class=\"bb-block\">$1</div>"],
+    ["story", "<div class=\"bb-story-box\">$1</div>"],
+    ["dark", "<div class=\"bb-dark-box\">$1</div>"],
+    ["light", "<div class=\"bb-light-box\">$1</div>"]
   ].forEach(([tag, replacement]) => {
     html = replaceInnermostBbcodeWrap(html, tag, replacement);
   });
 
+  html = html.replace(createBbcodeOptionRegex("list"), (full, rawType, inner) => {
+    const normalizedType = String(rawType || "").trim().toLowerCase();
+    const isOrdered =
+      normalizedType === "1" ||
+      normalizedType === "ordered" ||
+      normalizedType === "number" ||
+      normalizedType === "decimal" ||
+      normalizedType === "ol";
+    return isOrdered
+      ? `<ol class="bb-list bb-list-ordered">${inner}</ol>`
+      : `<ul class="bb-list">${inner}</ul>`;
+  });
+  html = replaceInnermostBbcodeWrap(html, "list", "<ul class=\"bb-list\">$1</ul>");
+  html = replaceInnermostBbcodeWrap(html, "li", "<li>$1</li>");
   html = replaceInnermostBbcodeWrap(html, "table", "<table class=\"bb-table\">$1</table>");
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrap(html, "td", "<td>$1</td>");
@@ -9013,11 +9072,29 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   });
 
   html = replaceInnermostBbcodeWrap(html, "quote", "<blockquote>$1</blockquote>");
-  html = replaceInnermostBbcodeWrap(html, "code", "<code>$1</code>");
+  html = replaceInnermostBbcodeWrap(html, "code", "<pre class=\"bb-code-block\"><code>$1</code></pre>");
+  html = replaceInnermostBbcodeWrap(html, "icode", "<code>$1</code>");
+  html = replaceInnermostBbcodeWrap(
+    html,
+    "fn",
+    "<span class=\"bb-fn\" tabindex=\"0\"><span class=\"bb-fn-icon\" aria-hidden=\"true\">i</span><span class=\"bb-fn-popup\">$1</span></span>"
+  );
   html = html.replace(createBbcodeWrapRegex("youtube"), (full, rawUrl) => {
     const embedUrl = getYouTubeEmbedUrl(rawUrl);
     if (!embedUrl) return rawUrl;
     return `<div class="bb-youtube"><iframe src="${escapeHtml(embedUrl)}" title="YouTube Video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+  });
+
+  html = html.replace(createBbcodeOptionRegex("button"), (full, rawSpec, inner) => {
+    const buttonConfig = parseBbcodeButtonSpec(rawSpec);
+    if (!buttonConfig.url) {
+      return inner;
+    }
+
+    const iconMarkup = buttonConfig.icon
+      ? `<span class="bb-button-icon" aria-hidden="true">${escapeHtml(buttonConfig.icon)}</span>`
+      : "";
+    return `<a class="bb-button" href="${escapeHtml(buttonConfig.url)}" target="_blank" rel="noopener noreferrer">${iconMarkup}<span>${inner}</span></a>`;
   });
 
   html = html.replace(/\[\s*url\s*=\s*([^\]]+?)\s*\]([\s\S]*?)\[\s*\/\s*url\s*\]/gi, (full, rawUrl, label) => {
@@ -9083,11 +9160,11 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   }
   if (compactBlockLineBreaks) {
     html = html.replace(
-      /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)/gi,
+      /<br>\s*(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div|ul|ol|li|pre)\b[^>]*>|<hr class="bb-hr">)/gi,
       "$1"
     );
     html = html.replace(
-      /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
+      /(<\/?(?:table|tr|td|h1|h2|h3|blockquote|details|summary|div|ul|ol|li|pre)\b[^>]*>|<hr class="bb-hr">)\s*<br>/gi,
       "$1"
     );
   }

@@ -402,32 +402,98 @@
         <details class="gb-bbcode-toolbar-shell" open>
           <summary>BBCode Werkzeuge</summary>
           <div class="gb-bbcode-toolbar" data-gb-bbcode-toolbar aria-label="BBCode Werkzeugleiste">
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="b" title="Fett">Fett</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="i" title="Kursiv">Kursiv</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="u" title="Unterstrichen">U</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="s" title="Durchgestrichen">S</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="left" title="Linksbündig">Links</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="center" title="Zentriert">Mitte</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="right" title="Rechtsbündig">Rechts</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="block" title="Blocksatz">Block</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="quote" title="Zitat">Zitat</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-option="color" title="Farbe">Farbe</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-option="font" title="Schrift">Font</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-link="url" title="Link einfügen">Link</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image" title="Bild einfügen">Bild</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image-left" title="Bild links einfügen">Bild links</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-media="image-right" title="Bild rechts einfügen">Bild rechts</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-media="youtube" title="YouTube Video einfügen">YouTube</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-option="spoiler" title="Spoiler einfügen">Spoiler</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h1" title="Überschrift 1">H1</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h2" title="Überschrift 2">H2</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="h3" title="Überschrift 3">H3</button>
-            <button type="button" class="gb-bbcode-btn" data-bbcode-insert="hr" title="Linie einfügen">Linie</button>
+            <div class="gb-bbcode-toolbar-group">
+              <button type="button" class="gb-bbcode-btn" data-bbcode-action="source-toggle" title="Quellcode Ansicht">Quellcode</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-history="undo" title="Rückgängig">Zurück</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-history="redo" title="Wiederholen">Vor</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-action="fullscreen-toggle" title="Vollbild">Vollbild</button>
+            </div>
+
+            <div class="gb-bbcode-toolbar-group">
+              <details class="gb-bbcode-menu">
+                <summary class="gb-bbcode-btn" title="Überschrift">Überschrift</summary>
+                <div class="gb-bbcode-menu-list">
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="h1">Überschrift 1</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="h2">Überschrift 2</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="h3">Überschrift 3</button>
+                </div>
+              </details>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="b" title="Fett">Fett</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="i" title="Kursiv">Kursiv</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="u" title="Unterstrichen">Unterstr.</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="s" title="Durchgestrichen">Durch</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="sub" title="Tiefgestellt">Tief</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="sup" title="Hochgestellt">Hoch</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-option="color" title="Farbe">Farbe</button>
+            </div>
+
+            <div class="gb-bbcode-toolbar-group">
+              <details class="gb-bbcode-menu">
+                <summary class="gb-bbcode-btn" title="Schriftart">Schrift</summary>
+                <div class="gb-bbcode-menu-list">
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Arial">Arial</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Comic Sans MS">Comic Sans MS</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Consolas">Consolas</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Georgia">Georgia</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Lucida Sans Unicode">Lucida Sans Unicode</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Tahoma">Tahoma</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Times New Roman">Times New Roman</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Trebuchet MS">Trebuchet MS</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Verdana">Verdana</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-clear="true">Schriftart entfernen</button>
+                </div>
+              </details>
+
+              <details class="gb-bbcode-menu">
+                <summary class="gb-bbcode-btn" title="Liste">Liste</summary>
+                <div class="gb-bbcode-menu-list">
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-template="list-bullet">Punkte</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-template="list-numbered">Nummeriert</button>
+                </div>
+              </details>
+
+              <details class="gb-bbcode-menu">
+                <summary class="gb-bbcode-btn" title="Ausrichtung">Ausrichtung</summary>
+                <div class="gb-bbcode-menu-list">
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="left">Linksbündig</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="center">Zentrieren</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="right">Rechtsbündig</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-wrap="block">Blocksatz</button>
+                </div>
+              </details>
+
+              <button type="button" class="gb-bbcode-btn" data-bbcode-template="table-basic" title="Tabelle">Tabelle</button>
+
+              <details class="gb-bbcode-menu">
+                <summary class="gb-bbcode-btn" title="Medien">Medien</summary>
+                <div class="gb-bbcode-menu-list">
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-link="url">Link</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-media="image">Bild</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-media="image-left">Bild links</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-media="image-right">Bild rechts</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-media="youtube">YouTube</button>
+                </div>
+              </details>
+            </div>
+
+            <div class="gb-bbcode-toolbar-group">
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="code" title="Codeblock">Code</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="icode" title="Inline-Code">Inline-Code</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-option="spoiler" title="Spoiler">Spoiler</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-insert="hr" title="Linie">Linie</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="story" title="Story Kasten">Story</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="dark" title="Dark Box">Dark</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="light" title="Light Box">Light</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-wrap="fn" title="Info">Info</button>
+              <button type="button" class="gb-bbcode-btn" data-bbcode-template="button-link" title="Button">Button</button>
+            </div>
           </div>
         </details>
-        <span class="gb-editor-helptext">Text markieren und dann den passenden Button anklicken. Link, Bild und YouTube fragen die Adresse direkt ab.</span>
+        <span class="gb-editor-helptext">Text markieren oder den Cursor setzen. Überschrift, Schrift, Listen, Ausrichtung, Boxen und Medien lassen sich direkt über die Leiste einfügen.</span>
       </div>
-      <textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
+      <div class="gb-bbcode-editor-shell" data-gb-bbcode-editor-shell>
+        <textarea class="gb-bbcode-textarea" data-gb-bbcode-textarea name="page_content" rows="12" maxlength="12000"><%= activePage.content %></textarea>
+      </div>
     </div>
   </div>
     </div>
@@ -701,6 +767,8 @@
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
+    const bbcodeEditorShell = editorForm?.querySelector("[data-gb-bbcode-editor-shell]") || null;
+    const bbcodeToolbarMenus = Array.from(editorForm?.querySelectorAll(".gb-bbcode-menu") || []);
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     let previewSyncTimeout = null;
 
@@ -793,6 +861,108 @@
       pageContentField.focus({ preventScroll: true });
     };
 
+    const createHistorySnapshot = () => {
+      if (!pageContentField) {
+        return null;
+      }
+
+      return {
+        value: String(pageContentField.value || ""),
+        selectionStart: Number.isInteger(pageContentField.selectionStart)
+          ? pageContentField.selectionStart
+          : String(pageContentField.value || "").length,
+        selectionEnd: Number.isInteger(pageContentField.selectionEnd)
+          ? pageContentField.selectionEnd
+          : String(pageContentField.value || "").length
+      };
+    };
+
+    const historyStates = [];
+    let historyIndex = -1;
+    let isApplyingHistoryState = false;
+
+    const closeBbcodeMenus = (exceptionMenu = null) => {
+      bbcodeToolbarMenus.forEach((menu) => {
+        if (menu !== exceptionMenu) {
+          menu.removeAttribute("open");
+        }
+      });
+    };
+
+    const syncBbcodeToolbarButtons = () => {
+      if (!bbcodeToolbar) {
+        return;
+      }
+
+      const isSourceView = bbcodeEditorShell?.classList.contains("is-source-view");
+      const isFullscreen = bbcodeEditorShell?.classList.contains("is-fullscreen");
+
+      bbcodeToolbar.querySelectorAll('button[data-bbcode-action="source-toggle"]').forEach((button) => {
+        button.classList.toggle("is-active", Boolean(isSourceView));
+        button.setAttribute("aria-pressed", isSourceView ? "true" : "false");
+      });
+
+      bbcodeToolbar.querySelectorAll('button[data-bbcode-action="fullscreen-toggle"]').forEach((button) => {
+        button.classList.toggle("is-active", Boolean(isFullscreen));
+        button.setAttribute("aria-pressed", isFullscreen ? "true" : "false");
+      });
+
+      bbcodeToolbar.querySelectorAll('button[data-bbcode-history="undo"]').forEach((button) => {
+        button.disabled = historyIndex <= 0;
+      });
+
+      bbcodeToolbar.querySelectorAll('button[data-bbcode-history="redo"]').forEach((button) => {
+        button.disabled = historyIndex < 0 || historyIndex >= historyStates.length - 1;
+      });
+    };
+
+    const recordHistoryState = (force = false) => {
+      if (!pageContentField || isApplyingHistoryState) {
+        return;
+      }
+
+      const snapshot = createHistorySnapshot();
+      if (!snapshot) {
+        return;
+      }
+
+      const currentSnapshot = historyStates[historyIndex] || null;
+      if (!force && currentSnapshot && currentSnapshot.value === snapshot.value) {
+        currentSnapshot.selectionStart = snapshot.selectionStart;
+        currentSnapshot.selectionEnd = snapshot.selectionEnd;
+        syncBbcodeToolbarButtons();
+        return;
+      }
+
+      historyStates.splice(historyIndex + 1);
+      historyStates.push(snapshot);
+      if (historyStates.length > 120) {
+        historyStates.shift();
+      }
+      historyIndex = historyStates.length - 1;
+      syncBbcodeToolbarButtons();
+    };
+
+    const applyHistoryState = (nextIndex) => {
+      if (!pageContentField || nextIndex < 0 || nextIndex >= historyStates.length) {
+        return;
+      }
+
+      const targetState = historyStates[nextIndex];
+      if (!targetState) {
+        return;
+      }
+
+      historyIndex = nextIndex;
+      isApplyingHistoryState = true;
+      pageContentField.value = targetState.value;
+      focusPageContentField();
+      pageContentField.setSelectionRange(targetState.selectionStart, targetState.selectionEnd);
+      pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
+      isApplyingHistoryState = false;
+      syncBbcodeToolbarButtons();
+    };
+
     const updatePageContentField = (nextValue, selectionStart, selectionEnd = selectionStart) => {
       if (!pageContentField) {
         return;
@@ -823,6 +993,28 @@
         selectionEnd,
         selectedText: currentValue.slice(selectionStart, selectionEnd)
       };
+    };
+
+    const toggleSourceView = () => {
+      if (!bbcodeEditorShell) {
+        return;
+      }
+
+      bbcodeEditorShell.classList.toggle("is-source-view");
+      syncBbcodeToolbarButtons();
+      focusPageContentField();
+    };
+
+    const toggleFullscreen = () => {
+      if (!bbcodeEditorShell) {
+        return;
+      }
+
+      const nextFullscreenState = !bbcodeEditorShell.classList.contains("is-fullscreen");
+      bbcodeEditorShell.classList.toggle("is-fullscreen", nextFullscreenState);
+      document.body.classList.toggle("gb-editor-fullscreen-open", nextFullscreenState);
+      syncBbcodeToolbarButtons();
+      focusPageContentField();
     };
 
     const wrapSelectionWithBbcode = (openTag, closeTag, placeholder = "Text") => {
@@ -856,8 +1048,70 @@
       updatePageContentField(nextValue, nextCursor, nextCursor);
     };
 
+    const insertTemplateAtSelection = (templateType) => {
+      const normalizedTemplateType = String(templateType || "").trim().toLowerCase();
+      if (!normalizedTemplateType) {
+        return;
+      }
+
+      if (normalizedTemplateType === "list-bullet") {
+        insertBbcodeAtSelection("[list]\n[li]Punkt 1[/li]\n[li]Punkt 2[/li]\n[/list]");
+        return;
+      }
+
+      if (normalizedTemplateType === "list-numbered") {
+        insertBbcodeAtSelection("[list=1]\n[li]Punkt 1[/li]\n[li]Punkt 2[/li]\n[/list]");
+        return;
+      }
+
+      if (normalizedTemplateType === "table-basic") {
+        insertBbcodeAtSelection("[table]\n[tr]\n[td]Text links[/td]\n[td]Text rechts[/td]\n[/tr]\n[/table]");
+        return;
+      }
+
+      if (normalizedTemplateType === "button-link") {
+        const buttonTitle = window.prompt("Button Titel eingeben", "Zum Link");
+        if (!buttonTitle) {
+          return;
+        }
+
+        const buttonUrl = window.prompt("Button Link eingeben", "https://");
+        if (!buttonUrl) {
+          return;
+        }
+
+        const buttonIcon = window.prompt("Button Icon oder kurzer Zusatz, optional", "");
+        const optionValue = buttonIcon
+          ? `${buttonUrl.trim()}|${buttonIcon.trim()}`
+          : buttonUrl.trim();
+        insertBbcodeAtSelection(`[button=${optionValue}]${buttonTitle.trim()}[/button]`);
+      }
+    };
+
     const handleBbcodeToolbarAction = (button) => {
       if (!button || !pageContentField) {
+        return;
+      }
+
+      const historyAction = String(button.dataset.bbcodeHistory || "").trim().toLowerCase();
+      if (historyAction === "undo") {
+        applyHistoryState(historyIndex - 1);
+        return;
+      }
+
+      if (historyAction === "redo") {
+        applyHistoryState(historyIndex + 1);
+        return;
+      }
+
+      const buttonAction = String(button.dataset.bbcodeAction || "").trim().toLowerCase();
+      if (buttonAction === "source-toggle") {
+        toggleSourceView();
+        return;
+      }
+
+      if (buttonAction === "fullscreen-toggle") {
+        toggleFullscreen();
         return;
       }
 
@@ -868,16 +1122,35 @@
           i: "Text",
           u: "Text",
           s: "Text",
+          sub: "Text",
+          sup: "Text",
           left: "Text",
           center: "Text",
           right: "Text",
           block: "Text",
           quote: "Zitat",
+          code: "Beispielcode",
+          icode: "Inline-Code",
+          story: "Text im Story-Kasten",
+          dark: "Text in der Dark Box",
+          light: "Text in der Light Box",
+          fn: "Info Hinweis",
           h1: "Überschrift 1",
           h2: "Überschrift 2",
           h3: "Überschrift 3"
         };
         wrapSelectionWithBbcode(`[${wrapTag}]`, `[/${wrapTag}]`, placeholders[wrapTag] || "Text");
+        return;
+      }
+
+      const fontValue = String(button.dataset.bbcodeFontValue || "").trim();
+      if (fontValue) {
+        wrapSelectionWithBbcode(`[font=${fontValue}]`, "[/font]", "Text");
+        return;
+      }
+
+      if (String(button.dataset.bbcodeFontClear || "").trim().toLowerCase() === "true") {
+        wrapSelectionWithBbcode("[font=default]", "[/font]", "Text");
         return;
       }
 
@@ -955,11 +1228,20 @@
         return;
       }
 
+      const templateType = String(button.dataset.bbcodeTemplate || "").trim().toLowerCase();
+      if (templateType) {
+        insertTemplateAtSelection(templateType);
+        return;
+      }
+
       const insertType = String(button.dataset.bbcodeInsert || "").trim().toLowerCase();
       if (insertType === "hr") {
         insertBbcodeAtSelection("[hr]");
       }
     };
+
+    recordHistoryState(true);
+    syncBbcodeToolbarButtons();
 
     const syncPreviewDraft = () => {
       if (!editorForm || !previewSyncUrl) {
@@ -1020,17 +1302,22 @@
 
     if (bbcodeToolbar && pageContentField) {
       bbcodeToolbar.addEventListener("click", (event) => {
-        const trigger = event.target.closest("button[data-bbcode-wrap], button[data-bbcode-option], button[data-bbcode-link], button[data-bbcode-media], button[data-bbcode-insert]");
+        const trigger = event.target.closest("button[data-bbcode-wrap], button[data-bbcode-option], button[data-bbcode-link], button[data-bbcode-media], button[data-bbcode-insert], button[data-bbcode-action], button[data-bbcode-history], button[data-bbcode-template], button[data-bbcode-font-value], button[data-bbcode-font-clear]");
         if (!(trigger instanceof HTMLButtonElement)) {
           return;
         }
 
         event.preventDefault();
         handleBbcodeToolbarAction(trigger);
+        closeBbcodeMenus();
       });
     }
 
     if (pageContentField) {
+      pageContentField.addEventListener("input", () => {
+        recordHistoryState();
+      });
+
       pageContentField.addEventListener("keydown", (event) => {
         if (
           event.key !== "Enter" ||
@@ -1055,5 +1342,29 @@
         pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
       });
     }
+
+    if (bbcodeToolbarMenus.length) {
+      bbcodeToolbarMenus.forEach((menu) => {
+        menu.addEventListener("toggle", () => {
+          if (menu.open) {
+            closeBbcodeMenus(menu);
+          }
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!bbcodeToolbar || !(event.target instanceof Node) || !bbcodeToolbar.contains(event.target)) {
+          closeBbcodeMenus();
+        }
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && bbcodeEditorShell?.classList.contains("is-fullscreen")) {
+        bbcodeEditorShell.classList.remove("is-fullscreen");
+        document.body.classList.remove("gb-editor-fullscreen-open");
+        syncBbcodeToolbarButtons();
+      }
+    });
   })();
 </script>
