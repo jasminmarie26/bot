@@ -281,8 +281,12 @@
     ); %>
     <% const topbarCharacterCreatedAtLabel =
       typeof characterCreatedAtLabel !== "undefined" ? String(characterCreatedAtLabel || "").trim() : ""; %>
-    <% const topbarBirthdayRows = Array.isArray(publicBirthdayRows)
-      ? publicBirthdayRows.filter((entry) => entry && entry.label && entry.value)
+    <% const topbarBirthdayRows = Array.isArray(
+      typeof publicBirthdayRows !== "undefined" ? publicBirthdayRows : []
+    )
+      ? (typeof publicBirthdayRows !== "undefined" ? publicBirthdayRows : []).filter(
+        (entry) => entry && entry.label && entry.value
+      )
       : []; %>
     <% const showTopbarGuestbookCreatedAt = Boolean(
       topbarGuestbookModeActive && (topbarCharacterCreatedAtLabel || topbarBirthdayRows.length)
