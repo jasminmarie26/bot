@@ -1,4 +1,8 @@
 <%
+  const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
+  const topbarBrandPrefix = showBirthdayCake ? String.fromCodePoint(0x1F382) : "";
+  const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
+  const topbarBrandModifier = "is-character";
   const isTransparentPurTheme = String(guestbookSettings?.theme_style || "").trim().toLowerCase() === "transparent-pur";
   const isFullyTransparentGuestbookColor = (value) => {
     const normalized = String(value || "").trim().toUpperCase();
@@ -93,9 +97,14 @@
 %>
 <%- include("partials/start", {
   topbarCharacter,
+  topbarBrandLabel,
+  topbarBrandPrefix,
+  topbarBrandHref,
+  topbarBrandModifier,
   topbarGuestbookMode: true,
   topbarGuestbookControlHidden: true,
   characterCreatedAtLabel,
+  publicBirthdayRows,
   pageClass: `page-guestbook-view ${guestbookPanelFontClass}`,
   enableRealtime: false
 }) %>

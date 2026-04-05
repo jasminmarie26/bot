@@ -28,6 +28,9 @@ db.exec(`
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
     email TEXT DEFAULT '',
     birth_date TEXT DEFAULT '',
+    public_birth_show_age INTEGER NOT NULL DEFAULT 0,
+    public_birth_show_day_month INTEGER NOT NULL DEFAULT 0,
+    public_birth_show_year INTEGER NOT NULL DEFAULT 0,
     account_number TEXT NOT NULL DEFAULT '',
     email_verified INTEGER NOT NULL DEFAULT 1,
     email_verification_token TEXT DEFAULT '',
@@ -805,6 +808,18 @@ if (!userColumns.includes("email")) {
 
 if (!userColumns.includes("birth_date")) {
   db.exec("ALTER TABLE users ADD COLUMN birth_date TEXT DEFAULT ''");
+}
+
+if (!userColumns.includes("public_birth_show_age")) {
+  db.exec("ALTER TABLE users ADD COLUMN public_birth_show_age INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!userColumns.includes("public_birth_show_day_month")) {
+  db.exec("ALTER TABLE users ADD COLUMN public_birth_show_day_month INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!userColumns.includes("public_birth_show_year")) {
+  db.exec("ALTER TABLE users ADD COLUMN public_birth_show_year INTEGER NOT NULL DEFAULT 0");
 }
 
 if (!userColumns.includes("account_number")) {

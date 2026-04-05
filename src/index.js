@@ -1590,6 +1590,76 @@ function isBirthdayToday(rawBirthDate, referenceDate = new Date()) {
   return now.getMonth() + 1 === month && now.getDate() === day;
 }
 
+function normalizePublicBirthdaySelection(values, rawBirthDate = "") {
+  const birthDate = normalizeBirthDate(rawBirthDate);
+  if (!birthDate) {
+    return {
+      showAge: false,
+      showDayMonth: false,
+      showYear: false
+    };
+  }
+
+  const isChecked = (value) =>
+    value === true || value === 1 || String(value || "").trim() === "1";
+
+  let showDayMonth = isChecked(values?.public_birth_show_day_month);
+  const showYear = isChecked(values?.public_birth_show_year);
+  if (showYear) {
+    showDayMonth = true;
+  }
+
+  return {
+    showAge: isChecked(values?.public_birth_show_age),
+    showDayMonth,
+    showYear
+  };
+}
+
+function formatGermanBirthdayDayMonth(rawBirthDate) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
+  if (!match) return "";
+
+  return `${match[3]}.${match[2]}.`;
+}
+
+function buildPublicBirthdayDisplay(rawBirthDate, values, referenceDate = new Date()) {
+  const birthDate = normalizeBirthDate(rawBirthDate);
+  const selection = normalizePublicBirthdaySelection(values, birthDate);
+  const rows = [];
+
+  if (!birthDate) {
+    return {
+      rows,
+      hasVisibleInfo: false,
+      showCake: false
+    };
+  }
+
+  if (selection.showDayMonth) {
+    rows.push({
+      label: "Geburtstag",
+      value: selection.showYear ? formatGermanDate(birthDate) : formatGermanBirthdayDayMonth(birthDate)
+    });
+  }
+
+  if (selection.showAge) {
+    const age = getAgeFromBirthDate(birthDate, referenceDate);
+    if (age !== null) {
+      rows.push({
+        label: "Alter",
+        value: `${age} Jahre`
+      });
+    }
+  }
+
+  return {
+    rows,
+    hasVisibleInfo: rows.length > 0,
+    showCake: rows.length > 0 && isBirthdayToday(birthDate, referenceDate)
+  };
+}
+
 function getBirthdayGreetingCharacterForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -2947,6 +3017,10 @@ function renderAccountPage(req, res, options = {}) {
   }
 
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
+  const publicBirthdaySelection = normalizePublicBirthdaySelection(
+    accountUser,
+    accountUser.birth_date
+  );
 
   return res.render("account", {
     title: options.title || "Account",
@@ -2960,6 +3034,12 @@ function renderAccountPage(req, res, options = {}) {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
       birth_date: accountUser.birth_date ?? "",
+      public_birth_show_age:
+        options.values?.public_birth_show_age ?? publicBirthdaySelection.showAge,
+      public_birth_show_day_month:
+        options.values?.public_birth_show_day_month ?? publicBirthdaySelection.showDayMonth,
+      public_birth_show_year:
+        options.values?.public_birth_show_year ?? publicBirthdaySelection.showYear,
       auto_afk_enabled:
         options.values?.auto_afk_enabled ??
         normalizeAutoAfkEnabled(accountUser.auto_afk_enabled),
@@ -4184,13 +4264,19 @@ function getUserForSessionByUsername(username) {
 function getAccountUserById(userId) {
   return db
     .prepare(
-      `SELECT id, username, email, birth_date, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
+      `SELECT id, username, email, birth_date, public_birth_show_age, public_birth_show_day_month,
+              public_birth_show_year, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
               room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at,
               oauth_password_pending
        FROM users
        WHERE id = ?`
     )
     .get(userId);
+}
+
+function getPublicBirthdayDisplayForUser(userId, referenceDate = new Date()) {
+  const accountUser = getAccountUserById(userId);
+  return buildPublicBirthdayDisplay(accountUser?.birth_date, accountUser, referenceDate);
 }
 
 function makeUsernameBase(input) {
@@ -12968,6 +13054,14 @@ app.post("/account/update", requireAuth, (req, res) => {
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = normalizeBirthDate(accountUser.birth_date) || "";
+  const publicBirthdaySelection = normalizePublicBirthdaySelection(
+    {
+      public_birth_show_age: req.body.public_birth_show_age,
+      public_birth_show_day_month: req.body.public_birth_show_day_month,
+      public_birth_show_year: req.body.public_birth_show_year
+    },
+    birthDate
+  );
   const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
   const usernameChanged = username !== accountUser.username;
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
@@ -12979,6 +13073,9 @@ app.post("/account/update", requireAuth, (req, res) => {
       values: {
         username,
         email,
+        public_birth_show_age: publicBirthdaySelection.showAge,
+        public_birth_show_day_month: publicBirthdaySelection.showDayMonth,
+        public_birth_show_year: publicBirthdaySelection.showYear,
         auto_afk_enabled: autoAfkEnabled,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
         room_log_email_enabled: roomLogEmailEnabled,
@@ -13025,6 +13122,9 @@ app.post("/account/update", requireAuth, (req, res) => {
      SET username = ?,
          email = ?,
          birth_date = ?,
+         public_birth_show_age = ?,
+         public_birth_show_day_month = ?,
+         public_birth_show_year = ?,
          afk_timeout_minutes = ?,
          auto_afk_enabled = ?,
          room_log_email_enabled = ?,
@@ -13035,6 +13135,9 @@ app.post("/account/update", requireAuth, (req, res) => {
     username,
     email,
     birthDate,
+    publicBirthdaySelection.showAge ? 1 : 0,
+    publicBirthdaySelection.showDayMonth ? 1 : 0,
+    publicBirthdaySelection.showYear ? 1 : 0,
     afkTimeoutMinutes,
     autoAfkEnabled ? 1 : 0,
     roomLogEmailEnabled ? 1 : 0,
@@ -15680,12 +15783,14 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   if (currentHeaderCharacter) {
     rememberPreferredCharacter(req, currentHeaderCharacter);
   }
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
 
   return res.render("character-view", {
     title: character.name,
     character,
     currentHeaderCharacter,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
+    publicBirthdayRows: publicBirthdayDisplay.rows,
     isOwner,
     standardRooms,
     standardRoomUsers,
@@ -17850,6 +17955,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     guestbookPages,
     activeGuestbookPage.id,
@@ -17863,6 +17969,8 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     title: `Gästebuch: ${character.name}`,
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
+    publicBirthdayRows: publicBirthdayDisplay.rows,
+    showBirthdayCake: publicBirthdayDisplay.showCake,
     isOwner: guestbookAccessState.isOwner,
     guestbookAccessState,
     guestbookEntries,
@@ -18192,11 +18300,14 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     (pageId) => `/characters/${id}/guestbook/edit/preview?page_id=${pageId}`
   );
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
 
   return res.render("guestbook-preview", {
     title: `Vorschau: ${character.name}`,
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
+    publicBirthdayRows: publicBirthdayDisplay.rows,
+    showBirthdayCake: publicBirthdayDisplay.showCake,
     pageId: previewPage.id,
     pageNumber: previewPage.page_number,
     guestbookPageNavigation,

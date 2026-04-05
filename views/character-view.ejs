@@ -147,6 +147,11 @@
           <% if (characterCreatedAtLabel) { %>
             <span>Charakter erstellt: <%= characterCreatedAtLabel %></span>
           <% } %>
+          <% if (Array.isArray(publicBirthdayRows)) { %>
+            <% publicBirthdayRows.forEach((entry) => { %>
+              <span><%= entry.label %>: <%= entry.value %></span>
+            <% }) %>
+          <% } %>
           <span data-live-character-server-label>Server: <%= character.server_id === "larp" ? "LARP" : (character.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
         </div>
 

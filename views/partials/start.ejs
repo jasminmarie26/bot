@@ -253,6 +253,8 @@
       typeof topbarBrandHref !== "undefined" && topbarBrandHref
         ? topbarBrandHref
         : "/"; %>
+    <% const topbarBrandPrefixText =
+      typeof topbarBrandPrefix !== "undefined" ? String(topbarBrandPrefix || "").trim() : ""; %>
     <% const topbarBrandClass =
       typeof topbarBrandModifier !== "undefined" && topbarBrandModifier
         ? `brand ${topbarBrandModifier}`
@@ -279,8 +281,11 @@
     ); %>
     <% const topbarCharacterCreatedAtLabel =
       typeof characterCreatedAtLabel !== "undefined" ? String(characterCreatedAtLabel || "").trim() : ""; %>
+    <% const topbarBirthdayRows = Array.isArray(publicBirthdayRows)
+      ? publicBirthdayRows.filter((entry) => entry && entry.label && entry.value)
+      : []; %>
     <% const showTopbarGuestbookCreatedAt = Boolean(
-      topbarGuestbookModeActive && topbarCharacterCreatedAtLabel
+      topbarGuestbookModeActive && (topbarCharacterCreatedAtLabel || topbarBirthdayRows.length)
     ); %>
     <% const hideTopbarGuestbookControl = Boolean(
       topbarGuestbookModeActive &&
@@ -335,7 +340,12 @@
       <header class="topbar">
         <div class="topbar-inner<%= showTopbarGuestbookCreatedAt ? " has-guestbook-created-at" : "" %>">
           <% if (!topbarGuestbookModeActive) { %>
-            <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>"><%= topbarBrandText %></a>
+            <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>">
+              <% if (topbarBrandPrefixText) { %>
+                <span class="brand-prefix" aria-hidden="true"><%= topbarBrandPrefixText %></span>
+              <% } %>
+              <%= topbarBrandText %>
+            </a>
           <% } else { %>
             <% if (!hideTopbarGuestbookControl) { %>
               <div class="topbar-guestbook-control">
@@ -355,10 +365,18 @@
             <% } %>
             <% if (showTopbarGuestbookCreatedAt) { %>
               <div class="topbar-guestbook-created-wrap">
-                <span class="topbar-guestbook-created-at">
-                  <span>Charakter erstellt am</span>
-                  <strong><%= topbarCharacterCreatedAtLabel %></strong>
-                </span>
+                <% if (topbarCharacterCreatedAtLabel) { %>
+                  <span class="topbar-guestbook-created-at">
+                    <span>Charakter erstellt am</span>
+                    <strong><%= topbarCharacterCreatedAtLabel %></strong>
+                  </span>
+                <% } %>
+                <% topbarBirthdayRows.forEach((entry) => { %>
+                  <span class="topbar-guestbook-created-at is-birthday">
+                    <span><%= entry.label %></span>
+                    <strong><%= entry.value %></strong>
+                  </span>
+                <% }) %>
               </div>
             <% } %>
           <% } %>
@@ -439,6 +457,9 @@
             <% if (currentUser) { %>
               <% if (topbarGuestbookModeActive) { %>
                 <a class="<%= `${topbarBrandClassName} brand-in-nav` %>" href="<%= topbarBrandTarget %>">
+                  <% if (topbarBrandPrefixText) { %>
+                    <span class="brand-prefix" aria-hidden="true"><%= topbarBrandPrefixText %></span>
+                  <% } %>
                   <% if (topbarBrandWrapperClass) { %>
                     <span class="<%= topbarBrandWrapperClass %>"><%= topbarBrandText %></span>
                   <% } else { %>

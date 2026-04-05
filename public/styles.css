@@ -1539,6 +1539,8 @@ a:hover {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
   justify-content: center;
   align-items: center;
 }
@@ -1546,6 +1548,7 @@ a:hover {
 .topbar-guestbook-created-at {
   display: inline-flex;
   align-items: baseline;
+  justify-content: center;
   gap: 0.45rem;
   max-width: min(100%, 28rem);
   min-width: 0;
@@ -1558,6 +1561,16 @@ a:hover {
 .topbar-guestbook-created-at strong {
   color: var(--text);
   font-weight: 700;
+}
+
+.topbar-guestbook-created-at.is-birthday {
+  font-size: 0.9rem;
+}
+
+.brand-prefix {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.28rem;
 }
 
 .brand.brand-in-nav {
@@ -5392,6 +5405,11 @@ body.theme-future.page-home-screen .home-copyright {
 
 .account-table-checkbox span {
   line-height: 1.3;
+}
+
+.account-birthday-visibility-options {
+  display: grid;
+  gap: 0.48rem;
 }
 
 .account-settings-actions {

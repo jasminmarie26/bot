@@ -6,6 +6,7 @@
     Math.ceil((usernameChangeInfo.available_at.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   )
   : 0; %>
+<% const canPubliclyShowBirthday = Boolean(formValues.birth_date); %>
 
 <section class="panel admin-user-page account-layout">
   <div class="header-line">
@@ -127,6 +128,49 @@
               </label>
             </td>
             <td>Dient der Alterspr&uuml;fung f&uuml;r Bereiche wie ERP.</td>
+          </tr>
+          <tr>
+            <td>Geburtstag &ouml;ffentlich</td>
+            <td>
+              <div class="account-birthday-visibility-options">
+                <label class="checkbox account-table-checkbox">
+                  <input
+                    name="public_birth_show_age"
+                    type="checkbox"
+                    value="1"
+                    <%= formValues.public_birth_show_age ? "checked" : "" %>
+                    <%= canPubliclyShowBirthday ? "" : "disabled" %>
+                  />
+                  <span>Nur Alter</span>
+                </label>
+                <label class="checkbox account-table-checkbox">
+                  <input
+                    name="public_birth_show_day_month"
+                    type="checkbox"
+                    value="1"
+                    <%= formValues.public_birth_show_day_month ? "checked" : "" %>
+                    <%= canPubliclyShowBirthday ? "" : "disabled" %>
+                  />
+                  <span>Tag und Monat</span>
+                </label>
+                <label class="checkbox account-table-checkbox">
+                  <input
+                    name="public_birth_show_year"
+                    type="checkbox"
+                    value="1"
+                    <%= formValues.public_birth_show_year ? "checked" : "" %>
+                    <%= canPubliclyShowBirthday ? "" : "disabled" %>
+                  />
+                  <span>Jahr dazu</span>
+                </label>
+              </div>
+            </td>
+            <td>
+              Wird bei deinen Charakteren unter &bdquo;Charakter erstellt am&ldquo; angezeigt.
+              Jahr dazu erg&auml;nzt den Geburtstag zu Tag, Monat und Jahr.
+              Wer heute Geburtstag hat und etwas davon &ouml;ffentlich freigegeben hat,
+              bekommt nur an diesem Tag eine Torte vor dem Namen.
+            </td>
           </tr>
           <tr>
             <td>AFK nach Minuten</td>
