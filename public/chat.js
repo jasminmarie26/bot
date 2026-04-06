@@ -132,11 +132,12 @@
   let currentAfkMode = "";
   const typingStateByUserId = new Map();
   const onlineEntriesByUserId = new Map();
-  const whisperThreadsByUserId = new Map();
-  const whisperUnreadUserIds = new Set();
+  const whisperStateByPresenceKey = new Map();
+  let whisperThreadsByKey = new Map();
+  let whisperUnreadThreadKeys = new Set();
   const pendingRoomInvites = [];
   let activeRoomInvite = null;
-  let activeWhisperThreadUserId = null;
+  let activeWhisperThreadKey = "";
   let whisperSequence = 0;
   const entrySoundPreferenceKey = "chat-room-entry-sound-enabled";
   const messageSoundPreferenceKey = "chat-room-message-sound-enabled";
@@ -529,6 +530,10 @@
       isCurrentChannelAfk = false;
       currentAfkMode = "";
       clearStoredAfkState();
+      switchWhisperState(currentPresenceKey);
+      renderWhisperThreadList();
+      renderWhisperThread();
+      updateWhisperToggleBadge();
       scheduleAfkTimer();
     }
   }
@@ -966,6 +971,39 @@
       chatBox.dataset.activeCharacterId = String(currentActiveCharacterId);
     }
   }
+
+  function getWhisperStateKey(presenceKey = currentPresenceKey) {
+    return String(presenceKey || "").trim() || "guest";
+  }
+
+  function switchWhisperState(presenceKey = currentPresenceKey) {
+    const stateKey = getWhisperStateKey(presenceKey);
+    let state = whisperStateByPresenceKey.get(stateKey);
+    if (!state) {
+      state = {
+        threadsByKey: new Map(),
+        unreadThreadKeys: new Set(),
+        activeThreadKey: ""
+      };
+      whisperStateByPresenceKey.set(stateKey, state);
+    }
+
+    whisperThreadsByKey = state.threadsByKey;
+    whisperUnreadThreadKeys = state.unreadThreadKeys;
+    activeWhisperThreadKey = String(state.activeThreadKey || "").trim();
+    return state;
+  }
+
+  function setActiveWhisperThreadKey(threadKey) {
+    const normalizedThreadKey = String(threadKey || "").trim();
+    activeWhisperThreadKey = normalizedThreadKey;
+    const currentState = whisperStateByPresenceKey.get(getWhisperStateKey());
+    if (currentState) {
+      currentState.activeThreadKey = normalizedThreadKey;
+    }
+  }
+
+  switchWhisperState(currentPresenceKey);
 
   function hasNightEyeMarker() {
     if (!(document.body instanceof HTMLElement)) {
@@ -2116,6 +2154,49 @@
     return null;
   }
 
+  function getWhisperPartnerCharacterId(msg) {
+    const fromCharacterId = normalizePositiveNumber(msg?.from_character_id);
+    const toCharacterId = normalizePositiveNumber(msg?.to_character_id);
+
+    if (Boolean(msg?.outgoing)) {
+      return toCharacterId;
+    }
+
+    if (fromCharacterId && fromCharacterId !== currentActiveCharacterId) {
+      return fromCharacterId;
+    }
+
+    if (toCharacterId && toCharacterId !== currentActiveCharacterId) {
+      return toCharacterId;
+    }
+
+    return null;
+  }
+
+  function getWhisperThreadKey(characterId, userId) {
+    const parsedCharacterId = normalizePositiveNumber(characterId);
+    if (parsedCharacterId) {
+      return `character:${parsedCharacterId}`;
+    }
+
+    const parsedUserId = normalizePositiveNumber(userId);
+    return parsedUserId ? `user:${parsedUserId}` : "";
+  }
+
+  function getWhisperThreadKeyFromEntry(entry) {
+    return getWhisperThreadKey(
+      entry?.characterId ?? entry?.character_id,
+      entry?.userId ?? entry?.user_id
+    );
+  }
+
+  function getWhisperPartnerThreadKey(msg) {
+    return getWhisperThreadKey(
+      getWhisperPartnerCharacterId(msg),
+      getWhisperPartnerUserId(msg)
+    );
+  }
+
   function getOnlineEntryByUserId(userId) {
     const parsedUserId = Number(userId);
     if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -2131,22 +2212,49 @@
     return null;
   }
 
-  function getWhisperPartnerName(msg, partnerUserId = getWhisperPartnerUserId(msg)) {
+  function getOnlineEntryByThreadKey(threadKey) {
+    const normalizedThreadKey = String(threadKey || "").trim();
+    if (!normalizedThreadKey) {
+      return null;
+    }
+
+    for (const entry of onlineEntriesByUserId.values()) {
+      if (getWhisperThreadKeyFromEntry(entry) === normalizedThreadKey) {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
+  function getWhisperPartnerName(
+    msg,
+    partnerUserId = getWhisperPartnerUserId(msg),
+    partnerThreadKey = getWhisperPartnerThreadKey(msg)
+  ) {
     const explicitName = Boolean(msg?.outgoing) ? msg?.to_name : msg?.from_name;
-    const rememberedName = whisperThreadsByUserId.get(partnerUserId)?.name;
-    const onlineName = getOnlineEntryByUserId(partnerUserId)?.name;
+    const rememberedName = whisperThreadsByKey.get(partnerThreadKey)?.name;
+    const onlineName =
+      getOnlineEntryByThreadKey(partnerThreadKey)?.name ||
+      getOnlineEntryByUserId(partnerUserId)?.name;
     const resolvedName = String(explicitName || rememberedName || onlineName || "").trim();
     return resolvedName || "Unbekannt";
   }
 
-  function ensureWhisperThread(userId, name = "") {
-    const parsedUserId = Number(userId);
-    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+  function ensureWhisperThread(threadKey, { userId = null, characterId = null, name = "" } = {}) {
+    const normalizedThreadKey = String(threadKey || "").trim();
+    if (!normalizedThreadKey) {
       return null;
     }
 
-    const existing = whisperThreadsByUserId.get(parsedUserId);
+    const parsedUserId = normalizePositiveNumber(userId);
+    const parsedCharacterId = normalizePositiveNumber(characterId);
+    const existing = whisperThreadsByKey.get(normalizedThreadKey);
     if (existing) {
+      if (parsedUserId) {
+        existing.userId = parsedUserId;
+      }
+      existing.characterId = parsedCharacterId;
       if (String(name || "").trim()) {
         existing.name = String(name).trim();
       }
@@ -2154,12 +2262,14 @@
     }
 
     const created = {
+      threadKey: normalizedThreadKey,
       userId: parsedUserId,
+      characterId: parsedCharacterId,
       name: String(name || "").trim() || "Unbekannt",
       messages: [],
       lastSequence: 0
     };
-    whisperThreadsByUserId.set(parsedUserId, created);
+    whisperThreadsByKey.set(normalizedThreadKey, created);
     return created;
   }
 
@@ -2177,13 +2287,13 @@
 
   function updateWhisperToggleBadge() {
     if (!whisperToggleBadge) return;
-    const unreadCount = whisperUnreadUserIds.size;
+    const unreadCount = whisperUnreadThreadKeys.size;
     whisperToggleBadge.hidden = unreadCount < 1;
     whisperToggleBadge.textContent = String(unreadCount);
   }
 
   function sortWhisperThreads() {
-    return Array.from(whisperThreadsByUserId.values())
+    return Array.from(whisperThreadsByKey.values())
       .filter((thread) => !isIgnoredAccountUserId(thread?.userId))
       .sort((left, right) => {
       const rightSequence = Number(right?.lastSequence || 0);
@@ -2226,7 +2336,7 @@
       const lastEntry = thread.messages[thread.messages.length - 1] || null;
 
       button.type = "button";
-      button.className = `chat-whisper-list-item${thread.userId === activeWhisperThreadUserId ? " is-active" : ""}`;
+      button.className = `chat-whisper-list-item${thread.threadKey === activeWhisperThreadKey ? " is-active" : ""}`;
       name.className = "chat-whisper-list-name";
       name.textContent = thread.name;
 
@@ -2238,7 +2348,7 @@
       meta.className = "chat-whisper-list-meta";
       meta.textContent = lastEntry?.created_at ? String(lastEntry.created_at) : "";
 
-      if (whisperUnreadUserIds.has(thread.userId)) {
+      if (whisperUnreadThreadKeys.has(thread.threadKey)) {
         unreadDot.className = "chat-whisper-list-unread";
         unreadDot.setAttribute("aria-hidden", "true");
         button.appendChild(unreadDot);
@@ -2248,8 +2358,8 @@
       button.appendChild(preview);
       button.appendChild(meta);
       button.addEventListener("click", () => {
-        activeWhisperThreadUserId = thread.userId;
-        whisperUnreadUserIds.delete(thread.userId);
+        setActiveWhisperThreadKey(thread.threadKey);
+        whisperUnreadThreadKeys.delete(thread.threadKey);
         renderWhisperThreadList();
         renderWhisperThread();
         updateWhisperToggleBadge();
@@ -2266,7 +2376,7 @@
       return;
     }
 
-    const thread = whisperThreadsByUserId.get(Number(activeWhisperThreadUserId));
+    const thread = whisperThreadsByKey.get(String(activeWhisperThreadKey || "").trim());
     whisperThread.innerHTML = "";
 
     if (!thread || isIgnoredAccountUserId(thread.userId)) {
@@ -2330,12 +2440,18 @@
 
   function rememberWhisperMessage(msg) {
     const partnerUserId = getWhisperPartnerUserId(msg);
-    if (!Number.isInteger(partnerUserId) || partnerUserId < 1) {
+    const partnerCharacterId = getWhisperPartnerCharacterId(msg);
+    const partnerThreadKey = getWhisperPartnerThreadKey(msg);
+    if (!partnerThreadKey || !Number.isInteger(partnerUserId) || partnerUserId < 1) {
       return null;
     }
 
-    const partnerName = getWhisperPartnerName(msg, partnerUserId);
-    const thread = ensureWhisperThread(partnerUserId, partnerName);
+    const partnerName = getWhisperPartnerName(msg, partnerUserId, partnerThreadKey);
+    const thread = ensureWhisperThread(partnerThreadKey, {
+      userId: partnerUserId,
+      characterId: partnerCharacterId,
+      name: partnerName
+    });
     if (!thread) {
       return null;
     }
@@ -2389,13 +2505,13 @@
 
   function openWhisperPanel({ focusInput = false } = {}) {
     if (!whisperPanel) return;
-    if (!activeWhisperThreadUserId) {
+    if (!activeWhisperThreadKey) {
       const firstThread = sortWhisperThreads()[0];
       if (firstThread) {
-        activeWhisperThreadUserId = firstThread.userId;
+        setActiveWhisperThreadKey(firstThread.threadKey);
       }
     }
-    whisperUnreadUserIds.clear();
+    whisperUnreadThreadKeys.clear();
     whisperPanel.hidden = false;
     updateWhisperToggleState();
     renderWhisperThreadList();
@@ -2423,17 +2539,24 @@
 
   function activateWhisperThread(entry, { focusInput = false, openPanel = false } = {}) {
     const userId = Number(entry?.userId);
-    if (!Number.isInteger(userId) || userId < 1) return;
+    const characterId = normalizePositiveNumber(entry?.characterId ?? entry?.character_id);
+    const threadKey = getWhisperThreadKeyFromEntry(entry);
+    if (!threadKey || !Number.isInteger(userId) || userId < 1) return;
 
     const name = String(
       entry?.name ||
+      getOnlineEntryByThreadKey(threadKey)?.name ||
       getOnlineEntryByUserId(userId)?.name ||
-      whisperThreadsByUserId.get(userId)?.name ||
+      whisperThreadsByKey.get(threadKey)?.name ||
       "Unbekannt"
     ).trim() || "Unbekannt";
-    ensureWhisperThread(userId, name);
-    activeWhisperThreadUserId = userId;
-    whisperUnreadUserIds.delete(userId);
+    ensureWhisperThread(threadKey, {
+      userId,
+      characterId,
+      name
+    });
+    setActiveWhisperThreadKey(threadKey);
+    whisperUnreadThreadKeys.delete(threadKey);
     renderWhisperThreadList();
     renderWhisperThread();
     updateWhisperToggleBadge();
@@ -3041,7 +3164,9 @@
   }
 
   function submitWhisperMessage() {
-    const targetUserId = Number(whisperTargetUserIdInput?.value);
+    const activeThread = whisperThreadsByKey.get(String(activeWhisperThreadKey || "").trim());
+    const targetUserId = Number(activeThread?.userId || whisperTargetUserIdInput?.value);
+    const targetCharacterId = normalizePositiveNumber(activeThread?.characterId);
     const content = String(whisperInput?.value || "").trim();
     if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
       return false;
@@ -3050,15 +3175,19 @@
     registerChatActivity({ typing: true });
     socket.emit("chat:whisper", {
       targetUserId,
+      targetCharacterId,
       content
     });
 
     whisperInput.value = "";
     activateWhisperThread({
       userId: targetUserId,
+      characterId: targetCharacterId,
       name:
+        activeThread?.name ||
+        getOnlineEntryByThreadKey(getWhisperThreadKey(targetCharacterId, targetUserId))?.name ||
         getOnlineEntryByUserId(targetUserId)?.name ||
-        whisperThreadsByUserId.get(targetUserId)?.name ||
+        whisperThreadsByKey.get(getWhisperThreadKey(targetCharacterId, targetUserId))?.name ||
         "Unbekannt"
     }, {
       focusInput: true,
@@ -3157,6 +3286,7 @@
 
   function handleWhisperMessage(payload) {
     const partnerUserId = getWhisperPartnerUserId(payload);
+    const partnerThreadKey = getWhisperPartnerThreadKey(payload);
     if (!payload?.outgoing && isIgnoredAccountUserId(partnerUserId)) {
       return;
     }
@@ -3173,18 +3303,18 @@
       playChatTone();
     }
 
-    if (!payload?.outgoing && (!isWhisperPanelOpen() || Number(activeWhisperThreadUserId) !== Number(thread.userId))) {
-      whisperUnreadUserIds.add(thread.userId);
+    if (!payload?.outgoing && (!isWhisperPanelOpen() || activeWhisperThreadKey !== partnerThreadKey)) {
+      whisperUnreadThreadKeys.add(thread.threadKey);
     } else {
-      whisperUnreadUserIds.delete(thread.userId);
+      whisperUnreadThreadKeys.delete(thread.threadKey);
     }
 
-    if (!activeWhisperThreadUserId && payload?.outgoing) {
-      activeWhisperThreadUserId = thread.userId;
+    if (!activeWhisperThreadKey && payload?.outgoing) {
+      setActiveWhisperThreadKey(thread.threadKey);
     }
 
     renderWhisperThreadList();
-    if (Number(activeWhisperThreadUserId) === Number(thread.userId)) {
+    if (activeWhisperThreadKey === thread.threadKey) {
       renderWhisperThread();
     }
     updateWhisperToggleBadge();

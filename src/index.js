@@ -21108,10 +21108,12 @@ function emitWhisperBetweenUsers(
   content,
   serverId = DEFAULT_SERVER_ID,
   roomId = null,
-  standardRoomId = null
+  standardRoomId = null,
+  targetCharacterId = null
 ) {
   const normalizedContent = String(content || "").trim();
   const parsedTargetUserId = Number(targetUserId);
+  const normalizedTargetCharacterId = normalizePresenceCharacterId(targetCharacterId);
   if (
     !senderSocket?.data?.user ||
     !Number.isInteger(parsedTargetUserId) ||
@@ -21127,23 +21129,53 @@ function emitWhisperBetweenUsers(
 
   const normalizedServerId = normalizeServer(serverId);
   const senderServerId = getSocketChannelServerId(senderSocket, roomId, normalizedServerId);
-  const recipientSockets = getUserSocketsOnServer(
+  const senderCharacterId = normalizePresenceCharacterId(
+    getSocketPreferredCharacterId(senderSocket, senderServerId)
+  );
+  let recipientSockets = getUserSocketsOnServer(
     parsedTargetUserId,
     normalizedServerId,
     roomId,
     standardRoomId
   );
+  if (normalizedTargetCharacterId) {
+    recipientSockets = recipientSockets.filter((memberSocket) => {
+      const memberServerId = getSocketChannelServerId(memberSocket, roomId, normalizedServerId);
+      return (
+        normalizePresenceCharacterId(getSocketPreferredCharacterId(memberSocket, memberServerId)) ===
+        normalizedTargetCharacterId
+      );
+    });
+  }
   if (!recipientSockets.length) {
     return { ok: false, reason: "missing_target" };
   }
 
-  const senderSockets = getUserSocketsOnServer(
+  let senderSockets = getUserSocketsOnServer(
     senderSocket.data.user.id,
     normalizedServerId,
     roomId,
     standardRoomId
   );
+  if (senderCharacterId) {
+    senderSockets = senderSockets.filter((memberSocket) => {
+      const memberServerId = getSocketChannelServerId(memberSocket, roomId, normalizedServerId);
+      return (
+        normalizePresenceCharacterId(getSocketPreferredCharacterId(memberSocket, memberServerId)) ===
+        senderCharacterId
+      );
+    });
+  }
+  if (!senderSockets.length) {
+    senderSockets = [senderSocket];
+  }
   const senderProfile = getSocketDisplayProfile(senderSocket, senderServerId);
+  const recipientCharacterId = normalizePresenceCharacterId(
+    getSocketPreferredCharacterId(
+      recipientSockets[0],
+      getSocketChannelServerId(recipientSockets[0], roomId, normalizedServerId)
+    )
+  );
   const recipientProfile = recipientSockets[0]
     ? getSocketDisplayProfile(
         recipientSockets[0],
@@ -21160,6 +21192,8 @@ function emitWhisperBetweenUsers(
     outgoing: true,
     from_user_id: Number(senderSocket.data.user.id),
     to_user_id: parsedTargetUserId,
+    from_character_id: senderCharacterId,
+    to_character_id: recipientCharacterId,
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
@@ -21169,6 +21203,8 @@ function emitWhisperBetweenUsers(
     outgoing: false,
     from_user_id: Number(senderSocket.data.user.id),
     to_user_id: parsedTargetUserId,
+    from_character_id: senderCharacterId,
+    to_character_id: recipientCharacterId,
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
@@ -24491,7 +24527,8 @@ io.on("connection", (socket) => {
         whisperArgs.message,
         serverId,
         roomId,
-        standardRoomId
+        standardRoomId,
+        whisperTargets[0].characterId
       );
       if (!whisperResult.ok) {
         socket.emit("chat:message", {
@@ -25509,6 +25546,7 @@ io.on("connection", (socket) => {
     if (!payload || typeof payload !== "object") return;
 
     const targetUserId = Number(payload.targetUserId);
+    const targetCharacterId = normalizePresenceCharacterId(payload.targetCharacterId);
     const content = String(payload.content || "").trim();
     if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
       return;
@@ -25542,7 +25580,15 @@ io.on("connection", (socket) => {
       getSocketPreferredCharacterId(socket, serverId),
       standardRoomId
     );
-    emitWhisperBetweenUsers(socket, targetUserId, content, serverId, roomId, standardRoomId);
+    emitWhisperBetweenUsers(
+      socket,
+      targetUserId,
+      content,
+      serverId,
+      roomId,
+      standardRoomId,
+      targetCharacterId
+    );
   });
 
   socket.on("chat:room-invite-response", (payload) => {
