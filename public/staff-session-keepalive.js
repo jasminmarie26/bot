@@ -9,10 +9,23 @@
   let activityTouchQueued = false;
   let tabCloseSent = false;
 
+  const getCurrentPagePath = () =>
+    `${window.location.pathname || "/"}${window.location.search || ""}${window.location.hash || ""}`;
+
+  const getCurrentPageTitle = () => String(document.title || "").trim();
+
   const buildTouchPayload = () => {
     const payload = new URLSearchParams();
     if (tabId) {
       payload.set("tab_id", tabId);
+    }
+    const currentPagePath = getCurrentPagePath();
+    const currentPageTitle = getCurrentPageTitle();
+    if (currentPagePath) {
+      payload.set("page_path", currentPagePath);
+    }
+    if (currentPageTitle) {
+      payload.set("page_title", currentPageTitle);
     }
     return payload.toString();
   };

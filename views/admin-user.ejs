@@ -60,6 +60,9 @@
     <span>E-Mail: <%= targetUser.email || "-" %></span>
     <span>Geburtsdatum: <%= targetUser.birth_date || "-" %></span>
     <span>Charaktere: <%= targetUser.character_count %></span>
+    <% if (targetUser.is_online && targetUser.online_location_label) { %>
+      <span>Ort: <%= targetUser.online_location_label %></span>
+    <% } %>
     <span>Letzter Login: <%= targetUser.last_login_at || "-" %></span>
     <span>Letzte IP: <%= targetUser.last_login_ip || "-" %></span>
     <span>Doppelaccounts: <%= Number(targetUser.duplicate_accounts_allowed) === 1 ? "freigeschaltet" : "gesperrt" %></span>

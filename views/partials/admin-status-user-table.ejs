@@ -55,14 +55,14 @@
           </td>
           <td>
             <div class="admin-table-subline">
+              <% const statusNoteText = user.is_online
+                ? (user.online_location_label || "Gerade online.")
+                : (user.moderation_status_note || "Keine Notiz."); %>
+              <% const statusNoteIsEmpty = !user.is_online && !user.moderation_status_note; %>
               <span class="admin-status-badge is-<%= user.moderation_status.slug %>">
                 <%= user.moderation_status.label %>
               </span>
-              <% if (user.moderation_status_note) { %>
-                <span class="admin-status-note"><%= user.moderation_status_note %></span>
-              <% } else { %>
-                <span class="admin-status-note is-empty">Keine Notiz.</span>
-              <% } %>
+              <span class="admin-status-note<%= statusNoteIsEmpty ? ' is-empty' : '' %>"><%= statusNoteText %></span>
             </div>
           </td>
           <td>

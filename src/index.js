@@ -911,6 +911,7 @@ function collectActiveSessionUserIds(options = {}) {
       : null;
 
     const uniqueUserIds = new Set();
+    const latestSessionLocationsByUserId = new Map();
     let deletedSessionCount = 0;
     for (const row of rows) {
       try {
@@ -925,6 +926,27 @@ function collectActiveSessionUserIds(options = {}) {
         const userId = Number(parsed?.user?.id);
         if (Number.isInteger(userId) && userId > 0) {
           uniqueUserIds.add(userId);
+          const sessionPagePath = normalizeSessionTrackedPagePath(parsed?.last_page_path);
+          const sessionPageTitle = normalizeSessionTrackedPageTitle(parsed?.last_page_title);
+          const sessionPageSeenAt = Number(parsed?.last_page_seen_at || 0);
+          const sessionLocationSeenAt = Math.max(
+            Number.isFinite(sessionPageSeenAt) ? sessionPageSeenAt : 0,
+            getSessionLastTabHeartbeatAt(parsed)
+          );
+
+          if (sessionPagePath || sessionPageTitle) {
+            const existingLocation = latestSessionLocationsByUserId.get(userId);
+            if (
+              !existingLocation ||
+              sessionLocationSeenAt >= Number(existingLocation.seenAt || 0)
+            ) {
+              latestSessionLocationsByUserId.set(userId, {
+                path: sessionPagePath,
+                title: sessionPageTitle,
+                seenAt: sessionLocationSeenAt
+              });
+            }
+          }
         }
       } catch (error) {
         if (deleteSessionStatement) {
@@ -945,16 +967,26 @@ function collectActiveSessionUserIds(options = {}) {
     const existingUsers = db
       .prepare(`SELECT id FROM users WHERE id IN (${placeholders})`)
       .all(...candidateUserIds);
+    const existingUserIds = existingUsers
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+    const sessionLocationsByUserId = {};
+    existingUserIds.forEach((userId) => {
+      const sessionLocation = latestSessionLocationsByUserId.get(userId);
+      if (sessionLocation) {
+        sessionLocationsByUserId[userId] = sessionLocation;
+      }
+    });
 
     return {
-      activeUserIds: existingUsers
-        .map((row) => Number(row.id))
-        .filter((id) => Number.isInteger(id) && id > 0),
+      activeUserIds: existingUserIds,
+      sessionLocationsByUserId,
       deletedSessionCount
     };
   } catch (error) {
     return {
       activeUserIds: [],
+      sessionLocationsByUserId: {},
       deletedSessionCount: 0
     };
   } finally {
@@ -2861,6 +2893,50 @@ function getSessionLastTabHeartbeatAt(sessionData) {
   return Number.isFinite(inferredHeartbeatAt) && inferredHeartbeatAt > 0 ? inferredHeartbeatAt : 0;
 }
 
+function normalizeSessionTrackedPagePath(rawPath) {
+  const value = String(rawPath || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  try {
+    const parsedUrl = new URL(value, "https://heldenhaftereisen.invalid");
+    const normalizedPath = `${parsedUrl.pathname || "/"}${parsedUrl.search || ""}${parsedUrl.hash || ""}`;
+    return normalizedPath.startsWith("/") && !normalizedPath.startsWith("//")
+      ? normalizedPath.slice(0, 500)
+      : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function normalizeSessionTrackedPageTitle(rawTitle) {
+  return String(rawTitle || "")
+    .replace(/\s+/g, " ")
+    .replace(/^\(\d+\)\s*/g, "")
+    .replace(/\s+\|\s+Heldenhafte Reisen$/i, "")
+    .trim()
+    .slice(0, 200);
+}
+
+function markSessionTrackedPageLocation(sessionData, rawPath, rawTitle, now = Date.now()) {
+  if (!sessionData?.user) {
+    return false;
+  }
+
+  const normalizedPath = normalizeSessionTrackedPagePath(rawPath);
+  if (!normalizedPath) {
+    return false;
+  }
+
+  const parsedNow = Number(now);
+  const nextTimestamp = Number.isFinite(parsedNow) && parsedNow > 0 ? parsedNow : Date.now();
+  sessionData.last_page_path = normalizedPath;
+  sessionData.last_page_title = normalizeSessionTrackedPageTitle(rawTitle);
+  sessionData.last_page_seen_at = nextTimestamp;
+  return true;
+}
+
 function normalizeSessionOpenTabId(rawTabId) {
   const normalizedTabId = String(rawTabId || "").trim();
   if (!normalizedTabId || normalizedTabId.length > 120) {
@@ -3052,6 +3128,9 @@ function respondToInactiveSession(req, res) {
   delete req.session.open_tab_ids;
   delete req.session.last_all_tabs_closed_at;
   delete req.session.last_tab_heartbeat_at;
+  delete req.session.last_page_path;
+  delete req.session.last_page_title;
+  delete req.session.last_page_seen_at;
   delete req.session.user;
 
   return req.session.destroy(() => finishResponse());
@@ -13063,6 +13142,7 @@ app.post("/session/touch", (req, res) => {
 
   markSessionOpenTab(req.session, req.body?.tab_id);
   markSessionTabHeartbeat(req.session);
+  markSessionTrackedPageLocation(req.session, req.body?.page_path, req.body?.page_title);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   return req.session.save((error) => {
     if (error) {
@@ -19131,16 +19211,118 @@ function getStaffPanelConfig(user) {
   };
 }
 
-function renderStaffOverview(req, res) {
-  const panelConfig = getStaffPanelConfig(req.session.user);
-  const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
-  const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
+function getOnlineAccountActivitySnapshot() {
+  const sessionSnapshot = collectActiveSessionUserIds({ deleteInactive: true });
+  return {
+    onlineAccountUserIds: new Set([
+      ...sessionSnapshot.activeUserIds,
+      ...getConnectedSocketUserIds()
+    ]),
+    sessionLocationsByUserId: sessionSnapshot.sessionLocationsByUserId || {}
+  };
+}
+
+function buildStaffUserLocationLabel(rawPath, rawTitle) {
+  const normalizedTitle = normalizeSessionTrackedPageTitle(rawTitle);
+  const normalizedPath = normalizeSessionTrackedPagePath(rawPath);
+  if (!normalizedPath) {
+    return normalizedTitle;
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(normalizedPath, "https://heldenhaftereisen.invalid");
+  } catch (_error) {
+    return normalizedTitle || normalizedPath;
+  }
+
+  const normalizedPathname = String(parsedUrl.pathname || "/").replace(/\/+$/, "") || "/";
+  const normalizedHash = String(parsedUrl.hash || "").trim().toLowerCase();
+
+  if (normalizedPathname === "/members") {
+    return "Mitgliederliste ansehen";
+  }
+  if (normalizedPathname === "/register") {
+    return "Registrieren";
+  }
+  if (normalizedPathname === "/login") {
+    return "Login";
+  }
+  if (normalizedPathname === "/dashboard") {
+    return "Dashboard";
+  }
+  if (normalizedPathname === "/account") {
+    return "Account";
+  }
+  if (normalizedPathname === "/admin") {
+    return "Adminbereich";
+  }
+  if (normalizedPathname === "/staff") {
+    return "Moderatorenbereich";
+  }
+  if (normalizedPathname === "/updates") {
+    return normalizedTitle || DEFAULT_UPDATES_TITLE;
+  }
+  if (normalizedPathname === "/kontakt") {
+    return normalizedTitle || "Kontakt & Ticket";
+  }
+  if (normalizedPathname === "/chat") {
+    return normalizedTitle ? `Im Chat: ${normalizedTitle}` : "Im Chat";
+  }
+  if (/^\/characters\/\d+\/guestbook\/edit\/preview$/i.test(normalizedPathname)) {
+    return normalizedTitle || "Gästebuch-Vorschau";
+  }
+  if (/^\/characters\/\d+\/guestbook\/edit$/i.test(normalizedPathname)) {
+    return normalizedTitle || "Gästebuch bearbeiten";
+  }
+  if (/^\/characters\/\d+\/guestbook$/i.test(normalizedPathname)) {
+    return normalizedTitle || "Gästebuch ansehen";
+  }
+  if (/^\/characters\/\d+\/edit$/i.test(normalizedPathname)) {
+    const isGuestbookEdit =
+      parsedUrl.searchParams.has("guestbook_page_id") || normalizedHash === "#guestbook-design";
+    const characterEditTitle = normalizedTitle.match(/^Bearbeiten:\s*(.+)$/i);
+    if (isGuestbookEdit) {
+      return characterEditTitle
+        ? `Gästebuch bearbeiten: ${characterEditTitle[1]}`
+        : (normalizedTitle || "Gästebuch bearbeiten");
+    }
+    return characterEditTitle
+      ? `Charakter bearbeiten: ${characterEditTitle[1]}`
+      : (normalizedTitle || "Charakter bearbeiten");
+  }
+  if (/^\/characters\/\d+$/i.test(normalizedPathname)) {
+    return normalizedTitle || "Charakterprofil";
+  }
+  if (/^\/(?:admin|staff)\/users\/\d+$/i.test(normalizedPathname)) {
+    return normalizedTitle || "User-Details";
+  }
+
+  return normalizedTitle || normalizedPath;
+}
+
+function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId = {}) {
+  const parsedUserId = Number(user?.id);
+  const sessionLocation = sessionLocationsByUserId[parsedUserId] || null;
+  return {
     ...user,
-    is_online: onlineAccountUserIds.has(Number(user.id)),
+    is_online: onlineAccountUserIds.has(parsedUserId),
+    online_location_label: buildStaffUserLocationLabel(
+      sessionLocation?.path,
+      sessionLocation?.title
+    ),
     moderation_status_level: normalizeModerationStatusLevel(user.moderation_status_level),
     moderation_status_note: normalizeModerationStatusNote(user.moderation_status_note),
     moderation_status: getModerationStatusDefinition(user.moderation_status_level)
-  }));
+  };
+}
+
+function renderStaffOverview(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
+  const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
+  const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) =>
+    decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId)
+  );
   const searchQuery = String(req.query.q || "").trim();
   const filteredUsers = filterStaffOverviewUsers(allUsers, searchQuery);
   const users = filteredUsers;
@@ -19288,14 +19470,10 @@ function renderStaffUserDetails(req, res) {
     return res.redirect(panelConfig.panelBasePath);
   }
 
-  const onlineAccountUserIds = new Set(getOnlineAccountUserIds());
-  const users = decorateAdminUsers(getAdminUsersOverview()).map((user) => ({
-    ...user,
-    is_online: onlineAccountUserIds.has(Number(user.id)),
-    moderation_status_level: normalizeModerationStatusLevel(user.moderation_status_level),
-    moderation_status_note: normalizeModerationStatusNote(user.moderation_status_note),
-    moderation_status: getModerationStatusDefinition(user.moderation_status_level)
-  }));
+  const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
+  const users = decorateAdminUsers(getAdminUsersOverview()).map((user) =>
+    decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId)
+  );
   const targetUser = users.find((user) => Number(user.id) === targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
