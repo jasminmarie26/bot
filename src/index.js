@@ -648,7 +648,8 @@ function getAcmeChallengeRoots() {
 const ACME_CHALLENGE_ROOTS = getAcmeChallengeRoots();
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_TAB_IDLE_TIMEOUT_MS = 1000 * 60 * 20;
-const SESSION_OPEN_TAB_STALE_MS = SESSION_MAX_AGE_MS;
+const SESSION_OPEN_TAB_HEARTBEAT_INTERVAL_MS = 1000 * 60 * 5;
+const SESSION_OPEN_TAB_STALE_MS = SESSION_OPEN_TAB_HEARTBEAT_INTERVAL_MS * 3;
 const SOCKET_SESSION_HEARTBEAT_INTERVAL_MS = 1000 * 60 * 4;
 const SESSION_COOKIE_NAME = "connect.sid";
 const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
@@ -2877,16 +2878,23 @@ function normalizeSessionOpenTabs(sessionData, now = Date.now()) {
   const parsedNow = Number(now);
   const nextTimestamp = Number.isFinite(parsedNow) && parsedNow > 0 ? parsedNow : Date.now();
   const normalizedTabs = {};
+  let lastClosedAtFromStaleTabs = 0;
 
   Object.entries(rawTabs).forEach(([rawTabId, rawTimestamp]) => {
     const tabId = normalizeSessionOpenTabId(rawTabId);
     const lastSeenAt = Number(rawTimestamp);
-    if (
-      !tabId ||
-      !Number.isFinite(lastSeenAt) ||
-      lastSeenAt <= 0 ||
-      nextTimestamp - lastSeenAt > SESSION_OPEN_TAB_STALE_MS
-    ) {
+    const isValidTimestamp = Number.isFinite(lastSeenAt) && lastSeenAt > 0;
+    const isStaleTab =
+      tabId &&
+      isValidTimestamp &&
+      nextTimestamp - lastSeenAt > SESSION_OPEN_TAB_STALE_MS;
+    if (!tabId || !isValidTimestamp || isStaleTab) {
+      if (isStaleTab) {
+        lastClosedAtFromStaleTabs = Math.max(
+          lastClosedAtFromStaleTabs,
+          Math.min(nextTimestamp, lastSeenAt + SESSION_OPEN_TAB_HEARTBEAT_INTERVAL_MS)
+        );
+      }
       return;
     }
 
@@ -2895,6 +2903,12 @@ function normalizeSessionOpenTabs(sessionData, now = Date.now()) {
 
   if (sessionData && JSON.stringify(rawTabs) !== JSON.stringify(normalizedTabs)) {
     sessionData.open_tab_ids = normalizedTabs;
+  }
+  if (sessionData && !Object.keys(normalizedTabs).length && lastClosedAtFromStaleTabs > 0) {
+    const explicitClosedAt = Number(sessionData.last_all_tabs_closed_at || 0);
+    if (!Number.isFinite(explicitClosedAt) || explicitClosedAt < lastClosedAtFromStaleTabs) {
+      sessionData.last_all_tabs_closed_at = lastClosedAtFromStaleTabs;
+    }
   }
 
   return normalizedTabs;
