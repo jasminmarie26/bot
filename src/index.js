@@ -3188,6 +3188,9 @@ function renderAccountPage(req, res, options = {}) {
       afk_timeout_minutes:
         options.values?.afk_timeout_minutes ??
         normalizeAfkTimeoutMinutes(accountUser.afk_timeout_minutes),
+      guestbook_music_enabled:
+        options.values?.guestbook_music_enabled ??
+        normalizeGuestbookMusicEnabled(accountUser.guestbook_music_enabled),
       room_log_email_enabled:
         options.values?.room_log_email_enabled ??
         (Number(accountUser.room_log_email_enabled) !== 0),
@@ -4193,6 +4196,18 @@ function normalizeAutoAfkEnabled(value, fallback = true) {
   return fallback !== false;
 }
 
+function normalizeGuestbookMusicEnabled(value, fallback = true) {
+  if (value === true || value === 1 || value === "1") {
+    return true;
+  }
+
+  if (value === false || value === 0 || value === "0") {
+    return false;
+  }
+
+  return fallback !== false;
+}
+
 function parseAfkTimeoutMinutes(value) {
   const parsedValue = Number(value);
   if (!Number.isInteger(parsedValue)) {
@@ -4366,6 +4381,7 @@ function toSessionUser(user) {
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(user?.afk_timeout_minutes),
     auto_afk_enabled: normalizeAutoAfkEnabled(user?.auto_afk_enabled),
     show_own_chat_time: Number(user?.show_own_chat_time) === 1,
+    guestbook_music_enabled: normalizeGuestbookMusicEnabled(user?.guestbook_music_enabled),
     account_number: getAccountNumberByUserId(user.id)
   };
 }
@@ -4382,7 +4398,7 @@ function getUserForSessionById(userId) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
-              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time
+              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time, guestbook_music_enabled
        , admin_character_id, moderator_character_id
        FROM users
        WHERE id = ?`
@@ -4394,7 +4410,7 @@ function getUserForSessionByUsername(username) {
   return db
     .prepare(
       `SELECT id, username, is_admin, is_moderator, admin_display_name, moderator_display_name, theme,
-              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time
+              afk_timeout_minutes, auto_afk_enabled, show_own_chat_time, guestbook_music_enabled
        , admin_character_id, moderator_character_id
        FROM users
        WHERE lower(username) = lower(?)
@@ -4408,6 +4424,7 @@ function getAccountUserById(userId) {
     .prepare(
       `SELECT id, username, email, birth_date, public_birth_show_age, public_birth_show_day_month,
               public_birth_show_year, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
+              guestbook_music_enabled,
               room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at,
               oauth_password_pending
        FROM users
@@ -9079,6 +9096,32 @@ function getYouTubeEmbedUrl(rawValue) {
   return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : "";
 }
 
+function normalizeGuestbookMusicUrl(rawValue) {
+  const videoId = extractYouTubeVideoId(rawValue);
+  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : "";
+}
+
+function getYouTubeBackgroundMusicEmbedUrl(rawValue) {
+  const videoId = extractYouTubeVideoId(rawValue);
+  if (!videoId) {
+    return "";
+  }
+
+  const params = new URLSearchParams({
+    autoplay: "1",
+    controls: "0",
+    disablekb: "1",
+    fs: "0",
+    iv_load_policy: "3",
+    loop: "1",
+    modestbranding: "1",
+    playsinline: "1",
+    playlist: videoId,
+    rel: "0"
+  });
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+}
+
 function renderYouTubeEmbedMarkup(rawValue) {
   const embedUrl = getYouTubeEmbedUrl(rawValue);
   if (!embedUrl) {
@@ -9584,6 +9627,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
   const existingInnerImageUrl = String(existingSettings?.inner_image_url || "").trim().slice(0, 500);
   const existingOuterImageUrl = String(existingSettings?.outer_image_url || "").trim().slice(0, 500);
+  const existingMusicUrl = normalizeGuestbookMusicUrl(existingSettings?.music_url);
   const existingCensorLevel = normalizeGuestbookOption(
     existingSettings?.censor_level,
     GUESTBOOK_CENSOR_OPTIONS,
@@ -9606,6 +9650,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
   const hasInnerImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_url");
   const hasOuterImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_url");
+  const hasMusicUrlField = Object.prototype.hasOwnProperty.call(safeBody, "music_url");
   const hasClearInnerImageField = Object.prototype.hasOwnProperty.call(safeBody, "clear_inner_image");
   const hasClearOuterImageField = Object.prototype.hasOwnProperty.call(safeBody, "clear_outer_image");
   const hasInnerImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_opacity");
@@ -9627,6 +9672,9 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const outerImageUrl = hasOuterImageUrlField
     ? String(safeBody.outer_image_url || "").trim().slice(0, 500)
     : existingOuterImageUrl;
+  const musicUrl = hasMusicUrlField
+    ? String(safeBody.music_url || "").trim().slice(0, 500)
+    : existingMusicUrl;
   const shouldClearInnerImage = hasClearInnerImageField && String(safeBody.clear_inner_image || "").trim() === "1";
   const shouldClearOuterImage = hasClearOuterImageField && String(safeBody.clear_outer_image || "").trim() === "1";
   const sanitizedImageUrl = /^https?:\/\/.+/i.test(imageUrl) ? imageUrl : "";
@@ -9636,6 +9684,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const sanitizedOuterImageUrl = shouldClearOuterImage
     ? ""
     : (/^https?:\/\/.+/i.test(outerImageUrl) ? outerImageUrl : "");
+  const sanitizedMusicUrl = normalizeGuestbookMusicUrl(musicUrl);
   const censorLevel = hasCensorLevelField
     ? normalizeGuestbookOption(safeBody.censor_level, GUESTBOOK_CENSOR_OPTIONS, existingCensorLevel)
     : existingCensorLevel;
@@ -9695,6 +9744,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       page_style: pageStyle,
       theme_style: themeStyle,
       font_style: fontStyle,
+      music_url: sanitizedMusicUrl,
       tags: ""
     }
   };
@@ -9724,6 +9774,7 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     page_style: normalizeGuestbookOption(page?.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, "scroll"),
     theme_style: normalizeGuestbookOption(page?.theme_style, GUESTBOOK_THEME_STYLE_OPTIONS, "pergament-gold"),
     font_style: normalizeGuestbookOption(baseSettings?.font_style, GUESTBOOK_FONT_STYLE_OPTIONS, "default"),
+    music_url: normalizeGuestbookMusicUrl(baseSettings?.music_url),
     tags: ""
   };
 }
@@ -9851,7 +9902,7 @@ function renumberGuestbookPages(characterId) {
 function getOrCreateGuestbookSettings(characterId) {
   let settings = db
     .prepare(
-      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
        FROM guestbook_settings
        WHERE character_id = ?`
     )
@@ -9864,7 +9915,7 @@ function getOrCreateGuestbookSettings(characterId) {
     ).run(characterId);
     settings = db
       .prepare(
-        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, tags
+        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
          FROM guestbook_settings
          WHERE character_id = ?`
       )
@@ -13194,6 +13245,7 @@ app.post("/account/update", requireAuth, (req, res) => {
   const email = normalizeEmail(req.body.email || "");
   const autoAfkEnabled = String(req.body.auto_afk_enabled || "").trim() === "1";
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
+  const guestbookMusicEnabled = String(req.body.guestbook_music_enabled || "").trim() === "1";
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = normalizeBirthDate(accountUser.birth_date) || "";
@@ -13221,6 +13273,7 @@ app.post("/account/update", requireAuth, (req, res) => {
         public_birth_show_year: publicBirthdaySelection.showYear,
         auto_afk_enabled: autoAfkEnabled,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
+        guestbook_music_enabled: guestbookMusicEnabled,
         room_log_email_enabled: roomLogEmailEnabled,
         show_own_chat_time: showOwnChatTime
       }
@@ -13270,6 +13323,7 @@ app.post("/account/update", requireAuth, (req, res) => {
          public_birth_show_year = ?,
          afk_timeout_minutes = ?,
          auto_afk_enabled = ?,
+         guestbook_music_enabled = ?,
          room_log_email_enabled = ?,
          show_own_chat_time = ?,
          username_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE username_changed_at END
@@ -13283,6 +13337,7 @@ app.post("/account/update", requireAuth, (req, res) => {
     publicBirthdaySelection.showYear ? 1 : 0,
     afkTimeoutMinutes,
     autoAfkEnabled ? 1 : 0,
+    guestbookMusicEnabled ? 1 : 0,
     roomLogEmailEnabled ? 1 : 0,
     showOwnChatTime ? 1 : 0,
     usernameChanged ? 1 : 0,
@@ -18135,6 +18190,9 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     character.id,
     getAccountUserById(character.user_id)
   );
+  const guestbookMusicEmbedUrl = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled)
+    ? getYouTubeBackgroundMusicEmbedUrl(guestbookSettings?.music_url)
+    : "";
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     guestbookPages,
     activeGuestbookPage.id,
@@ -18171,6 +18229,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     },
     guestbookPageNavigation,
     guestbookSettings,
+    guestbookMusicEmbedUrl,
     guestbookPageTextColor: resolveGuestbookPageTextColor(
       guestbookSettings?.page_text_color,
       guestbookSettings?.theme_style
@@ -18582,6 +18641,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
          page_style = ?,
          theme_style = ?,
          font_style = ?,
+         music_url = ?,
          tags = ?,
          updated_at = CURRENT_TIMESTAMP
      WHERE character_id = ?`
@@ -18602,6 +18662,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     payload.settings.page_style,
     payload.settings.theme_style,
     payload.settings.font_style,
+    payload.settings.music_url,
     payload.settings.tags,
     id
   );

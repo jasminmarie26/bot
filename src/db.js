@@ -45,6 +45,7 @@ db.exec(`
     afk_timeout_minutes INTEGER NOT NULL DEFAULT 20,
     auto_afk_enabled INTEGER NOT NULL DEFAULT 1,
     show_own_chat_time INTEGER NOT NULL DEFAULT 0,
+    guestbook_music_enabled INTEGER NOT NULL DEFAULT 1,
     room_log_email_enabled INTEGER NOT NULL DEFAULT 1,
     duplicate_accounts_allowed INTEGER NOT NULL DEFAULT 0,
     moderation_status_level INTEGER NOT NULL DEFAULT 1,
@@ -158,6 +159,7 @@ db.exec(`
     page_style TEXT NOT NULL DEFAULT 'scroll',
     theme_style TEXT NOT NULL DEFAULT 'pergament-gold',
     font_style TEXT NOT NULL DEFAULT 'default',
+    music_url TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
@@ -878,6 +880,10 @@ if (!userColumns.includes("show_own_chat_time")) {
   db.exec("ALTER TABLE users ADD COLUMN show_own_chat_time INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!userColumns.includes("guestbook_music_enabled")) {
+  db.exec("ALTER TABLE users ADD COLUMN guestbook_music_enabled INTEGER NOT NULL DEFAULT 1");
+}
+
 if (!userColumns.includes("room_log_email_enabled")) {
   db.exec("ALTER TABLE users ADD COLUMN room_log_email_enabled INTEGER NOT NULL DEFAULT 1");
 }
@@ -1059,6 +1065,10 @@ if (!guestbookSettingsColumns.includes("outer_image_repeat")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_repeat INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!guestbookSettingsColumns.includes("music_url")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN music_url TEXT NOT NULL DEFAULT ''");
+}
+
 if (!chatRoomColumns.includes("server_id")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
@@ -1232,6 +1242,7 @@ db.prepare("UPDATE guestbook_settings SET inner_image_opacity = 100 WHERE inner_
 db.prepare("UPDATE guestbook_settings SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET music_url = '' WHERE music_url IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET image_url = '' WHERE image_url IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET inner_image_url = '' WHERE inner_image_url IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
@@ -1303,6 +1314,7 @@ db.prepare("UPDATE users SET google_id = '' WHERE google_id IS NULL").run();
 db.prepare("UPDATE users SET facebook_id = '' WHERE facebook_id IS NULL").run();
 db.prepare("UPDATE users SET last_login_ip = '' WHERE last_login_ip IS NULL").run();
 db.prepare("UPDATE users SET last_login_at = '' WHERE last_login_at IS NULL").run();
+db.prepare("UPDATE users SET guestbook_music_enabled = 1 WHERE guestbook_music_enabled IS NULL").run();
 db.prepare(
   "UPDATE users SET registration_ip = COALESCE(NULLIF(last_login_ip, ''), '') WHERE registration_ip IS NULL OR registration_ip = ''"
 ).run();

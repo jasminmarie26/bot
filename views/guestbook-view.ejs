@@ -316,6 +316,25 @@
   </section>
 </div>
 
+<% if (guestbookMusicEmbedUrl) { %>
+  <div
+    class="guestbook-background-music"
+    aria-hidden="true"
+    style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;opacity:0;"
+  >
+    <iframe
+      src="<%= guestbookMusicEmbedUrl %>"
+      title="G&auml;stebuch Hintergrundmusik"
+      width="1"
+      height="1"
+      frameborder="0"
+      tabindex="-1"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+  </div>
+<% } %>
+
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>

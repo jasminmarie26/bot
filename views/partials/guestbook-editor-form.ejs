@@ -365,6 +365,24 @@
     </div>
   </div>
 
+  <div class="gb-image-field">
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">Hintergrundmusik</span>
+      <span class="gb-editor-helptext">YouTube-Link f&uuml;r Musik beim &Ouml;ffnen des G&auml;stebuchs.</span>
+      <span class="gb-editor-helptext">Ob jemand sie h&ouml;ren will, stellt jeder bei sich selbst im Account ein.</span>
+    </div>
+    <div class="gb-image-body">
+      <input
+        name="music_url"
+        value="<%= settings.music_url || '' %>"
+        maxlength="500"
+        placeholder="https://www.youtube.com/watch?v=..."
+        spellcheck="false"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
   <div class="gb-editor-row gb-editor-notes-row">
     <div class="gb-editor-row-meta">
       <span class="gb-editor-subheading">BBCode</span>
