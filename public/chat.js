@@ -163,6 +163,36 @@
   const chatTabSiteLabel = "HR";
   const siteTitleLabel = chatTabSiteLabel;
   let unreadChatTabCount = 0;
+  const chatBottomSnapThresholdPx = 48;
+
+  function getChatBottomDistance() {
+    if (!chatBox) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return Math.max(0, chatBox.scrollHeight - chatBox.clientHeight - chatBox.scrollTop);
+  }
+
+  function isChatNearBottom() {
+    return getChatBottomDistance() <= chatBottomSnapThresholdPx;
+  }
+
+  function scrollChatToBottom() {
+    if (!chatBox) {
+      return;
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function keepChatPinnedToBottom(callback) {
+    const shouldKeepBottom = isChatNearBottom();
+    const result = typeof callback === "function" ? callback() : undefined;
+    if (shouldKeepBottom) {
+      window.requestAnimationFrame(() => {
+        scrollChatToBottom();
+      });
+    }
+    return result;
+  }
 
   function getCurrentRoomLabel() {
     const titleTextNode = chatRoomTitle?.querySelector(".chat-room-title-text");
@@ -650,10 +680,12 @@
       return;
     }
 
-    const maxHeight = 220;
-    input.style.height = "auto";
-    input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
-    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+    keepChatPinnedToBottom(() => {
+      const maxHeight = 220;
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
+      input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+    });
   }
 
   function shouldUseChatHistoryNavigation(event) {
@@ -1994,7 +2026,7 @@
       chatBox.removeChild(chatBox.firstChild);
     }
 
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollChatToBottom();
   }
 
   if (pendingChatReloadRecovery?.messages?.length) {
@@ -2346,7 +2378,7 @@
       chatBox.removeChild(chatBox.firstChild);
     }
 
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollChatToBottom();
   }
 
   function closeOnlineMenu() {
@@ -3103,10 +3135,21 @@
     applyOnlineMenuState();
   });
 
-  window.addEventListener("resize", () => {
+  const handleChatViewportResize = () => {
+    const shouldKeepBottom = isChatNearBottom();
     closeOnlineMenu();
     closeSoundPanel();
-  });
+    if (shouldKeepBottom) {
+      window.requestAnimationFrame(() => {
+        scrollChatToBottom();
+      });
+    }
+  };
+
+  window.addEventListener("resize", handleChatViewportResize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", handleChatViewportResize);
+  }
   window.addEventListener("scroll", () => {
     closeOnlineMenu();
     closeSoundPanel();
@@ -3151,5 +3194,5 @@
   renderOnlineCharacters(lastRenderedOnlineEntries);
   updateWhisperToggleState();
   updateWhisperToggleBadge();
-  chatBox.scrollTop = chatBox.scrollHeight;
+  scrollChatToBottom();
 })();
