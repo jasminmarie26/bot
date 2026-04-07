@@ -12230,6 +12230,8 @@ app.use((req, res, next) => {
 
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
+  res.locals.pageStyles = [];
+  res.locals.pageScripts = [];
   delete req.session.flash;
   next();
 });
@@ -26021,4 +26023,3 @@ server.listen(port, () => {
   }, FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
 });
-
