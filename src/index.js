@@ -10871,6 +10871,62 @@ function resolveRpBoardContextForUser(userId, serverId, festplayId, characterId)
   };
 }
 
+function resolveFallbackRpBoardContextForUser(
+  userId,
+  requestedServerId,
+  festplayId = 0,
+  preferredCharacterId = null
+) {
+  const normalizedRequestedServerId = isRpServerId(requestedServerId)
+    ? normalizeCharacterServerId(requestedServerId)
+    : "";
+  const candidateCharacterIds = [];
+  const seenCharacterIds = new Set();
+
+  const addCandidateCharacterId = (value) => {
+    const parsedCharacterId = Number(value);
+    if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+      return;
+    }
+    if (seenCharacterIds.has(parsedCharacterId)) {
+      return;
+    }
+    seenCharacterIds.add(parsedCharacterId);
+    candidateCharacterIds.push(parsedCharacterId);
+  };
+
+  addCandidateCharacterId(preferredCharacterId);
+
+  if (normalizedRequestedServerId) {
+    const preferredCharacter = getPreferredCharacterForUser(
+      userId,
+      normalizedRequestedServerId,
+      preferredCharacterId
+    );
+    addCandidateCharacterId(preferredCharacter?.id);
+  }
+
+  getOwnedCharactersForUser(userId, normalizedRequestedServerId || DEFAULT_SERVER_ID)
+    .filter((character) => isRpServerId(character?.server_id))
+    .forEach((character) => {
+      addCandidateCharacterId(character.id);
+    });
+
+  for (const candidateCharacterId of candidateCharacterIds) {
+    const nextContext = resolveRpBoardContextForUser(
+      userId,
+      normalizedRequestedServerId || null,
+      festplayId,
+      candidateCharacterId
+    );
+    if (nextContext) {
+      return nextContext;
+    }
+  }
+
+  return null;
+}
+
 function getLatestRpBoardEntryId(serverId = DEFAULT_SERVER_ID, festplayId = 0) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedFestplayId = normalizeRpBoardFestplayId(festplayId);
@@ -13349,7 +13405,7 @@ app.post("/account/delete", requireAuth, async (req, res) => {
   });
 });
 
-app.get("/rp-board", requireAuth, (req, res) => {
+app.get(["/rp-board", "/rp-aushang", "/rp-board-page"], requireAuth, (req, res) => {
   const requestedServerId = normalizeServer(req.query.server_id);
   const requestedCharacterId = Number(req.query.character_id);
   let context = resolveRpBoardContextForUser(
@@ -13361,19 +13417,34 @@ app.get("/rp-board", requireAuth, (req, res) => {
 
   if (!context) {
     const preferredCharacterId = getPreferredCharacterIdFromSession(req, requestedServerId);
-    const preferredCharacter = getPreferredCharacterForUser(
+    context = resolveFallbackRpBoardContextForUser(
       req.session.user.id,
       requestedServerId,
+      0,
       preferredCharacterId
     );
+  }
 
-    if (preferredCharacter) {
-      context = resolveRpBoardContextForUser(
-        req.session.user.id,
-        requestedServerId,
-        0,
-        preferredCharacter.id
-      );
+  if (!context) {
+    const anyPreferredCharacterId = getPreferredCharacterIdFromSession(req, DEFAULT_SERVER_ID);
+    context = resolveFallbackRpBoardContextForUser(
+      req.session.user.id,
+      "",
+      0,
+      anyPreferredCharacterId
+    );
+  }
+
+  if (context) {
+    const canonicalRpBoardHref =
+      `/rp-board?server_id=${encodeURIComponent(context.serverId)}&character_id=${Number(context.character.id)}`;
+    const normalizedRequestPath = String(req.path || "").trim().toLowerCase();
+    if (
+      normalizedRequestPath !== "/rp-board" ||
+      requestedServerId !== context.serverId ||
+      requestedCharacterId !== Number(context.character.id)
+    ) {
+      return res.redirect(canonicalRpBoardHref);
     }
   }
 
