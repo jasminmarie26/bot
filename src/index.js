@@ -1,4 +1,4 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
@@ -24,6 +24,7 @@ const {
   TextRun
 } = require("docx");
 const db = require("./db");
+const { buildRaumPraesenzNachricht } = require("./chat-nachrichten-de");
 const CHAT_ROOM_COLUMN_NAMES = new Set(
   db
     .prepare("PRAGMA table_info(chat_rooms)")
@@ -23287,15 +23288,7 @@ const ROOM_PRESENCE_SUFFIXES = Array.from(
 );
 
 function buildRoomPresenceMessage(kind, displayName) {
-  const safeName = String(displayName || "").trim() || "Jemand";
-  const suffixes = kind === "leave" ? ROOM_EXIT_SUFFIXES : ROOM_ENTRY_SUFFIXES;
-  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)] || suffixes[0] || "ist da.";
-  return {
-    text: `${safeName} ${suffix}`.trim(),
-    actorName: safeName,
-    suffix,
-    kind: kind === "leave" ? "leave" : "enter"
-  };
+  return buildRaumPraesenzNachricht(kind, displayName);
 }
 
 function buildSystemChatPayload(content, options = {}) {
@@ -25718,18 +25711,24 @@ io.on("connection", (socket) => {
       const switchDisplayName =
         switchDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user);
 
+      const switchLeaveMessage = buildRoomPresenceMessage("leave", switchDisplayName);
       emitSystemChatMessage(
         roomId,
         serverId,
-        `${switchDisplayName} hat in den Raum ${targetRoom.name} gewechselt.`,
+        switchLeaveMessage.text,
         {
           chat_text_color: "#000000",
-          system_kind: "room-switch",
-          presence_actor_name: switchDisplayName,
+          system_kind: "presence",
+          presence_kind: switchLeaveMessage.kind,
+          presence_actor_name: switchLeaveMessage.actorName,
           presence_actor_chat_text_color: switchDisplayProfile?.chat_text_color || "",
-          room_switch_target_name: targetRoom.name
+          presence_suffix: switchLeaveMessage.suffix
         },
         standardRoomId
+      );
+      emitDirectSystemMessageToSocket(
+        socket,
+        `Du gehst in den Raum ${targetRoom.name}.`
       );
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
@@ -26012,5 +26011,4 @@ server.listen(port, () => {
   }, FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
 });
-
 
