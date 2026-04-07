@@ -9,5 +9,13 @@
     <% if (currentUser) { %>
       <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
+    <% if (Array.isArray(pageScripts)) { %>
+      <% pageScripts.forEach((src) => { %>
+        <% const resolvedSrc = String(src || "").trim(); %>
+        <% if (resolvedSrc) { %>
+          <script src="<%= resolvedSrc %>"></script>
+        <% } %>
+      <% }) %>
+    <% } %>
   </body>
 </html>
