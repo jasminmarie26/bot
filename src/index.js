@@ -16016,7 +16016,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   }
   const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
 
-  return res.render("character-view", {
+  return res.render("rooms/character-room-list", {
     title: character.name,
     character,
     currentHeaderCharacter,
