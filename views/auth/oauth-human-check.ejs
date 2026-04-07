@@ -1,0 +1,59 @@
+<%- include("../partials/start") %>
+
+<section class="panel narrow">
+  <h1><%= providerLabel %> Sicherheitsprüfung</h1>
+  <p class="muted">
+    Bevor es mit <%= providerLabel %> weitergeht, bestätige bitte kurz, dass du kein Bot bist.
+  </p>
+
+  <% if (error) { %>
+    <div class="inline-error"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="/auth/<%= provider %>/start" class="form">
+    <% if (captchaMode === "turnstile") { %>
+      <div class="auth-captcha">
+        <div
+          class="cf-turnstile"
+          data-sitekey="<%= captchaSiteKey || '' %>"
+          data-action="oauth-start"
+          data-theme="auto"
+        ></div>
+      </div>
+    <% } else { %>
+      <label class="auth-captcha auth-captcha-fallback">
+        Sicherheitscode
+        <img
+          src="<%= fallbackCaptchaUrl %>"
+          alt="Sicherheitscode"
+          class="auth-captcha-image"
+          loading="eager"
+          decoding="async"
+        />
+        <input
+          type="text"
+          name="captcha_answer"
+          required
+          minlength="4"
+          maxlength="8"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="Code eingeben"
+        />
+      </label>
+    <% } %>
+
+    <button type="submit" class="btn">Mit <%= providerLabel %> fortfahren</button>
+  </form>
+
+  <p class="muted auth-secondary-links">
+    <a href="/login">Zurück zum Login</a>
+  </p>
+</section>
+
+<% if (captchaMode === "turnstile") { %>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<% } %>
+
+<%- include("../partials/end") %>

@@ -1,0 +1,90 @@
+<%- include("../partials/start") %>
+
+<section class="panel members-panel">
+  <div class="header-line members-header">
+    <div>
+      <h1>Mitgliederliste</h1>
+      <p class="muted">Suche nach Charakteren und öffne direkt das passende Gästebuch.</p>
+    </div>
+    <div class="members-search-wrap">
+      <label class="members-search-label" for="members-search">Suche</label>
+      <input
+        id="members-search"
+        class="members-search-input"
+        type="search"
+        placeholder="Name, Besitzer oder Server"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <p id="members-search-status" class="muted members-search-status">
+    <%= memberCount %> Charaktere gefunden.
+  </p>
+
+  <div id="members-list" class="members-list">
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>Administratoren & Moderatoren</h2>
+      </header>
+      <% if (!staffMembers || !staffMembers.length) { %>
+        <p class="muted">Noch keine Rollencharaktere gesetzt.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% staffMembers.forEach((member) => { %>
+            <%- include("../partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>RP SERVER</h2>
+      </header>
+      <% if (!rpMembers || !rpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im RP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% rpMembers.forEach((member) => { %>
+            <%- include("../partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>ERP SERVER</h2>
+      </header>
+      <% if (!erpMembers || !erpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im ERP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% erpMembers.forEach((member) => { %>
+            <%- include("../partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="members-section" data-members-section>
+      <header class="members-section-header">
+        <h2>LARP BEREICH</h2>
+      </header>
+      <% if (!larpMembers || !larpMembers.length) { %>
+        <p class="muted">Keine sichtbaren Charaktere im LARP-Bereich.</p>
+      <% } else { %>
+        <div class="members-section-list">
+          <% larpMembers.forEach((member) => { %>
+            <%- include("../partials/member-card", { member }) %>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</section>
+
+<script src="/members-list.js?v=<%= staticAssetVersion %>"></script>
+
+<%- include("../partials/end") %>

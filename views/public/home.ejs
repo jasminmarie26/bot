@@ -1,0 +1,286 @@
+<%- include("../partials/start") %>
+
+<div class="home-layout">
+  <aside class="home-stats" aria-label="Plattform Statistiken">
+    <div class="home-stats-shell">
+      <h2 class="home-stat-group-title home-stats-title">Server Gesamt&uuml;bersicht</h2>
+
+      <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+        <div class="home-stat-detail-list" aria-label="Server Gesamt&uuml;bersicht Details">
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Registrierte Accounts:</span>
+            <strong id="home-account-count" class="home-stat-detail-value"><%= stats.accountCount %></strong>
+          </div>
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Gerade eingeloggt:</span>
+            <strong id="home-logged-in-count" class="home-stat-detail-value"><%= stats.loggedInUserCount %></strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+        <div class="home-stat-detail-list" aria-label="Admins und Moderatoren">
+          <div class="home-stat-detail-row">
+            <span class="home-stat-detail-label">Admins &amp; Moderatoren:</span>
+            <strong id="home-staff-online-count" class="home-stat-detail-value"><%= stats.adminOnlineCount + stats.moderatorOnlineCount %></strong>
+          </div>
+        </div>
+        <% if (
+          (stats.adminOnlineNames && stats.adminOnlineNames.length) ||
+          (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length)
+        ) { %>
+          <small id="home-staff-online-names" class="home-stat-names">
+            <% const staffNames = []; %>
+            <% if (stats.adminOnlineNames && stats.adminOnlineNames.length) { %>
+              <% stats.adminOnlineNames.forEach((name) => { %>
+                <% staffNames.push({ role: "admin", label: name }); %>
+              <% }) %>
+            <% } %>
+            <% if (stats.moderatorOnlineNames && stats.moderatorOnlineNames.length) { %>
+              <% stats.moderatorOnlineNames.forEach((name) => { %>
+                <% staffNames.push({ role: "moderator", label: `${name} (M)` }); %>
+              <% }) %>
+            <% } %>
+            <% staffNames.forEach((entry, index) => { %>
+              <span class="<%= entry.role === 'admin' ? 'staff-name-admin' : 'staff-name-moderator' %>"><%= entry.label %></span><%= index < staffNames.length - 1 ? ", " : "" %>
+            <% }) %>
+          </small>
+        <% } else { %>
+          <small id="home-staff-online-empty" class="home-stat-empty">Niemand gerade online.</small>
+        <% } %>
+      </article>
+
+      <div class="home-stat-divider" aria-hidden="true"></div>
+
+      <section class="home-stat-group">
+        <h3 class="home-stat-group-title">RP SERVER</h3>
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+          <div class="home-stat-detail-list" aria-label="RP Server Details">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Charaktere:</span>
+              <strong id="home-rp-character-count" class="home-stat-detail-value"><%= stats.rpServerCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Im Free-Chat online:</span>
+              <strong id="home-free-rp-online-count" class="home-stat-detail-value"><%= stats.freeRpOnlineCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Im ERP-Chat online:</span>
+              <strong id="home-erp-online-count" class="home-stat-detail-value"><%= stats.erpOnlineCount %></strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="home-stat-group">
+        <h3 class="home-stat-group-title">LARP SERVER</h3>
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown">
+          <div class="home-stat-detail-list" aria-label="LARP Server Details">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Charaktere:</span>
+              <strong id="home-larp-character-count" class="home-stat-detail-value"><%= stats.larpServerCount %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">LARP online:</span>
+              <strong id="home-larp-online-count" class="home-stat-detail-value"><%= stats.larpOnlineCount %></strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <div class="home-stat-divider" aria-hidden="true"></div>
+    </div>
+  </aside>
+
+  <div class="home-main">
+    <div class="home-main-top">
+      <div class="home-main-primary">
+        <section
+          id="home-hero"
+          class="hero <%= currentUser && currentUser.is_admin ? "has-update-actions" : "" %>"
+        >
+          <input id="home-hero-title-source" type="hidden" value="<%= homeContent.hero_title %>" />
+          <textarea id="home-hero-body-source" hidden><%= homeContent.hero_body %></textarea>
+
+          <% if (currentUser && currentUser.is_admin) { %>
+            <div class="hero-update-actions">
+              <button
+                class="ghost-btn icon-btn update-pen-btn"
+                type="button"
+                data-site-content-open="hero"
+                aria-label="Startseitenbereich bearbeiten"
+                title="Startseitenbereich bearbeiten"
+              >
+                &#9998;
+              </button>
+            </div>
+          <% } %>
+
+          <div class="home-hero-stack">
+            <h1 id="home-hero-title" class="home-hero-title"><%= homeContent.hero_title %></h1>
+            <div id="home-hero-body" class="hero-copy guestbook-entry-body home-hero-copy"><%- homeContent.hero_body_html %></div>
+            <% if (!currentUser) { %>
+              <div class="hero-actions home-hero-actions">
+                <a class="btn" href="/register">Jetzt starten</a>
+                <a class="btn btn-secondary" href="/login">Einloggen</a>
+              </div>
+            <% } %>
+          </div>
+        </section>
+
+        <div class="home-main-bottom">
+          <div class="home-main-bottom-links">
+            <div class="home-legal-links" aria-label="Rechtliche Informationen">
+              <a href="/impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+              <span aria-hidden="true">|</span>
+              <a href="/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutz</a>
+              <span aria-hidden="true">|</span>
+              <a href="/community-regeln" target="_blank" rel="noopener noreferrer">Community-Regeln</a>
+              <span aria-hidden="true">|</span>
+              <a href="/partner" target="_blank" rel="noopener noreferrer">Unsere Partner</a>
+            </div>
+
+            <div class="home-copyright">&copy; Seit 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="home-main-discord" aria-label="Community">
+        <h2 class="home-stats-title home-stat-group-title home-support-title">Community</h2>
+
+        <article class="home-stat home-stat-highlight home-stat-server-breakdown home-discord-card">
+          <a
+            class="home-discord-summary"
+            href="<%= stats.discordInviteUrl || 'https://discord.gg/CWWxbZenwS' %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-home-discord-link
+          >
+            <img
+              id="home-discord-icon"
+              class="home-discord-icon"
+              src="<%= stats.discordIconUrl || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' %>"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              <%= stats.discordIconUrl ? '' : 'hidden' %>
+            />
+            <div
+              id="home-discord-icon-fallback"
+              class="home-discord-icon home-discord-icon-fallback"
+              aria-hidden="true"
+              <%= stats.discordIconUrl ? 'hidden' : '' %>
+            >D</div>
+            <div class="home-discord-copy">
+              <p id="home-discord-name" class="home-discord-name">Discord</p>
+              <p class="home-discord-subtitle">Community, Austausch und kurze Wege</p>
+            </div>
+          </a>
+
+          <div class="home-stat-detail-list" aria-label="Discord &Uuml;bersicht">
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Mitglieder:</span>
+              <strong id="home-discord-member-count" class="home-stat-detail-value"><%= typeof stats.discordMemberCount === "number" ? stats.discordMemberCount : "-" %></strong>
+            </div>
+            <div class="home-stat-detail-row">
+              <span class="home-stat-detail-label">Gerade online:</span>
+              <strong id="home-discord-online-count" class="home-stat-detail-value"><%= typeof stats.discordOnlineCount === "number" ? stats.discordOnlineCount : "-" %></strong>
+            </div>
+          </div>
+
+          <a
+            class="home-discord-join"
+            href="<%= stats.discordInviteUrl || 'https://discord.gg/CWWxbZenwS' %>"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-home-discord-link
+          >
+            Eintreten
+          </a>
+        </article>
+
+        <article class="home-donation-card" aria-label="Freiwillige Spende">
+          <div class="home-donation-head">
+            <span class="home-donation-icon" aria-hidden="true">P</span>
+            <div class="home-donation-copy">
+              <p class="home-donation-title">Freiwillige Spende</p>
+              <p class="home-donation-text">Freiwillige Spende für die Website – alle Inhalte bleiben frei.</p>
+            </div>
+          </div>
+
+          <a
+            class="home-donation-link"
+            href="https://www.paypal.com/paypalme/JasminBeyer1987"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Spenden
+          </a>
+        </article>
+
+        <a
+          class="home-contact-link-text"
+          href="/kontakt"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Kontakt &amp; Ticket
+        </a>
+
+      </section>
+    </div>
+  </div>
+</div>
+
+<% if (currentUser && currentUser.is_admin) { %>
+  <div id="site-content-modal" class="update-modal" hidden>
+    <section class="panel update-modal-card">
+      <div class="updates-header">
+        <h2 id="site-content-modal-title">Bereich bearbeiten</h2>
+        <button id="site-content-close-btn" class="ghost-btn" type="button">Schlie&szlig;en</button>
+      </div>
+
+      <form id="site-content-form" method="POST" action="/site-content/hero" class="form update-form">
+        <label>
+          &Uuml;berschrift
+          <input id="site-content-title-input" name="title" maxlength="120" required />
+        </label>
+
+        <div id="site-content-body-wrap">
+          <div class="update-toolbar" role="toolbar" aria-label="BBCode Werkzeuge f&uuml;r den Startseitentext">
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="b">B</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="i">I</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="u">U</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="h2">H2</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="left">Links</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="center">Mitte</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="right">Rechts</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-tag="quote">Zitat</button>
+            <button class="ghost-btn update-tool-btn" type="button" data-bbcode-target="site-content-body" data-bbcode-link>Link</button>
+          </div>
+
+          <label>
+            Inhalt (BBCode)
+            <textarea id="site-content-body-input" name="body" rows="6" maxlength="2000"></textarea>
+          </label>
+
+          <details class="bbcode-help">
+            <summary>BBCode Hilfe</summary>
+            <div class="bbcode-help-content">
+              <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
+              <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
+              <p><code>[right]Rechts[/right]</code> <code>[quote]Zitat[/quote]</code></p>
+              <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
+            </div>
+          </details>
+        </div>
+
+        <div class="update-form-actions">
+          <button id="site-content-submit-btn" type="submit" class="btn">Speichern</button>
+        </div>
+      </form>
+    </section>
+  </div>
+<% } %>
+
+<%- include("../partials/end") %>

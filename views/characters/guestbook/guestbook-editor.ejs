@@ -1,0 +1,74 @@
+<%- include("../../partials/start", { hideTopbar: true, enableRealtime: false }) %>
+
+<section class="gb-editor-shell">
+  <header class="gb-editor-topbar">
+    <a class="rp-logo" href="/">Heldenhafte Reisen</a>
+
+    <div class="gb-editor-actions">
+      <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
+      <button
+        class="btn btn-secondary"
+        type="submit"
+        form="guestbook-editor-form"
+        formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+        formmethod="POST"
+        formtarget="guestbook-preview-<%= character.id %>"
+      >
+        Vorschau
+      </button>
+
+      <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+        <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+        <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
+      </form>
+
+      <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
+        <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+        <button
+          class="btn btn-danger"
+          type="submit"
+          onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
+        >
+          Aktuelle Seite l&ouml;schen
+        </button>
+      </form>
+    </div>
+
+    <form method="POST" action="/settings/theme" class="inline-form theme-form">
+      <label for="gb-theme-select">Design</label>
+      <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+      <select
+        id="gb-theme-select"
+        name="theme"
+        class="theme-select"
+      >
+        <% availableThemes.forEach((theme) => { %>
+          <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <%= theme.label %>
+          </option>
+        <% }) %>
+      </select>
+    </form>
+
+    <form method="POST" action="/logout" class="inline-form">
+      <button type="submit" class="ghost-btn">Logout</button>
+    </form>
+  </header>
+
+  <% if ((pages || []).length > 1) { %>
+    <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
+      <% pages.forEach((page) => { %>
+        <a
+          class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+          href="/characters/<%= character.id %>/guestbook/edit?page_id=<%= page.id %>"
+        >
+          <%= page.page_number %>
+        </a>
+      <% }) %>
+    </nav>
+  <% } %>
+
+  <%- include("../../partials/guestbook-editor-form", { guestbookEditorFormClass: "panel form gb-editor-form" }) %>
+</section>
+
+<%- include("../../partials/end") %>

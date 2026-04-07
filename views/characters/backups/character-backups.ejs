@@ -1,0 +1,105 @@
+<%- include("../../partials/start") %>
+
+<% const isLarpView = Boolean(typeof isLarpBackupView !== "undefined" && isLarpBackupView); %>
+<% const resolvedBackupReturnTarget = typeof backupReturnTarget !== "undefined" && backupReturnTarget
+  ? backupReturnTarget
+  : "/character-backups"; %>
+
+<section class="header-line dashboard-page-header">
+  <div>
+    <h1>Gelöschte Charaktere</h1>
+    <p class="muted">Hier kannst du gelöschte Charaktere mit Gästebuch, Farbe und Gästebucheinträgen wiederherstellen.</p>
+  </div>
+</section>
+
+<% if (!isLarpView) { %>
+  <nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
+    <a
+      class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
+      href="/character-backups"
+    >Charaktere</a>
+    <a
+      class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
+      href="/character-backups/logs"
+    >Logs</a>
+  </nav>
+<% } %>
+
+<section class="dashboard-block">
+  <details class="dashboard-festplay-overview dashboard-character-overview" open>
+    <summary class="dashboard-festplay-overview-header">
+      <div class="dashboard-festplay-overview-title">
+        <h3>Gelöschte Charaktere</h3>
+        <span class="dashboard-festplay-count">(<%= Array.isArray(characterBackups) ? characterBackups.length : 0 %>)</span>
+      </div>
+      <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="dashboard-server-panel dashboard-character-overview-body">
+      <% if (!characterBackups || !characterBackups.length) { %>
+        <p class="muted">Noch keine gelöschten Charaktere vorhanden.</p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% characterBackups.forEach((backup) => { %>
+            <article class="character-mini-card">
+              <div class="character-mini-item">
+                <span class="character-mini-name"><%= backup.character_name %></span>
+              </div>
+              <div class="character-mini-actions">
+                <form
+                  method="POST"
+                  action="/character-backups/<%= backup.id %>/restore"
+                  class="character-mini-move-form"
+                  onsubmit="return confirm('Charakter wirklich wiederherstellen?')"
+                >
+                  <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="character-mini-move-btn"
+                    aria-label="Charakter wiederherstellen"
+                    title="Charakter wiederherstellen"
+                  >
+                    &olarr;
+                  </button>
+                </form>
+                <form
+                  method="POST"
+                  action="/character-backups/<%= backup.id %>/delete"
+                  class="character-mini-delete-form"
+                  onsubmit="return confirm('Backup endgültig löschen? Danach kann der Charakter nie wieder wiederhergestellt werden.')"
+                >
+                  <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="character-mini-delete-btn"
+                    aria-label="Backup endgültig löschen"
+                    title="Backup endgültig löschen"
+                  >
+                    X
+                  </button>
+                </form>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </details>
+
+  <% if (isLarpView) { %>
+    <details class="dashboard-festplay-overview dashboard-character-overview" open>
+      <summary class="dashboard-festplay-overview-header">
+        <div class="dashboard-festplay-overview-title">
+          <h3>Gelöschter Account</h3>
+        </div>
+        <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+      </summary>
+
+      <div class="dashboard-server-panel dashboard-character-overview-body">
+        <p class="muted">Hier kannst du deinen gelöschten Account widerherstellen.</p>
+      </div>
+    </details>
+  <% } %>
+</section>
+
+<%- include("../../partials/end") %>

@@ -1,0 +1,277 @@
+<%- include("../partials/start") %>
+
+<% const dashboardLarpReturnTarget = "/dashboard/larp"; %>
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const canCreateLarpProfile = larpCharacters.length < 1; %>
+<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
+<% const larpAccessTitle = "Ein LARP-Profil pro Account"; %>
+<% const larpAccessDescription = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere." %>
+<% const larpAccessWarning = hasLarpStaffAccess
+  ? "Der Bereich ist für Staff regulär freigeschaltet."
+  : "Bis zur Freigabe nutzt du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht." %>
+
+<section class="header-line dashboard-page-header">
+  <div>
+    <span class="dashboard-kicker">LARP</span>
+    <h1><%= larpSection.title %></h1>
+    <p class="muted"><%= larpSection.description %></p>
+  </div>
+  <div class="dashboard-server-actions">
+    <% if (canCreateLarpProfile) { %>
+      <a
+        class="btn dashboard-add-character-btn"
+        href="/characters/new?server=larp&return_to=<%= encodeURIComponent(dashboardLarpReturnTarget) %>"
+        aria-label="LARP-Profil anlegen"
+        title="LARP-Profil anlegen"
+      >
+        +
+      </a>
+    <% } %>
+    <form
+      method="POST"
+      action="/dashboard/larp/guestbook-code-email"
+      class="dashboard-export-all-form"
+    >
+      <input type="hidden" name="return_to" value="/dashboard/larp">
+      <button
+        type="submit"
+        class="btn dashboard-add-character-btn dashboard-export-all-btn"
+        aria-label="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+        title="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+      >
+        &#10003;
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="dashboard-block">
+  <section class="panel dashboard-server-panel dashboard-subpanel">
+    <div class="header-line">
+      <div>
+        <span class="dashboard-status-pill"><%= larpStatusLabel %></span>
+        <h3><%= larpAccessTitle %></h3>
+        <p class="muted"><%= larpAccessDescription %></p>
+        <p class="muted"><%= larpAccessWarning %></p>
+      </div>
+    </div>
+  </section>
+
+  <details class="dashboard-festplay-overview dashboard-character-overview" open>
+    <summary class="dashboard-festplay-overview-header">
+      <div class="dashboard-festplay-overview-title">
+        <h3>Mein LARP-Profil</h3>
+      </div>
+      <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="dashboard-server-panel dashboard-character-overview-body">
+      <% if (!larpCharacters.length) { %>
+        <p class="muted">Noch kein LARP-Profil vorhanden.</p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% larpCharacters.forEach((char) => { %>
+            <article class="character-mini-card">
+              <a class="character-mini-item" href="/characters/<%= char.id %>/edit" title="<%= char.name %> bearbeiten">
+                <span class="character-mini-name"><%= char.name %></span>
+              </a>
+              <div class="character-mini-actions">
+                <% if (char.can_dashboard_move) { %>
+                  <form
+                    method="POST"
+                    action="/characters/<%= char.id %>/move"
+                    class="character-mini-move-form"
+                    data-larp-dashboard-move
+                    data-dashboard-character-name="<%= char.name %>"
+                    data-dashboard-current-server="<%= char.server_id %>"
+                  >
+                    <input type="hidden" name="return_to" value="/dashboard/larp">
+                    <input type="hidden" name="target_server_id" value="">
+                    <input type="hidden" name="target_dashboard_mode" value="main">
+                    <button
+                      type="submit"
+                      class="character-mini-move-btn"
+                      aria-label="Profil verschieben"
+                      title="Zielbereich auswaehlen"
+                    >
+                      &harr;
+                    </button>
+                  </form>
+                <% } %>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/guestbook-code-email"
+                  class="character-mini-export-form"
+                >
+                  <input type="hidden" name="return_to" value="/dashboard/larp">
+                  <button
+                    type="submit"
+                    class="character-mini-export-btn"
+                    aria-label="Gaestebuch-Code per E-Mail senden"
+                    title="Gaestebuch-Code per E-Mail senden"
+                  >
+                    <span class="character-mini-export-icon" aria-hidden="true"></span>
+                  </button>
+                </form>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/delete"
+                  class="character-mini-delete-form"
+                  onsubmit="return confirm('Profil wirklich loeschen?')"
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardLarpReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="character-mini-delete-btn"
+                    aria-label="Profil loeschen"
+                    title="Profil loeschen"
+                  >
+                    X
+                  </button>
+                </form>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </details>
+
+  <details class="dashboard-festplay-overview" open>
+    <summary class="dashboard-festplay-overview-header">
+      <div class="dashboard-festplay-overview-title">
+        <h3>Meine Gilden</h3>
+        <span class="dashboard-festplay-count">(<%= larpGuilds.length %>)</span>
+      </div>
+      <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="dashboard-festplay-stack">
+      <% if (!larpGuilds.length) { %>
+        <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
+          <div class="header-line">
+            <div>
+              <h3>Noch keine Gilden</h3>
+              <p class="muted dashboard-section-copy">
+                Hier landen sp&auml;ter deine LARP-Gilden, Lagergruppen und festen Zusammenschl&uuml;sse.
+              </p>
+            </div>
+          </div>
+        </section>
+      <% } %>
+    </div>
+  </details>
+</section>
+
+<div id="dashboard-larp-move-modal" class="dashboard-confirm-modal" hidden>
+  <div class="dashboard-confirm-backdrop" data-larp-dashboard-close></div>
+  <section
+    class="dashboard-confirm-card panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="dashboard-larp-move-title"
+  >
+    <h2 id="dashboard-larp-move-title">Profil verschieben</h2>
+    <p class="muted" id="dashboard-larp-move-copy">
+      Wohin soll dieses Profil verschoben werden?
+    </p>
+    <p class="muted dashboard-confirm-note" id="dashboard-larp-move-note">
+      Du kannst das Profil in einen RP-Bereich verschieben.
+    </p>
+    <div class="dashboard-confirm-actions">
+      <button type="button" class="btn btn-secondary" data-larp-dashboard-close>
+        Abbrechen
+      </button>
+      <button type="button" class="btn btn-secondary" id="dashboard-larp-move-free">
+        Free RP
+      </button>
+      <button type="button" class="btn" id="dashboard-larp-move-erp">
+        ERP
+      </button>
+    </div>
+  </section>
+</div>
+
+<script>
+  (() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const modal = document.getElementById("dashboard-larp-move-modal");
+      const copy = document.getElementById("dashboard-larp-move-copy");
+      const note = document.getElementById("dashboard-larp-move-note");
+      const freeButton = document.getElementById("dashboard-larp-move-free");
+      const erpButton = document.getElementById("dashboard-larp-move-erp");
+      const closeElements = modal ? modal.querySelectorAll("[data-larp-dashboard-close]") : [];
+      const moveForms = document.querySelectorAll("[data-larp-dashboard-move]");
+      const erpMoveAllowed = <%= erpMoveAllowed ? "true" : "false" %>;
+      if (!modal || !copy || !note || !freeButton || !erpButton || !moveForms.length) return;
+
+      let pendingForm = null;
+
+      const closeModal = () => {
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+        pendingForm = null;
+      };
+
+      const openModalForForm = (form) => {
+        pendingForm = form;
+        const characterName = String(form.dataset.dashboardCharacterName || "").trim() || "Dieser Charakter";
+        const targetInput = form.querySelector('input[name="target_server_id"]');
+        if (targetInput) {
+          targetInput.value = "";
+        }
+
+        copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
+        note.textContent = "Du kannst das Profil nach Free RP oder ERP verschieben.";
+
+        freeButton.disabled = false;
+        erpButton.disabled = !erpMoveAllowed;
+        if (!erpMoveAllowed) {
+          note.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist für Accounts unter 18 nicht verfügbar.";
+        }
+
+        modal.hidden = false;
+        document.body.classList.add("modal-open");
+      };
+
+      moveForms.forEach((form) => {
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          openModalForForm(form);
+        });
+      });
+
+      closeElements.forEach((element) => {
+        element.addEventListener("click", closeModal);
+      });
+
+      const submitMoveTo = (targetServerId) => {
+        if (!pendingForm) return;
+        const formToSubmit = pendingForm;
+        const targetInput = formToSubmit.querySelector('input[name="target_server_id"]');
+        if (!targetInput) return;
+        targetInput.value = targetServerId;
+        closeModal();
+        formToSubmit.submit();
+      };
+
+      freeButton.addEventListener("click", () => {
+        if (freeButton.disabled) return;
+        submitMoveTo("free-rp");
+      });
+
+      erpButton.addEventListener("click", () => {
+        if (erpButton.disabled) return;
+        submitMoveTo("erp");
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !modal.hidden) {
+          closeModal();
+        }
+      });
+    });
+  })();
+</script>
+
+<%- include("../partials/end") %>
