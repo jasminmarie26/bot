@@ -402,6 +402,7 @@
     const label = String(rawName || node.textContent || "").trim();
     node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
+    node.classList.toggle("has-cerberus-flame", /^cerberus(?:\b|\s|\[|\()/i.test(label));
   }
 
   function readSessionStorage(key) {
@@ -896,7 +897,13 @@
     const nextRoleStyle = String(roleStyle || "").trim().toLowerCase();
     const nextChatTextColor = String(chatTextColor || "").trim();
 
-    node.classList.remove("role-name-admin", "role-name-moderator", "has-noctra-wings", "has-crescentia-moons");
+    node.classList.remove(
+      "role-name-admin",
+      "role-name-moderator",
+      "has-noctra-wings",
+      "has-crescentia-moons",
+      "has-cerberus-flame"
+    );
     if (nextRoleStyle === "admin" || nextRoleStyle === "moderator") {
       node.classList.add(`role-name-${nextRoleStyle}`);
     }

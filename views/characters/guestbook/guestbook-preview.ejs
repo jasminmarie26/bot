@@ -67,12 +67,13 @@
   const effectiveGuestbookSurroundColor = guestbookSurroundColor || guestbookBaseBackgroundColor || "";
   const normalizedGuestbookName = String(character?.name || "").trim().toLowerCase();
   const isGuestbookNameCrescentia = /^(crescentia|cresentia)$/.test(normalizedGuestbookName);
+  const isGuestbookNameCerberus = normalizedGuestbookName === "cerberus";
   const guestbookNameSpecialClass = normalizedGuestbookName === "noctra"
     ? "has-noctra-wings"
-    : (isGuestbookNameCrescentia ? "has-crescentia-moons" : "");
+    : (isGuestbookNameCerberus ? "has-cerberus-flame" : (isGuestbookNameCrescentia ? "has-crescentia-moons" : ""));
   const guestbookNameWrapperClass = normalizedGuestbookName === "noctra"
     ? "noctra-nameplate"
-    : (isGuestbookNameCrescentia ? "crescentia-nameplate" : "");
+    : (isGuestbookNameCerberus ? "cerberus-nameplate" : (isGuestbookNameCrescentia ? "crescentia-nameplate" : ""));
   const guestbookPreviewShellStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
     guestbookSettings?.outer_image_url

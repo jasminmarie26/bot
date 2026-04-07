@@ -1441,6 +1441,111 @@ a:hover {
   transform: translateY(-45%);
 }
 
+:is(
+  .brand.is-character,
+  .rp-header-identity,
+  .role-name-admin,
+  .role-name-moderator,
+  .staff-name-admin,
+  .staff-name-moderator,
+  .guestbook-preview-name,
+  .guestbook-author-link strong,
+  .guestbook-item-authorline > strong,
+  .chat-online-name,
+  .chat-message strong,
+  .rp-room-occupant,
+  .topbar-user-menu-meta > strong,
+  .rp-user-menu-meta > strong
+).has-cerberus-flame,
+.cerberus-nameplate {
+  position: relative;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+:is(
+  .rp-header-identity,
+  .role-name-admin,
+  .role-name-moderator,
+  .staff-name-admin,
+  .staff-name-moderator,
+  .guestbook-author-link strong,
+  .guestbook-item-authorline > strong,
+  .chat-online-name,
+  .chat-message strong,
+  .rp-room-occupant,
+  .topbar-user-menu-meta > strong,
+  .rp-user-menu-meta > strong
+).has-cerberus-flame,
+.cerberus-nameplate {
+  padding-inline: 0;
+  margin-inline-start: 0.95rem;
+}
+
+:is(
+  .rp-header-identity,
+  .role-name-admin,
+  .role-name-moderator,
+  .staff-name-admin,
+  .staff-name-moderator,
+  .guestbook-author-link strong,
+  .guestbook-item-authorline > strong,
+  .chat-online-name,
+  .chat-message strong,
+  .rp-room-occupant,
+  .topbar-user-menu-meta > strong,
+  .rp-user-menu-meta > strong
+).has-cerberus-flame {
+  display: inline-block;
+}
+
+.has-cerberus-flame,
+.cerberus-nameplate {
+  font-family: "Cinzel Decorative", "Cinzel", "Palatino Linotype", serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #c72922 !important;
+  text-shadow:
+    -0.035em 0 0 rgba(7, 4, 4, 0.88),
+    0.035em 0 0 rgba(83, 7, 7, 0.82),
+    0 0 0.12em rgba(199, 41, 34, 0.2);
+}
+
+:is(
+  .rp-header-identity,
+  .role-name-admin,
+  .role-name-moderator,
+  .staff-name-admin,
+  .staff-name-moderator,
+  .guestbook-author-link strong,
+  .guestbook-item-authorline > strong,
+  .chat-online-name,
+  .chat-message strong,
+  .rp-room-occupant,
+  .topbar-user-menu-meta > strong,
+  .rp-user-menu-meta > strong
+).has-cerberus-flame::before,
+.cerberus-nameplate::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -0.96rem;
+  width: 0.74rem;
+  height: 0.82rem;
+  background: center / contain no-repeat url("/icons/cerberus-flame.svg");
+  filter:
+    drop-shadow(0 0.05rem 0.08rem rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 0.07rem rgba(185, 32, 25, 0.18));
+  opacity: 0.96;
+  pointer-events: none;
+  transform: translateY(-54%);
+}
+
 .has-crescentia-moons,
 .crescentia-nameplate {
   font-family: "Cardo", "Palatino Linotype", "Book Antiqua", serif;
@@ -4068,6 +4173,34 @@ body.theme-future.page-home-screen .home-copyright {
   color: color-mix(in srgb, var(--accent) 82%, white 18%) !important;
 }
 
+:is(
+  .brand.is-character,
+  .rp-header-identity,
+  .role-name-admin,
+  .staff-name-admin,
+  .role-name-moderator,
+  .staff-name-moderator,
+  .guestbook-preview-name,
+  .guestbook-author-link strong,
+  .guestbook-item-authorline > strong,
+  .chat-online-name,
+  .chat-message strong,
+  .rp-room-occupant,
+  .topbar-user-menu-meta > strong,
+  .rp-user-menu-meta > strong
+).has-cerberus-flame {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #c72922 !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 .brand.is-character.has-crescentia-moons,
 .rp-header-identity.has-crescentia-moons,
 .role-name-admin.has-crescentia-moons,
@@ -4094,6 +4227,37 @@ body.theme-future.page-home-screen .home-copyright {
 }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .has-cerberus-flame,
+  .cerberus-nameplate,
+  .brand.is-character.has-cerberus-flame,
+  .rp-header-identity.has-cerberus-flame,
+  .role-name-admin.has-cerberus-flame,
+  .staff-name-admin.has-cerberus-flame,
+  .role-name-moderator.has-cerberus-flame,
+  .staff-name-moderator.has-cerberus-flame,
+  .guestbook-preview-name.has-cerberus-flame,
+  .guestbook-author-link strong.has-cerberus-flame,
+  .guestbook-item-authorline > strong.has-cerberus-flame,
+  .chat-online-name.has-cerberus-flame,
+  .chat-message strong.has-cerberus-flame,
+  .rp-room-occupant.has-cerberus-flame,
+  .topbar-user-menu-meta > strong.has-cerberus-flame,
+  .rp-user-menu-meta > strong.has-cerberus-flame {
+    background: linear-gradient(90deg, #090505 0%, #360707 20%, #b01717 52%, #220707 82%, #050303 100%) !important;
+    background-image: linear-gradient(90deg, #090505 0%, #360707 20%, #b01717 52%, #220707 82%, #050303 100%) !important;
+    background-size: 100% 100% !important;
+    background-repeat: no-repeat !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+    text-shadow:
+      0 0 0.09em rgba(176, 23, 23, 0.16),
+      0 0 0.16em rgba(34, 7, 7, 0.14);
+  }
+
   .has-crescentia-moons,
   .crescentia-nameplate,
   .brand.is-character.has-crescentia-moons,
@@ -12077,6 +12241,29 @@ body.page-guestbook-view .guestbook-entry-heading {
     0 0 0.18em rgba(242, 74, 29, 0.14);
 }
 
+.page-chat .chat-online-name.has-cerberus-flame,
+.page-chat .chat-message strong.has-cerberus-flame,
+.page-chat .rp-header-identity.has-cerberus-flame,
+.page-chat .rp-user-menu-meta > strong.has-cerberus-flame,
+.page-chat .topbar-user-menu-meta > strong.has-cerberus-flame,
+.page-chat .rp-room-occupant.has-cerberus-flame,
+.page-chat .role-name-admin.has-cerberus-flame,
+.page-chat .role-name-moderator.has-cerberus-flame {
+  background: linear-gradient(90deg, #060303 0%, #2a0606 20%, #aa1717 54%, #210505 82%, #050202 100%) !important;
+  background-image: linear-gradient(90deg, #060303 0%, #2a0606 20%, #aa1717 54%, #210505 82%, #050202 100%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  text-shadow:
+    0 0 0.12em rgba(170, 23, 23, 0.18),
+    0 0 0.18em rgba(33, 5, 5, 0.16);
+}
+
 .page-chat .chat-online-name.has-crescentia-moons,
 .page-chat .chat-message strong.has-crescentia-moons,
 .page-chat .rp-header-identity.has-crescentia-moons,
@@ -12118,6 +12305,22 @@ body.is-standalone-app.page-chat .role-name-moderator.has-noctra-wings {
   color: #ffb35c !important;
 }
 
+body.is-standalone-app.page-chat .chat-online-name.has-cerberus-flame,
+body.is-standalone-app.page-chat .chat-message strong.has-cerberus-flame,
+body.is-standalone-app.page-chat .rp-header-identity.has-cerberus-flame,
+body.is-standalone-app.page-chat .rp-user-menu-meta > strong.has-cerberus-flame,
+body.is-standalone-app.page-chat .topbar-user-menu-meta > strong.has-cerberus-flame,
+body.is-standalone-app.page-chat .rp-room-occupant.has-cerberus-flame,
+body.is-standalone-app.page-chat .role-name-admin.has-cerberus-flame,
+body.is-standalone-app.page-chat .role-name-moderator.has-cerberus-flame {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #c72922 !important;
+}
+
 body.is-standalone-app.page-chat .chat-online-name.has-crescentia-moons,
 body.is-standalone-app.page-chat .chat-message strong.has-crescentia-moons,
 body.is-standalone-app.page-chat .rp-header-identity.has-crescentia-moons,
@@ -12157,6 +12360,22 @@ body.chat-gradient-fallback.page-chat .role-name-moderator.has-noctra-wings {
   background-clip: initial !important;
   -webkit-text-fill-color: currentColor !important;
   color: #ffb35c !important;
+}
+
+body.chat-gradient-fallback.page-chat .chat-online-name.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .chat-message strong.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .rp-header-identity.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .rp-user-menu-meta > strong.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .topbar-user-menu-meta > strong.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .rp-room-occupant.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .role-name-admin.has-cerberus-flame,
+body.chat-gradient-fallback.page-chat .role-name-moderator.has-cerberus-flame {
+  background: none !important;
+  background-image: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #c72922 !important;
 }
 
 body.chat-gradient-fallback.page-chat .chat-online-name.has-crescentia-moons,

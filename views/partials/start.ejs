@@ -111,12 +111,14 @@
       (() => {
         const NOCTRA_PATTERN = /^noctra(?:\b|\s|\[|\()/i;
         const CRESCENTIA_PATTERN = /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i;
+        const CERBERUS_PATTERN = /^cerberus(?:\b|\s|\[|\()/i;
         const TARGET_SELECTOR = [
           ".role-name-admin",
           ".role-name-moderator",
           ".staff-name-admin",
           ".staff-name-moderator",
           ".rp-header-identity",
+          ".rp-user-menu-meta > strong",
           ".topbar-user-menu-meta > strong",
           ".guestbook-author-link strong",
           ".guestbook-item-authorline > strong",
@@ -134,12 +136,13 @@
 
           targets.forEach((node) => {
             if (node.classList?.contains("rp-room-occupant")) {
-              node.classList.remove("has-noctra-wings", "has-crescentia-moons");
+              node.classList.remove("has-noctra-wings", "has-crescentia-moons", "has-cerberus-flame");
               return;
             }
             const label = String(node.textContent || "").trim();
             node.classList.toggle("has-noctra-wings", NOCTRA_PATTERN.test(label));
             node.classList.toggle("has-crescentia-moons", CRESCENTIA_PATTERN.test(label));
+            node.classList.toggle("has-cerberus-flame", CERBERUS_PATTERN.test(label));
           });
         };
 
@@ -269,12 +272,13 @@
         : "brand"; %>
     <% const normalizedTopbarBrandText = String(topbarBrandText || "").trim().toLowerCase(); %>
     <% const isTopbarBrandCrescentia = /^(crescentia|cresentia)$/.test(normalizedTopbarBrandText); %>
+    <% const isTopbarBrandCerberus = normalizedTopbarBrandText === "cerberus"; %>
     <% const topbarBrandSpecialClass = normalizedTopbarBrandText === "noctra"
       ? "has-noctra-wings"
-      : (isTopbarBrandCrescentia ? "has-crescentia-moons" : ""); %>
+      : (isTopbarBrandCerberus ? "has-cerberus-flame" : (isTopbarBrandCrescentia ? "has-crescentia-moons" : "")); %>
     <% const topbarBrandWrapperClass = normalizedTopbarBrandText === "noctra"
       ? "noctra-nameplate"
-      : (isTopbarBrandCrescentia ? "crescentia-nameplate" : ""); %>
+      : (isTopbarBrandCerberus ? "cerberus-nameplate" : (isTopbarBrandCrescentia ? "crescentia-nameplate" : "")); %>
     <% const topbarBrandClassName = topbarBrandClass; %>
     <% const topbarRoleplayAreaHref =
       menuCharacter && menuCharacter.server_id === "larp"

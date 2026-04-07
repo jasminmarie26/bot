@@ -10,6 +10,7 @@
   const label = String(value || "").trim();
   if (/^noctra(?:\b|\s|\[|\()/i.test(label)) return "has-noctra-wings";
   if (/^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label)) return "has-crescentia-moons";
+  if (/^cerberus(?:\b|\s|\[|\()/i.test(label)) return "has-cerberus-flame";
   return "";
 }; %>
 <% const formatBirthdayCakeLabel = (value, showBirthdayCake = false) => {

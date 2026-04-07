@@ -85,6 +85,7 @@
     const label = String(rawName || node.textContent || "").trim();
     node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
+    node.classList.toggle("has-cerberus-flame", /^cerberus(?:\b|\s|\[|\()/i.test(label));
   }
 
   function getBirthdayCakeLabel(label, showBirthdayCake) {
