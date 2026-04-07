@@ -11860,11 +11860,9 @@ body.page-guestbook-view .guestbook-entry-heading {
   --character-chat-background-image-opacity: 1;
   border-radius: 14px;
   height: 420px;
-  overflow-y: auto;
-  padding: 0.8rem;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
   position: relative;
   isolation: isolate;
   background-color: var(--character-chat-background-color);
@@ -11885,17 +11883,22 @@ body.page-guestbook-view .guestbook-entry-heading {
   -webkit-backdrop-filter: none;
 }
 
-.chat-box::before,
-.chat-box::after {
-  content: none;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.chat-box > * {
+.chat-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
   position: relative;
   z-index: 1;
+}
+
+.chat-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
 }
 
 .page-chat #chat-box {
@@ -11907,6 +11910,7 @@ body.page-guestbook-view .guestbook-entry-heading {
   flex: 1 1 0%;
   height: auto;
   min-height: 0;
+  padding: 0;
 }
 
 .page-chat .chat-form {
@@ -11988,8 +11992,8 @@ body.page-guestbook-view .guestbook-entry-heading {
   box-shadow: none !important;
 }
 
-.page-chat .chat-box {
-  padding-top: 0.42rem;
+.page-chat .chat-scroll {
+  padding: 0.42rem 0.68rem 0.68rem;
 }
 
 .page-chat #chat-input,
