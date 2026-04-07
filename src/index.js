@@ -26,6 +26,34 @@ const {
 const db = require("./db");
 const { buildRaumPraesenzNachricht } = require("./chat-nachrichten-de");
 const {
+  BBCODE_1001FREEFONTS_BASE_URL,
+  BBCODE_1001FREEFONTS_CACHE_ROOT,
+  BBCODE_1001FREEFONTS_EXTENSION_PRIORITY,
+  BBCODE_1001FREEFONTS_FORMAT_BY_EXTENSION,
+  BBCODE_1001FREEFONTS_MAX_ZIP_SIZE_BYTES,
+  BBCODE_1001FREEFONTS_MISS_TTL_MS,
+  BBCODE_FONT_SAFE_FAMILY_PATTERN,
+  GUESTBOOK_BBCODE_FONT_STYLES,
+  GUESTBOOK_CENSOR_OPTIONS,
+  GUESTBOOK_FONT_OPTIONS,
+  GUESTBOOK_FONT_STYLE_OPTIONS,
+  GUESTBOOK_PAGE_SIZE,
+  GUESTBOOK_PAGE_STYLE_OPTIONS,
+  GUESTBOOK_THEME_STYLE_OPTIONS,
+  normalizeGuestbookColor,
+  normalizeGuestbookOpacity,
+  normalizeGuestbookOption,
+  normalizeOptionalGuestbookPageColor,
+  resolveGuestbookPageTextColor
+} = require("./character-design");
+const {
+  CHARACTER_RENAME_COOLDOWN_MONTHS,
+  USERNAME_CHANGE_COOLDOWN_DAYS,
+  addUtcCalendarMonths: buildRenamedDateWithUtcCalendarMonths,
+  getCharacterRenameAvailability: buildCharacterRenameAvailability,
+  getUsernameChangeAvailability: buildUsernameChangeAvailability
+} = require("./character-renaming");
+const {
   registerRaeumeErstellenBearbeitenRoutes
 } = require("./raeume-erstellen-bearbeiten");
 const CHAT_ROOM_COLUMN_NAMES = new Set(
@@ -60,101 +88,6 @@ const SERVER_OPTIONS = [
 const LARP_SERVER_ID = "larp";
 const LARP_PROFILE_LIMIT_ERROR = "Im LARP-Bereich ist nur ein Profil pro Account möglich.";
 const CHARACTER_SERVER_IDS = [LARP_SERVER_ID, ...SERVER_OPTIONS.map((server) => server.id)];
-const GUESTBOOK_PAGE_SIZE = 12;
-const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
-const LEGACY_GUESTBOOK_PAGE_TEXT_COLOR = "#2B2B2B";
-const GUESTBOOK_THEME_TEXT_COLORS = {
-  "pergament-gold": "#EED7AE",
-  rosenlack: "#F3CAD3",
-  mondsilber: "#DCE5F2",
-  elfenhain: "#D2EDBC",
-  kupferpatina: "#D5E6DF",
-  bernsteinfeuer: "#F1D09C",
-  sternsamt: "#D9E1FF",
-  winterglas: "#E4F2F6",
-  tintenmeer: "#D0EEF4",
-  "obsidian-ornament": "#E7D1A3",
-  "transparent-pur": "#F4F7FB"
-};
-const GUESTBOOK_CENSOR_OPTIONS = new Set(["none", "ab18", "sexual"]);
-const GUESTBOOK_PAGE_STYLE_OPTIONS = new Set(["scroll", "book"]);
-const GUESTBOOK_THEME_STYLE_OPTIONS = new Set([
-  "pergament-gold",
-  "rosenlack",
-  "mondsilber",
-  "elfenhain",
-  "kupferpatina",
-  "bernsteinfeuer",
-  "sternsamt",
-  "winterglas",
-  "tintenmeer",
-  "obsidian-ornament",
-  "transparent-pur"
-]);
-const GUESTBOOK_FONT_OPTIONS = [
-  { id: "default", label: "Default" },
-  { id: "serif", label: "Serif" },
-  { id: "sans", label: "Sans" },
-  { id: "mono", label: "Mono" },
-  { id: "audiowide", label: "Audiowide" },
-  { id: "berkshire-swash", label: "Berkshire Swash" },
-  { id: "cardo", label: "Cardo" },
-  { id: "della-respira", label: "Della Respira" },
-  { id: "flamenco", label: "Flamenco" },
-  { id: "indie-flower", label: "Indie Flower" },
-  { id: "josefin-slab", label: "Josefin Slab" },
-  { id: "kelly-slab", label: "Kelly Slab" },
-  { id: "medieval-sharp", label: "MedievalSharp" },
-  { id: "old-standard-tt", label: "Old Standard TT" },
-  { id: "russo-one", label: "Russo One" },
-  { id: "sunshiney", label: "Sunshiney" },
-  { id: "altdeutsch", label: "Altdeutsch (Unifraktur)" },
-  { id: "altdeutsch-royal", label: "Altdeutsch Royal" },
-  { id: "jedi", label: "Jedi Schrift" },
-  { id: "jedi-tech", label: "Jedi Tech" },
-  { id: "elfisch", label: "Elfenschrift" },
-  { id: "elfisch-rune", label: "Elfenschrift Runen" },
-  { id: "magie", label: "Magie Script" },
-  { id: "vintage-fantasy", label: "Vintage Fantasy" }
-];
-const GUESTBOOK_BBCODE_FONT_STYLES = Object.freeze({
-  default: "font-family:var(--font-ui);",
-  serif: "font-family:\"Cardo\", \"Times New Roman\", serif;",
-  sans: "font-family:var(--font-ui);",
-  mono: "font-family:\"Consolas\", \"Courier New\", monospace;",
-  audiowide: "font-family:\"Audiowide\", \"Trebuchet MS\", sans-serif;",
-  "berkshire-swash": "font-family:\"Berkshire Swash\", \"Palatino Linotype\", serif;",
-  cardo: "font-family:\"Cardo\", \"Times New Roman\", serif;",
-  "della-respira": "font-family:\"Della Respira\", \"Palatino Linotype\", serif;",
-  flamenco: "font-family:\"Flamenco\", var(--font-ui);",
-  "indie-flower": "font-family:\"Indie Flower\", \"Comic Sans MS\", cursive;",
-  "josefin-slab": "font-family:\"Josefin Slab\", \"Georgia\", serif;",
-  "kelly-slab": "font-family:\"Kelly Slab\", var(--font-ui);",
-  "medieval-sharp": "font-family:\"MedievalSharp\", \"Cinzel\", serif;",
-  "old-standard-tt": "font-family:\"Old Standard TT\", \"Times New Roman\", serif;",
-  "russo-one": "font-family:\"Russo One\", \"Arial Black\", sans-serif;",
-  sunshiney: "font-family:\"Sunshiney\", \"Comic Sans MS\", cursive;",
-  altdeutsch: "font-family:\"UnifrakturCook\", \"Old English Text MT\", serif;",
-  "altdeutsch-royal": "font-family:\"Pirata One\", \"Cinzel\", serif;",
-  jedi: "font-family:\"Poller One\", \"Russo One\", sans-serif;letter-spacing:0.02em;",
-  "jedi-tech": "font-family:\"Orbitron\", \"Audiowide\", sans-serif;letter-spacing:0.02em;",
-  elfisch: "font-family:\"Cinzel Decorative\", \"Cinzel\", serif;",
-  "elfisch-rune": "font-family:\"Metamorphous\", \"Cinzel\", serif;",
-  magie: "font-family:\"Great Vibes\", \"Berkshire Swash\", cursive;",
-  "vintage-fantasy": "font-family:\"IM Fell English SC\", \"Old Standard TT\", serif;"
-});
-const BBCODE_FONT_SAFE_FAMILY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 '&-]*$/i;
-const BBCODE_1001FREEFONTS_BASE_URL = "https://www.1001freefonts.com";
-const BBCODE_1001FREEFONTS_CACHE_ROOT = path.join(__dirname, "..", "data", "bbcode-font-cache");
-const BBCODE_1001FREEFONTS_MISS_TTL_MS = 6 * 60 * 60 * 1000;
-const BBCODE_1001FREEFONTS_MAX_ZIP_SIZE_BYTES = 15 * 1024 * 1024;
-const BBCODE_1001FREEFONTS_FORMAT_BY_EXTENSION = Object.freeze({
-  ".woff2": "woff2",
-  ".woff": "woff",
-  ".otf": "opentype",
-  ".ttf": "truetype"
-});
-const BBCODE_1001FREEFONTS_EXTENSION_PRIORITY = Object.freeze([".woff2", ".woff", ".otf", ".ttf"]);
 const bbcode1001FreeFontsPendingLoads = new Map();
 const bbcode1001FreeFontsMisses = new Map();
 const BIRTHDAY_GREETING_OPENERS = [
@@ -239,9 +172,6 @@ const HOLIDAY_NOTIFICATION_CONFIGS = Object.freeze([
     }
   }
 ]);
-const GUESTBOOK_FONT_STYLE_OPTIONS = new Set(
-  GUESTBOOK_FONT_OPTIONS.map((option) => option.id)
-);
 const DEFAULT_THEME = "glass-aurora";
 const ALLOWED_THEME_IDS = new Set(THEME_OPTIONS.map((theme) => theme.id));
 const THEME_COOKIE_NAME = "theme_preference";
@@ -395,9 +325,6 @@ const HUMAN_VERIFICATION_MAX_AGE_MS = 1000 * 60 * 10;
 const HUMAN_VERIFICATION_CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 let verificationMailer = null;
 const USERNAME_PATTERN = /^[\p{L}0-9_.+\- ]{3,24}$/u;
-const USERNAME_CHANGE_COOLDOWN_DAYS = 182;
-const USERNAME_CHANGE_COOLDOWN_MS = USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
-const CHARACTER_RENAME_COOLDOWN_MONTHS = 3;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGISTRATION_FORM_MIN_AGE_MS = 3500;
 const REGISTRATION_FORM_MAX_AGE_MS = 1000 * 60 * 60 * 6;
@@ -2354,96 +2281,21 @@ function setPostLoginFlash(req, userId, fallbackText = "Erfolgreich eingeloggt."
 }
 
 function getUsernameChangeAvailability(user) {
-  const isAdmin = Boolean(user?.is_admin === 1 || user?.is_admin === true);
-  if (isAdmin) {
-    return {
-      is_admin_bypass: true,
-      can_change: true,
-      available_at: null,
-      available_at_text: ""
-    };
-  }
-
-  const lastChangedAt = parseSqliteDateTime(user?.username_changed_at);
-  if (!lastChangedAt) {
-    return {
-      is_admin_bypass: false,
-      can_change: true,
-      available_at: null,
-      available_at_text: ""
-    };
-  }
-
-  const availableAt = new Date(lastChangedAt.getTime() + USERNAME_CHANGE_COOLDOWN_MS);
-  return {
-    is_admin_bypass: false,
-    can_change: Date.now() >= availableAt.getTime(),
-    available_at: availableAt,
-    available_at_text: formatGermanDateTime(availableAt)
-  };
+  return buildUsernameChangeAvailability(user, {
+    parseSqliteDateTime,
+    formatGermanDateTime
+  });
 }
 
 function addUtcCalendarMonths(value, months) {
-  const parsed = value instanceof Date ? new Date(value.getTime()) : parseSqliteDateTime(value);
-  if (!parsed || !Number.isInteger(months)) return null;
-
-  const year = parsed.getUTCFullYear();
-  const month = parsed.getUTCMonth();
-  const day = parsed.getUTCDate();
-  const hours = parsed.getUTCHours();
-  const minutes = parsed.getUTCMinutes();
-  const seconds = parsed.getUTCSeconds();
-  const milliseconds = parsed.getUTCMilliseconds();
-  const shiftedMonthIndex = month + months;
-  const shiftedYear = year + Math.floor(shiftedMonthIndex / 12);
-  const normalizedMonth = ((shiftedMonthIndex % 12) + 12) % 12;
-  const lastDayOfTargetMonth = new Date(Date.UTC(shiftedYear, normalizedMonth + 1, 0)).getUTCDate();
-
-  return new Date(
-    Date.UTC(
-      shiftedYear,
-      normalizedMonth,
-      Math.min(day, lastDayOfTargetMonth),
-      hours,
-      minutes,
-      seconds,
-      milliseconds
-    )
-  );
+  return buildRenamedDateWithUtcCalendarMonths(value, months, parseSqliteDateTime);
 }
 
 function getCharacterRenameAvailability(character, actorUser = null) {
-  if (actorUser?.is_admin) {
-    return {
-      can_change: true,
-      available_at: null,
-      available_at_text: ""
-    };
-  }
-
-  const lastChangedAt = parseSqliteDateTime(character?.name_changed_at);
-  if (!lastChangedAt) {
-    return {
-      can_change: true,
-      available_at: null,
-      available_at_text: ""
-    };
-  }
-
-  const availableAt = addUtcCalendarMonths(lastChangedAt, CHARACTER_RENAME_COOLDOWN_MONTHS);
-  if (!availableAt) {
-    return {
-      can_change: true,
-      available_at: null,
-      available_at_text: ""
-    };
-  }
-
-  return {
-    can_change: Date.now() >= availableAt.getTime(),
-    available_at: availableAt,
-    available_at_text: formatGermanDate(availableAt)
-  };
+  return buildCharacterRenameAvailability(character, actorUser, {
+    parseSqliteDateTime,
+    formatGermanDate
+  });
 }
 
 function normalizeCharacterEditGuestbookPageId(value) {
@@ -9566,14 +9418,6 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   return html;
 }
 
-function normalizeGuestbookColor(rawColor) {
-  const prepared = String(rawColor || "").trim();
-  if (/^#[0-9a-f]{6}$/i.test(prepared)) {
-    return prepared.toUpperCase();
-  }
-  return "#AEE7B7";
-}
-
 function normalizeOptionalGuestbookColor(rawColor) {
   const prepared = String(rawColor || "").trim();
   if (!prepared) {
@@ -9589,40 +9433,6 @@ function isOptionalHexColorInputValid(rawColor) {
 
 function normalizeChatBackgroundColor(rawColor) {
   return normalizeOptionalGuestbookColor(rawColor) || "#EFEFEF";
-}
-
-function normalizeOptionalGuestbookPageColor(rawColor) {
-  const prepared = String(rawColor || "").trim();
-  if (!prepared) {
-    return "";
-  }
-  if (/^#[0-9a-f]{6}$/i.test(prepared) || /^#[0-9a-f]{8}$/i.test(prepared)) {
-    return prepared.toUpperCase();
-  }
-  return "";
-}
-
-function normalizeGuestbookOption(input, allowedValues, fallback) {
-  const value = String(input || "").trim().toLowerCase();
-  return allowedValues.has(value) ? value : fallback;
-}
-
-function normalizeGuestbookOpacity(input, fallback = 100) {
-  const value = Number.parseInt(String(input ?? "").trim(), 10);
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  return Math.min(100, Math.max(0, value));
-}
-
-function resolveGuestbookPageTextColor(rawColor, themeStyle) {
-  const normalizedColor = normalizeGuestbookColor(rawColor);
-  if (normalizedColor && normalizedColor !== LEGACY_GUESTBOOK_PAGE_TEXT_COLOR) {
-    return normalizedColor;
-  }
-
-  const normalizedThemeStyle = String(themeStyle || "").trim().toLowerCase();
-  return GUESTBOOK_THEME_TEXT_COLORS[normalizedThemeStyle] || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR;
 }
 
 function getGuestbookEditorPayload(body, existingSettings = null) {

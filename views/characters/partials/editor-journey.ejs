@@ -1,0 +1,68 @@
+<nav
+  class="panel character-editor-journey"
+  data-character-editor-journey
+  data-character-editor-storage-key="character-editor-step-<%= character.id %>"
+  aria-label="Bearbeitungsschritte"
+>
+  <button
+    type="button"
+    class="character-editor-journey-arrow"
+    data-character-editor-nav="prev"
+    aria-label="Zum vorherigen Schritt"
+  >
+    &#8249;
+  </button>
+
+  <div class="character-editor-journey-track" role="tablist" aria-label="Bearbeitungsschritte">
+    <button
+      type="button"
+      class="character-editor-journey-step"
+      data-character-editor-step-trigger="character"
+      aria-controls="character-editor-panel-character"
+      aria-selected="false"
+    >
+      <span class="character-editor-journey-step-number">1</span>
+      <span class="character-editor-journey-step-copy">
+        <strong><%= isLarpProfile ? "Profil bearbeiten" : "Charakter bearbeiten" %></strong>
+        <small>Basis, Name und Chat</small>
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="character-editor-journey-step"
+      data-character-editor-step-trigger="guestbook-design"
+      aria-controls="guestbook-design"
+      aria-selected="false"
+    >
+      <span class="character-editor-journey-step-number">2</span>
+      <span class="character-editor-journey-step-copy">
+        <strong>G&auml;stebuch Design</strong>
+        <small>Theme, Farben und Stil</small>
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="character-editor-journey-step"
+      data-character-editor-step-trigger="guestbook-content"
+      aria-controls="guestbook-design"
+      aria-selected="false"
+    >
+      <span class="character-editor-journey-step-number">3</span>
+      <span class="character-editor-journey-step-copy">
+        <strong>Inhalt &amp; Bilder</strong>
+        <small>Texte, Hinweise und Bilder</small>
+      </span>
+    </button>
+  </div>
+
+  <button
+    type="button"
+    class="character-editor-journey-arrow"
+    data-character-editor-nav="next"
+    aria-label="Zum n&auml;chsten Schritt"
+  >
+    &#8250;
+  </button>
+</nav>

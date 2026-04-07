@@ -1,0 +1,285 @@
+<section id="character-editor-panel-character" class="panel character-form-panel" data-character-editor-panel="character">
+  <div class="header-line">
+    <div>
+      <h1><%= characterFormHeading %></h1>
+    </div>
+  </div>
+
+  <% if (isLarpProfile) { %>
+    <section class="panel dashboard-server-panel dashboard-subpanel">
+      <div class="header-line">
+        <div>
+          <span class="dashboard-status-pill"><%= hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang" %></span>
+          <h3>LARP-Profil</h3>
+          <p class="muted">
+            Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere.
+          </p>
+          <% if (isLarpTestCharacter) { %>
+            <p class="muted">
+              Wichtig: Wenn du den Bereich wieder verl&auml;sst, wird dein Testprofil gel&ouml;scht.
+            </p>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (error) { %>
+    <div class="inline-error"><%= error %></div>
+  <% } %>
+
+  <form
+    method="POST"
+    action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
+    class="form"
+  >
+    <input type="hidden" name="server_id" value="<%= character.server_id || "free-rp" %>" />
+    <input type="hidden" name="festplay_id" value="<%= character.festplay_id || "" %>" />
+    <% if (returnTo) { %>
+      <input type="hidden" name="return_to" value="<%= returnTo %>" />
+    <% } %>
+    <% if (activeGuestbookEditor?.activePage) { %>
+      <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookEditor.activePage.id %>" />
+    <% } %>
+
+    <% const isNameLocked = mode === "edit" && renameAvailability && !renameAvailability.can_change; %>
+
+    <label>
+      Name
+      <% if (isNameLocked) { %>
+        <span class="gb-editor-helptext">
+          Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= renameAvailability.available_at_text %>.
+        </span>
+      <% } %>
+      <input
+        name="name"
+        required
+        maxlength="80"
+        value="<%= character.name %>"
+        <%= isNameLocked ? "readonly" : "" %>
+      />
+    </label>
+
+    <label>
+      Chat-Farbe
+      <span class="gb-editor-helptext">
+        Diese Farbe wird f&uuml;r Namen und Schrift deines Charakters im Chat und in Bereichen verwendet.
+      </span>
+
+      <div class="character-color-row" data-character-color-root>
+        <div class="character-color-input-wrap">
+          <input
+            id="character-chat-color-text"
+            name="chat_text_color"
+            value="<%= character.chat_text_color || "#AEE7B7" %>"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button
+            id="character-chat-color-trigger"
+            class="character-color-trigger"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="character-chat-color-panel"
+            aria-label="Chat-Farbe ausw&auml;hlen"
+          >
+            <span id="character-chat-color-swatch" class="character-color-trigger-swatch" aria-hidden="true"></span>
+          </button>
+          <span id="character-chat-color-preview" class="gb-color-preview" aria-hidden="true">Aa</span>
+        </div>
+
+        <div
+          id="character-chat-color-panel"
+          class="character-color-panel"
+          role="dialog"
+          aria-label="Chat-Farbe ausw&auml;hlen"
+          hidden
+        >
+          <div class="character-color-panel-grid">
+            <div
+              id="character-chat-color-surface"
+              class="character-color-surface"
+              tabindex="0"
+              role="slider"
+              aria-label="S&auml;ttigung und Helligkeit"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span
+                id="character-chat-color-surface-handle"
+                class="character-color-surface-handle"
+                aria-hidden="true"
+              ></span>
+            </div>
+
+            <div
+              id="character-chat-color-hue"
+              class="character-color-hue"
+              tabindex="0"
+              role="slider"
+              aria-label="Farbton"
+              aria-valuemin="0"
+              aria-valuemax="360"
+            >
+              <span
+                id="character-chat-color-hue-handle"
+                class="character-color-hue-handle"
+                aria-hidden="true"
+              ></span>
+            </div>
+          </div>
+
+          <div class="character-color-panel-footer">
+            <span class="character-color-panel-label">Ausgew&auml;hlte Farbe</span>
+            <div class="character-color-panel-current">
+              <span id="character-chat-color-panel-swatch" class="character-color-panel-swatch" aria-hidden="true"></span>
+              <strong id="character-chat-color-panel-value">#AEE7B7</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </label>
+
+    <label class="character-chat-background-field">
+      Chat-Hintergrund
+      <span class="gb-editor-helptext">
+        W&auml;hle eine Hintergrundfarbe und optional ein Bild. Die Vorschau darunter aktualisiert sich direkt live.
+      </span>
+      <div class="character-color-row" data-character-background-color-root>
+        <span class="character-chat-background-option-label">Hintergrund-Farbe</span>
+        <div class="character-color-input-wrap">
+          <input
+            id="character-chat-background-color-text"
+            name="chat_background_color"
+            value="<%= character.chat_background_color || "#EFEFEF" %>"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button
+            id="character-chat-background-color-trigger"
+            class="character-color-trigger"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="character-chat-background-color-panel"
+            aria-label="Chat-Hintergrundfarbe ausw&auml;hlen"
+          >
+            <span
+              id="character-chat-background-color-swatch"
+              class="character-color-trigger-swatch"
+              aria-hidden="true"
+            ></span>
+          </button>
+          <span
+            id="character-chat-background-color-preview"
+            class="character-chat-background-color-preview"
+            aria-hidden="true"
+          >Bg</span>
+        </div>
+
+        <div
+          id="character-chat-background-color-panel"
+          class="character-color-panel"
+          role="dialog"
+          aria-label="Chat-Hintergrundfarbe ausw&auml;hlen"
+          hidden
+        >
+          <div class="character-color-panel-grid">
+            <div
+              id="character-chat-background-color-surface"
+              class="character-color-surface"
+              tabindex="0"
+              role="slider"
+              aria-label="S&auml;ttigung und Helligkeit"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span
+                id="character-chat-background-color-surface-handle"
+                class="character-color-surface-handle"
+                aria-hidden="true"
+              ></span>
+            </div>
+
+            <div
+              id="character-chat-background-color-hue"
+              class="character-color-hue"
+              tabindex="0"
+              role="slider"
+              aria-label="Farbton"
+              aria-valuemin="0"
+              aria-valuemax="360"
+            >
+              <span
+                id="character-chat-background-color-hue-handle"
+                class="character-color-hue-handle"
+                aria-hidden="true"
+              ></span>
+            </div>
+          </div>
+
+          <div class="character-color-panel-footer">
+            <span class="character-color-panel-label">Ausgew&auml;hlte Farbe</span>
+            <div class="character-color-panel-current">
+              <span
+                id="character-chat-background-color-panel-swatch"
+                class="character-color-panel-swatch"
+                aria-hidden="true"
+              ></span>
+              <strong id="character-chat-background-color-panel-value">#EFEFEF</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <span class="character-chat-background-option-label">Hintergrund-Bild</span>
+      <input
+        id="character-chat-background-url"
+        name="chat_background_url"
+        type="url"
+        inputmode="url"
+        maxlength="500"
+        placeholder="https://..."
+        value="<%= character.chat_background_url || "" %>"
+      />
+      <div class="character-chat-background-opacity-row">
+        <span class="character-chat-background-option-label">Bild-Deckkraft</span>
+        <div class="character-chat-background-opacity-controls">
+          <input
+            id="character-chat-background-opacity"
+            name="chat_background_image_opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
+          />
+          <strong id="character-chat-background-opacity-value" class="character-chat-background-opacity-value">
+            <%= Number(character.chat_background_image_opacity ?? 100) %>%
+          </strong>
+        </div>
+      </div>
+      <div id="character-chat-background-preview" class="character-chat-background-preview" aria-live="polite">
+        <div class="character-chat-background-preview-copy">
+          <span class="character-chat-background-preview-label">Live-Vorschau</span>
+          <strong id="character-chat-background-preview-name" class="character-chat-background-preview-name">
+            <%= character.name || "Dein Charakter" %>:
+          </strong>
+          <p class="character-chat-background-preview-message">
+            Hier siehst du direkt, wie dein Chat mit diesem Hintergrund wirkt.
+          </p>
+          <small id="character-chat-background-preview-state" class="character-chat-background-preview-state">
+            Kein Hintergrund gesetzt.
+          </small>
+        </div>
+      </div>
+    </label>
+
+    <div class="character-form-actions">
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</section>
