@@ -16058,7 +16058,7 @@ app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
   const selectedRoomId = Number(req.query.selected_room);
   const selectedRoom =
     ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
-  return res.render("room-create", {
+  return res.render("rooms/room-list", {
     title: `Raum erstellen: ${character.name}`,
     character,
     ownedRooms,
