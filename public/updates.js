@@ -1212,6 +1212,10 @@
     liveUpdatesLink.addEventListener("click", (event) => {
       markLiveUpdatesAsSeen(getLatestLiveUpdatesRevision());
 
+      if (liveUpdatesLink.dataset.liveUpdatesOpenMode === "same-tab") {
+        return;
+      }
+
       const shouldHandleInNamedTab =
         event.button === 0 &&
         !event.metaKey &&

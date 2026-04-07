@@ -195,6 +195,14 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-hr.png?v=<%= staticAssetVersion %>" />
     <link rel="shortcut icon" href="/favicon-hr.ico?v=<%= staticAssetVersion %>" />
     <link rel="stylesheet" href="/styles.css?v=<%= staticAssetVersion %>" />
+    <% if (Array.isArray(pageStyles)) { %>
+      <% pageStyles.forEach((href) => { %>
+        <% const resolvedHref = String(href || "").trim(); %>
+        <% if (resolvedHref) { %>
+          <link rel="stylesheet" href="<%= resolvedHref %>" />
+        <% } %>
+      <% }) %>
+    <% } %>
   </head>
     <% const bodyClassNames = [`theme-${activeTheme}`]; %>
     <% if (typeof pageClass !== "undefined" && pageClass) { bodyClassNames.push(pageClass); } %>
@@ -297,6 +305,7 @@
       topbarGuestbookControlHidden
     ); %>
     <% const showTopbarLiveUpdatesLink = Boolean(!topbarGuestbookModeActive); %>
+    <% const topbarUseSameTabNavigation = Boolean(isDashboardPath); %>
     <% const showTopbarBackupLink = Boolean(
       currentUser &&
       !topbarGuestbookModeActive &&
@@ -388,7 +397,7 @@
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
                 <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
-                <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
+                <a href="/members"<%= topbarUseSameTabNavigation ? "" : ' target="_blank" rel="noopener noreferrer"' %>>Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a
                     href="/characters/<%= menuCharacter.id %>/festplays/public"
@@ -425,15 +434,16 @@
               <a href="/register">Registrieren</a>
             <% } %>
             <% if (showTopbarBackupLink) { %>
-              <a href="<%= topbarBackupHref %>" target="_blank" rel="noopener noreferrer">Backup</a>
+              <a href="<%= topbarBackupHref %>"<%= topbarUseSameTabNavigation ? "" : ' target="_blank" rel="noopener noreferrer"' %>>Backup</a>
             <% } %>
             <% if (showTopbarLiveUpdatesLink) { %>
               <a
                 class="live-updates-nav-link"
                 href="/live-updates"
-                target="site-live-updates"
                 data-live-updates-link-root
-                data-live-updates-target="site-live-updates"
+                data-live-updates-open-mode="<%= topbarUseSameTabNavigation ? "same-tab" : "named-tab" %>"
+                <% if (!topbarUseSameTabNavigation) { %>target="site-live-updates"<% } %>
+                <% if (!topbarUseSameTabNavigation) { %>data-live-updates-target="site-live-updates"<% } %>
                 data-live-updates-initial-revision="<%= topbarLiveUpdatesInitialRevision %>"
                 data-live-updates-initial-revisions="<%= topbarLiveUpdatesInitialRevisions.join('|') %>"
               >

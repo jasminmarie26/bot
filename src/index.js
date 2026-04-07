@@ -15117,18 +15117,26 @@ function getDashboardLarpSection() {
   };
 }
 
+function getServerListPageAssets(scriptPaths = []) {
+  return {
+    pageStyles: ["/serverliste.css?v=" + STATIC_ASSET_VERSION],
+    pageScripts: scriptPaths.map((scriptPath) => scriptPath + "?v=" + STATIC_ASSET_VERSION)
+  };
+}
+
 app.get("/dashboard", requireAuth, (req, res) => {
   const serverSections = getDashboardServerSections(req.session.user.id);
   const larpSection = getDashboardLarpSection();
   const larpCharacters = getLarpCharactersForUser(req.session.user.id);
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
-  return res.render("dashboard", {
+  return res.render("serverliste/index", {
     title: "Serverliste",
     serverSections,
     larpSection,
     larpCharacters,
-    openLarpSection
+    openLarpSection,
+    ...getServerListPageAssets()
   });
 });
 
@@ -15140,12 +15148,13 @@ app.get("/dashboard/larp", requireAuth, (req, res) => {
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
 
-  return res.render("dashboard-larp", {
+  return res.render("serverliste/larp", {
     title: "LARP Bereich",
     larpSection,
     larpCharacters,
     larpGuilds,
-    erpMoveAllowed
+    erpMoveAllowed,
+    ...getServerListPageAssets(["/serverliste-larp.js"])
   });
 });
 
@@ -15159,10 +15168,11 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
 
-  return res.render("dashboard-area", {
+  return res.render("serverliste/bereich", {
     title: serverSection.dashboard_area_title || serverSection.dashboard_label || "Rollenspiel",
     serverSection,
-    erpMoveAllowed
+    erpMoveAllowed,
+    ...getServerListPageAssets(["/serverliste-area.js"])
   });
 });
 

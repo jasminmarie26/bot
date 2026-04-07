@@ -1,0 +1,200 @@
+<%- include("../partials/start") %>
+
+<% const dashboardLarpReturnTarget = "/dashboard/larp"; %>
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const canCreateLarpProfile = larpCharacters.length < 1; %>
+<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
+<% const larpAccessTitle = "Ein LARP-Profil pro Account"; %>
+<% const larpAccessDescription = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere." %>
+<% const larpAccessWarning = hasLarpStaffAccess
+  ? "Der Bereich ist für Staff regulär freigeschaltet."
+  : "Bis zur Freigabe nutzt du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht." %>
+
+<section class="header-line serverlist-page-header">
+  <div>
+    <span class="serverlist-kicker">LARP</span>
+    <h1><%= larpSection.title %></h1>
+    <p class="muted"><%= larpSection.description %></p>
+  </div>
+  <div class="serverlist-actions">
+    <% if (canCreateLarpProfile) { %>
+      <a
+        class="btn serverlist-add-character-btn"
+        href="/characters/new?server=larp&return_to=<%= encodeURIComponent(dashboardLarpReturnTarget) %>"
+        aria-label="LARP-Profil anlegen"
+        title="LARP-Profil anlegen"
+      >
+        +
+      </a>
+    <% } %>
+    <form
+      method="POST"
+      action="/dashboard/larp/guestbook-code-email"
+      class="serverlist-export-all-form"
+    >
+      <input type="hidden" name="return_to" value="/dashboard/larp">
+      <button
+        type="submit"
+        class="btn serverlist-add-character-btn serverlist-export-all-btn"
+        aria-label="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+        title="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+      >
+        &#10003;
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="serverlist-block">
+  <section class="panel serverlist-panel serverlist-subpanel">
+    <div class="header-line">
+      <div>
+        <span class="serverlist-status-pill"><%= larpStatusLabel %></span>
+        <h3><%= larpAccessTitle %></h3>
+        <p class="muted"><%= larpAccessDescription %></p>
+        <p class="muted"><%= larpAccessWarning %></p>
+      </div>
+    </div>
+  </section>
+
+  <details class="serverlist-festplay-overview serverlist-character-overview" open>
+    <summary class="serverlist-festplay-overview-header">
+      <div class="serverlist-festplay-overview-title">
+        <h3>Mein LARP-Profil</h3>
+      </div>
+      <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="serverlist-panel serverlist-character-overview-body">
+      <% if (!larpCharacters.length) { %>
+        <p class="muted">Noch kein LARP-Profil vorhanden.</p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% larpCharacters.forEach((char) => { %>
+            <article class="character-mini-card">
+              <a class="character-mini-item" href="/characters/<%= char.id %>/edit" title="<%= char.name %> bearbeiten">
+                <span class="character-mini-name"><%= char.name %></span>
+              </a>
+              <div class="character-mini-actions">
+                <% if (char.can_dashboard_move) { %>
+                  <form
+                    method="POST"
+                    action="/characters/<%= char.id %>/move"
+                    class="character-mini-move-form"
+                    data-serverlist-larp-move
+                    data-serverlist-character-name="<%= char.name %>"
+                    data-serverlist-current-server="<%= char.server_id %>"
+                  >
+                    <input type="hidden" name="return_to" value="/dashboard/larp">
+                    <input type="hidden" name="target_server_id" value="">
+                    <input type="hidden" name="target_dashboard_mode" value="main">
+                    <button
+                      type="submit"
+                      class="character-mini-move-btn"
+                      aria-label="Profil verschieben"
+                      title="Zielbereich auswaehlen"
+                    >
+                      &harr;
+                    </button>
+                  </form>
+                <% } %>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/guestbook-code-email"
+                  class="character-mini-export-form"
+                >
+                  <input type="hidden" name="return_to" value="/dashboard/larp">
+                  <button
+                    type="submit"
+                    class="character-mini-export-btn"
+                    aria-label="Gaestebuch-Code per E-Mail senden"
+                    title="Gaestebuch-Code per E-Mail senden"
+                  >
+                    <span class="character-mini-export-icon" aria-hidden="true"></span>
+                  </button>
+                </form>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/delete"
+                  class="character-mini-delete-form"
+                  onsubmit="return confirm('Profil wirklich loeschen?')"
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardLarpReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="character-mini-delete-btn"
+                    aria-label="Profil loeschen"
+                    title="Profil loeschen"
+                  >
+                    X
+                  </button>
+                </form>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </details>
+
+  <details class="serverlist-festplay-overview" open>
+    <summary class="serverlist-festplay-overview-header">
+      <div class="serverlist-festplay-overview-title">
+        <h3>Meine Gilden</h3>
+        <span class="serverlist-festplay-count">(<%= larpGuilds.length %>)</span>
+      </div>
+      <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="serverlist-festplay-stack">
+      <% if (!larpGuilds.length) { %>
+        <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
+          <div class="header-line">
+            <div>
+              <h3>Noch keine Gilden</h3>
+              <p class="muted serverlist-section-copy">
+                Hier landen später deine LARP-Gilden, Lagergruppen und festen Zusammenschlüsse.
+              </p>
+            </div>
+          </div>
+        </section>
+      <% } %>
+    </div>
+  </details>
+</section>
+
+<div
+  id="serverlist-larp-move-modal"
+  class="serverlist-confirm-modal"
+  data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>"
+  hidden
+>
+  <div class="serverlist-confirm-backdrop" data-serverlist-larp-close></div>
+  <section
+    class="serverlist-confirm-card panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="serverlist-larp-move-title"
+  >
+    <h2 id="serverlist-larp-move-title">Profil verschieben</h2>
+    <p class="muted" id="serverlist-larp-move-copy">
+      Wohin soll dieses Profil verschoben werden?
+    </p>
+    <p class="muted serverlist-confirm-note" id="serverlist-larp-move-note">
+      Du kannst das Profil in einen RP-Bereich verschieben.
+    </p>
+    <div class="serverlist-confirm-actions">
+      <button type="button" class="btn btn-secondary" data-serverlist-larp-close>
+        Abbrechen
+      </button>
+      <button type="button" class="btn btn-secondary" id="serverlist-larp-move-free">
+        Free RP
+      </button>
+      <button type="button" class="btn" id="serverlist-larp-move-erp">
+        ERP
+      </button>
+    </div>
+  </section>
+</div>
+
+<%- include("../partials/end") %>
