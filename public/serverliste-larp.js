@@ -1,7 +1,6 @@
 (() => {
   document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("serverlist-larp-move-modal");
-    const copy = document.getElementById("serverlist-larp-move-copy");
     const note = document.getElementById("serverlist-larp-move-note");
     const freeButton = document.getElementById("serverlist-larp-move-free");
     const erpButton = document.getElementById("serverlist-larp-move-erp");
@@ -9,7 +8,7 @@
     const moveForms = document.querySelectorAll("[data-serverlist-larp-move]");
     const erpMoveAllowed = modal?.dataset.erpMoveAllowed === "true";
 
-    if (!modal || !copy || !note || !freeButton || !erpButton || !moveForms.length) {
+    if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
     }
 
@@ -23,21 +22,19 @@
 
     const openModalForForm = (form) => {
       pendingForm = form;
-      const characterName = String(form.dataset.serverlistCharacterName || "").trim() || "Dieser Charakter";
       const targetInput = form.querySelector('input[name="target_server_id"]');
 
       if (targetInput) {
         targetInput.value = "";
       }
 
-      copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
       note.textContent = "Du kannst das Profil nach Free RP oder ERP verschieben.";
 
       freeButton.disabled = false;
       erpButton.disabled = !erpMoveAllowed;
 
       if (!erpMoveAllowed) {
-        note.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist fuer Accounts unter 18 nicht verfuegbar.";
+        note.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist für Accounts unter 18 nicht verfügbar.";
       }
 
       modal.hidden = false;

@@ -12,8 +12,8 @@
     <a
       class="btn serverlist-add-character-btn"
       href="/characters/new?server=<%= serverSection.id %>&return_to=<%= encodeURIComponent(dashboardAreaReturnTarget) %>"
-      aria-label="Charakter hinzufuegen"
-      title="Charakter hinzufuegen"
+      aria-label="Charakter hinzufügen"
+      title="Charakter hinzufügen"
     >
       +
     </a>
@@ -26,8 +26,8 @@
       <button
         type="submit"
         class="btn serverlist-add-character-btn serverlist-export-all-btn"
-        aria-label="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
-        title="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+        aria-label="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
+        title="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
       >
         &#10003;
       </button>
@@ -78,7 +78,7 @@
                       type="submit"
                       class="character-mini-move-btn"
                       aria-label="Charakter verschieben"
-                      title="Zielserver auswaehlen"
+                      title="Zielserver auswählen"
                     >
                       &harr;
                     </button>
@@ -93,8 +93,8 @@
                   <button
                     type="submit"
                     class="character-mini-export-btn"
-                    aria-label="Gaestebuch-Code per E-Mail senden"
-                    title="Gaestebuch-Code per E-Mail senden"
+                    aria-label="Gästebuch-Code per E-Mail senden"
+                    title="Gästebuch-Code per E-Mail senden"
                   >
                     <span class="character-mini-export-icon" aria-hidden="true"></span>
                   </button>
@@ -103,14 +103,14 @@
                   method="POST"
                   action="/characters/<%= char.id %>/delete"
                   class="character-mini-delete-form"
-                  onsubmit="return confirm('Charakter wirklich loeschen?')"
+                  onsubmit="return confirm('Charakter wirklich löschen?')"
                 >
                   <input type="hidden" name="return_to" value="<%= dashboardAreaReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
-                    aria-label="Charakter loeschen"
-                    title="Charakter loeschen"
+                    aria-label="Charakter löschen"
+                    title="Charakter löschen"
                   >
                     X
                   </button>
@@ -158,7 +158,7 @@
                     <a
                       class="character-mini-item"
                       href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/rooms"
-                      title="Festspiel-Raeume mit <%= char.name %> oeffnen"
+                      title="Festspiel-Räume mit <%= char.name %> öffnen"
                     >
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
@@ -190,7 +190,7 @@
                         type="submit"
                         class="character-mini-move-btn"
                         aria-label="Charakter verschieben"
-                        title="Zielserver auswaehlen"
+                        title="Zielserver auswählen"
                       >
                         &harr;
                       </button>
@@ -204,8 +204,8 @@
                       <button
                         type="submit"
                         class="character-mini-export-btn"
-                        aria-label="Gaestebuch-Code per E-Mail senden"
-                        title="Gaestebuch-Code per E-Mail senden"
+                        aria-label="Gästebuch-Code per E-Mail senden"
+                        title="Gästebuch-Code per E-Mail senden"
                       >
                         <span class="character-mini-export-icon" aria-hidden="true"></span>
                       </button>
@@ -215,14 +215,14 @@
                         method="POST"
                         action="/characters/<%= char.id %>/delete"
                         class="character-mini-delete-form"
-                        onsubmit="return confirm('Charakter wirklich loeschen?')"
+                        onsubmit="return confirm('Charakter wirklich löschen?')"
                       >
                         <input type="hidden" name="return_to" value="<%= dashboardAreaReturnTarget %>">
                         <button
                           type="submit"
                           class="character-mini-delete-btn"
-                          aria-label="Charakter loeschen"
-                          title="Charakter loeschen"
+                          aria-label="Charakter löschen"
+                          title="Charakter löschen"
                         >
                           X
                         </button>
@@ -253,9 +253,6 @@
     aria-labelledby="serverlist-area-move-title"
   >
     <h2 id="serverlist-area-move-title">Charakter verschieben</h2>
-    <p class="muted" id="serverlist-area-move-copy">
-      Wohin soll dieser Charakter verschoben werden?
-    </p>
     <p class="muted serverlist-confirm-note">
       Freischaltungen an Festspielen bleiben dabei erhalten.
     </p>

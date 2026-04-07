@@ -36,8 +36,8 @@
       <button
         type="submit"
         class="btn serverlist-add-character-btn serverlist-export-all-btn"
-        aria-label="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
-        title="Alle sichtbaren Gaestebuch-Codes per E-Mail senden"
+        aria-label="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
+        title="Alle sichtbaren Gästebuch-Codes per E-Mail senden"
       >
         &#10003;
       </button>
@@ -92,7 +92,7 @@
                       type="submit"
                       class="character-mini-move-btn"
                       aria-label="Profil verschieben"
-                      title="Zielbereich auswaehlen"
+                      title="Zielbereich auswählen"
                     >
                       &harr;
                     </button>
@@ -107,8 +107,8 @@
                   <button
                     type="submit"
                     class="character-mini-export-btn"
-                    aria-label="Gaestebuch-Code per E-Mail senden"
-                    title="Gaestebuch-Code per E-Mail senden"
+                    aria-label="Gästebuch-Code per E-Mail senden"
+                    title="Gästebuch-Code per E-Mail senden"
                   >
                     <span class="character-mini-export-icon" aria-hidden="true"></span>
                   </button>
@@ -117,14 +117,14 @@
                   method="POST"
                   action="/characters/<%= char.id %>/delete"
                   class="character-mini-delete-form"
-                  onsubmit="return confirm('Profil wirklich loeschen?')"
+                  onsubmit="return confirm('Profil wirklich löschen?')"
                 >
                   <input type="hidden" name="return_to" value="<%= dashboardLarpReturnTarget %>">
                   <button
                     type="submit"
                     class="character-mini-delete-btn"
-                    aria-label="Profil loeschen"
-                    title="Profil loeschen"
+                    aria-label="Profil löschen"
+                    title="Profil löschen"
                   >
                     X
                   </button>
@@ -177,9 +177,6 @@
     aria-labelledby="serverlist-larp-move-title"
   >
     <h2 id="serverlist-larp-move-title">Profil verschieben</h2>
-    <p class="muted" id="serverlist-larp-move-copy">
-      Wohin soll dieses Profil verschoben werden?
-    </p>
     <p class="muted serverlist-confirm-note" id="serverlist-larp-move-note">
       Du kannst das Profil in einen RP-Bereich verschieben.
     </p>

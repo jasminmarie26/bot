@@ -1,7 +1,6 @@
 (() => {
   document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("serverlist-area-move-modal");
-    const copy = document.getElementById("serverlist-area-move-copy");
     const note = modal ? modal.querySelector(".serverlist-confirm-note") : null;
     const freeButton = document.getElementById("serverlist-area-move-free");
     const erpButton = document.getElementById("serverlist-area-move-erp");
@@ -9,7 +8,7 @@
     const moveForms = document.querySelectorAll("[data-serverlist-area-move-confirm]");
     const erpMoveAllowed = modal?.dataset.erpMoveAllowed === "true";
 
-    if (!modal || !copy || !note || !freeButton || !erpButton || !moveForms.length) {
+    if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
     }
 
@@ -88,7 +87,7 @@
             mode: "main"
           },
           {
-            label: "Zurueck zum Festspiel",
+            label: "Zurück zum Festspiel",
             serverId: homeServer,
             mode: "festplay"
           }
@@ -120,7 +119,6 @@
         targetModeInput.value = "";
       }
 
-      copy.textContent = `Wohin soll ${characterName} verschoben werden?`;
       note.textContent = "Freischaltungen an Festspielen bleiben dabei erhalten.";
 
       const options = getMoveOptions(form).map((option) => ({
@@ -134,11 +132,11 @@
       if (homeServer === currentServer && position === "festplay") {
         note.textContent = `Du kannst ${characterName} oben in ${getServerButtonLabel(homeServer)} ablegen oder auf ${getServerButtonLabel(getOtherServerId(homeServer))} verschieben.`;
       } else if (homeServer && position === "main") {
-        note.textContent = `Du kannst ${characterName} auf den anderen RP-Server legen oder zurueck ins Festspiel schieben.`;
+        note.textContent = `Du kannst ${characterName} auf den anderen RP-Server legen oder zurück ins Festspiel schieben.`;
       }
 
       if (!erpMoveAllowed && options.some((option) => option.serverId === "erp")) {
-        note.textContent = `${note.textContent} ERP ist fuer Accounts unter 18 nicht verfuegbar.`;
+        note.textContent = `${note.textContent} ERP ist für Accounts unter 18 nicht verfügbar.`;
       }
 
       modal.hidden = false;
