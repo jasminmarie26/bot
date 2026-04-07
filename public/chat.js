@@ -50,6 +50,7 @@
   const headerIdentity = document.querySelector("[data-header-identity]");
   const userMenuIdentity = document.querySelector("[data-chat-user-menu-identity]");
   const chatRoomListLink = document.querySelector("[data-chat-roomlist-link]");
+  const chatRpBoardLinks = Array.from(document.querySelectorAll("[data-rp-board-link-root]"));
   const chatCharacterLinkTargets = Array.from(document.querySelectorAll("[data-chat-character-href-template]"));
   const roomIdRaw = chatBox?.dataset?.roomId || "";
   const serverId = (chatBox?.dataset?.serverId || "free-rp").trim().toLowerCase();
@@ -274,6 +275,25 @@
     return Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
       ? `/characters/${currentActiveCharacterId}#roomlist`
       : "/dashboard";
+  }
+
+  function buildCurrentRpBoardUrl() {
+    if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
+      return "/rp-board";
+    }
+
+    const nextServerId = String(currentDisplayServerId || serverId || chatBox?.dataset?.serverId || "")
+      .trim()
+      .toLowerCase();
+    const params = new URLSearchParams({
+      character_id: String(currentActiveCharacterId)
+    });
+
+    if (nextServerId) {
+      params.set("server_id", nextServerId);
+    }
+
+    return `/rp-board?${params.toString()}`;
   }
 
   function syncChatCharacterLinks() {
@@ -3071,6 +3091,21 @@
     chatRoomListLink.addEventListener("click", syncRoomListHref);
     chatRoomListLink.addEventListener("auxclick", syncRoomListHref);
     chatRoomListLink.addEventListener("pointerdown", syncRoomListHref);
+  }
+
+  if (chatRpBoardLinks.length) {
+    const syncRpBoardHref = () => {
+      const nextHref = buildCurrentRpBoardUrl();
+      chatRpBoardLinks.forEach((node) => {
+        node.href = nextHref;
+      });
+    };
+    syncRpBoardHref();
+    chatRpBoardLinks.forEach((node) => {
+      node.addEventListener("click", syncRpBoardHref);
+      node.addEventListener("auxclick", syncRpBoardHref);
+      node.addEventListener("pointerdown", syncRpBoardHref);
+    });
   }
 
   if (onlineActionGuestbook) {
