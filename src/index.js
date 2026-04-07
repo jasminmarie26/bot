@@ -28,6 +28,7 @@ const { buildRaumPraesenzNachricht } = require("./chat-nachrichten-de");
 const {
   registerRaeumeErstellenBearbeitenRoutes
 } = require("./raeume-erstellen-bearbeiten");
+const { createHomePageService, DEFAULT_UPDATES_TITLE } = require("./homepage");
 const CHAT_ROOM_COLUMN_NAMES = new Set(
   db
     .prepare("PRAGMA table_info(chat_rooms)")
@@ -248,10 +249,6 @@ const THEME_COOKIE_NAME = "theme_preference";
 const THEME_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 365 * 2;
 const DEFAULT_SERVER_ID = "free-rp";
 const ALLOWED_SERVER_IDS = new Set(SERVER_OPTIONS.map((server) => server.id));
-const DEFAULT_HOME_HERO_TITLE = "Heldenhaft Reisen";
-const DEFAULT_HOME_HERO_BODY =
-  "Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.";
-const DEFAULT_UPDATES_TITLE = "Live Updates";
 const ROOM_EMPTY_DELETE_DELAY_MS = 0;
 const ROOM_CLEANUP_BOOT_GRACE_MS = 60 * 1000;
 const AUTO_DELETE_EMPTY_ROOMS = false;
@@ -660,25 +657,6 @@ const SESSION_STORE_CLEANUP_INTERVAL_MS = 1000 * 60;
 const FESTPLAY_INACTIVITY_MONTHS = 6;
 const FESTPLAY_INACTIVITY_SQL_OFFSET = `-${FESTPLAY_INACTIVITY_MONTHS} months`;
 const FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS = 1000 * 60 * 60;
-const LOGIN_STATS_CACHE_TTL_MS = 10 * 1000;
-const DISCORD_HOME_INVITE_URL = "https://discord.gg/CWWxbZenwS";
-const DISCORD_HOME_INVITE_CODE = "CWWxbZenwS";
-const DISCORD_HOME_INVITE_API_URL =
-  `https://discord.com/api/v9/invites/${DISCORD_HOME_INVITE_CODE}?with_counts=true&with_expiration=true`;
-const DISCORD_HOME_STATS_CACHE_TTL_MS = 1000 * 60 * 2;
-const DISCORD_HOME_FETCH_TIMEOUT_MS = 5000;
-let cachedLoginStats = null;
-let cachedLoginStatsExpiresAt = 0;
-let cachedDiscordHomeStats = {
-  guildName: "Heldenhafte Reisen Discord",
-  inviteUrl: DISCORD_HOME_INVITE_URL,
-  memberCount: null,
-  onlineCount: null,
-  iconUrl: "",
-  available: false
-};
-let cachedDiscordHomeStatsExpiresAt = 0;
-let discordHomeStatsRefreshPromise = null;
 let inactiveFestplayCleanupRunning = false;
 const DEFAULT_SEO_DESCRIPTION =
   "Heldenhafte Reisen ist eine kostenlose deutschsprachige Rollenspiel-Community mit getrennten Bereichen für Free RP, ERP und LARP, Charakterprofilen, Gästebüchern und Community-Austausch.";
@@ -785,109 +763,6 @@ app.use(passport.initialize());
 
 function setFlash(req, type, text) {
   req.session.flash = { type, text };
-}
-
-function clearLoginStatsCache() {
-  cachedLoginStats = null;
-  cachedLoginStatsExpiresAt = 0;
-}
-
-function buildDiscordHomeIconUrl(guildId, iconHash) {
-  const normalizedGuildId = String(guildId || "").trim();
-  const normalizedIconHash = String(iconHash || "").trim();
-  if (!normalizedGuildId || !normalizedIconHash) {
-    return "";
-  }
-
-  return `https://cdn.discordapp.com/icons/${encodeURIComponent(normalizedGuildId)}/${encodeURIComponent(normalizedIconHash)}.png?size=128`;
-}
-
-function normalizeDiscordHomeStats(payload) {
-  const guild = payload && typeof payload === "object" ? payload.guild || {} : {};
-  const profile = payload && typeof payload === "object" ? payload.profile || {} : {};
-  const guildName = String(
-    profile.name || guild.name || cachedDiscordHomeStats.guildName || "Heldenhafte Reisen Discord"
-  ).trim() || "Heldenhafte Reisen Discord";
-  const memberCountRaw =
-    profile.member_count ?? payload?.approximate_member_count ?? payload?.member_count;
-  const onlineCountRaw =
-    profile.online_count ?? payload?.approximate_presence_count ?? payload?.presence_count;
-  const memberCount = Number.isFinite(Number(memberCountRaw)) ? Number(memberCountRaw) : null;
-  const onlineCount = Number.isFinite(Number(onlineCountRaw)) ? Number(onlineCountRaw) : null;
-
-  return {
-    guildName,
-    inviteUrl: DISCORD_HOME_INVITE_URL,
-    memberCount,
-    onlineCount,
-    iconUrl: buildDiscordHomeIconUrl(guild.id || payload?.guild_id, guild.icon || profile.icon_hash),
-    available: memberCount !== null || onlineCount !== null
-  };
-}
-
-function getDiscordHomeStats() {
-  if (Date.now() >= cachedDiscordHomeStatsExpiresAt) {
-    void refreshDiscordHomeStats();
-  }
-
-  return cachedDiscordHomeStats;
-}
-
-async function refreshDiscordHomeStats(force = false) {
-  if (discordHomeStatsRefreshPromise) {
-    return discordHomeStatsRefreshPromise;
-  }
-
-  if (!force && Date.now() < cachedDiscordHomeStatsExpiresAt) {
-    return cachedDiscordHomeStats;
-  }
-
-  discordHomeStatsRefreshPromise = (async () => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), DISCORD_HOME_FETCH_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(DISCORD_HOME_INVITE_API_URL, {
-        signal: controller.signal,
-        headers: {
-          accept: "application/json",
-          "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Discord invite request failed with status ${response.status}`);
-      }
-
-      const previousStats = JSON.stringify(cachedDiscordHomeStats);
-      cachedDiscordHomeStats = normalizeDiscordHomeStats(await response.json());
-      cachedDiscordHomeStatsExpiresAt = Date.now() + DISCORD_HOME_STATS_CACHE_TTL_MS;
-      clearLoginStatsCache();
-
-      if (JSON.stringify(cachedDiscordHomeStats) !== previousStats) {
-        io.emit("site:stats:update", getLoginStats());
-      }
-
-      return cachedDiscordHomeStats;
-    } catch (error) {
-      cachedDiscordHomeStatsExpiresAt = Date.now() + 30000;
-      return cachedDiscordHomeStats;
-    } finally {
-      clearTimeout(timeout);
-      discordHomeStatsRefreshPromise = null;
-    }
-  })();
-
-  return discordHomeStatsRefreshPromise;
-}
-
-async function ensureDiscordHomeStats() {
-  if (Date.now() < cachedDiscordHomeStatsExpiresAt) {
-    return cachedDiscordHomeStats;
-  }
-
-  return refreshDiscordHomeStats(true);
 }
 
 function collectActiveSessionUserIds(options = {}) {
@@ -1283,242 +1158,6 @@ function getConnectedUserComparableIps(userId) {
   }
 
   return comparableIps;
-}
-
-function getHomeStatsTrackedIp(user) {
-  const registrationIp = normalizeComparableIp(user?.registration_ip);
-  if (registrationIp) {
-    return registrationIp;
-  }
-  return normalizeComparableIp(user?.last_login_ip);
-}
-
-function getPrimaryHomeStatsAdminUser(users) {
-  if (!Array.isArray(users) || users.length === 0) {
-    return null;
-  }
-
-  const normalizeName = (value) => String(value || "").trim().toLowerCase();
-  return (
-    users.find(
-      (user) =>
-        Number(user?.is_admin) === 1 &&
-        (
-          normalizeName(user?.admin_character_name) === "noctra" ||
-          normalizeName(user?.username) === "noctra"
-        )
-    ) ||
-    users.find((user) => Number(user?.is_admin) === 1) ||
-    null
-  );
-}
-
-function getVisibleAccountCountForHomeStats() {
-  return getHomeStatsVisibleUsers().length;
-}
-
-function getHomeStatsUsers() {
-  return db
-    .prepare(`
-      SELECT u.id,
-             u.username,
-             u.is_admin,
-             u.registration_ip,
-             u.last_login_ip,
-             COALESCE(admin_character.name, '') AS admin_character_name
-        FROM users u
-        LEFT JOIN characters admin_character
-          ON admin_character.id = u.admin_character_id
-    `)
-    .all();
-}
-
-function getHomeStatsHiddenUserIds(users) {
-  const primaryAdminUser = getPrimaryHomeStatsAdminUser(users);
-  const hiddenUserIds = new Set();
-  const adminIps = new Set();
-  const primaryAdminConnectedIps = primaryAdminUser
-    ? getConnectedUserComparableIps(primaryAdminUser.id)
-    : new Set();
-
-  users.forEach((user) => {
-    if (Number(user?.is_admin) !== 1) {
-      return;
-    }
-    const trackedIp = getHomeStatsTrackedIp(user);
-    if (trackedIp) {
-      adminIps.add(trackedIp);
-    }
-  });
-  primaryAdminConnectedIps.forEach((ip) => {
-    if (ip) {
-      adminIps.add(ip);
-    }
-  });
-
-  users.forEach((user) => {
-    if (primaryAdminUser && Number(user?.id) === Number(primaryAdminUser.id)) {
-      return;
-    }
-    if (Number(user?.is_admin) === 1) {
-      hiddenUserIds.add(Number(user.id));
-      return;
-    }
-
-    const trackedIp = getHomeStatsTrackedIp(user);
-    if (trackedIp && adminIps.has(trackedIp)) {
-      hiddenUserIds.add(Number(user.id));
-    }
-  });
-
-  return hiddenUserIds;
-}
-
-function getHomeStatsVisibleUsers() {
-  const users = getHomeStatsUsers();
-  const hiddenUserIds = getHomeStatsHiddenUserIds(users);
-  return users.filter((user) => !hiddenUserIds.has(Number(user.id)));
-}
-
-function getVisibleAccountCountForHomeStats(users = []) {
-  const seenIps = new Set();
-  let visibleCount = 0;
-
-  users.forEach((user) => {
-    const trackedIp = getHomeStatsTrackedIp(user);
-    if (!trackedIp) {
-      visibleCount += 1;
-      return;
-    }
-    if (seenIps.has(trackedIp)) {
-      return;
-    }
-    seenIps.add(trackedIp);
-    visibleCount += 1;
-  });
-
-  return visibleCount;
-}
-
-function getVisibleCharacterStatsForHomeStats(hiddenUserIds = null) {
-  const characters = db.prepare("SELECT user_id, server_id FROM characters").all();
-  const visibleCharacters = hiddenUserIds instanceof Set
-    ? characters.filter((character) => !hiddenUserIds.has(Number(character.user_id)))
-    : characters;
-
-  return {
-    characterCount: visibleCharacters.length,
-    freeRpCharacterCount: visibleCharacters.filter(
-      (character) => normalizeCharacterServerId(character.server_id) === "free-rp"
-    ).length,
-    erpCharacterCount: visibleCharacters.filter(
-      (character) => normalizeCharacterServerId(character.server_id) === "erp"
-    ).length,
-    larpCharacterCount: visibleCharacters.filter(
-      (character) => normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
-    ).length
-  };
-}
-
-function getVisibleLoggedInUserIdsForHomeStats(activeUserIds = [], hiddenUserIds = null) {
-  const hiddenSet = hiddenUserIds instanceof Set ? hiddenUserIds : null;
-  const visibleUserIds = [];
-  const seenUserIds = new Set();
-
-  (Array.isArray(activeUserIds) ? activeUserIds : []).forEach((userId) => {
-    const parsedUserId = Number(userId);
-    if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
-      return;
-    }
-    if (hiddenSet && hiddenSet.has(parsedUserId)) {
-      return;
-    }
-    if (seenUserIds.has(parsedUserId)) {
-      return;
-    }
-    seenUserIds.add(parsedUserId);
-    visibleUserIds.push(parsedUserId);
-  });
-
-  return visibleUserIds;
-}
-
-function getVisibleOnlineUserCountForServers(serverIds, hiddenUserIds = null) {
-  const onlineUserIds = getOnlineUserIdsForServers(serverIds);
-  if (!(hiddenUserIds instanceof Set) || hiddenUserIds.size === 0) {
-    return onlineUserIds.size;
-  }
-
-  let visibleCount = 0;
-  onlineUserIds.forEach((userId) => {
-    if (!hiddenUserIds.has(Number(userId))) {
-      visibleCount += 1;
-    }
-  });
-  return visibleCount;
-}
-
-function buildLoginStats() {
-  const discordHomeStats = getDiscordHomeStats();
-  const activeUserIds = getActiveSessionUserIds();
-  const homeStatsUsers = getHomeStatsUsers();
-  const hiddenHomeStatsUserIds = getHomeStatsHiddenUserIds(homeStatsUsers);
-  const visibleHomeStatsUsers = homeStatsUsers.filter(
-    (user) => !hiddenHomeStatsUserIds.has(Number(user.id))
-  );
-  const visibleCharacterStats = getVisibleCharacterStatsForHomeStats(hiddenHomeStatsUserIds);
-  const visibleLoggedInUserIds = getVisibleLoggedInUserIdsForHomeStats(
-    activeUserIds,
-    hiddenHomeStatsUserIds
-  );
-  const staffStats = getOnlineStaffStats(hiddenHomeStatsUserIds);
-  const accountCount = getVisibleAccountCountForHomeStats(visibleHomeStatsUsers);
-  const characterCount = visibleCharacterStats.characterCount;
-  const freeRpCharacterCount = visibleCharacterStats.freeRpCharacterCount;
-  const erpCharacterCount = visibleCharacterStats.erpCharacterCount;
-  const larpCharacterCount = visibleCharacterStats.larpCharacterCount;
-  const freeRpOnlineCount = getVisibleOnlineUserCountForServers("free-rp", hiddenHomeStatsUserIds);
-  const erpOnlineCount = getVisibleOnlineUserCountForServers("erp", hiddenHomeStatsUserIds);
-  const rpOnlineCount = getVisibleOnlineUserCountForServers(["free-rp", "erp"], hiddenHomeStatsUserIds);
-
-  return {
-    accountCount,
-    characterCount,
-    rpServerCount: freeRpCharacterCount + erpCharacterCount,
-    freeRpCharacterCount,
-    erpCharacterCount,
-    larpServerCount: larpCharacterCount,
-    freeRpOnlineCount,
-    erpOnlineCount,
-    rpOnlineCount,
-    larpOnlineCount: 0,
-    discordGuildName: discordHomeStats.guildName,
-    discordInviteUrl: discordHomeStats.inviteUrl,
-    discordMemberCount: discordHomeStats.memberCount,
-    discordOnlineCount: discordHomeStats.onlineCount,
-    discordIconUrl: discordHomeStats.iconUrl,
-    discordAvailable: discordHomeStats.available,
-    loggedInUserCount: getLoggedInUsersCount(visibleLoggedInUserIds),
-    adminOnlineCount: staffStats.adminOnlineCount,
-    adminOnlineNames: staffStats.adminOnlineNames,
-    moderatorOnlineCount: staffStats.moderatorOnlineCount,
-    moderatorOnlineNames: staffStats.moderatorOnlineNames
-  };
-}
-
-function getLoginStats() {
-  const now = Date.now();
-  if (cachedLoginStats && now < cachedLoginStatsExpiresAt) {
-    return cachedLoginStats;
-  }
-
-  cachedLoginStats = buildLoginStats();
-  cachedLoginStatsExpiresAt = now + LOGIN_STATS_CACHE_TTL_MS;
-  return cachedLoginStats;
-}
-
-function emitHomeStatsUpdate() {
-  io.emit("site:stats:update", getLoginStats());
 }
 
 function normalizeEmail(value) {
@@ -11830,40 +11469,6 @@ function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin
   return Number(userId) === Number(characterOwnerId) || Number(isCharacterPublic) === 1;
 }
 
-function normalizeHomeSectionTitle(rawTitle) {
-  return String(rawTitle || "").trim().slice(0, 120);
-}
-
-function normalizeHomeSectionBody(rawBody) {
-  return String(rawBody || "").trim().slice(0, 2000);
-}
-
-function decorateHomeContent(homeContent) {
-  const heroTitle = normalizeHomeSectionTitle(homeContent?.hero_title || "") || DEFAULT_HOME_HERO_TITLE;
-  const heroBody = normalizeHomeSectionBody(homeContent?.hero_body || "") || DEFAULT_HOME_HERO_BODY;
-  const updatesTitle =
-    normalizeHomeSectionTitle(homeContent?.updates_title || "") || DEFAULT_UPDATES_TITLE;
-
-  return {
-    hero_title: heroTitle,
-    hero_body: heroBody,
-    hero_body_html: renderGuestbookBbcode(heroBody),
-    updates_title: updatesTitle
-  };
-}
-
-function getHomeContent() {
-  const homeContent = db
-    .prepare(
-      `SELECT hero_title, hero_body, updates_title
-       FROM site_home_settings
-       WHERE id = 1`
-    )
-    .get();
-
-  return decorateHomeContent(homeContent);
-}
-
 function normalizeSiteUpdateContent(rawContent) {
   return String(rawContent || "").trim().slice(0, 1200);
 }
@@ -11968,6 +11573,32 @@ function getLatestSiteUpdateRevisionToken() {
 
   return decorateSiteUpdate(latestSiteUpdate)?.revision_token || "";
 }
+
+const homePageService = createHomePageService({
+  db,
+  renderGuestbookBbcode,
+  fetchImpl: typeof fetch === "function" ? fetch.bind(globalThis) : null,
+  getActiveSessionUserIds,
+  getConnectedUserComparableIps,
+  normalizeComparableIp,
+  normalizeCharacterServerId,
+  larpServerId: LARP_SERVER_ID,
+  getOnlineUserIdsForServers,
+  getOnlineStaffStats,
+  getLoggedInUsersCount,
+  broadcastSiteStatsUpdate(payload) {
+    io.emit("site:stats:update", payload);
+  },
+  getRecentSiteUpdates,
+  getLatestSiteUpdateRevisionToken,
+  defaultSeoDescription: DEFAULT_SEO_DESCRIPTION
+});
+
+const clearLoginStatsCache = () => homePageService.clearLoginStatsCache();
+const emitHomeStatsUpdate = () => homePageService.emitHomeStatsUpdate();
+const getHomeContent = () => homePageService.getHomeContent();
+const getLoginStats = () => homePageService.getLoginStats();
+const refreshDiscordHomeStats = (...args) => homePageService.refreshDiscordHomeStats(...args);
 
 function getLiveUpdatesStatePayload(options = {}) {
   const scope = String(options.scope || "recent").trim().toLowerCase();
@@ -12332,20 +11963,8 @@ app.get("/media/guestbook-image", async (req, res) => {
 });
 
 app.get("/", async (req, res) => {
-  await ensureDiscordHomeStats();
-  const homeContent = getHomeContent();
-  const recentSiteUpdates = getRecentSiteUpdates(30);
-  return res.render("public/home", {
-    title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
-    metaDescription: DEFAULT_SEO_DESCRIPTION,
-    stats: getLoginStats(),
-    homeContent,
-    recentSiteUpdateRevisions: recentSiteUpdates
-      .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
-      .filter(Boolean),
-    latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
-    pageClass: "page-home-screen"
-  });
+  await homePageService.ensureDiscordHomeStats();
+  return res.render("public/home", homePageService.buildHomePageViewModel());
 });
 
 app.get("/live-updates", (req, res) => {
@@ -14508,47 +14127,27 @@ app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res)
 });
 
 app.post("/site-content/hero", requireAuth, requireAdmin, (req, res) => {
-  const heroTitle = normalizeHomeSectionTitle(req.body.title);
-  const heroBody = normalizeHomeSectionBody(req.body.body);
+  const result = homePageService.saveHeroContent(req.body.title, req.body.body);
 
-  if (!heroTitle) {
-    setFlash(req, "error", "Die Startseiten-Überschrift darf nicht leer sein.");
+  if (!result.ok) {
+    setFlash(req, "error", result.error);
     return res.redirect(req.get("referer") || "/");
   }
 
-  if (!heroBody) {
-    setFlash(req, "error", "Der Startseitentext darf nicht leer sein.");
-    return res.redirect(req.get("referer") || "/");
-  }
-
-  db.prepare(
-    `UPDATE site_home_settings
-     SET hero_title = ?, hero_body = ?
-     WHERE id = 1`
-  ).run(heroTitle, heroBody);
-
-  const homeContent = getHomeContent();
-  io.emit("site:home-content:update", homeContent);
+  io.emit("site:home-content:update", result.homeContent);
   setFlash(req, "success", "Startseitenbereich aktualisiert.");
   return res.redirect(req.get("referer") || "/");
 });
 
 app.post("/site-content/updates-title", requireAuth, requireAdmin, (req, res) => {
-  const updatesTitle = normalizeHomeSectionTitle(req.body.title);
+  const result = homePageService.saveUpdatesTitle(req.body.title);
 
-  if (!updatesTitle) {
-    setFlash(req, "error", "Die Live-Updates-Überschrift darf nicht leer sein.");
+  if (!result.ok) {
+    setFlash(req, "error", result.error);
     return res.redirect(req.get("referer") || "/");
   }
 
-  db.prepare(
-    `UPDATE site_home_settings
-     SET updates_title = ?
-     WHERE id = 1`
-  ).run(updatesTitle);
-
-  const homeContent = getHomeContent();
-  io.emit("site:home-content:update", homeContent);
+  io.emit("site:home-content:update", result.homeContent);
   setFlash(req, "success", "Live-Updates-Überschrift aktualisiert.");
   return res.redirect(req.get("referer") || "/");
 });
