@@ -55,8 +55,6 @@
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a
             href="/characters/<%= character.id %>/festplays/public"
-            target="_blank"
-            rel="noopener noreferrer"
             data-live-character-href-template="/characters/__CHARACTER_ID__/festplays/public"
           >Festspiele</a>
         <% } %>
@@ -64,8 +62,6 @@
           <a
             class="rp-board-nav-link"
             href="<%= roomlistBoardHref %>"
-            target="_blank"
-            rel="noopener noreferrer"
             data-rp-board-link-root
             data-live-character-href-template="/rp-board?server_id=__SERVER_ID__&character_id=__CHARACTER_ID__"
             data-rp-board-server-id="<%= roomlistBoardServerId %>"
@@ -76,18 +72,7 @@
             <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
           </a>
         <% } %>
-        <a
-          class="live-updates-nav-link"
-        href="/live-updates"
-        target="site-live-updates"
-        data-live-updates-link-root
-        data-live-updates-target="site-live-updates"
-        data-live-updates-initial-revision="<%= roomlistLiveUpdatesInitialRevision %>"
-        data-live-updates-initial-revisions="<%= roomlistLiveUpdatesInitialRevisions.join('|') %>"
-      >
-        <span>Live Updates</span>
-        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
-      </a>
+        <a href="/live-updates">Live Updates</a>
     </nav>
     <div class="rp-topline-actions">
       <% if (showRoomlistHeaderIdentity) { %>
