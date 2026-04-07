@@ -9,6 +9,8 @@
   ].join("");
 
   const chatBox = document.getElementById("chat-box");
+  const chatScroll = document.getElementById("chat-scroll");
+  const chatFeed = document.getElementById("chat-feed");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const onlineCharList = document.getElementById("online-char-list");
@@ -159,7 +161,7 @@
     entry: "",
     chat: ""
   };
-  if (!chatBox || !form || !input) return;
+  if (!chatBox || !chatScroll || !chatFeed || !form || !input) return;
   const defaultDocumentTitle = String(document.title || "Heldenhafte Reisen").trim() || "Heldenhafte Reisen";
   const chatTabSiteLabel = "HR";
   const siteTitleLabel = chatTabSiteLabel;
@@ -167,10 +169,10 @@
   const chatBottomSnapThresholdPx = 48;
 
   function getChatBottomDistance() {
-    if (!chatBox) {
+    if (!chatScroll) {
       return Number.POSITIVE_INFINITY;
     }
-    return Math.max(0, chatBox.scrollHeight - chatBox.clientHeight - chatBox.scrollTop);
+    return Math.max(0, chatScroll.scrollHeight - chatScroll.clientHeight - chatScroll.scrollTop);
   }
 
   function isChatNearBottom() {
@@ -178,10 +180,10 @@
   }
 
   function scrollChatToBottom() {
-    if (!chatBox) {
+    if (!chatScroll) {
       return;
     }
-    chatBox.scrollTop = chatBox.scrollHeight;
+    chatScroll.scrollTop = chatScroll.scrollHeight;
   }
 
   function keepChatPinnedToBottom(callback) {
@@ -1093,7 +1095,7 @@
       JSON.stringify({
         reason: String(reason || "").trim() || "page-reload",
         disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
-        scrollTop: chatBox.scrollTop,
+        scrollTop: chatScroll.scrollTop,
         characterId:
           Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
             ? currentActiveCharacterId
@@ -2048,7 +2050,7 @@
     line.appendChild(body);
 
     article.appendChild(line);
-    chatBox.appendChild(article);
+    chatFeed.appendChild(article);
 
     if (
       !isSystemMessage &&
@@ -2060,8 +2062,8 @@
       playChatTone();
     }
 
-    while (chatBox.children.length > chatMessageRestoreLimit) {
-      chatBox.removeChild(chatBox.firstChild);
+    while (chatFeed.children.length > chatMessageRestoreLimit) {
+      chatFeed.removeChild(chatFeed.firstChild);
     }
 
     scrollChatToBottom();
@@ -2072,7 +2074,7 @@
       appendMessage(message, { skipNotifications: true });
     });
     if (pendingChatReloadRecovery.scrollTop != null) {
-      chatBox.scrollTop = pendingChatReloadRecovery.scrollTop;
+      chatScroll.scrollTop = pendingChatReloadRecovery.scrollTop;
     }
   }
 
@@ -2488,10 +2490,10 @@
     line.appendChild(body);
 
     article.appendChild(line);
-    chatBox.appendChild(article);
+    chatFeed.appendChild(article);
 
-    while (chatBox.children.length > 150) {
-      chatBox.removeChild(chatBox.firstChild);
+    while (chatFeed.children.length > 150) {
+      chatFeed.removeChild(chatFeed.firstChild);
     }
 
     scrollChatToBottom();
