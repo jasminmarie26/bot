@@ -11867,7 +11867,17 @@ body.page-guestbook-view .guestbook-entry-heading {
   gap: 0.18rem;
   position: relative;
   isolation: isolate;
-  background: var(--character-chat-background-color);
+  background-color: var(--character-chat-background-color);
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, calc(0.12 + ((1 - var(--character-chat-background-image-opacity)) * 0.88))),
+      rgba(255, 255, 255, calc(0.22 + ((1 - var(--character-chat-background-image-opacity)) * 0.78)))
+    ),
+    var(--character-chat-background-image);
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-attachment: scroll, scroll;
   border-color: #d3d8df;
   color: #1a1c20;
   box-shadow: none;
@@ -11877,22 +11887,10 @@ body.page-guestbook-view .guestbook-entry-heading {
 
 .chat-box::before,
 .chat-box::after {
-  content: "";
+  content: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
-}
-
-.chat-box::before {
-  background-image: var(--character-chat-background-image);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  opacity: var(--character-chat-background-image-opacity);
-}
-
-.chat-box::after {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.22));
 }
 
 .chat-box > * {
@@ -11901,7 +11899,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .page-chat #chat-box {
-  background: var(--character-chat-background-color) !important;
+  background-color: var(--character-chat-background-color) !important;
   box-shadow: none !important;
 }
 

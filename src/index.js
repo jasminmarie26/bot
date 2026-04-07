@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
@@ -25,6 +25,9 @@ const {
 } = require("docx");
 const db = require("./db");
 const { buildRaumPraesenzNachricht } = require("./chat-nachrichten-de");
+const {
+  registerRaeumeErstellenBearbeitenRoutes
+} = require("./raeume-erstellen-bearbeiten");
 const CHAT_ROOM_COLUMN_NAMES = new Set(
   db
     .prepare("PRAGMA table_info(chat_rooms)")
@@ -2740,7 +2743,7 @@ function renderAuthPage(req, res, options = {}) {
     }
   }
 
-  return res.status(options.status || 200).render("auth", viewData);
+  return res.status(options.status || 200).render("auth/auth", viewData);
 }
 
 function renderOAuthVerificationPage(req, res, provider, options = {}) {
@@ -2758,7 +2761,7 @@ function renderOAuthVerificationPage(req, res, provider, options = {}) {
     )}&v=${encodeURIComponent(challenge.token)}`;
   }
 
-  return res.status(options.status || 200).render("oauth-human-check", {
+  return res.status(options.status || 200).render("auth/oauth-human-check", {
     title: `${providerLabel} Sicherheitsprüfung`,
     provider: normalizedProvider,
     providerLabel,
@@ -2787,7 +2790,7 @@ function renderOAuthBirthDatePage(req, res, options = {}) {
     ? "Profil vervollständigen"
     : (requirePassword ? "Passwort festlegen" : "Geburtsdatum ergänzen");
 
-  return res.status(options.status || 200).render("oauth-birth-date", {
+  return res.status(options.status || 200).render("auth/oauth-birth-date", {
     title: pageTitle,
     provider,
     providerLabel,
@@ -2801,7 +2804,7 @@ function renderOAuthBirthDatePage(req, res, options = {}) {
 }
 
 function renderKontaktPage(req, res, options = {}) {
-  return res.status(options.status || 200).render("kontakt", {
+  return res.status(options.status || 200).render("public/kontakt", {
     title: "Kontakt & Ticket",
     legalMeta: getLegalMeta(),
     pageClass: "page-legal",
@@ -3165,7 +3168,7 @@ function renderAccountPage(req, res, options = {}) {
     accountUser.birth_date
   );
 
-  return res.render("account", {
+  return res.render("account/account", {
     title: options.title || "Account",
     error: options.error || null,
     accountUser: {
@@ -10222,7 +10225,7 @@ function buildGuestbookAccessDeniedPayload(accessState = {}) {
 }
 
 function renderGuestbookAccessDenied(res, accessState) {
-  return res.status(403).render("error", buildGuestbookAccessDeniedPayload(accessState));
+  return res.status(403).render("errors/error", buildGuestbookAccessDeniedPayload(accessState));
 }
 
 function buildGuestbookContextQuery(accessState = {}) {
@@ -12006,7 +12009,7 @@ function requireAuth(req, res, next) {
 
 function requireAdmin(req, res, next) {
   if (!req.session.user?.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Admins dürfen diese Seite sehen."
     });
@@ -12016,7 +12019,7 @@ function requireAdmin(req, res, next) {
 
 function requireStaff(req, res, next) {
   if (!req.session.user?.is_admin && !req.session.user?.is_moderator) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Admins und Moderatoren dürfen diese Seite sehen."
     });
@@ -12030,7 +12033,7 @@ function canPublishSiteUpdates(user) {
 
 function requireSiteUpdateEditor(req, res, next) {
   if (!canPublishSiteUpdates(req.session.user)) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Admins und Moderatoren dürfen Live-Updates veröffentlichen."
     });
@@ -12332,7 +12335,7 @@ app.get("/", async (req, res) => {
   await ensureDiscordHomeStats();
   const homeContent = getHomeContent();
   const recentSiteUpdates = getRecentSiteUpdates(30);
-  return res.render("home", {
+  return res.render("public/home", {
     title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
     metaDescription: DEFAULT_SEO_DESCRIPTION,
     stats: getLoginStats(),
@@ -12352,7 +12355,7 @@ app.get("/live-updates", (req, res) => {
     .slice(0, 50)
     .map((siteUpdate) => String(siteUpdate.revision_token || "").trim())
     .filter(Boolean);
-  return res.render("live-updates", {
+  return res.render("public/live-updates", {
     title: homeContent.updates_title || DEFAULT_UPDATES_TITLE,
     metaDescription:
       "Verfolge in den Live Updates von Heldenhafte Reisen neue Funktionen, Änderungen und wichtige Hinweise zur Plattform.",
@@ -12375,7 +12378,7 @@ app.get("/api/live-updates/state", (req, res) => {
 });
 
 app.get("/impressum", (req, res) => {
-  return res.render("impressum", {
+  return res.render("legal/impressum", {
     title: "Impressum",
     legalMeta: getLegalMeta(),
     adminContactName: getPublicAdminCharacterName(),
@@ -12384,7 +12387,7 @@ app.get("/impressum", (req, res) => {
 });
 
 app.get("/datenschutz", (req, res) => {
-  return res.render("datenschutz", {
+  return res.render("legal/datenschutz", {
     title: "Datenschutz",
     legalMeta: getLegalMeta(),
     pageClass: "page-legal"
@@ -12392,7 +12395,7 @@ app.get("/datenschutz", (req, res) => {
 });
 
 app.get("/community-regeln", (req, res) => {
-  return res.render("verhaltensregeln", {
+  return res.render("legal/verhaltensregeln", {
     title: "Community-Regeln",
     legalMeta: getLegalMeta(),
     adminContactName: getPublicAdminCharacterName(),
@@ -12401,7 +12404,7 @@ app.get("/community-regeln", (req, res) => {
 });
 
 app.get("/partner", (req, res) => {
-  return res.render("partner", {
+  return res.render("public/partner", {
     title: "Unsere Partner",
     pageClass: "page-legal"
   });
@@ -13204,7 +13207,7 @@ app.post("/session/touch", (req, res) => {
       if (isFetchRequest) {
         return res.status(500).json({ error: "session_touch_failed" });
       }
-      return res.status(500).render("error", {
+      return res.status(500).render("errors/error", {
         title: "Serverfehler",
         message: "Die Sitzung konnte gerade nicht aktualisiert werden."
       });
@@ -13753,7 +13756,7 @@ app.get("/rp-board", requireAuth, (req, res) => {
   }
 
   if (!context) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Für diesen RP-Aushang wurde kein passender eigener Charakter gefunden."
     });
@@ -13767,7 +13770,7 @@ app.get("/rp-board", requireAuth, (req, res) => {
     getLatestRpBoardEntryId(context.serverId, 0)
   );
 
-  return res.render("rp-board-page", {
+  return res.render("chat/rp-board-page", {
     title: `RP-Aushang: ${getServerLabel(context.serverId)}`,
     topbarCharacter: context.character,
     activeCharacter: context.character,
@@ -13786,7 +13789,7 @@ app.get("/character-backups", requireAuth, (req, res) => {
   });
   const backupReturnTarget = isLarpBackupView ? "/character-backups?server=larp" : "/character-backups";
 
-  return res.render("character-backups", {
+  return res.render("characters/backups/character-backups", {
     title: "Gelöschte Charaktere",
     activeTab: "characters",
     characterBackups,
@@ -13803,7 +13806,7 @@ app.get("/character-backups/logs", requireAuth, (req, res) => {
     last_log_at_label: formatGermanDateTime(entry.last_log_at)
   }));
 
-  return res.render("character-backup-logs", {
+  return res.render("characters/backups/character-backup-logs", {
     title: "Log-Backups",
     activeTab: "logs",
     logCharacters
@@ -13813,7 +13816,7 @@ app.get("/character-backups/logs", requireAuth, (req, res) => {
 app.get("/character-backups/logs/:characterId", requireAuth, (req, res) => {
   const characterId = Number(req.params.characterId);
   if (!Number.isInteger(characterId) || characterId < 0) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const requestedCharacterName = String(req.query.name || "").trim();
@@ -13833,7 +13836,7 @@ app.get("/character-backups/logs/:characterId", requireAuth, (req, res) => {
     return res.redirect("/character-backups/logs");
   }
 
-  return res.render("character-backup-log-detail", {
+  return res.render("characters/backups/character-backup-log-detail", {
     title: `Logs: ${characterLogs[0].character_name}`,
     activeTab: "logs",
     characterLogGroup: {
@@ -15184,11 +15187,11 @@ app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) =
   const returnTarget = getSafeReturnTarget(req, "/dashboard");
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Gästebuch-Code per E-Mail anfordern."
     });
@@ -15397,10 +15400,11 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
     note: "In Planung für Kampagnen, Orga-Ideen und Charakterkonzepte."
   };
 
-  return res.render("dashboard", {
+  return res.render("serverliste/index", {
     title: "Serverliste",
     serverSections,
-    larpSection
+    larpSection,
+    ...getServerListPageAssets()
   });
 });
 
@@ -15560,7 +15564,7 @@ app.get("/members", requireAuth, (req, res) => {
     (member) => normalizeCharacterServerId(member.server_id) === LARP_SERVER_ID
   );
 
-  return res.render("members", {
+  return res.render("dashboard/members", {
     title: "Mitgliederliste",
     staffMembers,
     rpMembers,
@@ -15640,7 +15644,7 @@ function decorateHelpBbcodeExamples() {
 }
 
 app.get("/help", (req, res) => {
-  return res.render("help", {
+  return res.render("public/help", {
     title: "Hilfe",
     metaDescription:
       "Hier findest du die Hilfe von Heldenhafte Reisen mit Befehlen, Erklärungen und einer übersichtlichen Orientierung durch die Plattform.",
@@ -15656,10 +15660,10 @@ app.get("/help/:slug", (req, res) => {
   const resolvedSlug = HELP_TOPIC_ALIASES[requestedSlug] || requestedSlug;
   const helpTopic = HELP_TOPICS.find((topic) => topic.slug === resolvedSlug);
   if (!helpTopic) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
-  return res.render("help", {
+  return res.render("public/help", {
     title: `Hilfe: ${helpTopic.title}`,
     metaDescription:
       "Hier findest du die Hilfe von Heldenhafte Reisen mit Befehlen, Erklärungen und einer übersichtlichen Orientierung durch die Plattform.",
@@ -15754,7 +15758,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     return res.redirect("/dashboard/larp");
   }
 
-  res.render("character-form", {
+  res.render("characters/character-form", {
     title: "Neuer Charakter",
     mode: "create",
     error: null,
@@ -15793,7 +15797,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!payload.name) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Name ist erforderlich.",
@@ -15806,7 +15810,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!req.session.user?.is_admin && containsReservedCharacterNameTerm(payload.name)) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: RESERVED_CHARACTER_NAME_ERROR,
@@ -15819,7 +15823,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Avatar-URL muss mit http:// oder https:// starten.",
@@ -15832,7 +15836,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
@@ -15845,7 +15849,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
@@ -15863,7 +15867,7 @@ app.post("/characters", requireAuth, (req, res) => {
       targetServerId: payload.server_id
     })
   ) {
-    return res.status(400).render("character-form", {
+    return res.status(400).render("characters/character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Dieser Charaktername ist bereits vergeben.",
@@ -15912,18 +15916,18 @@ app.post("/characters", requireAuth, (req, res) => {
 app.get("/characters/:id", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const isOwner = req.session.user.id === character.user_id;
   const isAdmin = req.session.user.is_admin === true;
   if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
     });
@@ -16047,126 +16051,48 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   });
 });
 
-app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  const character = getCharacterById(id);
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf mit diesem Charakter einen eigenen Raum erstellen."
-    });
-  }
-
-  rememberPreferredCharacter(req, character);
-  const ownedRooms = getSavedNonFestplayRoomsForUser(req.session.user.id, character.server_id);
-  const selectedRoomId = Number(req.query.selected_room);
-  const selectedRoom =
-    ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
-  return res.render("rooms/room-list", {
-    title: `Raum erstellen: ${character.name}`,
-    character,
-    ownedRooms,
-    selectedRoom
-  });
-});
-
-app.post("/characters/:id/rooms/reorder", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  const fallbackReturnTarget = `/characters/${id}/rooms/new#room-create`;
-  const isFetchRequest =
-    String(req.get("x-requested-with") || "").trim().toLowerCase() === "fetch";
-
-  if (!Number.isInteger(id) || id < 1) {
-    if (isFetchRequest) {
-      return res.status(404).json({ error: "Nicht gefunden" });
-    }
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  const character = getCharacterById(id);
-  if (!character) {
-    if (isFetchRequest) {
-      return res.status(404).json({ error: "Nicht gefunden" });
-    }
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    if (isFetchRequest) {
-      return res.status(403).json({ error: "Kein Zugriff" });
-    }
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf eigene Raeume sortieren."
-    });
-  }
-
-  let orderedRoomIds = [];
-  try {
-    const rawRoomIds = req.body.room_ids;
-    if (Array.isArray(rawRoomIds)) {
-      orderedRoomIds = rawRoomIds;
-    } else if (typeof rawRoomIds === "string") {
-      const trimmedValue = rawRoomIds.trim();
-      orderedRoomIds = trimmedValue.startsWith("[")
-        ? JSON.parse(trimmedValue)
-        : trimmedValue.split(",").map((entry) => entry.trim()).filter(Boolean);
-    }
-  } catch (error) {
-    console.error("owned room reorder payload parse failed", {
-      characterId: id,
-      userId: req.session.user.id,
-      error
-    });
-  }
-
-  try {
-    const updated = reorderOwnedRooms(req.session.user.id, character.server_id, orderedRoomIds);
-    if (!updated) {
-      if (isFetchRequest) {
-        return res.status(400).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
-      }
-      setFlash(req, "error", "Die Raumreihenfolge konnte nicht gespeichert werden.");
-      return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
-    }
-  } catch (error) {
-    console.error("owned room reorder failed", {
-      characterId: id,
-      userId: req.session.user.id,
-      roomIds: orderedRoomIds,
-      error
-    });
-    if (isFetchRequest) {
-      return res.status(500).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
-    }
-    setFlash(req, "error", "Beim Sortieren der Raeume ist ein Fehler aufgetreten.");
-    return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
-  }
-
-  if (isFetchRequest) {
-    return res.status(204).end();
-  }
-
-  return res.redirect(getSafeReturnTarget(req, fallbackReturnTarget));
+registerRaeumeErstellenBearbeitenRoutes(app, {
+  requireAuth,
+  getCharacterById,
+  rememberPreferredCharacter,
+  getSavedNonFestplayRoomsForUser,
+  setFlash,
+  getSafeReturnTarget,
+  reorderOwnedRooms,
+  canAccessCharacter,
+  normalizeRoomName,
+  normalizeRoomDescription,
+  ensurePublicRoomForServer,
+  ensureOwnedRoomForCharacter,
+  emitRoomListRefresh,
+  db,
+  normalizeServer,
+  normalizeRoomTeaser,
+  getSocketsInChannel,
+  clearPendingRoomDeletion,
+  finalizeRoomLog,
+  deleteRoomData,
+  io,
+  toRoomNameKey,
+  findOwnedRoomByNameKey,
+  isCuratedPublicRoom,
+  saveCuratedRoomOverride,
+  getRoomWithCharacter,
+  maybeStartAutomaticRoomLog,
+  getActiveRoomLog,
+  emitSystemChatMessage,
+  emitRoomStateUpdate
 });
 
 app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -16175,7 +16101,7 @@ app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
 
   rememberPreferredCharacter(req, character);
 
-  return res.render("festplays-public", {
+  return res.render("characters/festplays/festplays-public", {
     title: `Festspiele: ${character.name}`,
     character,
     publicFestplays: getPublicFestplays(character.server_id)
@@ -16186,12 +16112,12 @@ app.get("/characters/:id/festplays/public/:festplayId", requireAuth, (req, res) 
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -16200,7 +16126,7 @@ app.get("/characters/:id/festplays/public/:festplayId", requireAuth, (req, res) 
 
   const festplay = getPublicFestplayById(festplayId, character.server_id);
   if (!festplay) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   rememberPreferredCharacter(req, character);
@@ -16208,7 +16134,7 @@ app.get("/characters/:id/festplays/public/:festplayId", requireAuth, (req, res) 
   const application = getFestplayApplicationForCharacter(festplay.id, character.id);
   const applicationState = hasAccess ? "approved" : application?.status || "none";
 
-  return res.render("festplay-public-detail", {
+  return res.render("characters/festplays/festplay-public-detail", {
     title: `Festspiel: ${festplay.name}`,
     character,
     festplay,
@@ -16221,16 +16147,16 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Festspiel-Chat mit dem Charakter betreten."
     });
@@ -16238,11 +16164,11 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
 
   const festplay = getFestplayById(festplayId);
   if (!festplay) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (!characterHasFestplayAccess(festplayId, character.id)) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist nicht für dieses Festspiel freigeschaltet."
     });
@@ -16310,7 +16236,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
       festplayChatEntries.map((entry) => [entry.room.id, entry.activeUsers])
     );
 
-    return res.render("festplay-rooms", {
+    return res.render("characters/festplays/festplay-rooms", {
       title: `Festspiel-Räume: ${festplay.name}`,
       character,
       festplay,
@@ -16342,16 +16268,16 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
   const festplayId = Number(req.params.festplayId);
   const fallbackReturnTarget = `/characters/${id}/festplays/${festplayId}/rooms`;
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf mit diesem Charakter einen Festspiel-Raum anlegen."
     });
@@ -16359,11 +16285,11 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
 
   const festplay = getFestplayById(festplayId);
   if (!festplay) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (!characterHasFestplayAccess(festplayId, character.id)) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist nicht für dieses Festspiel freigeschaltet."
     });
@@ -16416,7 +16342,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
   const festplay = getFestplayById(festplayId);
 
   if (!character || !festplay) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const canManageFestplayRooms = canCharacterManageFestplayRooms(
@@ -16433,14 +16359,14 @@ app.post("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) 
   });
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf mit diesem Charakter Festspiel-Räume anlegen."
     });
   }
 
   if (!canManageFestplayRooms) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume angelegt werden."
     });
@@ -16519,7 +16445,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/reorder", requireAuth, (re
     if (isFetchRequest) {
       return res.status(404).json({ error: "Nicht gefunden" });
     }
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
@@ -16528,14 +16454,14 @@ app.post("/characters/:id/festplays/:festplayId/rooms/reorder", requireAuth, (re
     if (isFetchRequest) {
       return res.status(404).json({ error: "Nicht gefunden" });
     }
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
     if (isFetchRequest) {
       return res.status(403).json({ error: "Kein Zugriff" });
     }
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf eigene Festspiel-Raeume sortieren."
     });
@@ -16613,16 +16539,16 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
     !Number.isInteger(festplayId) || festplayId < 1 ||
     !Number.isInteger(roomId) || roomId < 1
   ) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf eigene Festspiel-Raeume bearbeiten."
     });
@@ -16653,7 +16579,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
   });
 
   if (!canManageFestplayRooms) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume bearbeitet werden."
     });
@@ -16765,16 +16691,16 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
     !Number.isInteger(festplayId) || festplayId < 1 ||
     !Number.isInteger(roomId) || roomId < 1
   ) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf eigene Festspiel-Räume löschen."
     });
@@ -16800,7 +16726,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   });
 
   if (!canManageFestplayRooms) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Mit diesem Charakter dürfen für dieses Festspiel keine eigenen Räume gelöscht werden."
     });
@@ -16849,12 +16775,12 @@ app.post("/characters/:id/festplays/public/:festplayId/apply", requireAuth, (req
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -16898,12 +16824,12 @@ app.post("/characters/:id/festplays/public/:festplayId/withdraw", requireAuth, (
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -16941,12 +16867,12 @@ app.post("/characters/:id/festplays/public/:festplayId/withdraw", requireAuth, (
 app.get("/characters/:id/festplays", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17052,7 +16978,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
         : null;
     selectedFestplayRoomPreviewHtml =
       selectedFestplayRoom?.teaser ? renderGuestbookBbcode(selectedFestplayRoom.teaser) : "";
-    return res.render("festplay-create", {
+    return res.render("characters/festplays/festplay-create", {
       title: `Festspiele erstellen: ${character.name}`,
       character,
       ownedFestplays,
@@ -17086,12 +17012,12 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
 app.post("/characters/:id/festplays", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17140,12 +17066,12 @@ app.post("/characters/:id/festplays/:festplayId/permissions", requireAuth, (req,
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17189,12 +17115,12 @@ app.post("/characters/:id/festplays/:festplayId/permissions/:permissionId/delete
     !Number.isInteger(permissionId) ||
     permissionId < 1
   ) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17229,12 +17155,12 @@ app.post("/characters/:id/festplays/:festplayId/players/:playerCharacterId/delet
     !Number.isInteger(playerCharacterId) ||
     playerCharacterId < 1
   ) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17273,12 +17199,12 @@ app.post("/characters/:id/festplays/:festplayId/applications/:applicationId/appr
     !Number.isInteger(applicationId) ||
     applicationId < 1
   ) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17370,12 +17296,12 @@ app.post("/characters/:id/festplays/:festplayId/update", requireAuth, (req, res)
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17425,12 +17351,12 @@ app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res)
   const id = Number(req.params.id);
   const festplayId = Number(req.params.festplayId);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(festplayId) || festplayId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -17472,16 +17398,16 @@ app.post("/characters/:id/festplays/:festplayId/delete", requireAuth, (req, res)
 app.get("/characters/:id/edit", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Charakter bearbeiten."
     });
@@ -17507,11 +17433,11 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   const festplays = getFestplays();
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Charakter bearbeiten."
     });
@@ -17730,11 +17656,11 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Charakter löschen."
     });
@@ -17766,11 +17692,11 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   );
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Charakter verschieben."
     });
@@ -17887,11 +17813,11 @@ app.post("/characters/:id/role-character", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Besitzer darf diesen Charakter als Rollenname setzen."
     });
@@ -17912,250 +17838,16 @@ app.post("/characters/:id/role-character", requireAuth, (req, res) => {
   return res.redirect(`/characters/${id}`);
 });
 
-app.post("/characters/:id/enter-room", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  const character = getCharacterById(id);
-
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (
-    !canAccessCharacter(
-      req.session.user.id,
-      character.user_id,
-      character.is_public,
-      req.session.user.is_admin
-    )
-  ) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Dieser Charakter ist privat."
-    });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf mit diesem Charakter einen eigenen Raum anlegen."
-    });
-  }
-
-  const roomName = normalizeRoomName(req.body.room_name);
-  const roomDescription = normalizeRoomDescription(req.body.room_description || req.body.room_teaser);
-  const returnTarget = String(req.body.return_to || "").trim().toLowerCase();
-  if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
-    return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
-  }
-
-  if (character.user_id === req.session.user.id) {
-    rememberPreferredCharacter(req, character);
-  }
-
-  const targetRoom = returnTarget === "roomlist"
-    ? ensurePublicRoomForServer(req.session.user.id, character, roomName, roomDescription)
-    : ensureOwnedRoomForCharacter(req.session.user.id, character, roomName, roomDescription);
-  if (!targetRoom) {
-    setFlash(req, "error", "Raum konnte nicht angelegt werden.");
-    return res.redirect(returnTarget === "roomlist" ? `/characters/${id}#roomlist` : `/characters/${id}/rooms/new`);
-  }
-
-  if (targetRoom.created) {
-    emitRoomListRefresh(character.server_id);
-  }
-
-  if (returnTarget === "roomlist") {
-    return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
-  }
-
-  return res.redirect(`/characters/${id}/rooms/new`);
-});
-
-app.post("/characters/:id/rooms/:roomId/update", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  const roomId = Number(req.params.roomId);
-  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  const character = getCharacterById(id);
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf eigene Räume bearbeiten."
-    });
-  }
-
-  const room = db
-    .prepare(
-      `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, is_saved_room
-       FROM chat_rooms
-       WHERE id = ?
-         AND COALESCE(festplay_id, 0) = 0
-         AND COALESCE(is_festplay_chat, 0) = 0
-         AND COALESCE(is_manual_festplay_room, 0) = 0
-         AND COALESCE(is_festplay_side_chat, 0) = 0`
-    )
-    .get(roomId);
-  if (
-    !room ||
-    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
-    Number(room.is_saved_room) !== 1 ||
-    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
-  ) {
-    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
-    return res.redirect(`/characters/${id}/rooms/new`);
-  }
-
-  const roomName = normalizeRoomName(req.body.room_name);
-  const roomDescription = normalizeRoomDescription(req.body.room_description);
-  const roomTeaser = normalizeRoomTeaser(req.body.room_teaser);
-  const roomImageUrl = String(room.image_url || "");
-  const emailLogEnabled = req.body.email_log_enabled ? 1 : 0;
-  const isLocked = req.body.is_locked ? 1 : 0;
-
-  if (req.body.delete_room) {
-    if (getSocketsInChannel(roomId, room.server_id).length > 0) {
-      setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
-      return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
-    }
-
-    clearPendingRoomDeletion(roomId);
-    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
-    deleteRoomData(roomId);
-    io.emit("chat:room-removed", { room_id: roomId });
-    emitRoomListRefresh(room.server_id);
-    setFlash(req, "success", "Raum gelöscht.");
-    return res.redirect(`/characters/${id}/rooms/new`);
-  }
-
-  if (roomName.length < 2) {
-    setFlash(req, "error", "Bitte einen gültigen Raumnamen eingeben.");
-    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
-  }
-
-  const nextRoomNameKey = toRoomNameKey(roomName);
-  const currentRoomNameKey = toRoomNameKey(room.name);
-  const conflictingRoom = nextRoomNameKey === currentRoomNameKey
-    ? null
-    : findOwnedRoomByNameKey(
-        req.session.user.id,
-        character.server_id,
-        nextRoomNameKey,
-        roomDescription
-      );
-  if (conflictingRoom && Number(conflictingRoom.id) !== roomId) {
-    setFlash(req, "error", "Du hast bereits einen Raum mit diesem Namen.");
-    return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
-  }
-
-  db.prepare(
-      `UPDATE chat_rooms
-       SET name = ?,
-           name_key = ?,
-           description = ?,
-           teaser = ?,
-           image_url = ?,
-           email_log_enabled = ?,
-           is_locked = ?
-       WHERE id = ?`
-    ).run(
-      roomName,
-      nextRoomNameKey,
-      roomDescription,
-      roomTeaser,
-      roomImageUrl,
-      emailLogEnabled,
-    isLocked,
-    roomId
-  );
-  if (isCuratedPublicRoom(room, room.server_id)) {
-    saveCuratedRoomOverride(
-      room.server_id,
-      room.name_key || toRoomNameKey(roomName),
-      roomDescription,
-      roomTeaser
-    );
-  }
-
-  const refreshedRoom = getRoomWithCharacter(roomId);
-  if (emailLogEnabled === 1 && Number(room.email_log_enabled) !== 1) {
-    maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
-  } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
-    emitSystemChatMessage(roomId, room.server_id, "Log wurde deaktiviert.");
-    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
-  }
-
-  emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
-  emitRoomListRefresh(room.server_id);
-  return res.redirect(`/characters/${id}/rooms/new?selected_room=${roomId}#room-selected-editor`);
-});
-
-app.post("/characters/:id/rooms/:roomId/delete", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  const roomId = Number(req.params.roomId);
-  if (!Number.isInteger(id) || id < 1 || !Number.isInteger(roomId) || roomId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  const character = getCharacterById(id);
-  if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
-  }
-
-  if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf eigene Räume löschen."
-    });
-  }
-
-  const room = db
-    .prepare(
-      `SELECT id, name, server_id, created_by_user_id, is_public_room, is_saved_room
-       FROM chat_rooms
-       WHERE id = ?
-         AND COALESCE(festplay_id, 0) = 0`
-    )
-    .get(roomId);
-  if (
-    !room ||
-    Number(room.created_by_user_id) !== Number(req.session.user.id) ||
-    Number(room.is_saved_room) !== 1 ||
-    normalizeServer(room.server_id) !== normalizeServer(character.server_id)
-  ) {
-    setFlash(req, "error", "Dieser Raum konnte nicht gefunden werden.");
-    return res.redirect(`/characters/${id}/rooms/new`);
-  }
-
-  if (getSocketsInChannel(roomId, room.server_id).length > 0) {
-    setFlash(req, "error", "Der Raum kann erst gelöscht werden, wenn niemand mehr darin ist.");
-    return res.redirect(`/characters/${id}/rooms/new`);
-  }
-
-  clearPendingRoomDeletion(roomId);
-  await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
-  deleteRoomData(roomId);
-  io.emit("chat:room-removed", { room_id: roomId });
-  emitRoomListRefresh(room.server_id);
-
-  return res.redirect(`/characters/${id}/rooms/new`);
-});
 
 app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const character = getCharacterById(id);
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
@@ -18215,7 +17907,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       buildGuestbookContextQuery(guestbookAccessState)
   );
 
-  return res.render("guestbook-view", {
+  return res.render("characters/guestbook/guestbook-view", {
     title: `Gästebuch: ${character.name}`,
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
@@ -18259,7 +17951,7 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
@@ -18341,7 +18033,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
   const character = getCharacterById(id);
 
   if (!character || !Number.isInteger(entryId) || entryId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
@@ -18351,12 +18043,12 @@ app.post("/characters/:id/guestbook/entries/:entryId/update", requireAuth, (req,
 
   const entry = getGuestbookEntryById(entryId);
   if (!entry || Number(entry.character_id) !== id) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const isAuthor = Number(entry.author_id) === Number(req.session.user.id);
   if (!isAuthor && !guestbookAccessState.isAdmin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Verfasser oder ein Admin darf diesen Eintrag bearbeiten."
     });
@@ -18398,7 +18090,7 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
   const character = getCharacterById(id);
 
   if (!character || !Number.isInteger(entryId) || entryId < 1) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const guestbookAccessState = getGuestbookAccessState(req, character);
@@ -18408,12 +18100,12 @@ app.post("/characters/:id/guestbook/entries/:entryId/delete", requireAuth, (req,
 
   const entry = getGuestbookEntryById(entryId);
   if (!entry || Number(entry.character_id) !== id) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   const isAuthor = Number(entry.author_id) === Number(req.session.user.id);
   if (!isAuthor && !guestbookAccessState.isOwner && !guestbookAccessState.isAdmin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur der Verfasser, der Besitzer oder ein Admin darf diesen Eintrag löschen."
     });
@@ -18447,11 +18139,11 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18466,7 +18158,7 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
     return res.redirect(buildEmbeddedGuestbookEditorUrl(id, guestbookEditorState.activePage.id));
   }
 
-  return res.render("guestbook-editor", {
+  return res.render("characters/guestbook/guestbook-editor", {
     title: `Gästebuch bearbeiten: ${character.name}`,
     character,
     pages: guestbookEditorState.pages,
@@ -18501,11 +18193,11 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18557,7 +18249,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     getAccountUserById(character.user_id)
   );
 
-  return res.render("guestbook-preview", {
+  return res.render("characters/guestbook/guestbook-preview", {
     title: `Vorschau: ${character.name}`,
     character,
     characterCreatedAtLabel: formatGermanDate(character.created_at),
@@ -18585,11 +18277,11 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18702,11 +18394,11 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18742,7 +18434,7 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
         return res.status(500).end();
       }
 
-      return res.status(500).render("error", {
+      return res.status(500).render("errors/error", {
         title: "Serverfehler",
         message: "Die Vorschau konnte gerade nicht geladen werden."
       });
@@ -18761,11 +18453,11 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18837,11 +18529,11 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   const character = getCharacterById(id);
 
   if (!character) {
-    return res.status(404).render("404", { title: "Nicht gefunden" });
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
   if (character.user_id !== req.session.user.id && !req.session.user.is_admin) {
-    return res.status(403).render("error", {
+    return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Besitzer oder Admins dürfen das Gästebuch bearbeiten."
     });
@@ -18899,7 +18591,7 @@ app.get("/chat", requireAuth, (req, res) => {
     room = ensureSavedRoomVisibleForOwner(room, req.session.user.id);
 
     if (!canAccessRoom(req.session.user, room)) {
-      return res.status(403).render("error", {
+      return res.status(403).render("errors/error", {
         title: "Kein Zugriff",
         message: "Dieser Raum ist nicht für dich sichtbar."
       });
@@ -18981,7 +18673,7 @@ app.get("/chat", requireAuth, (req, res) => {
     }
   );
 
-  return res.render("chat", {
+  return res.render("chat/chat", {
     title: activeRoom
       ? `${getServerLabel(activeServerId)} Raum: ${activeRoom.name}`
       : standardRoom
@@ -19416,7 +19108,7 @@ function renderStaffOverview(req, res) {
     .prepare("SELECT COUNT(*) AS count FROM users")
     .get().count;
 
-  return res.render("admin", {
+  return res.render("admin/admin", {
     title: panelConfig.pageTitle,
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
@@ -19519,7 +19211,7 @@ function renderStaffUserBackups(req, res) {
     });
   });
 
-  return res.render("staff-user-backups", {
+  return res.render("admin/staff-user-backups", {
     title: `${panelConfig.panelTitle}: USER BACKUP`,
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
@@ -19556,7 +19248,7 @@ function renderStaffUserDetails(req, res) {
 
   const userCharacters = getAdminUserCharacters(targetId);
 
-  return res.render("admin-user", {
+  return res.render("admin/admin-user", {
     title: `${panelConfig.panelTitle}: ${targetUser.username}`,
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
@@ -19734,7 +19426,7 @@ app.post("/admin/festplays/:id/delete", requireAuth, requireAdmin, (req, res) =>
 app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    return res.status(400).render("error", {
+    return res.status(400).render("errors/error", {
       title: "Ungültige Anfrage",
       message: "User-ID ist ungültig."
     });
@@ -19744,7 +19436,7 @@ app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) 
     .prepare("SELECT id, username, is_admin FROM users WHERE id = ?")
     .get(targetId);
   if (!targetUser) {
-    return res.status(404).render("error", {
+    return res.status(404).render("errors/error", {
       title: "Nicht gefunden",
       message: "User wurde nicht gefunden."
     });
@@ -19784,7 +19476,7 @@ app.post("/admin/users/:id/toggle-admin", requireAuth, requireAdmin, (req, res) 
 app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, res) => {
   const targetId = Number(req.params.id);
   if (!Number.isInteger(targetId) || targetId < 1) {
-    return res.status(400).render("error", {
+    return res.status(400).render("errors/error", {
       title: "Ungültige Anfrage",
       message: "User-ID ist ungültig."
     });
@@ -19794,7 +19486,7 @@ app.post("/admin/users/:id/toggle-moderator", requireAuth, requireAdmin, (req, r
     .prepare("SELECT id, username, is_moderator FROM users WHERE id = ?")
     .get(targetId);
   if (!targetUser) {
-    return res.status(404).render("error", {
+    return res.status(404).render("errors/error", {
       title: "Nicht gefunden",
       message: "User wurde nicht gefunden."
     });
@@ -20132,12 +19824,12 @@ app.get("/bbcode-fonts/1001freefonts.css", async (req, res) => {
 });
 
 app.use((req, res) => {
-  res.status(404).render("404", { title: "Nicht gefunden" });
+  res.status(404).render("errors/404", { title: "Nicht gefunden" });
 });
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).render("error", {
+  res.status(500).render("errors/error", {
     title: "Serverfehler",
     message: "Es ist ein unerwarteter Fehler aufgetreten."
   });
