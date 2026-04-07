@@ -77,6 +77,7 @@ function createHomePageService(options = {}) {
     typeof options.getLatestSiteUpdateRevisionToken === "function"
       ? options.getLatestSiteUpdateRevisionToken
       : () => "";
+  const onError = typeof options.onError === "function" ? options.onError : NOOP;
   const defaultSeoDescription = String(options.defaultSeoDescription || "");
 
   if (!db) {
@@ -88,6 +89,63 @@ function createHomePageService(options = {}) {
   let cachedDiscordHomeStats = { ...FALLBACK_DISCORD_HOME_STATS };
   let cachedDiscordHomeStatsExpiresAt = 0;
   let discordHomeStatsRefreshPromise = null;
+
+  function logHomePageError(scope, error, extra = {}) {
+    try {
+      onError({ scope, error, extra });
+    } catch (_loggingError) {
+      NOOP();
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderPlainTextAsHtml(value) {
+    return escapeHtml(value).replace(/\r?\n/g, "<br>");
+  }
+
+  function buildFallbackLoginStats() {
+    return {
+      accountCount: 0,
+      characterCount: 0,
+      rpServerCount: 0,
+      freeRpCharacterCount: 0,
+      erpCharacterCount: 0,
+      larpServerCount: 0,
+      freeRpOnlineCount: 0,
+      erpOnlineCount: 0,
+      rpOnlineCount: 0,
+      larpOnlineCount: 0,
+      discordGuildName: FALLBACK_DISCORD_HOME_STATS.guildName,
+      discordInviteUrl: FALLBACK_DISCORD_HOME_STATS.inviteUrl,
+      discordMemberCount: FALLBACK_DISCORD_HOME_STATS.memberCount,
+      discordOnlineCount: FALLBACK_DISCORD_HOME_STATS.onlineCount,
+      discordIconUrl: FALLBACK_DISCORD_HOME_STATS.iconUrl,
+      discordAvailable: FALLBACK_DISCORD_HOME_STATS.available,
+      loggedInUserCount: 0,
+      adminOnlineCount: 0,
+      adminOnlineNames: [],
+      moderatorOnlineCount: 0,
+      moderatorOnlineNames: []
+    };
+  }
+
+  function buildFallbackHomeContent() {
+    const heroBody = DEFAULT_HOME_HERO_BODY;
+    return {
+      hero_title: DEFAULT_HOME_HERO_TITLE,
+      hero_body: heroBody,
+      hero_body_html: renderPlainTextAsHtml(heroBody),
+      updates_title: DEFAULT_UPDATES_TITLE
+    };
+  }
 
   function clearLoginStatsCache() {
     cachedLoginStats = null;
@@ -179,7 +237,8 @@ function createHomePageService(options = {}) {
         }
 
         return cachedDiscordHomeStats;
-      } catch (_error) {
+      } catch (error) {
+        logHomePageError("discord-refresh", error);
         cachedDiscordHomeStatsExpiresAt = Date.now() + 30000;
         return cachedDiscordHomeStats;
       } finally {
@@ -418,13 +477,24 @@ function createHomePageService(options = {}) {
       return cachedLoginStats;
     }
 
-    cachedLoginStats = buildLoginStats();
-    cachedLoginStatsExpiresAt = now + LOGIN_STATS_CACHE_TTL_MS;
+    try {
+      cachedLoginStats = buildLoginStats();
+      cachedLoginStatsExpiresAt = now + LOGIN_STATS_CACHE_TTL_MS;
+    } catch (error) {
+      logHomePageError("build-login-stats", error);
+      cachedLoginStats = cachedLoginStats || buildFallbackLoginStats();
+      cachedLoginStatsExpiresAt = now + LOGIN_STATS_CACHE_TTL_MS;
+    }
+
     return cachedLoginStats;
   }
 
   function emitHomeStatsUpdate() {
-    broadcastSiteStatsUpdate(getLoginStats());
+    try {
+      broadcastSiteStatsUpdate(getLoginStats());
+    } catch (error) {
+      logHomePageError("broadcast-site-stats-update", error);
+    }
   }
 
   function normalizeHomeSectionTitle(rawTitle) {
@@ -446,27 +516,54 @@ function createHomePageService(options = {}) {
     return {
       hero_title: heroTitle,
       hero_body: heroBody,
-      hero_body_html: renderGuestbookBbcode(heroBody),
+      hero_body_html: (() => {
+        try {
+          return renderGuestbookBbcode(heroBody);
+        } catch (error) {
+          logHomePageError("render-home-hero-bbcode", error, {
+            heroBodyLength: heroBody.length
+          });
+          return renderPlainTextAsHtml(heroBody);
+        }
+      })(),
       updates_title: updatesTitle
     };
   }
 
   function getHomeContent() {
-    const homeContent = db
-      .prepare(
-        `SELECT hero_title, hero_body, updates_title
-         FROM site_home_settings
-         WHERE id = 1`
-      )
-      .get();
+    try {
+      const homeContent = db
+        .prepare(
+          `SELECT hero_title, hero_body, updates_title
+           FROM site_home_settings
+           WHERE id = 1`
+        )
+        .get();
 
-    return decorateHomeContent(homeContent);
+      return decorateHomeContent(homeContent);
+    } catch (error) {
+      logHomePageError("get-home-content", error);
+      return buildFallbackHomeContent();
+    }
   }
 
   function buildHomePageViewModel() {
     const homeContent = getHomeContent();
-    const recentSiteUpdatesResult = getRecentSiteUpdates(30);
-    const recentSiteUpdates = Array.isArray(recentSiteUpdatesResult) ? recentSiteUpdatesResult : [];
+    let recentSiteUpdates = [];
+    let latestSiteUpdateRevisionToken = "";
+
+    try {
+      const recentSiteUpdatesResult = getRecentSiteUpdates(30);
+      recentSiteUpdates = Array.isArray(recentSiteUpdatesResult) ? recentSiteUpdatesResult : [];
+    } catch (error) {
+      logHomePageError("get-recent-site-updates", error);
+    }
+
+    try {
+      latestSiteUpdateRevisionToken = String(getLatestSiteUpdateRevisionToken() || "").trim();
+    } catch (error) {
+      logHomePageError("get-latest-site-update-revision-token", error);
+    }
 
     return {
       title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
@@ -476,7 +573,7 @@ function createHomePageService(options = {}) {
       recentSiteUpdateRevisions: recentSiteUpdates
         .map((siteUpdate) => String(siteUpdate?.revision_token || "").trim())
         .filter(Boolean),
-      latestSiteUpdateRevisionToken: getLatestSiteUpdateRevisionToken(),
+      latestSiteUpdateRevisionToken,
       pageClass: "page-home-screen"
     };
   }
@@ -499,16 +596,24 @@ function createHomePageService(options = {}) {
       };
     }
 
-    db.prepare(
-      `UPDATE site_home_settings
-       SET hero_title = ?, hero_body = ?
-       WHERE id = 1`
-    ).run(heroTitle, heroBody);
+    try {
+      db.prepare(
+        `UPDATE site_home_settings
+         SET hero_title = ?, hero_body = ?
+         WHERE id = 1`
+      ).run(heroTitle, heroBody);
 
-    return {
-      ok: true,
-      homeContent: getHomeContent()
-    };
+      return {
+        ok: true,
+        homeContent: getHomeContent()
+      };
+    } catch (error) {
+      logHomePageError("save-hero-content", error);
+      return {
+        ok: false,
+        error: "Der Startseitenbereich konnte gerade nicht gespeichert werden."
+      };
+    }
   }
 
   function saveUpdatesTitle(rawTitle) {
@@ -521,16 +626,24 @@ function createHomePageService(options = {}) {
       };
     }
 
-    db.prepare(
-      `UPDATE site_home_settings
-       SET updates_title = ?
-       WHERE id = 1`
-    ).run(updatesTitle);
+    try {
+      db.prepare(
+        `UPDATE site_home_settings
+         SET updates_title = ?
+         WHERE id = 1`
+      ).run(updatesTitle);
 
-    return {
-      ok: true,
-      homeContent: getHomeContent()
-    };
+      return {
+        ok: true,
+        homeContent: getHomeContent()
+      };
+    } catch (error) {
+      logHomePageError("save-updates-title", error);
+      return {
+        ok: false,
+        error: "Die Live-Updates-Überschrift konnte gerade nicht gespeichert werden."
+      };
+    }
   }
 
   return {

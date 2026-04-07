@@ -1,0 +1,764 @@
+<%- include("../../partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+
+<section class="rp-shell">
+  <% const festplayDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
+  <% const festplayAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : character.name); %>
+  <% const festplayIdentityRoleStyle = currentUser && currentUser.is_admin && Number(currentUser.admin_character_id) === Number(character.id)
+    ? "admin"
+    : currentUser && currentUser.is_moderator && Number(currentUser.moderator_character_id) === Number(character.id)
+      ? "moderator"
+      : (currentUserDisplayRoleStyle || ""); %>
+  <% const festplayIdentityName = character.name || festplayDisplayName; %>
+  <% const festplayIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const festplayLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
+  <% const festplayLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const festplayHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const festplayHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
+      : festplayIdentityName; %>
+  <% const festplayBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
+
+  <header class="rp-topline">
+    <a class="rp-logo" href="/">Heldenhafte Reisen</a>
+    <nav class="rp-menu" aria-label="Festspiel Navigation">
+      <a href="<%= character.server_id === 'free-rp' || character.server_id === 'erp' ? `/dashboard/areas/${character.server_id}` : `/characters/${character.id}#roomlist` %>" <%= character.server_id === "free-rp" || character.server_id === "erp" ? 'target="_blank" rel="noopener noreferrer"' : "" %>><%= character.server_id === "free-rp" || character.server_id === "erp" ? "Serverliste" : "Raumliste" %></a>
+      <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
+      <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
+      <a
+        class="rp-board-nav-link"
+        href="<%= festplayBoardHref %>"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-rp-board-link-root
+        data-rp-board-server-id="<%= character.server_id %>"
+        data-rp-board-festplay-id="0"
+        data-rp-board-character-id="<%= Number(character.id) %>"
+      >
+        <span>RP-Aushang</span>
+        <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
+      </a>
+      <a
+        class="live-updates-nav-link"
+        href="/live-updates"
+        target="site-live-updates"
+        data-live-updates-link-root
+        data-live-updates-target="site-live-updates"
+        data-live-updates-initial-revision="<%= festplayLiveUpdatesInitialRevision %>"
+        data-live-updates-initial-revisions="<%= festplayLiveUpdatesInitialRevisions.join('|') %>"
+      >
+        <span>Live Updates</span>
+        <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+      </a>
+    </nav>
+    <div class="rp-topline-actions">
+      <% if (festplayHeaderIdentityHref) { %>
+        <a
+          class="rp-header-identity rp-header-identity-link"
+          data-header-identity
+          href="<%= festplayHeaderIdentityHref %>"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="<%- festplayHeaderIdentityTitle %>"
+          style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+        ><%= festplayIdentityName %></a>
+      <% } else { %>
+        <span
+          class="rp-header-identity"
+          data-header-identity
+          title="<%= festplayIdentityName %>"
+          style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+        ><%= festplayIdentityName %></span>
+      <% } %>
+      <form method="POST" action="/settings/theme" class="inline-form theme-form">
+        <label for="rp-theme-select-festplay-create">Design</label>
+        <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <select
+          id="rp-theme-select-festplay-create"
+          name="theme"
+          class="theme-select"
+        >
+          <% availableThemes.forEach((theme) => { %>
+            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+              <%= theme.label %>
+            </option>
+          <% }) %>
+        </select>
+      </form>
+      <div class="rp-topline-quick-actions">
+        <%- include("../../partials/guestbook-notification-link") %>
+        <details class="rp-user-menu">
+          <summary
+            class="rp-user-menu-toggle"
+            aria-label="Benutzermen&uuml; &ouml;ffnen"
+            title="Benutzermen&uuml;"
+          >
+            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+          </summary>
+          <div class="rp-user-menu-panel">
+        <div class="rp-user-menu-meta">
+          <strong
+            class="<%= festplayIdentityRoleStyle ? `role-name-${festplayIdentityRoleStyle}` : '' %>"
+            style="<%= festplayIdentityColor ? `color:${festplayIdentityColor};` : '' %>"
+          ><%= festplayIdentityName %></strong>
+          <% if (festplayAccountDisplayName && festplayAccountDisplayName !== festplayIdentityName) { %>
+            <span>Konto: <%= festplayAccountDisplayName %></span>
+          <% } %>
+          <span>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
+        </div>
+
+        <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
+          <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
+          <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
+          <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
+          <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
+          <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+        </nav>
+
+        <form method="POST" action="/logout" class="inline-form rp-user-menu-form">
+          <button type="submit" class="rp-user-menu-logout">Logout</button>
+        </form>
+          </div>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <section class="rp-room-panel rp-room-panel-create" id="festplay-create">
+    <% const showFestplaySaveAction = ((!selectedFestplay && activeFestplayOverviewTab !== "andere") || (selectedFestplayMode === "owned" && activeFestplayTab === "allgemein")); %>
+    <% const showFestplayDeleteAction = Boolean(selectedFestplayMode === "owned" && activeFestplayTab === "allgemein" && selectedFestplay); %>
+    <div class="rp-room-create-header">
+      <% if (showFestplaySaveAction || showFestplayDeleteAction) { %>
+        <div class="rp-room-create-header-actions">
+          <% if (showFestplaySaveAction) { %>
+            <button
+              class="btn rp-room-create-save"
+              type="submit"
+              form="<%= selectedFestplay ? `festplay-editor-form-${selectedFestplay.id}` : 'festplay-create-form' %>"
+            >Speichern</button>
+          <% } %>
+          <% if (showFestplayDeleteAction) { %>
+            <form
+              method="POST"
+              action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/delete"
+              class="inline-form"
+              onsubmit="return confirm('Festspiel wirklich löschen? Zugeordnete Charaktere werden wieder in den normalen Bereich gesetzt.');"
+            >
+              <button type="submit" class="btn btn-danger">Festplay l&ouml;schen</button>
+            </form>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <nav class="rp-room-editor-tabs rp-festplay-overview-tabs" aria-label="Festspiel&uuml;bersicht">
+      <a
+        class="rp-room-editor-tab<%= activeFestplayOverviewTab === 'eigene' ? ' is-active' : '' %>"
+        href="/characters/<%= character.id %>/festplays"
+      >Eigene Festplays</a>
+      <a
+        class="rp-room-editor-tab<%= activeFestplayOverviewTab === 'andere' ? ' is-active' : '' %>"
+        href="/characters/<%= character.id %>/festplays?overview=andere"
+      >Andere Festplays</a>
+    </nav>
+
+    <section class="rp-room-editor rp-room-editor-placeholder rp-festplay-overview-panel" aria-label="Festspiel&uuml;bersicht">
+      <div class="rp-room-editor-body">
+        <% const visibleFestplays = activeFestplayOverviewTab === "andere" ? (otherFestplays || []) : (ownedFestplays || []); %>
+        <% if (visibleFestplays.length) { %>
+          <div class="rp-room-inline-list rp-festplay-overview-list">
+            <% visibleFestplays.forEach((festplay) => { %>
+              <a
+                class="rp-room-inline-item rp-room-manage-link<%= selectedFestplay && Number(selectedFestplay.id) === Number(festplay.id) ? ' is-active' : '' %>"
+                href="/characters/<%= character.id %>/festplays?overview=<%= activeFestplayOverviewTab %>&selected_festplay=<%= festplay.id %>#festplay-selected-editor"
+                title="Festspiel &ouml;ffnen"
+              >
+                <span class="rp-room-inline-name"><%= festplay.name %></span>
+                <% if (activeFestplayOverviewTab === "andere" && festplay.creator_display_name) { %>
+                  <span class="rp-room-inline-teaser">von <%= festplay.creator_display_name %></span>
+                <% } %>
+              </a>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="rp-room-editor-note">
+            <%= activeFestplayOverviewTab === "andere"
+              ? "Du bist auf diesem Server noch in keinen Festspielen anderer Spieler eingetragen."
+              : "Du hast noch keine eigenen Festspiele erstellt." %>
+          </p>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (selectedFestplayMode === "owned" || selectedFestplayMode === "other") { %>
+      <% const festplaySelectionBaseHref = selectedFestplayMode === "other"
+        ? `/characters/${character.id}/festplays?overview=andere&selected_festplay=${selectedFestplay.id}`
+        : `/characters/${character.id}/festplays?selected_festplay=${selectedFestplay.id}`; %>
+      <% const canOpenFestplayRoomsTab = selectedFestplayMode === "owned" || selectedFestplayHasRoomRights; %>
+      <section class="rp-room-editor" id="festplay-selected-editor" aria-label="Festspieldetails">
+        <div class="rp-room-editor-bar">
+          <div class="rp-room-editor-title-wrap">
+            <strong class="rp-room-editor-title"><%= selectedFestplay.name %></strong>
+          </div>
+        </div>
+
+        <nav class="rp-room-editor-tabs" aria-label="<%= selectedFestplayMode === 'owned' ? 'Festspiel bearbeiten' : 'Festspiel anzeigen' %>">
+          <a
+            class="rp-room-editor-tab<%= activeFestplayTab === 'allgemein' ? ' is-active' : '' %>"
+            href="<%= festplaySelectionBaseHref %>#festplay-selected-editor"
+          >Allgemein</a>
+          <% if (canOpenFestplayRoomsTab) { %>
+            <a
+              class="rp-room-editor-tab<%= activeFestplayTab === 'raeume' ? ' is-active' : '' %>"
+              href="<%= festplaySelectionBaseHref %>&tab=raeume#festplay-selected-editor"
+            >R&auml;ume</a>
+          <% } %>
+          <% if (selectedFestplayMode === "owned") { %>
+            <a
+              class="rp-room-editor-tab<%= activeFestplayTab === 'bewerbungen' ? ' is-active' : '' %>"
+              href="<%= festplaySelectionBaseHref %>&tab=bewerbungen#festplay-selected-editor"
+            >Bewerbungen &amp; Spieler</a>
+          <% } %>
+        </nav>
+
+        <% if (selectedFestplayMode === "owned" && activeFestplayTab === "bewerbungen") { %>
+          <div class="rp-room-editor-body">
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Bewerbungen</h3>
+
+              <% if (festplayApplications && festplayApplications.length) { %>
+                <div class="rp-festplay-player-list">
+                  <% festplayApplications.forEach((application) => { %>
+                    <div class="rp-festplay-player-row rp-festplay-application-row">
+                      <div class="rp-festplay-application-meta">
+                        <strong><%= application.character_name %></strong>
+                        <span>Beworben mit diesem Charakter.</span>
+                      </div>
+                      <form
+                        method="POST"
+                        action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/applications/<%= application.id %>/approve"
+                        class="inline-form"
+                      >
+                        <button type="submit" class="btn">Freischalten</button>
+                      </form>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine offenen Bewerbungen vorhanden.</p>
+              <% } %>
+            </section>
+
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Rechte</h3>
+              <form
+                method="POST"
+                action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/permissions"
+                class="rp-room-editor-inline-form"
+              >
+                <input
+                  type="text"
+                  name="character_name"
+                  maxlength="80"
+                  placeholder="Charaktername"
+                  required
+                />
+                <button type="submit" class="btn">Hinzuf&uuml;gen</button>
+              </form>
+
+              <% if (festplayPermissionEntries && festplayPermissionEntries.length) { %>
+                <div class="rp-festplay-player-inline-list rp-festplay-rights-inline-list">
+                  <% festplayPermissionEntries.forEach((entry, index) => { %>
+                    <span class="rp-festplay-right-inline-item">
+                      <a
+                        class="rp-festplay-player-link"
+                        href="/characters/<%= entry.character_id %>/guestbook"
+                        title="G&auml;stebuch von <%= entry.character_name %> &ouml;ffnen"
+                      ><%= entry.character_name %></a>
+                      <form
+                        method="POST"
+                        action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/permissions/<%= entry.id %>/delete"
+                        class="inline-form rp-room-delete-form rp-festplay-right-remove-form"
+                      >
+                        <button
+                          class="rp-room-delete-btn"
+                          type="submit"
+                          aria-label="Recht f&uuml;r <%= entry.character_name %> entfernen"
+                          title="Recht entfernen"
+                        >X</button>
+                      </form>
+                    </span><% if (index < festplayPermissionEntries.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine zus&auml;tzlichen Rechte vergeben.</p>
+              <% } %>
+            </section>
+
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Spieler</h3>
+              <div class="rp-festplay-stats">
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.activePlayerCount || 0 %></strong>
+                  <span>Spieler gerade aktiv</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.activeCharacterCount || 0 %></strong>
+                  <span>Charaktere gerade aktiv</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.playerCount || 0 %></strong>
+                  <span>Mitspieler gesamt</span>
+                </div>
+                <div class="rp-festplay-stat">
+                  <strong><%= festplayPlayerOverview?.characterCount || 0 %></strong>
+                  <span>Charaktere gesamt</span>
+                </div>
+              </div>
+
+              <% if (festplayPlayerOverview?.characters?.length) { %>
+                <div class="rp-festplay-player-inline-list">
+                  <% festplayPlayerOverview.characters.forEach((entry, index) => { %>
+                    <span class="rp-festplay-right-inline-item">
+                      <a
+                        class="rp-festplay-player-link"
+                        href="/characters/<%= entry.id %>/guestbook"
+                        title="G&auml;stebuch von <%= entry.name %> &ouml;ffnen"
+                      ><%= entry.name %></a>
+                      <% if (!entry.is_creator_character) { %>
+                        <form
+                          method="POST"
+                          action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/players/<%= entry.id %>/delete"
+                          class="inline-form rp-room-delete-form rp-festplay-right-remove-form"
+                        >
+                          <button
+                            class="rp-room-delete-btn"
+                            type="submit"
+                            aria-label="Spieler <%= entry.name %> aus dem Festspiel entfernen"
+                            title="Spieler entfernen"
+                          >X</button>
+                        </form>
+                      <% } %>
+                    </span><% if (index < festplayPlayerOverview.characters.length - 1) { %><span class="rp-festplay-player-separator">, </span><% } %>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine Charaktere diesem Festspiel zugeordnet.</p>
+              <% } %>
+            </section>
+          </div>
+        <% } else if (canOpenFestplayRoomsTab && activeFestplayTab === "raeume") { %>
+          <% const festplayRoomsBaseTarget = `${festplaySelectionBaseHref}&tab=raeume#festplay-selected-editor`; %>
+          <% const editableFestplayRoom = selectedFestplayRoom && selectedFestplayRoom.is_owned_room ? selectedFestplayRoom : null; %>
+          <% const readOnlyFestplayRoom = selectedFestplayRoom && !selectedFestplayRoom.is_owned_room ? selectedFestplayRoom : null; %>
+          <% const selectedFestplayRoomTarget = editableFestplayRoom
+            ? `${festplaySelectionBaseHref}&tab=raeume&selected_room=${editableFestplayRoom.id}#festplay-selected-editor`
+            : festplayRoomsBaseTarget; %>
+          <% const festplayRoomFormId = editableFestplayRoom
+            ? `festplay-room-editor-form-${editableFestplayRoom.id}`
+            : `festplay-room-create-form-${selectedFestplay.id}`; %>
+
+          <div class="rp-room-editor-body">
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading">Festspiel-R&auml;ume</h3>
+
+              <% if (festplayRooms && festplayRooms.length) { %>
+                <div
+                  class="rp-room-inline-list<%= festplayRoomSortingEnabled ? ' rp-room-inline-list-sortable' : '' %>"
+                  <% if (festplayRoomSortingEnabled) { %>
+                    data-festplay-room-sort-list
+                    data-sort-endpoint="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/reorder"
+                  <% } %>
+                >
+                  <% festplayRooms.forEach((room) => { %>
+                    <div
+                      class="rp-room-sort-card<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %><%= festplayRoomSortingEnabled ? '' : ' is-static' %>"
+                      <% if (festplayRoomSortingEnabled) { %>
+                        data-room-sort-item
+                        data-room-id="<%= room.id %>"
+                        draggable="true"
+                      <% } %>
+                      title="<%= festplayRoomSortingEnabled ? 'Mit der Maus verschieben' : 'Raum öffnen' %>"
+                    >
+                      <% if (festplayRoomSortingEnabled) { %>
+                        <span class="rp-room-sort-handle" aria-hidden="true">&#8646;</span>
+                      <% } %>
+                      <a
+                        class="rp-room-inline-item rp-room-manage-link<%= selectedFestplayRoom && Number(selectedFestplayRoom.id) === Number(room.id) ? ' is-active' : '' %>"
+                        href="<%= festplaySelectionBaseHref %>&tab=raeume&selected_room=<%= room.id %>#festplay-selected-editor"
+                        title="Raum &ouml;ffnen"
+                      >
+                        <span class="rp-room-inline-name"><%= room.name %></span>
+                        <% if (room.description) { %>
+                          <span class="rp-room-inline-teaser"><%= room.description %></span>
+                        <% } %>
+                      </a>
+                    </div>
+                  <% }) %>
+                </div>
+                <p
+                  class="rp-room-editor-note rp-room-sort-status"
+                  data-room-sort-status
+                  <%= festplayRoomSortingEnabled && festplayRooms.length > 1 ? '' : 'hidden' %>
+                ><%= festplayRoomSortingEnabled && festplayRooms.length > 1 ? 'Mit der Maus ziehen, um die Reihenfolge zu \u00e4ndern.' : '' %></p>
+              <% } else { %>
+                <p class="rp-room-editor-note">Noch keine Festspiel-R&auml;ume vorhanden.</p>
+              <% } %>
+            </section>
+
+            <section class="rp-room-editor-section">
+              <h3 class="rp-room-editor-subheading"><%= editableFestplayRoom ? 'Raum bearbeiten' : 'Raum anlegen' %></h3>
+
+              <% if (readOnlyFestplayRoom) { %>
+                <p class="rp-room-editor-note">
+                  Dieser Festspiel-Raum wurde mit <strong><%= readOnlyFestplayRoom.creator_character_name || selectedFestplay.creator_display_name || 'einem anderen Charakter' %></strong> erstellt.
+                  Du kannst hier eigene R&auml;ume anlegen und nur deine eigenen bearbeiten oder l&ouml;schen.
+                </p>
+              <% } %>
+
+              <form
+                id="<%= festplayRoomFormId %>"
+                method="POST"
+                action="<%= editableFestplayRoom
+                  ? `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms/${editableFestplayRoom.id}/update`
+                  : `/characters/${character.id}/festplays/${selectedFestplay.id}/rooms` %>"
+                class="rp-room-editor-section"
+              >
+                <input type="hidden" name="return_to" value="<%= selectedFestplayRoomTarget %>" />
+
+                <div class="rp-room-editor-checks">
+                  <label class="rp-room-editor-check">
+                    <input
+                      type="checkbox"
+                      name="email_log_enabled"
+                      value="1"
+                      <%= editableFestplayRoom?.email_log_enabled ? "checked" : "" %>
+                    />
+                    Log
+                  </label>
+                  <% if (editableFestplayRoom) { %>
+                    <label class="rp-room-editor-check">
+                      <input
+                        type="checkbox"
+                        name="delete_room"
+                        value="1"
+                      />
+                      Raum l&ouml;schen
+                    </label>
+                  <% } %>
+                </div>
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Raumname</span>
+                  <input
+                    type="text"
+                    name="room_name"
+                    maxlength="80"
+                    placeholder="Raumname"
+                    value="<%= editableFestplayRoom?.name || '' %>"
+                    required
+                  />
+                </label>
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Raumbeschreibung</span>
+                  <input
+                    type="text"
+                    name="room_description"
+                    maxlength="160"
+                    placeholder="Kurzer Text f&uuml;r die Raumliste"
+                    value="<%= editableFestplayRoom?.description || '' %>"
+                  />
+                </label>
+
+                <label class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">
+                    Raum
+                    <a class="rp-room-editor-help-link" href="/help/gaestebuch-design-bbcode" target="_blank" rel="noopener noreferrer">BBCode-Hilfe</a>
+                  </span>
+                  <textarea
+                    name="room_teaser"
+                    rows="10"
+                    maxlength="4000"
+                    placeholder="Text, der direkt im Raum angezeigt wird"
+                  ><%= editableFestplayRoom?.teaser || '' %></textarea>
+                </label>
+              </form>
+
+              <div class="rp-room-editor-actions">
+                <button type="submit" form="<%= festplayRoomFormId %>" class="btn"><%= editableFestplayRoom ? 'Speichern' : 'Raum anlegen' %></button>
+                <% if (selectedFestplayRoom) { %>
+                  <a
+                    class="rp-room-editor-enter"
+                    href="/chat?room_id=<%= selectedFestplayRoom.id %>&character_id=<%= character.id %>"
+                  >Raum betreten</a>
+                  <% if (editableFestplayRoom) { %>
+                    <form
+                      method="POST"
+                      action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/rooms/<%= editableFestplayRoom.id %>/delete"
+                      class="inline-form rp-room-delete-form"
+                    >
+                      <input type="hidden" name="return_to" value="<%= festplayRoomsBaseTarget %>" />
+                      <button
+                        class="rp-room-delete-btn"
+                        type="submit"
+                        aria-label="Raum <%= editableFestplayRoom.name %> l&ouml;schen"
+                        title="Raum l&ouml;schen"
+                      >X</button>
+                    </form>
+                  <% } %>
+                <% } %>
+              </div>
+
+              <% if (selectedFestplayRoomPreviewHtml) { %>
+                <div class="rp-room-editor-field">
+                  <span class="rp-room-editor-field-label">Vorschau</span>
+                  <div class="rp-room-editor-static rp-room-editor-static-long">
+                    <div class="guestbook-entry-body"><%- selectedFestplayRoomPreviewHtml %></div>
+                  </div>
+                </div>
+              <% } %>
+            </section>
+          </div>
+        <% } else if (selectedFestplayMode === "owned") { %>
+          <form
+            id="festplay-editor-form-<%= selectedFestplay.id %>"
+            method="POST"
+            action="/characters/<%= character.id %>/festplays/<%= selectedFestplay.id %>/update"
+            class="rp-room-editor-body"
+          >
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Festspielname</span>
+              <input
+                type="text"
+                name="festplay_name"
+                maxlength="80"
+                placeholder="Festspielname"
+                value="<%= selectedFestplay.name || '' %>"
+                required
+              />
+            </label>
+
+            <div class="rp-room-editor-checks">
+              <label class="rp-room-editor-check">
+                <input
+                  type="checkbox"
+                  name="is_public"
+                  value="1"
+                  <%= Number(selectedFestplay.is_public) === 1 ? "checked" : "" %>
+                />
+                &Ouml;ffentlich
+              </label>
+            </div>
+
+            <label class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">
+                Festplay Beschreibung
+                <a class="rp-room-editor-help-link" href="/help/gaestebuch-design-bbcode" target="_blank" rel="noopener noreferrer">BBCode-Hilfe</a>
+              </span>
+              <textarea
+                name="long_description"
+                rows="10"
+                maxlength="8000"
+                placeholder="Beschreibung f&uuml;r Inhalt, Ablauf oder wichtige Hinweise"
+              ><%= selectedFestplay.long_description || '' %></textarea>
+            </label>
+
+            <div class="rp-room-editor-actions">
+              <button type="submit" class="btn">Speichern</button>
+            </div>
+          </form>
+        <% } else { %>
+          <div class="rp-room-editor-body">
+            <% if (selectedFestplay.creator_display_name) { %>
+              <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
+            <% } %>
+
+            <div class="rp-room-editor-field">
+              <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
+              <div class="rp-room-editor-static rp-room-editor-static-long rp-festplay-description-box">
+                <% if (selectedFestplay.long_description_html) { %>
+                  <div class="guestbook-entry-body"><%- selectedFestplay.long_description_html %></div>
+                <% } else { %>
+                  Keine Festplay Beschreibung hinterlegt.
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </section>
+    <% } else if (activeFestplayOverviewTab === "eigene" && ownedFestplays && ownedFestplays.length) { %>
+      <section class="rp-room-editor rp-room-editor-placeholder" id="festplay-selected-editor" aria-label="Festspieldetails">
+        <div class="rp-room-editor-body">
+          <p class="rp-room-editor-note">Klicke oben auf ein Festspiel, dann wird es hervorgehoben und hier ge&ouml;ffnet.</p>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (!selectedFestplay && activeFestplayOverviewTab === "eigene") { %>
+      <form
+        id="festplay-create-form"
+        method="POST"
+        action="/characters/<%= character.id %>/festplays"
+        class="rp-room-form"
+      >
+        <div class="rp-room-input">
+          <span class="rp-room-icon" aria-hidden="true">&#128172;</span>
+          <input
+            id="festplay_name"
+            name="festplay_name"
+            maxlength="80"
+            placeholder="Festspielname (neu anlegen)"
+            required
+          />
+        </div>
+      </form>
+    <% } %>
+  </section>
+</section>
+
+<script>
+  (() => {
+    const sortList = document.querySelector("[data-festplay-room-sort-list]");
+    if (!sortList) {
+      return;
+    }
+
+    const statusNode = document.querySelector("[data-room-sort-status]");
+    let draggedItem = null;
+    let startOrder = "";
+
+    const getItems = () => Array.from(sortList.querySelectorAll("[data-room-sort-item]"));
+    const getOrder = () => getItems().map((item) => item.dataset.roomId || "").filter(Boolean).join(",");
+    const clearDropMarkers = () => {
+      getItems().forEach((item) => item.classList.remove("is-drop-target"));
+    };
+
+    const setStatus = (message, mode = "") => {
+      if (!statusNode) {
+        return;
+      }
+      statusNode.hidden = !message;
+      statusNode.textContent = message;
+      statusNode.classList.remove("is-success", "is-error");
+      if (mode) {
+        statusNode.classList.add(mode);
+      }
+    };
+
+    const submitOrderFallback = (roomIds) => {
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        setStatus("Reihenfolge konnte nicht gespeichert werden.", "is-error");
+        return;
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = endpoint;
+      form.hidden = true;
+
+      const roomIdsInput = document.createElement("input");
+      roomIdsInput.type = "hidden";
+      roomIdsInput.name = "room_ids";
+      roomIdsInput.value = JSON.stringify(roomIds);
+      form.appendChild(roomIdsInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    };
+
+    const saveOrder = async () => {
+      const roomIds = getItems()
+        .map((item) => item.dataset.roomId || "")
+        .filter(Boolean);
+      const endpoint = sortList.dataset.sortEndpoint || "";
+      if (!roomIds.length || !endpoint) {
+        return;
+      }
+
+      const body = new URLSearchParams();
+      body.set("room_ids", JSON.stringify(roomIds));
+
+      try {
+        setStatus("Reihenfolge wird gespeichert...");
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "fetch"
+          },
+          credentials: "same-origin",
+          body: body.toString()
+        });
+
+        if (!response.ok) {
+          submitOrderFallback(roomIds);
+          return;
+        }
+
+        setStatus("Reihenfolge gespeichert.", "is-success");
+        window.setTimeout(() => {
+          setStatus(getItems().length > 1 ? "Mit der Maus ziehen, um die Reihenfolge zu ändern." : "");
+        }, 1600);
+      } catch (error) {
+        console.error("festplay room order save failed", error);
+        submitOrderFallback(roomIds);
+      }
+    };
+
+    sortList.addEventListener("dragover", (event) => {
+      if (!draggedItem) {
+        return;
+      }
+
+      event.preventDefault();
+      const targetItem = event.target.closest("[data-room-sort-item]");
+      if (!targetItem || targetItem === draggedItem) {
+        return;
+      }
+
+      clearDropMarkers();
+      targetItem.classList.add("is-drop-target");
+      const targetRect = targetItem.getBoundingClientRect();
+      const insertBeforeTarget = event.clientX < targetRect.left + targetRect.width / 2;
+      sortList.insertBefore(draggedItem, insertBeforeTarget ? targetItem : targetItem.nextSibling);
+    });
+
+    getItems().forEach((item) => {
+      item.addEventListener("dragstart", (event) => {
+        draggedItem = item;
+        startOrder = getOrder();
+        item.classList.add("is-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", item.dataset.roomId || "");
+        }
+      });
+
+      item.addEventListener("drop", (event) => {
+        if (!draggedItem) {
+          return;
+        }
+        event.preventDefault();
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("is-dragging");
+        clearDropMarkers();
+        const endOrder = getOrder();
+        draggedItem = null;
+        if (startOrder && endOrder && startOrder !== endOrder) {
+          void saveOrder();
+        }
+      });
+    });
+  })();
+</script>
+
+<%- include("../../partials/end") %>

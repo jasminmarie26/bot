@@ -11591,7 +11591,10 @@ const homePageService = createHomePageService({
   },
   getRecentSiteUpdates,
   getLatestSiteUpdateRevisionToken,
-  defaultSeoDescription: DEFAULT_SEO_DESCRIPTION
+  defaultSeoDescription: DEFAULT_SEO_DESCRIPTION,
+  onError({ scope, error }) {
+    console.error(`[home] ${scope}`, error);
+  }
 });
 
 const clearLoginStatsCache = () => homePageService.clearLoginStatsCache();

@@ -1,0 +1,94 @@
+<%- include("../../partials/start") %>
+
+<section class="header-line dashboard-page-header">
+  <div>
+    <h1>Log-Backups: <%= characterLogGroup.character_name %></h1>
+    <p class="muted">Alle gespeicherten Logs dieses Charakters zum Nachlesen.</p>
+  </div>
+</section>
+
+<nav class="rp-room-editor-tabs backup-view-tabs" aria-label="Backup Navigation">
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'characters' ? ' is-active' : '' %>"
+    href="/character-backups"
+  >Charaktere</a>
+  <a
+    class="rp-room-editor-tab<%= activeTab === 'logs' ? ' is-active' : '' %>"
+    href="/character-backups/logs"
+  >Logs</a>
+</nav>
+
+<section class="panel backup-log-group-panel">
+  <h2><%= characterLogGroup.character_name %></h2>
+  <p class="muted">
+    <%= characterLogGroup.server_label %> · <%= characterLogGroup.log_count %> gespeicherte Log<%= Number(characterLogGroup.log_count) === 1 ? "" : "s" %>
+  </p>
+</section>
+
+<section class="dashboard-block">
+  <% if (!characterLogs || !characterLogs.length) { %>
+    <p class="muted">Noch keine Log-Backups vorhanden.</p>
+  <% } else { %>
+    <div class="backup-log-list">
+      <% characterLogs.forEach((entry) => { %>
+        <details class="backup-log-entry">
+          <summary class="backup-log-entry-summary">
+            <div class="backup-log-entry-copy">
+              <strong class="backup-log-entry-title"><%= entry.room_label || "Chat-Log" %></strong>
+              <span class="backup-log-meta">
+                <%= entry.ended_at_label || entry.started_at_label %>
+              </span>
+            </div>
+            <span class="backup-log-badge"><%= entry.email_sent ? "Backup + E-Mail" : "Nur Backup" %></span>
+          </summary>
+
+          <div class="backup-log-entry-body">
+            <div class="backup-log-actions">
+              <form
+                method="POST"
+                action="/character-backups/logs/<%= entry.id %>/delete"
+                class="character-mini-delete-form"
+                onsubmit="return confirm('Log-Backup wirklich löschen?')"
+              >
+                <button
+                  type="submit"
+                  class="character-mini-delete-btn"
+                  aria-label="Log-Backup löschen"
+                  title="Log-Backup löschen"
+                >
+                  X
+                </button>
+              </form>
+            </div>
+            <p class="backup-log-meta-line">
+              <strong>Zeitraum:</strong>
+              <span><%= entry.started_at_label %> bis <%= entry.ended_at_label || entry.started_at_label %></span>
+            </p>
+            <p class="backup-log-meta-line">
+              <strong>Server:</strong>
+              <span><%= entry.server_label %></span>
+            </p>
+            <% if (entry.participant_names && entry.participant_names.length) { %>
+              <p class="backup-log-meta-line">
+                <strong>Beteiligte:</strong>
+                <span><%= entry.participant_names.join(", ") %></span>
+              </p>
+            <% } %>
+            <% if (entry.end_reason_text) { %>
+              <p class="backup-log-meta-line">
+                <strong>Ende:</strong>
+                <span><%= entry.end_reason_text %></span>
+              </p>
+            <% } %>
+            <% if (entry.email_error) { %>
+              <p class="backup-log-note muted">E-Mail: <%= entry.email_error %></p>
+            <% } %>
+            <pre class="backup-log-text"><%= entry.log_text || "Keine Log-Zeilen gespeichert." %></pre>
+          </div>
+        </details>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include("../../partials/end") %>

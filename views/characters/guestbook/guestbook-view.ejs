@@ -1,0 +1,343 @@
+<%
+  const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
+  const topbarBrandPrefix = showBirthdayCake ? String.fromCodePoint(0x1F382) : "";
+  const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
+  const topbarBrandModifier = "is-character";
+  const isTransparentPurTheme = String(guestbookSettings?.theme_style || "").trim().toLowerCase() === "transparent-pur";
+  const isFullyTransparentGuestbookColor = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+    return /^#[0-9A-F]{8}$/.test(normalized) && normalized.endsWith("00");
+  };
+  const guestbookFrameColor = isTransparentPurTheme ? "" : String(guestbookSettings?.frame_color || "").trim();
+  const guestbookBaseBackgroundColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
+  const guestbookSurroundColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.surround_color || "").trim();
+  const effectiveGuestbookSurroundColor = guestbookSurroundColor || guestbookBaseBackgroundColor || "";
+  const normalizeGuestbookOpacity = (value, fallback = 100) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, Math.round(parsed)));
+  };
+  const buildGuestbookCssUrl = (value) => {
+    const normalized = String(value || "").trim();
+    return normalized ? `url(${JSON.stringify(normalized)})` : "";
+  };
+  const resolveGuestbookBackgroundColor = (rawColor, opacityValue) => {
+    const normalized = String(rawColor || "").trim();
+    if (!normalized) return "";
+    const clamped = Math.min(100, Math.max(0, Math.round(Number(opacityValue))));
+    return clamped >= 100
+      ? normalized
+      : `color-mix(in srgb, ${normalized} ${clamped}%, transparent)`;
+  };
+  const innerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.inner_image_opacity, 100);
+  const outerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.outer_image_opacity, 100);
+  const innerImageRepeat = Number(guestbookSettings?.inner_image_repeat) === 1;
+  const outerImageRepeat = Number(guestbookSettings?.outer_image_repeat) === 1;
+  const hasCustomGuestbookColors = Boolean(
+    guestbookFrameColor ||
+    guestbookBaseBackgroundColor ||
+    guestbookSurroundColor
+  );
+  const guestbookBackgroundColor = resolveGuestbookBackgroundColor(
+    guestbookBaseBackgroundColor,
+    innerImageOpacity
+  );
+  const shouldHideGuestbookThemeShadow =
+    isTransparentPurTheme ||
+    (isFullyTransparentGuestbookColor(guestbookFrameColor) &&
+      isFullyTransparentGuestbookColor(guestbookBaseBackgroundColor));
+  const guestbookPageStyle = [
+    `color:${guestbookPageTextColor || '#EED7AE'}`,
+    guestbookFrameColor ? `--gb-frame-color:${guestbookFrameColor}` : "",
+    guestbookBackgroundColor ? `--gb-background-color:${guestbookBackgroundColor}` : "",
+    shouldHideGuestbookThemeShadow ? "--gb-theme-shadow:none" : "",
+    !isTransparentPurTheme && guestbookSettings?.inner_image_url
+      ? `--gb-inner-image:${buildGuestbookCssUrl(guestbookSettings.inner_image_url)}`
+      : "",
+    `--gb-inner-image-opacity:${innerImageOpacity / 100}`,
+    `--gb-inner-image-repeat:${innerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-inner-image-size:${innerImageRepeat ? "auto" : "cover"}`,
+    `--gb-inner-image-position:${innerImageRepeat ? "top left" : "center top"}`
+  ].filter(Boolean).join(";");
+  const guestbookLayoutStyle = [
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
+    guestbookSettings?.outer_image_url
+      ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}`
+      : "",
+    `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
+    `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
+    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
+  ].filter(Boolean).join(";");
+%>
+<%
+  const guestbookEntryColor = guestbookPageTextColor || "#EED7AE";
+  const guestbookPanelImage = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.image_url || guestbookSettings?.inner_image_url || "").trim();
+  const guestbookPanelColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
+  const guestbookPanelImageCss = guestbookPanelImage ? `url(${JSON.stringify(guestbookPanelImage)})` : "";
+  const guestbookPanelFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
+%>
+<%- include("../../partials/start", {
+  topbarCharacter,
+  topbarBrandLabel,
+  topbarBrandPrefix,
+  topbarBrandHref,
+  topbarBrandModifier,
+  topbarGuestbookMode: true,
+  characterCreatedAtLabel,
+  publicBirthdayRows,
+  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`
+}) %>
+
+<style>
+  body.page-guestbook-view {
+    --gb-entry-color: <%= guestbookEntryColor %>;
+    --gb-panel-bg-color: <%= guestbookPanelColor %>;
+    --gb-panel-image: <%= guestbookPanelImageCss %>;
+  }
+</style>
+
+<% const hasPostingCharacters = Array.isArray(guestbookPostingCharacters) && guestbookPostingCharacters.length > 0; %>
+<% const guestbookEntryPage = guestbookEntryPagination?.currentPage || 1; %>
+<%
+  const buildGuestbookEntryPageUrl = (entriesPageNumber) =>
+    `/characters/${character.id}/guestbook?page_id=${activeGuestbookPage.id}` +
+    (entriesPageNumber > 1 ? `&entries_page=${entriesPageNumber}` : "") +
+    guestbookContextQuery;
+%>
+
+<div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookLayoutStyle %>">
+  <section class="guestbook-layout">
+    <div class="guestbook-page-shell">
+      <%- include("../../partials/guestbook-page-nav", { guestbookPageNavigation }) %>
+
+      <article
+        class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
+        style="<%= guestbookPageStyle %>"
+      >
+        <% if (guestbookSettings?.image_url) { %>
+          <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+        <% } %>
+        <% if (activeGuestbookPage?.content_html) { %>
+          <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
+        <% } else { %>
+          <p class="muted">Diese Seite ist noch leer.</p>
+        <% } %>
+      </article>
+    </div>
+  </section>
+
+  <section
+    class="guestbook-entry-panel"
+    id="guestbook-entry-panel"
+    data-guestbook-panel
+    data-auto-open="<%= guestbookAccessState?.viaReplyAccess ? "true" : "false" %>"
+    hidden
+  >
+  <% if (guestbookAccessState?.viaReplyAccess) { %>
+    <p class="muted guestbook-reply-hint">
+      Du bist &uuml;ber einen G&auml;stebuch-Link hier gelandet. Du kannst direkt mit deinem passenden Charakter antworten.
+    </p>
+  <% } %>
+
+  <form method="POST" action="/characters/<%= character.id %>/guestbook" class="form guestbook-entry-form">
+    <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
+    <input type="hidden" name="entries_page" value="<%= guestbookEntryPage %>" />
+    <% if (guestbookAccessState?.viaReplyAccess) { %>
+      <input type="hidden" name="reply_context_entry_id" value="<%= guestbookAccessState.replyContextEntryId %>" />
+      <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
+    <% } %>
+    <% if (hasPostingCharacters && selectedGuestbookAuthorCharacterId) { %>
+      <input type="hidden" name="author_character_id" value="<%= selectedGuestbookAuthorCharacterId %>" />
+    <% } %>
+
+    <% if (!hasPostingCharacters) { %>
+      <p class="muted">Du brauchst erst einen eigenen Charakter, um ins G&auml;stebuch zu schreiben.</p>
+    <% } %>
+
+    <label>
+      Eintrag
+      <textarea name="content" rows="5" maxlength="4000" required <%= hasPostingCharacters ? "" : "disabled" %>></textarea>
+    </label>
+
+    <label class="guestbook-private-row">
+      <input type="checkbox" name="is_private" value="1" />
+      Privater Eintrag
+    </label>
+
+    <button type="submit" class="rp-enter-btn" <%= hasPostingCharacters ? "" : "disabled" %>>
+      Eintragen
+    </button>
+  </form>
+
+  <h3>Eintr&auml;ge auf Seite <%= guestbookEntryPage %></h3>
+  <% if (!guestbookEntries || !guestbookEntries.length) { %>
+    <p class="muted">Noch keine sichtbaren Eintr&auml;ge.</p>
+  <% } else { %>
+    <div class="guestbook-list">
+      <% guestbookEntries.forEach((entry) => { %>
+        <article id="guestbook-entry-<%= entry.id %>" class="guestbook-item">
+          <header class="guestbook-item-header">
+            <div class="guestbook-item-authorline">
+              <% if (entry.author_guestbook_url) { %>
+                <a class="guestbook-author-link" href="<%= entry.author_guestbook_url %>"><strong><%= entry.author_name %></strong></a>
+              <% } else { %>
+                <strong><%= entry.author_name %></strong>
+              <% } %>
+              <div class="guestbook-entry-badges">
+                <% if (entry.private_label) { %>
+                  <span class="guestbook-entry-badge is-private"><%= entry.private_label %></span>
+                <% } %>
+                <% if (entry.updated_label) { %>
+                  <span class="guestbook-entry-badge"><%= entry.updated_label %></span>
+                <% } %>
+              </div>
+            </div>
+            <small><%= entry.created_at %></small>
+          </header>
+          <div class="guestbook-entry-body"><%- entry.content_html %></div>
+
+          <% if (entry.can_edit || entry.can_delete) { %>
+            <div class="guestbook-item-actions">
+              <% if (entry.can_edit) { %>
+                <details class="guestbook-edit-form">
+                  <summary
+                    class="guestbook-tool-btn"
+                    title="Eintrag bearbeiten"
+                    aria-label="Eintrag bearbeiten"
+                  >
+                    <svg class="guestbook-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 20l4.2-1 9.2-9.2a1.8 1.8 0 0 0 0-2.6l-.6-.6a1.8 1.8 0 0 0-2.6 0L5 15.8 4 20z"></path>
+                      <path d="M13.5 6.5l4 4"></path>
+                    </svg>
+                  </summary>
+                  <form method="POST" action="/characters/<%= character.id %>/guestbook/entries/<%= entry.id %>/update" class="form">
+                    <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
+                    <input type="hidden" name="entries_page" value="<%= guestbookEntryPage %>" />
+                    <% if (guestbookAccessState?.viaReplyAccess) { %>
+                      <input type="hidden" name="reply_context_entry_id" value="<%= guestbookAccessState.replyContextEntryId %>" />
+                      <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
+                    <% } %>
+                    <label>
+                      Inhalt
+                      <textarea name="content" rows="4" maxlength="4000" required><%= entry.content %></textarea>
+                    </label>
+                    <label class="guestbook-private-row">
+                      <input type="checkbox" name="is_private" value="1" <%= entry.is_private ? "checked" : "" %> />
+                      Privater Eintrag
+                    </label>
+                    <button type="submit" class="btn">Speichern</button>
+                  </form>
+                </details>
+              <% } %>
+
+              <% if (entry.can_delete) { %>
+                <form
+                  method="POST"
+                  action="/characters/<%= character.id %>/guestbook/entries/<%= entry.id %>/delete"
+                  class="guestbook-delete-form"
+                  onsubmit="return confirm('Diesen Eintrag wirklich l&ouml;schen?');"
+                >
+                  <input type="hidden" name="page_id" value="<%= activeGuestbookPage.id %>" />
+                  <input type="hidden" name="entries_page" value="<%= guestbookEntryPage %>" />
+                  <% if (guestbookAccessState?.viaReplyAccess) { %>
+                    <input type="hidden" name="reply_context_entry_id" value="<%= guestbookAccessState.replyContextEntryId %>" />
+                    <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
+                  <% } %>
+                  <button
+                    type="submit"
+                    class="guestbook-tool-btn guestbook-tool-btn-delete"
+                    title="Eintrag l&ouml;schen"
+                    aria-label="Eintrag l&ouml;schen"
+                  >
+                    <svg class="guestbook-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M6 7h12"></path>
+                      <path d="M9 7V5.8c0-.9.7-1.6 1.6-1.6h2.8c.9 0 1.6.7 1.6 1.6V7"></path>
+                      <path d="M8 7l.7 11.1c.1 1 .9 1.7 1.9 1.7h2.8c1 0 1.8-.7 1.9-1.7L16 7"></path>
+                      <path d="M10.2 10.2v6.2"></path>
+                      <path d="M13.8 10.2v6.2"></path>
+                    </svg>
+                  </button>
+                </form>
+              <% } %>
+            </div>
+          <% } %>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (guestbookEntryPagination?.totalPages > 1) { %>
+    <div class="guestbook-pagination-shell">
+      <div class="guestbook-pagination-status">
+        <span><%= guestbookEntryPagination.currentPage %></span>
+        <span>/</span>
+        <span><%= guestbookEntryPagination.totalPages %></span>
+      </div>
+      <nav class="guestbook-pagination" aria-label="G&auml;stebuch Seitenwechsel">
+        <% if (guestbookEntryPagination.hasPreviousPage) { %>
+          <a
+            class="guestbook-pagination-arrow"
+            href="<%= buildGuestbookEntryPageUrl(guestbookEntryPagination.previousPage) %>"
+            aria-label="Vorherige G&auml;stebuch-Seite"
+            title="Vorherige Seite"
+          >
+            &#8249;
+          </a>
+        <% } else { %>
+          <span class="guestbook-pagination-arrow is-disabled" aria-hidden="true">&#8249;</span>
+        <% } %>
+
+        <% if (guestbookEntryPagination.hasNextPage) { %>
+          <a
+            class="guestbook-pagination-arrow"
+            href="<%= buildGuestbookEntryPageUrl(guestbookEntryPagination.nextPage) %>"
+            aria-label="N&auml;chste G&auml;stebuch-Seite"
+            title="N&auml;chste Seite"
+          >
+            &#8250;
+          </a>
+        <% } else { %>
+          <span class="guestbook-pagination-arrow is-disabled" aria-hidden="true">&#8250;</span>
+        <% } %>
+      </nav>
+    </div>
+  <% } %>
+  </section>
+</div>
+
+<% if (guestbookMusicEmbedUrl) { %>
+  <div
+    class="guestbook-background-music"
+    aria-hidden="true"
+    style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;opacity:0;"
+  >
+    <iframe
+      src="<%= guestbookMusicEmbedUrl %>"
+      title="G&auml;stebuch Hintergrundmusik"
+      width="1"
+      height="1"
+      frameborder="0"
+      tabindex="-1"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+  </div>
+<% } %>
+
+<div data-server-presence="<%= character.server_id %>" hidden></div>
+<script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
+<script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
+<script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
+
+<%- include("../../partials/end") %>

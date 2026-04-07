@@ -1,0 +1,146 @@
+<%
+  const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
+  const topbarBrandPrefix = showBirthdayCake ? String.fromCodePoint(0x1F382) : "";
+  const topbarBrandHref = character ? `/characters/${character.id}/guestbook` : "/";
+  const topbarBrandModifier = "is-character";
+  const isTransparentPurTheme = String(guestbookSettings?.theme_style || "").trim().toLowerCase() === "transparent-pur";
+  const isFullyTransparentGuestbookColor = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+    return /^#[0-9A-F]{8}$/.test(normalized) && normalized.endsWith("00");
+  };
+  const normalizeGuestbookOpacity = (value, fallback = 100) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, Math.round(parsed)));
+  };
+  const buildGuestbookCssUrl = (value) => {
+    const normalized = String(value || "").trim();
+    return normalized ? `url(${JSON.stringify(normalized)})` : "";
+  };
+  const resolveGuestbookBackgroundColor = (rawColor, opacityValue) => {
+    const normalized = String(rawColor || "").trim();
+    if (!normalized) return "";
+    const clamped = Math.min(100, Math.max(0, Math.round(Number(opacityValue))));
+    return clamped >= 100
+      ? normalized
+      : `color-mix(in srgb, ${normalized} ${clamped}%, transparent)`;
+  };
+  const innerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.inner_image_opacity, 100);
+  const outerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.outer_image_opacity, 100);
+  const innerImageRepeat = Number(guestbookSettings?.inner_image_repeat) === 1;
+  const outerImageRepeat = Number(guestbookSettings?.outer_image_repeat) === 1;
+  const guestbookFrameColor = isTransparentPurTheme ? "" : String(guestbookSettings?.frame_color || "").trim();
+  const guestbookBaseBackgroundColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
+  const guestbookSurroundColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.surround_color || "").trim();
+  const hasCustomGuestbookColors = Boolean(
+    guestbookFrameColor ||
+    guestbookBaseBackgroundColor ||
+    guestbookSurroundColor
+  );
+  const guestbookBackgroundColor = resolveGuestbookBackgroundColor(
+    guestbookBaseBackgroundColor,
+    innerImageOpacity
+  );
+  const shouldHideGuestbookThemeShadow =
+    isTransparentPurTheme ||
+    (isFullyTransparentGuestbookColor(guestbookFrameColor) &&
+      isFullyTransparentGuestbookColor(guestbookBaseBackgroundColor));
+  const guestbookPageStyle = [
+    `color:${guestbookPageTextColor || '#EED7AE'}`,
+    guestbookFrameColor ? `--gb-frame-color:${guestbookFrameColor}` : "",
+    guestbookBackgroundColor ? `--gb-background-color:${guestbookBackgroundColor}` : "",
+    shouldHideGuestbookThemeShadow ? "--gb-theme-shadow:none" : "",
+    !isTransparentPurTheme && guestbookSettings?.inner_image_url
+      ? `--gb-inner-image:${buildGuestbookCssUrl(guestbookSettings.inner_image_url)}`
+      : "",
+    `--gb-inner-image-opacity:${innerImageOpacity / 100}`,
+    `--gb-inner-image-repeat:${innerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-inner-image-size:${innerImageRepeat ? "auto" : "cover"}`,
+    `--gb-inner-image-position:${innerImageRepeat ? "top left" : "center top"}`
+  ].filter(Boolean).join(";");
+  const effectiveGuestbookSurroundColor = guestbookSurroundColor || guestbookBaseBackgroundColor || "";
+  const normalizedGuestbookName = String(character?.name || "").trim().toLowerCase();
+  const isGuestbookNameCrescentia = /^(crescentia|cresentia)$/.test(normalizedGuestbookName);
+  const guestbookNameSpecialClass = normalizedGuestbookName === "noctra"
+    ? "has-noctra-wings"
+    : (isGuestbookNameCrescentia ? "has-crescentia-moons" : "");
+  const guestbookNameWrapperClass = normalizedGuestbookName === "noctra"
+    ? "noctra-nameplate"
+    : (isGuestbookNameCrescentia ? "crescentia-nameplate" : "");
+  const guestbookPreviewShellStyle = [
+    effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
+    guestbookSettings?.outer_image_url
+      ? `--gb-outer-image:${buildGuestbookCssUrl(guestbookSettings.outer_image_url)}`
+      : "",
+    `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
+    `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
+    `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
+    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
+  ].filter(Boolean).join(";");
+%>
+<%
+  const guestbookEntryColor = guestbookPageTextColor || "#EED7AE";
+  const guestbookPanelImage = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.image_url || guestbookSettings?.inner_image_url || "").trim();
+  const guestbookPanelColor = isTransparentPurTheme
+    ? ""
+    : String(guestbookSettings?.background_color || "").trim();
+  const guestbookPanelImageCss = guestbookPanelImage ? `url(${JSON.stringify(guestbookPanelImage)})` : "";
+  const guestbookPanelFontClass = `gb-font-${guestbookSettings?.font_style || 'default'}`;
+%>
+<%- include("../../partials/start", {
+  topbarCharacter,
+  topbarBrandLabel,
+  topbarBrandPrefix,
+  topbarBrandHref,
+  topbarBrandModifier,
+  topbarGuestbookMode: true,
+  topbarGuestbookControlHidden: true,
+  characterCreatedAtLabel,
+  publicBirthdayRows,
+  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`,
+  enableRealtime: false
+}) %>
+
+<style>
+  body.page-guestbook-view {
+    --gb-entry-color: <%= guestbookEntryColor %>;
+    --gb-panel-bg-color: <%= guestbookPanelColor %>;
+    --gb-panel-image: <%= guestbookPanelImageCss %>;
+  }
+</style>
+
+<div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookPreviewShellStyle %>">
+  <section class="guestbook-layout">
+    <div class="guestbook-page-shell guestbook-preview-page-shell">
+    <%- include("../../partials/guestbook-page-nav", { guestbookPageNavigation }) %>
+
+    <article
+      class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
+      style="<%= guestbookPageStyle %>"
+    >
+      <% if (guestbookSettings?.image_url) { %>
+        <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+      <% } %>
+      <% if (previewHtml) { %>
+        <div class="guestbook-entry-body"><%- previewHtml %></div>
+      <% } else { %>
+        <p class="muted">Diese Seite ist noch leer.</p>
+      <% } %>
+    </article>
+    </div>
+  </section>
+
+  <section class="guestbook-entry-panel" id="guestbook-entry-panel" hidden aria-hidden="true"></section>
+</div>
+
+<script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
+
+<%- include("../../partials/end") %>
