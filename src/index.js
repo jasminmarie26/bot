@@ -5296,7 +5296,7 @@ function getOwnedFestplaysForUser(userId, serverId = "") {
   const parsedUserId = Number(userId);
   if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedServerId) return [];
   return db
     .prepare(
       `SELECT f.id,
@@ -5310,10 +5310,10 @@ function getOwnedFestplaysForUser(userId, serverId = "") {
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE created_by_user_id = ?
-           AND (? = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
+           AND lower(trim(COALESCE(f.server_id, ''))) = ?
          ORDER BY f.created_at ASC, f.id ASC`
     )
-    .all(parsedUserId, normalizedServerId, normalizedServerId)
+    .all(parsedUserId, normalizedServerId)
     .map(decorateFestplayRecord);
 }
 
@@ -5340,7 +5340,7 @@ function getOtherFestplaysForUser(userId, serverId) {
              AND COALESCE(f.created_by_user_id, 0) = 0
              AND COALESCE(f.creator_character_id, 0) = 0
            )
-           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
+           AND lower(trim(COALESCE(f.server_id, ''))) = ?
            AND (
              EXISTS (
                SELECT 1
@@ -5438,7 +5438,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          JOIN characters c ON c.id = fp.character_id
          WHERE fp.user_id = ?
-           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
+           AND lower(trim(COALESCE(f.server_id, ''))) = ?
            AND COALESCE(f.created_by_user_id, 0) != ?
          ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
     )
@@ -5464,7 +5464,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
          JOIN characters c
            ON c.user_id = f.created_by_user_id
         WHERE f.created_by_user_id = ?
-          AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
+          AND lower(trim(COALESCE(f.server_id, ''))) = ?
           AND (
             c.festplay_id = f.id
             OR EXISTS (
@@ -5507,7 +5507,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.created_by_user_id = ?
-           AND (trim(COALESCE(f.server_id, '')) = '' OR lower(trim(f.server_id)) = ?)
+           AND lower(trim(COALESCE(f.server_id, ''))) = ?
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
     .all(parsedUserId, normalizedServerId);
@@ -5628,6 +5628,7 @@ function getOwnedFestplayById(userId, festplayId) {
 function getPublicFestplays(serverId = "") {
   if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
+  if (!normalizedServerId) return [];
   return db
     .prepare(
       `SELECT f.id,
@@ -5641,10 +5642,10 @@ function getPublicFestplays(serverId = "") {
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
          WHERE f.is_public = 1
            AND COALESCE(f.created_by_user_id, 0) > 0
-           AND (? = '' OR trim(COALESCE(f.server_id, '')) = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
+           AND lower(trim(COALESCE(f.server_id, ''))) = ?
          ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all(normalizedServerId, normalizedServerId)
+    .all(normalizedServerId)
     .map(decorateFestplayRecord);
 }
 
@@ -5652,7 +5653,7 @@ function getPublicFestplayById(festplayId, serverId = "") {
   const parsedFestplayId = Number(festplayId);
   if (isLarpServerId(serverId)) return null;
   const normalizedServerId = normalizeFestplayServerId(serverId);
-  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) return null;
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1 || !normalizedServerId) return null;
   return decorateFestplayRecord(
     db
       .prepare(
@@ -5668,10 +5669,10 @@ function getPublicFestplayById(festplayId, serverId = "") {
              LEFT JOIN characters creator ON creator.id = f.creator_character_id
              WHERE f.id = ?
                AND f.is_public = 1
-               AND (? = '' OR trim(COALESCE(f.server_id, '')) = '' OR lower(trim(COALESCE(f.server_id, ''))) = ?)
+               AND lower(trim(COALESCE(f.server_id, ''))) = ?
                AND COALESCE(f.created_by_user_id, 0) > 0`
         )
-      .get(parsedFestplayId, normalizedServerId, normalizedServerId)
+      .get(parsedFestplayId, normalizedServerId)
   );
 }
 
@@ -11235,6 +11236,25 @@ function ensureCuratedPublicRooms() {
       id ASC
       LIMIT 1`
   );
+  const findExistingRoomOnAnyServer = db.prepare(
+    `SELECT id, description, teaser
+       FROM chat_rooms
+      WHERE (
+          name_key = ?
+          OR (LOWER(name) = LOWER(?) AND created_by_user_id = ?)
+        )
+        AND COALESCE(is_public_room, 0) = 1
+        AND COALESCE(festplay_id, 0) = 0
+        AND COALESCE(is_festplay_chat, 0) = 0
+        AND COALESCE(is_manual_festplay_room, 0) = 0
+        AND COALESCE(is_festplay_side_chat, 0) = 0
+      ORDER BY CASE
+        WHEN name_key = ? THEN 0
+        ELSE 1
+      END,
+      id ASC
+      LIMIT 1`
+  );
   const updateRoom = db.prepare(
     `UPDATE chat_rooms
         SET character_id = ?,
@@ -11243,6 +11263,7 @@ function ensureCuratedPublicRooms() {
             name_key = ?,
             description = ?,
             teaser = ?,
+            server_id = ?,
             is_public_room = 1,
             is_saved_room = ?,
             is_locked = 0,
@@ -11286,13 +11307,20 @@ function ensureCuratedPublicRooms() {
         return;
       }
 
-      const existingRoom = findExistingRoom.get(
-        normalizeServer(serverId),
-        nameKey,
-        normalizedName,
-        anchor.userId,
-        nameKey
-      );
+      const existingRoom =
+        findExistingRoom.get(
+          normalizeServer(serverId),
+          nameKey,
+          normalizedName,
+          anchor.userId,
+          nameKey
+        ) ||
+        findExistingRoomOnAnyServer.get(
+          nameKey,
+          normalizedName,
+          anchor.userId,
+          nameKey
+        );
       const override = getCuratedRoomOverride(serverId, nameKey);
       const persistedDescription = override
         ? normalizeRoomDescription(override.description)
@@ -11310,6 +11338,7 @@ function ensureCuratedPublicRooms() {
           nameKey,
           persistedDescription,
           persistedTeaser,
+          normalizeServer(serverId),
           savedState,
           sortOrder,
           existingRoom.id

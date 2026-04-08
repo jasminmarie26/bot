@@ -665,10 +665,27 @@ if (!festplayColumns.includes("last_activity_at")) {
 
 db.exec(`
   UPDATE festplays
+     SET server_id = lower(trim(server_id))
+   WHERE lower(trim(COALESCE(server_id, ''))) IN ('free-rp', 'erp', 'larp')
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET server_id = ''
+   WHERE server_id IS NULL
+      OR (
+        trim(server_id) != ''
+        AND lower(trim(server_id)) NOT IN ('free-rp', 'erp', 'larp')
+      )
+`);
+
+db.exec(`
+  UPDATE festplays
      SET server_id = (
-       SELECT c.server_id
+       SELECT lower(trim(c.server_id))
          FROM characters c
         WHERE c.id = festplays.creator_character_id
+          AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
      )
    WHERE trim(COALESCE(server_id, '')) = ''
      AND creator_character_id IS NOT NULL
@@ -677,11 +694,44 @@ db.exec(`
 db.exec(`
   UPDATE festplays
      SET server_id = (
-       SELECT c.server_id
+       SELECT lower(trim(c.server_id))
          FROM festplay_permissions fp
          JOIN characters c ON c.id = fp.character_id
         WHERE fp.festplay_id = festplays.id
+          AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
         ORDER BY fp.id ASC
+        LIMIT 1
+     )
+   WHERE trim(COALESCE(server_id, '')) = ''
+     AND COALESCE(created_by_user_id, 0) > 0
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET server_id = (
+       SELECT lower(trim(c.server_id))
+         FROM characters c
+        WHERE c.festplay_id = festplays.id
+          AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+        ORDER BY c.id ASC
+        LIMIT 1
+     )
+   WHERE trim(COALESCE(server_id, '')) = ''
+     AND COALESCE(created_by_user_id, 0) > 0
+`);
+
+db.exec(`
+  UPDATE festplays
+     SET server_id = (
+       SELECT lower(trim(r.server_id))
+         FROM chat_rooms r
+        WHERE r.festplay_id = festplays.id
+          AND lower(trim(COALESCE(r.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+        ORDER BY CASE
+          WHEN COALESCE(r.is_festplay_chat, 0) = 1 THEN 0
+          ELSE 1
+        END,
+        r.id ASC
         LIMIT 1
      )
    WHERE trim(COALESCE(server_id, '')) = ''
@@ -1341,14 +1391,91 @@ db.prepare("UPDATE characters SET chat_background_url = '' WHERE chat_background
 db.prepare("UPDATE characters SET chat_background_color = '#EFEFEF' WHERE chat_background_color IS NULL OR trim(chat_background_color) = ''").run();
 db.prepare("UPDATE characters SET chat_background_image_opacity = 100 WHERE chat_background_image_opacity IS NULL").run();
 db.prepare(
-  `UPDATE chat_rooms
-   SET server_id = COALESCE(
-     (SELECT c.server_id FROM characters c WHERE c.id = chat_rooms.character_id),
-     'free-rp'
-   )`
+  "UPDATE festplays SET server_id = lower(trim(server_id)) WHERE lower(trim(COALESCE(server_id, ''))) IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare(
-  "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(server_id) NOT IN ('free-rp', 'erp', 'larp')"
+  `UPDATE festplays
+   SET server_id = COALESCE(
+     (
+       SELECT lower(trim(c.server_id))
+       FROM characters c
+       WHERE c.id = festplays.creator_character_id
+         AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+     ),
+     (
+       SELECT lower(trim(c.server_id))
+       FROM festplay_permissions fp
+       JOIN characters c ON c.id = fp.character_id
+       WHERE fp.festplay_id = festplays.id
+         AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+       ORDER BY fp.id ASC
+       LIMIT 1
+     ),
+     (
+       SELECT lower(trim(c.server_id))
+       FROM characters c
+       WHERE c.festplay_id = festplays.id
+         AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+       ORDER BY c.id ASC
+       LIMIT 1
+     ),
+     (
+       SELECT lower(trim(r.server_id))
+       FROM chat_rooms r
+       WHERE r.festplay_id = festplays.id
+         AND lower(trim(COALESCE(r.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+       ORDER BY CASE
+         WHEN COALESCE(r.is_festplay_chat, 0) = 1 THEN 0
+         ELSE 1
+       END,
+       r.id ASC
+       LIMIT 1
+     ),
+     ''
+   )
+   WHERE server_id IS NULL OR trim(server_id) = '' OR lower(trim(server_id)) NOT IN ('free-rp', 'erp', 'larp')`
+).run();
+db.prepare(
+  "UPDATE chat_rooms SET server_id = lower(trim(server_id)) WHERE lower(trim(COALESCE(server_id, ''))) IN ('free-rp', 'erp', 'larp')"
+).run();
+db.prepare(
+  `UPDATE chat_rooms
+      SET server_id = (
+        SELECT lower(trim(f.server_id))
+          FROM festplays f
+         WHERE f.id = chat_rooms.festplay_id
+           AND lower(trim(COALESCE(f.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+      )
+    WHERE COALESCE(chat_rooms.festplay_id, 0) > 0
+      AND EXISTS (
+        SELECT 1
+          FROM festplays f
+         WHERE f.id = chat_rooms.festplay_id
+           AND lower(trim(COALESCE(f.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+           AND lower(trim(COALESCE(chat_rooms.server_id, ''))) != lower(trim(f.server_id))
+      )`
+).run();
+db.prepare(
+  `UPDATE chat_rooms
+   SET server_id = COALESCE(
+     (
+       SELECT lower(trim(f.server_id))
+       FROM festplays f
+       WHERE f.id = chat_rooms.festplay_id
+         AND lower(trim(COALESCE(f.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+     ),
+     (
+       SELECT lower(trim(c.server_id))
+       FROM characters c
+       WHERE c.id = chat_rooms.character_id
+         AND lower(trim(COALESCE(c.server_id, ''))) IN ('free-rp', 'erp', 'larp')
+     ),
+     'free-rp'
+   )
+   WHERE server_id IS NULL OR trim(server_id) = '' OR lower(trim(server_id)) NOT IN ('free-rp', 'erp', 'larp')`
+).run();
+db.prepare(
+  "UPDATE chat_rooms SET server_id = 'free-rp' WHERE server_id IS NULL OR trim(server_id) = '' OR lower(trim(server_id)) NOT IN ('free-rp', 'erp', 'larp')"
 ).run();
 db.prepare("UPDATE chat_rooms SET description = '' WHERE description IS NULL").run();
 db.prepare("UPDATE chat_rooms SET description = teaser WHERE description = '' AND teaser != ''").run();
