@@ -2115,10 +2115,7 @@ function buildEmbeddedGuestbookEditorUrl(characterId, guestbookPageId = null) {
 }
 
 function buildGuestbookEditorReturnUrl(req, character, guestbookPageId = null) {
-  const isOwner = Number(character?.user_id) === Number(req?.session?.user?.id);
-  return isOwner
-    ? buildEmbeddedGuestbookEditorUrl(character.id, guestbookPageId)
-    : buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId);
+  return buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId);
 }
 
 function buildCharacterGuestbookEditorState(characterId, requestedPageId = null) {
@@ -2141,7 +2138,6 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     festplays: options.festplays || getFestplays(),
     serverOptions: SERVER_OPTIONS,
     renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
-    guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
     character: options.character || character
   };
 }
@@ -17197,15 +17193,11 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
   }
 
   const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
-  const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(
-    req.query.guestbook_page_id || req.query.page_id
-  );
 
   return res.render(
     "character-form",
     buildCharacterEditFormViewModel(character, {
-      renameAvailability,
-      requestedGuestbookPageId
+      renameAvailability
     })
   );
 });
@@ -17228,7 +17220,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
   const payload = normalizeCharacterInput(req.body);
-  const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(req.body.guestbook_page_id);
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
@@ -17256,7 +17247,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Name ist erforderlich.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17269,7 +17259,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: RESERVED_CHARACTER_NAME_ERROR,
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17282,7 +17271,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Avatar-URL muss mit http:// oder https:// starten.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17295,7 +17283,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17308,7 +17295,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17321,7 +17307,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Bitte ein gültiges Festplay auswählen.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17344,7 +17329,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: buildFestplayServerLockMessage(selectedFestplayServer, payload.server_id),
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17357,7 +17341,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: `Der Charaktername kann erst wieder ab ${renameAvailability.available_at_text} geändert werden.`,
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17376,7 +17359,6 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         error: "Dieser Charaktername ist bereits vergeben.",
         festplays,
         renameAvailability,
-        requestedGuestbookPageId,
         character: characterFormValues
       })
     );
@@ -17936,10 +17918,6 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
     id,
     normalizeCharacterEditGuestbookPageId(req.query.page_id)
   );
-
-  if (character.user_id === req.session.user.id) {
-    return res.redirect(buildEmbeddedGuestbookEditorUrl(id, guestbookEditorState.activePage.id));
-  }
 
   return res.render("characters/guestbook/guestbook-editor", {
     title: `Gästebuch bearbeiten: ${character.name}`,

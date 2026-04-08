@@ -118,6 +118,22 @@
   }
 </style>
 
+<section class="panel">
+  <div class="header-line">
+    <div>
+      <h1>G&auml;stebuch-Vorschau</h1>
+      <p class="muted">
+        Vorschau f&uuml;r <strong><%= character.name %></strong>.
+      </p>
+    </div>
+
+    <div class="gb-editor-actions">
+      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zur&uuml;ck zum Editor</a>
+      <a class="btn" href="/characters/<%= character.id %>/guestbook">Live-G&auml;stebuch &ouml;ffnen</a>
+    </div>
+  </div>
+</section>
+
 <div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookPreviewShellStyle %>">
   <section class="guestbook-layout">
     <div class="guestbook-page-shell guestbook-preview-page-shell">

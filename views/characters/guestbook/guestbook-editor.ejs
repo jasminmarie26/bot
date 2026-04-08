@@ -5,6 +5,8 @@
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
 
     <div class="gb-editor-actions">
+      <a class="btn btn-secondary" href="/characters/<%= character.id %>/edit">Zum Charakter</a>
+      <a class="btn btn-secondary" href="/characters/<%= character.id %>/guestbook">G&auml;stebuch ansehen</a>
       <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
       <button
         class="btn btn-secondary"
@@ -54,6 +56,17 @@
       <button type="submit" class="ghost-btn">Logout</button>
     </form>
   </header>
+
+  <section class="panel">
+    <div class="header-line">
+      <div>
+        <h1>G&auml;stebuch bearbeiten</h1>
+        <p class="muted">
+          Du bearbeitest gerade das G&auml;stebuch von <strong><%= character.name %></strong> auf einer eigenen Seite.
+        </p>
+      </div>
+    </div>
+  </section>
 
   <% if ((pages || []).length > 1) { %>
     <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">

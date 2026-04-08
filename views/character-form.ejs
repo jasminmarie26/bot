@@ -1,6 +1,5 @@
 <%- include("partials/start", { enableRealtime: false }) %>
 
-<% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
 <% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
 <% const isLarpProfile = character.server_id === "larp"; %>
 <% const isLarpTestCharacter = isLarpProfile && !hasLarpStaffAccess; %>
@@ -57,9 +56,6 @@
     <input type="hidden" name="festplay_id" value="<%= character.festplay_id || "" %>" />
     <% if (safeReturnTo) { %>
       <input type="hidden" name="return_to" value="<%= safeReturnTo %>" />
-    <% } %>
-    <% if (activeGuestbookEditor?.activePage) { %>
-      <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookEditor.activePage.id %>" />
     <% } %>
 
     <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
@@ -177,54 +173,21 @@
   </form>
 </section>
 
-<% if (activeGuestbookEditor?.activePage) { const { pages, activePage, settings } = activeGuestbookEditor; %>
-  <section class="panel character-form-panel character-guestbook-panel">
-    <div class="header-line character-guestbook-header">
+<% if (mode === "edit" && character?.id) { %>
+  <section class="panel character-form-panel">
+    <div class="header-line">
       <div>
-        <h2>G&auml;stebuch bearbeiten</h2>
-        <p>Design, Inhalte und Bilder bleiben direkt unter dem Charakter erreichbar.</p>
-      </div>
-
-      <div class="gb-editor-actions">
-        <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
-
-        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
-          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
-          <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
-        </form>
-
-        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
-          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
-          <button
-            class="btn btn-danger"
-            type="submit"
-            onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
-          >
-            Aktuelle Seite l&ouml;schen
-          </button>
-        </form>
+        <h2>G&auml;stebuch</h2>
+        <p class="muted">
+          Design, Inhalt und Seitenverwaltung liegen wieder auf der eigenen G&auml;stebuch-Seite.
+        </p>
       </div>
     </div>
 
-    <% if ((pages || []).length > 1) { %>
-      <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
-        <% pages.forEach((page) => { %>
-          <a
-            class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
-            href="/characters/<%= character.id %>/edit?guestbook_page_id=<%= page.id %>"
-          >
-            <%= page.page_number %>
-          </a>
-        <% }) %>
-      </nav>
-    <% } %>
-
-    <%- include("partials/guestbook-editor-form", {
-      character,
-      activePage,
-      settings,
-      guestbookEditorFormClass: "panel form gb-editor-form"
-    }) %>
+    <div class="character-form-actions">
+      <a class="btn" href="/characters/<%= character.id %>/guestbook/edit">G&auml;stebuch bearbeiten</a>
+      <a class="btn btn-secondary" href="/characters/<%= character.id %>/guestbook">G&auml;stebuch ansehen</a>
+    </div>
   </section>
 <% } %>
 
