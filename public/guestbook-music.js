@@ -58,9 +58,10 @@
 
   function readHiddenState() {
     try {
-      return window.localStorage.getItem(HIDDEN_STORAGE_KEY) === "1";
+      const storedValue = window.localStorage.getItem(HIDDEN_STORAGE_KEY);
+      return storedValue === null ? true : storedValue === "1";
     } catch (_error) {
-      return false;
+      return true;
     }
   }
 
@@ -79,7 +80,9 @@
   function renderVisibility() {
     root.classList.toggle("is-hidden", isHidden);
     panel.hidden = isHidden;
-    showButton.hidden = !isHidden;
+    showButton.setAttribute("aria-expanded", isHidden ? "false" : "true");
+    showButton.setAttribute("aria-label", isHidden ? "Musikplayer einblenden" : "Musikplayer ausblenden");
+    showButton.classList.toggle("is-active", !isHidden);
   }
 
   function getPlayerState() {
@@ -264,8 +267,8 @@
   }
 
   showButton.addEventListener("click", () => {
-    isHidden = false;
-    persistHiddenState(false);
+    isHidden = !isHidden;
+    persistHiddenState(isHidden);
     renderVisibility();
   });
 
@@ -273,6 +276,7 @@
     isHidden = true;
     persistHiddenState(true);
     renderVisibility();
+    showButton.focus();
   });
 
   playButton.addEventListener("click", () => {
@@ -284,6 +288,17 @@
     persistVolume(currentVolume);
     renderVolume(currentVolume);
     applyVolumeToPlayer();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || isHidden) {
+      return;
+    }
+
+    isHidden = true;
+    persistHiddenState(true);
+    renderVisibility();
+    showButton.focus();
   });
 
   renderVolume(currentVolume);

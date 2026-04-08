@@ -1,12 +1,14 @@
 (() => {
   const root = document.querySelector("[data-guestbook-search-root]");
-  const form = document.querySelector("[data-guestbook-search-form]");
-  const input = document.querySelector("[data-guestbook-search-input]");
-  const results = document.querySelector("[data-guestbook-search-results]");
-  const status = document.querySelector("[data-guestbook-search-status]");
+  const toggleButton = root?.querySelector("[data-guestbook-search-show]");
+  const panel = root?.querySelector("[data-guestbook-search-panel]");
+  const form = root?.querySelector("[data-guestbook-search-form]");
+  const input = root?.querySelector("[data-guestbook-search-input]");
+  const results = root?.querySelector("[data-guestbook-search-results]");
+  const status = root?.querySelector("[data-guestbook-search-status]");
   const dataElement = document.getElementById("guestbook-search-data");
 
-  if (!root || !form || !input || !results || !status || !dataElement) {
+  if (!root || !toggleButton || !panel || !form || !input || !results || !status || !dataElement) {
     return;
   }
 
@@ -57,6 +59,18 @@
     status.textContent = "";
   };
 
+  let isOpen = false;
+
+  const renderOpenState = () => {
+    panel.hidden = !isOpen;
+    toggleButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    toggleButton.classList.toggle("is-active", isOpen);
+
+    if (!isOpen) {
+      clearResults();
+    }
+  };
+
   const renderResults = () => {
     const matches = getMatches(input.value);
     const normalizedQuery = normalize(input.value);
@@ -97,13 +111,46 @@
   };
 
   input.addEventListener("input", renderResults);
-  input.addEventListener("focus", renderResults);
+  input.addEventListener("focus", () => {
+    if (!isOpen) {
+      isOpen = true;
+      renderOpenState();
+    }
+    renderResults();
+  });
+
+  toggleButton.addEventListener("click", () => {
+    isOpen = !isOpen;
+    renderOpenState();
+
+    if (isOpen) {
+      input.focus();
+      input.select();
+      renderResults();
+    }
+  });
 
   document.addEventListener("pointerdown", (event) => {
     if (root.contains(event.target)) {
       return;
     }
-    clearResults();
+
+    if (!isOpen) {
+      return;
+    }
+
+    isOpen = false;
+    renderOpenState();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !isOpen) {
+      return;
+    }
+
+    isOpen = false;
+    renderOpenState();
+    toggleButton.focus();
   });
 
   form.addEventListener("submit", (event) => {
@@ -113,4 +160,6 @@
       window.location.href = matches[0].url;
     }
   });
+
+  renderOpenState();
 })();

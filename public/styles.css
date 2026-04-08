@@ -1645,7 +1645,7 @@ a:hover {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.16rem;
+  gap: 0.12rem;
   justify-content: center;
   align-items: center;
 }
@@ -1673,13 +1673,14 @@ a:hover {
 }
 
 .topbar-guestbook-tools {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  width: 100%;
-  margin-top: 0.14rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  width: auto;
+  margin-top: 0;
 }
 
 .brand-prefix {
@@ -8765,9 +8766,57 @@ body.page-guestbook-preview::after {
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
 }
 
+.guestbook-search-shell,
+.guestbook-background-music {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.guestbook-search-show-btn,
+.guestbook-music-show-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.06rem;
+  padding: 0.34rem 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 72%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 50%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(10px) saturate(135%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.guestbook-search-show-btn:hover,
+.guestbook-search-show-btn:focus-visible,
+.guestbook-music-show-btn:hover,
+.guestbook-music-show-btn:focus-visible,
+.guestbook-search-show-btn.is-active,
+.guestbook-music-show-btn.is-active {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 54%, var(--field-edge));
+  background: color-mix(in srgb, var(--panel-bg) 68%, white 14%);
+}
+
 .guestbook-search-panel,
 .guestbook-music-controls {
-  width: min(15rem, calc(100vw - 2rem));
+  position: absolute;
+  top: calc(100% + 0.42rem);
+  right: 0;
+  z-index: 45;
+}
+
+.guestbook-search-panel {
+  width: min(15rem, calc(100vw - 1rem));
+}
+
+.guestbook-music-controls {
+  width: min(17rem, calc(100vw - 1rem));
 }
 
 .guestbook-search-header,
@@ -8833,31 +8882,14 @@ body.page-guestbook-preview::after {
   font-size: 0.64rem;
 }
 
+.guestbook-search-panel[hidden],
+.guestbook-music-controls[hidden] {
+  display: none;
+}
+
 .guestbook-music-controls {
   background: color-mix(in srgb, var(--panel-bg) 52%, transparent);
   backdrop-filter: blur(12px) saturate(135%);
-}
-
-.guestbook-background-music.is-hidden .guestbook-music-controls {
-  display: none;
-}
-
-.guestbook-music-show-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 4.9rem;
-  padding: 0.32rem 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--field-edge) 72%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-bg) 50%, transparent);
-  color: var(--text);
-  backdrop-filter: blur(10px) saturate(135%);
-  cursor: pointer;
-}
-
-.guestbook-music-show-btn[hidden] {
-  display: none;
 }
 
 .guestbook-music-play-btn,
@@ -8962,12 +8994,12 @@ body.page-guestbook-preview::after {
 
 @media (max-width: 720px) {
   .topbar-guestbook-tools {
-    align-items: stretch;
+    gap: 0.35rem;
   }
 
   .guestbook-search-panel,
   .guestbook-music-controls {
-    width: min(100%, 18rem);
+    width: min(17rem, calc(100vw - 1rem));
   }
 }
 

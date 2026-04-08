@@ -410,107 +410,118 @@
                   </span>
                 <% }) %>
 
-                <% if (showTopbarGuestbookTools) { %>
-                  <div class="topbar-guestbook-tools">
-                    <% if (topbarGuestbookSearchCharactersList.length) { %>
-                      <section class="guestbook-search-panel guestbook-utility-card" data-guestbook-search-root>
-                        <div class="guestbook-search-header">
-                          <strong>G&auml;stebuch suchen</strong>
-                        </div>
-                        <form class="guestbook-search-form" data-guestbook-search-form>
-                          <input
-                            type="search"
-                            placeholder="Charaktername"
-                            autocomplete="off"
-                            spellcheck="false"
-                            data-guestbook-search-input
-                            aria-label="Nach anderem G&auml;stebuch per Charaktername suchen"
-                          />
-                        </form>
-                        <p class="guestbook-search-status muted" data-guestbook-search-status hidden></p>
-                        <div class="guestbook-search-results" data-guestbook-search-results hidden></div>
-                      </section>
-                    <% } %>
-
-                    <% if (topbarGuestbookMusicVideoIdValue) { %>
-                      <div
-                        class="guestbook-background-music"
-                        data-guestbook-music-root
-                        data-video-id="<%= topbarGuestbookMusicVideoIdValue %>"
-                      >
-                        <div
-                          id="guestbook-background-music-player"
-                          class="guestbook-background-music-player"
-                          aria-hidden="true"
-                        ></div>
-                        <button
-                          type="button"
-                          class="guestbook-music-show-btn"
-                          data-guestbook-music-show
-                          hidden
-                          aria-label="Musikplayer einblenden"
-                        >
-                          Musik
-                        </button>
-                        <section class="guestbook-music-controls guestbook-utility-card" data-guestbook-music-panel>
-                          <div class="guestbook-music-controls-header">
-                            <button
-                              type="button"
-                              class="guestbook-music-play-btn"
-                              data-guestbook-music-play
-                              aria-label="Musik abspielen"
-                              aria-pressed="false"
-                            >
-                              Play
-                            </button>
-
-                            <div class="guestbook-music-track-meta">
-                              <span class="guestbook-music-label">Musik</span>
-                              <a
-                                class="guestbook-music-track-link"
-                                href="https://www.youtube.com/watch?v=<%= topbarGuestbookMusicVideoIdValue %>"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                data-guestbook-music-link
-                              >
-                                <span data-guestbook-music-title>Titel wird geladen...</span>
-                              </a>
-                            </div>
-
-                            <button
-                              type="button"
-                              class="guestbook-music-hide-btn"
-                              data-guestbook-music-hide
-                              aria-label="Musikplayer ausblenden"
-                            >
-                              &#10005;
-                            </button>
-                          </div>
-
-                          <label class="guestbook-music-volume-field">
-                            <span>Lautst&auml;rke</span>
-                            <div class="guestbook-music-volume-row">
-                              <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                step="1"
-                                value="28"
-                                data-guestbook-music-volume
-                                aria-label="Lautst&auml;rke der G&auml;stebuchmusik"
-                              />
-                              <span class="guestbook-music-volume-value" data-guestbook-music-volume-value>28%</span>
-                            </div>
-                          </label>
-                        </section>
-                      </div>
-                    <% } %>
-                  </div>
-                <% } %>
               </div>
             <% } %>
           <% } %>
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
+            <% if (topbarGuestbookModeActive && showTopbarGuestbookTools) { %>
+              <div class="topbar-guestbook-tools">
+                <% if (topbarGuestbookSearchCharactersList.length) { %>
+                  <div class="guestbook-search-shell" data-guestbook-search-root>
+                    <button
+                      type="button"
+                      class="guestbook-search-show-btn"
+                      data-guestbook-search-show
+                      aria-expanded="false"
+                      aria-label="G&auml;stebuchsuche &ouml;ffnen"
+                    >
+                      Suche
+                    </button>
+                    <section class="guestbook-search-panel guestbook-utility-card" data-guestbook-search-panel hidden>
+                      <div class="guestbook-search-header">
+                        <strong>G&auml;stebuch suchen</strong>
+                      </div>
+                      <form class="guestbook-search-form" data-guestbook-search-form>
+                        <input
+                          type="search"
+                          placeholder="Charaktername"
+                          autocomplete="off"
+                          spellcheck="false"
+                          data-guestbook-search-input
+                          aria-label="Nach anderem G&auml;stebuch per Charaktername suchen"
+                        />
+                      </form>
+                      <p class="guestbook-search-status muted" data-guestbook-search-status hidden></p>
+                      <div class="guestbook-search-results" data-guestbook-search-results hidden></div>
+                    </section>
+                  </div>
+                <% } %>
+
+                <% if (topbarGuestbookMusicVideoIdValue) { %>
+                  <div
+                    class="guestbook-background-music"
+                    data-guestbook-music-root
+                    data-video-id="<%= topbarGuestbookMusicVideoIdValue %>"
+                  >
+                    <div
+                      id="guestbook-background-music-player"
+                      class="guestbook-background-music-player"
+                      aria-hidden="true"
+                    ></div>
+                    <button
+                      type="button"
+                      class="guestbook-music-show-btn"
+                      data-guestbook-music-show
+                      aria-expanded="false"
+                      aria-label="Musikplayer einblenden"
+                    >
+                      Musik
+                    </button>
+                    <section class="guestbook-music-controls guestbook-utility-card" data-guestbook-music-panel hidden>
+                      <div class="guestbook-music-controls-header">
+                        <button
+                          type="button"
+                          class="guestbook-music-play-btn"
+                          data-guestbook-music-play
+                          aria-label="Musik abspielen"
+                          aria-pressed="false"
+                        >
+                          Play
+                        </button>
+
+                        <div class="guestbook-music-track-meta">
+                          <span class="guestbook-music-label">Musik</span>
+                          <a
+                            class="guestbook-music-track-link"
+                            href="https://www.youtube.com/watch?v=<%= topbarGuestbookMusicVideoIdValue %>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-guestbook-music-link
+                          >
+                            <span data-guestbook-music-title>Titel wird geladen...</span>
+                          </a>
+                        </div>
+
+                        <button
+                          type="button"
+                          class="guestbook-music-hide-btn"
+                          data-guestbook-music-hide
+                          aria-label="Musikplayer ausblenden"
+                        >
+                          &#10005;
+                        </button>
+                      </div>
+
+                      <label class="guestbook-music-volume-field">
+                        <span>Lautst&auml;rke</span>
+                        <div class="guestbook-music-volume-row">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value="28"
+                            data-guestbook-music-volume
+                            aria-label="Lautst&auml;rke der G&auml;stebuchmusik"
+                          />
+                          <span class="guestbook-music-volume-value" data-guestbook-music-volume-value>28%</span>
+                        </div>
+                      </label>
+                    </section>
+                  </div>
+                <% } %>
+              </div>
+            <% } %>
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
                 <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
