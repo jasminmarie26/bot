@@ -548,7 +548,7 @@
     if (badge) {
       const onlineCount = getVisibleFriends().length;
       badge.hidden = onlineCount < 1;
-      badge.textContent = onlineCount > 99 ? "99+" : String(onlineCount || 0);
+      badge.textContent = "";
     }
   }
 

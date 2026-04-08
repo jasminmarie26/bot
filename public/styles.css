@@ -2037,8 +2037,7 @@ a:hover {
   stroke: none;
 }
 
-.guestbook-notification-badge,
-.social-panel-badge {
+.guestbook-notification-badge {
   position: absolute;
   top: -0.16rem;
   right: -0.12rem;
@@ -2060,6 +2059,22 @@ a:hover {
   text-shadow: 0 1px 0 rgb(255 248 233 / 0.45);
   z-index: 1;
   box-shadow: 0 10px 18px -14px var(--panel-shadow);
+}
+
+.social-panel-badge {
+  position: absolute;
+  top: 0.18rem;
+  right: 0.18rem;
+  width: 0.56rem;
+  height: 0.56rem;
+  border-radius: 999px;
+  display: inline-flex;
+  background: radial-gradient(circle at 35% 35%, #aaf7b2 0%, #51d96a 45%, #1d8b3d 100%);
+  border: 1px solid rgb(6 37 14 / 0.65);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--panel-bg) 88%, transparent),
+    0 0 10px -2px rgb(81 217 106 / 0.7);
+  z-index: 1;
 }
 
 .guestbook-notification-badge[hidden] {
