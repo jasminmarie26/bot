@@ -17614,29 +17614,27 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     character.id,
     getAccountUserById(character.user_id)
   );
-  const guestbookSearchCharacters = guestbookAccessState.isOwner
-    ? db
-        .prepare(
-          `SELECT c.id,
-                  c.name,
-                  c.server_id
-           FROM characters c
-           WHERE (c.is_public = 1 OR c.user_id = ? OR ? = 1)
-             AND c.id != ?
-           ORDER BY lower(c.name) ASC, c.id ASC`
-        )
-        .all(
-          Number(req.session.user?.id) || 0,
-          req.session.user?.is_admin === true ? 1 : 0,
-          character.id
-        )
-        .map((entry) => ({
-          id: Number(entry.id),
-          name: String(entry.name || "").trim(),
-          server_label: getServerLabel(entry.server_id),
-          url: `/characters/${Number(entry.id)}/guestbook`
-        }))
-    : [];
+  const guestbookSearchCharacters = db
+    .prepare(
+      `SELECT c.id,
+              c.name,
+              c.server_id
+       FROM characters c
+       WHERE (c.is_public = 1 OR c.user_id = ? OR ? = 1)
+         AND c.id != ?
+       ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(
+      Number(req.session.user?.id) || 0,
+      req.session.user?.is_admin === true ? 1 : 0,
+      character.id
+    )
+    .map((entry) => ({
+      id: Number(entry.id),
+      name: String(entry.name || "").trim(),
+      server_label: getServerLabel(entry.server_id),
+      url: `/characters/${Number(entry.id)}/guestbook`
+    }));
   const guestbookMusicEnabled = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled);
   const guestbookMusicVideoId = guestbookMusicEnabled
     ? extractYouTubeVideoId(guestbookSettings?.music_url)

@@ -96,6 +96,8 @@
   topbarGuestbookMode: true,
   characterCreatedAtLabel,
   publicBirthdayRows,
+  topbarGuestbookSearchCharacters: guestbookSearchCharacters,
+  topbarGuestbookMusicVideoId: guestbookMusicVideoId,
   pageClass: `page-guestbook-view ${guestbookPanelFontClass}`
 }) %>
 
@@ -316,71 +318,12 @@
   </section>
 </div>
 
-<% if ((Array.isArray(guestbookSearchCharacters) && guestbookSearchCharacters.length) || guestbookMusicVideoId) { %>
-  <div class="guestbook-utility-stack">
-    <% if (Array.isArray(guestbookSearchCharacters) && guestbookSearchCharacters.length) { %>
-      <section class="guestbook-search-panel guestbook-utility-card panel" data-guestbook-search-root>
-        <div class="guestbook-search-header">
-          <strong>Andere G&auml;steb&uuml;cher</strong>
-        </div>
-        <form class="guestbook-search-form" data-guestbook-search-form>
-          <input
-            type="search"
-            placeholder="Charaktername"
-            autocomplete="off"
-            spellcheck="false"
-            data-guestbook-search-input
-            aria-label="Nach anderem G&auml;stebuch per Charaktername suchen"
-          />
-        </form>
-        <p class="guestbook-search-status muted" data-guestbook-search-status hidden></p>
-        <div class="guestbook-search-results" data-guestbook-search-results hidden></div>
-        <script id="guestbook-search-data" type="application/json"><%- JSON.stringify(guestbookSearchCharacters) %></script>
-      </section>
-    <% } %>
-
-    <% if (guestbookMusicVideoId) { %>
-      <div
-        class="guestbook-background-music"
-        data-guestbook-music-root
-        data-video-id="<%= guestbookMusicVideoId %>"
-      >
-        <div
-          id="guestbook-background-music-player"
-          class="guestbook-background-music-player"
-          aria-hidden="true"
-        ></div>
-        <div class="guestbook-music-controls guestbook-utility-card panel">
-          <div class="guestbook-music-controls-header">
-            <strong>Musik</strong>
-            <span class="guestbook-music-volume-value" data-guestbook-music-volume-value>28%</span>
-          </div>
-          <label class="guestbook-music-volume-field">
-            <span>Lautst&auml;rke</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value="28"
-              data-guestbook-music-volume
-              aria-label="Lautst&auml;rke der G&auml;stebuchmusik"
-            />
-          </label>
-          <button type="button" class="btn btn-secondary guestbook-music-start-btn" data-guestbook-music-start hidden>
-            Musik starten
-          </button>
-        </div>
-      </div>
-    <% } %>
-  </div>
-<% } %>
-
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
 <% if (Array.isArray(guestbookSearchCharacters) && guestbookSearchCharacters.length) { %>
+  <script id="guestbook-search-data" type="application/json"><%- JSON.stringify(guestbookSearchCharacters) %></script>
   <script src="/guestbook-search.js?v=<%= staticAssetVersion %>"></script>
 <% } %>
 <% if (guestbookMusicVideoId) { %>

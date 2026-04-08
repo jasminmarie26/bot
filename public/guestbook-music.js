@@ -1,53 +1,109 @@
 (() => {
   const root = document.querySelector("[data-guestbook-music-root]");
   const playerHost = document.getElementById("guestbook-background-music-player");
-  const startButton = document.querySelector("[data-guestbook-music-start]");
+  const panel = document.querySelector("[data-guestbook-music-panel]");
+  const showButton = document.querySelector("[data-guestbook-music-show]");
+  const playButton = document.querySelector("[data-guestbook-music-play]");
+  const hideButton = document.querySelector("[data-guestbook-music-hide]");
   const volumeInput = document.querySelector("[data-guestbook-music-volume]");
   const volumeValue = document.querySelector("[data-guestbook-music-volume-value]");
+  const titleNode = document.querySelector("[data-guestbook-music-title]");
+  const linkNode = document.querySelector("[data-guestbook-music-link]");
   const videoId = String(root?.dataset.videoId || "").trim();
 
-  if (!root || !playerHost || !startButton || !volumeInput || !volumeValue || !videoId) {
+  if (
+    !root ||
+    !playerHost ||
+    !panel ||
+    !showButton ||
+    !playButton ||
+    !hideButton ||
+    !volumeInput ||
+    !volumeValue ||
+    !titleNode ||
+    !linkNode ||
+    !videoId
+  ) {
     return;
   }
 
-  const AUTOPLAY_CHECK_DELAY_MS = 1100;
   const DEFAULT_VOLUME = 28;
-  const STORAGE_KEY = "guestbook-music-volume";
+  const DEFAULT_TITLE = "YouTube-Track";
+  const VOLUME_STORAGE_KEY = "guestbook-music-volume";
+  const HIDDEN_STORAGE_KEY = "guestbook-music-hidden";
   let player = null;
-  let autoplayAttemptFinished = false;
-  let isMutedFallbackActive = false;
   let playerReadyPromise = null;
-  let initialInteractionBound = false;
+  let currentVolume = readStoredVolume();
+  let isHidden = readHiddenState();
+  let metaRefreshTimeout = null;
 
-  const clampVolume = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+  function clampVolume(value) {
+    return Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+  }
 
-  const readStoredVolume = () => {
+  function readStoredVolume() {
     try {
-      const storedValue = window.localStorage.getItem(STORAGE_KEY);
-      if (storedValue === null) {
-        return DEFAULT_VOLUME;
-      }
-      return clampVolume(storedValue);
+      const storedValue = window.localStorage.getItem(VOLUME_STORAGE_KEY);
+      return storedValue === null ? DEFAULT_VOLUME : clampVolume(storedValue);
     } catch (_error) {
       return DEFAULT_VOLUME;
     }
-  };
+  }
 
-  let currentVolume = readStoredVolume();
-
-  const persistVolume = (value) => {
+  function persistVolume(value) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, String(value));
+      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(value));
     } catch (_error) {}
-  };
+  }
 
-  const renderVolume = (value) => {
+  function readHiddenState() {
+    try {
+      return window.localStorage.getItem(HIDDEN_STORAGE_KEY) === "1";
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function persistHiddenState(value) {
+    try {
+      window.localStorage.setItem(HIDDEN_STORAGE_KEY, value ? "1" : "0");
+    } catch (_error) {}
+  }
+
+  function renderVolume(value) {
     const normalizedVolume = clampVolume(value);
     volumeInput.value = String(normalizedVolume);
     volumeValue.textContent = `${normalizedVolume}%`;
-  };
+  }
 
-  const applyVolumeToPlayer = () => {
+  function renderVisibility() {
+    root.classList.toggle("is-hidden", isHidden);
+    panel.hidden = isHidden;
+    showButton.hidden = !isHidden;
+  }
+
+  function getPlayerState() {
+    try {
+      return typeof player?.getPlayerState === "function" ? player.getPlayerState() : -1;
+    } catch (_error) {
+      return -1;
+    }
+  }
+
+  function isCurrentlyPlaying() {
+    const playingState = window.YT?.PlayerState?.PLAYING;
+    return typeof playingState === "number" && getPlayerState() === playingState;
+  }
+
+  function renderPlayState() {
+    const isPlaying = isCurrentlyPlaying();
+    playButton.textContent = isPlaying ? "Pause" : "Play";
+    playButton.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+    playButton.setAttribute("aria-label", isPlaying ? "Musik pausieren" : "Musik abspielen");
+    playButton.classList.toggle("is-playing", isPlaying);
+  }
+
+  function applyVolumeToPlayer() {
     if (!player) {
       return;
     }
@@ -60,55 +116,49 @@
         player.unMute();
       }
     } catch (_error) {}
-  };
+  }
 
-  const showStartButton = (label = "Musik starten") => {
-    startButton.textContent = label;
-    startButton.hidden = false;
-  };
+  function updateTrackMeta() {
+    const fallbackUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+    let nextTitle = DEFAULT_TITLE;
+    let nextUrl = fallbackUrl;
 
-  const hideStartButton = () => {
-    startButton.hidden = true;
-  };
-
-  const safeGetPlayerState = () => {
     try {
-      return typeof player?.getPlayerState === "function" ? player.getPlayerState() : -1;
-    } catch (_error) {
-      return -1;
+      const videoData = typeof player?.getVideoData === "function" ? player.getVideoData() : null;
+      const resolvedTitle = String(videoData?.title || "").trim();
+      if (resolvedTitle) {
+        nextTitle = resolvedTitle;
+      }
+
+      const resolvedUrl = String(typeof player?.getVideoUrl === "function" ? player.getVideoUrl() || "" : "").trim();
+      if (resolvedUrl) {
+        nextUrl = resolvedUrl;
+      }
+    } catch (_error) {}
+
+    titleNode.textContent = nextTitle;
+    linkNode.href = nextUrl;
+  }
+
+  function scheduleMetaRefresh(attempt = 0) {
+    if (metaRefreshTimeout) {
+      window.clearTimeout(metaRefreshTimeout);
+      metaRefreshTimeout = null;
     }
-  };
 
-  const isCurrentlyPlaying = () => {
-    const youtubeApi = window.YT;
-    const playingState = youtubeApi?.PlayerState?.PLAYING;
-    return typeof playingState === "number" && safeGetPlayerState() === playingState;
-  };
-
-  const bindInitialInteraction = () => {
-    if (initialInteractionBound) {
+    if (attempt > 6) {
       return;
     }
 
-    initialInteractionBound = true;
-    const handleFirstInteraction = () => {
-      void activateMusic();
-    };
+    metaRefreshTimeout = window.setTimeout(() => {
+      updateTrackMeta();
+      if (String(titleNode.textContent || "").trim() === DEFAULT_TITLE) {
+        scheduleMetaRefresh(attempt + 1);
+      }
+    }, attempt === 0 ? 120 : 450);
+  }
 
-    document.addEventListener("pointerdown", handleFirstInteraction, { once: true, passive: true });
-    document.addEventListener(
-      "keydown",
-      (event) => {
-        if (event.metaKey || event.ctrlKey || event.altKey) {
-          return;
-        }
-        handleFirstInteraction();
-      },
-      { once: true }
-    );
-  };
-
-  const loadYouTubeApi = () => {
+  function loadYouTubeApi() {
     if (window.YT && typeof window.YT.Player === "function") {
       return Promise.resolve(window.YT);
     }
@@ -136,41 +186,16 @@
       script.src = "https://www.youtube.com/iframe_api";
       script.async = true;
       script.onerror = () => {
-        showStartButton();
+        titleNode.textContent = DEFAULT_TITLE;
         reject(new Error("YouTube API konnte nicht geladen werden."));
       };
       document.head.appendChild(script);
     });
 
     return window.__guestbookMusicYoutubeApiPromise;
-  };
+  }
 
-  const scheduleAutoplayCheck = () => {
-    window.setTimeout(() => {
-      if (isCurrentlyPlaying()) {
-        hideStartButton();
-        autoplayAttemptFinished = true;
-        return;
-      }
-
-      try {
-        player?.mute();
-        player?.playVideo();
-        isMutedFallbackActive = true;
-      } catch (_error) {}
-
-      window.setTimeout(() => {
-        autoplayAttemptFinished = true;
-        if (isCurrentlyPlaying()) {
-          showStartButton("Musik einschalten");
-        } else {
-          showStartButton("Musik starten");
-        }
-      }, 900);
-    }, AUTOPLAY_CHECK_DELAY_MS);
-  };
-
-  const ensurePlayer = async () => {
+  function ensurePlayer() {
     if (playerReadyPromise) {
       return playerReadyPromise;
     }
@@ -183,7 +208,7 @@
             height: "1",
             videoId,
             playerVars: {
-              autoplay: 1,
+              autoplay: 0,
               controls: 0,
               disablekb: 1,
               fs: 0,
@@ -198,25 +223,21 @@
               onReady: () => {
                 try {
                   applyVolumeToPlayer();
-                  player.playVideo();
+                  player.cueVideoById(videoId);
                 } catch (_error) {}
 
-                bindInitialInteraction();
-                scheduleAutoplayCheck();
+                updateTrackMeta();
+                scheduleMetaRefresh();
+                renderPlayState();
                 resolve(player);
               },
               onStateChange: () => {
-                if (!autoplayAttemptFinished && isCurrentlyPlaying() && !isMutedFallbackActive) {
-                  hideStartButton();
-                  return;
-                }
-
-                if (isCurrentlyPlaying() && !isMutedFallbackActive) {
-                  hideStartButton();
-                }
+                updateTrackMeta();
+                renderPlayState();
               },
               onError: () => {
-                showStartButton();
+                titleNode.textContent = DEFAULT_TITLE;
+                renderPlayState();
                 reject(new Error("YouTube Player konnte nicht gestartet werden."));
               }
             }
@@ -225,29 +246,37 @@
     );
 
     return playerReadyPromise;
-  };
+  }
 
-  const activateMusic = async () => {
+  async function togglePlayback() {
     try {
       await ensurePlayer();
       applyVolumeToPlayer();
-      player.playVideo();
-      isMutedFallbackActive = false;
-
-      window.setTimeout(() => {
-        if (isCurrentlyPlaying()) {
-          hideStartButton();
-        } else {
-          showStartButton("Musik starten");
-        }
-      }, 500);
+      if (isCurrentlyPlaying()) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+      renderPlayState();
     } catch (_error) {
-      showStartButton("Musik starten");
+      renderPlayState();
     }
-  };
+  }
 
-  startButton.addEventListener("click", () => {
-    void activateMusic();
+  showButton.addEventListener("click", () => {
+    isHidden = false;
+    persistHiddenState(false);
+    renderVisibility();
+  });
+
+  hideButton.addEventListener("click", () => {
+    isHidden = true;
+    persistHiddenState(true);
+    renderVisibility();
+  });
+
+  playButton.addEventListener("click", () => {
+    void togglePlayback();
   });
 
   volumeInput.addEventListener("input", () => {
@@ -257,21 +286,11 @@
     applyVolumeToPlayer();
   });
 
-  const activateMusicFromVolumeInteraction = () => {
-    void activateMusic();
-  };
-
-  volumeInput.addEventListener("change", activateMusicFromVolumeInteraction);
-  volumeInput.addEventListener("pointerup", activateMusicFromVolumeInteraction);
-  volumeInput.addEventListener("keyup", (event) => {
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
-      activateMusicFromVolumeInteraction();
-    }
-  });
-
   renderVolume(currentVolume);
-
+  renderVisibility();
+  updateTrackMeta();
+  renderPlayState();
   void ensurePlayer().catch(() => {
-    showStartButton("Musik starten");
+    titleNode.textContent = DEFAULT_TITLE;
   });
 })();
