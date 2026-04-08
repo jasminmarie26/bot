@@ -9793,6 +9793,35 @@ function getPreferredMenuCharacterForUser(req) {
     .get(currentUserId);
 }
 
+function resolveSocialSourceCharacterForRequest(req) {
+  const currentUserId = Number(req.session?.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return {
+      sourceCharacter: null,
+      hasExplicitSourceCharacterId: false
+    };
+  }
+
+  const rawSourceCharacterId = req.body?.source_character_id ?? req.query?.source_character_id ?? "";
+  const hasExplicitSourceCharacterId = String(rawSourceCharacterId || "").trim() !== "";
+  if (hasExplicitSourceCharacterId) {
+    const parsedSourceCharacterId = Number(rawSourceCharacterId);
+    return {
+      sourceCharacter: getOwnedCharacterForUser(currentUserId, parsedSourceCharacterId),
+      hasExplicitSourceCharacterId: true
+    };
+  }
+
+  const preferredCharacter = getPreferredMenuCharacterForUser(req);
+  return {
+    sourceCharacter:
+      preferredCharacter && Number(preferredCharacter.user_id) === currentUserId
+        ? preferredCharacter
+        : null,
+    hasExplicitSourceCharacterId: false
+  };
+}
+
 function getGuestbookPostingCharacters(req, targetCharacter) {
   const currentUserId = Number(req.session?.user?.id);
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
@@ -13189,6 +13218,16 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
     return res.status(400).json({ ok: false, error: "Bitte einen Charakternamen eingeben." });
   }
 
+  const { sourceCharacter, hasExplicitSourceCharacterId } = resolveSocialSourceCharacterForRequest(req);
+  if (!sourceCharacter) {
+    return res.status(400).json({
+      ok: false,
+      error: hasExplicitSourceCharacterId
+        ? "Dein ausgewählter Charakter konnte nicht zugeordnet werden."
+        : "Bitte zuerst einen eigenen Charakter auswählen."
+    });
+  }
+
   const canManageOwnCharacterFriends = currentUser?.is_admin === 1 || currentUser?.is_admin === true;
   const targetCharacter =
     Number.isInteger(directCharacterId) && directCharacterId > 0
@@ -13203,13 +13242,14 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
     db.prepare(
       `DELETE FROM friend_links
         WHERE user_id = ?
+          AND source_character_id = ?
           AND friend_user_id = ?`
-    ).run(currentUserId, Number(targetCharacter.user_id));
+    ).run(currentUserId, Number(sourceCharacter.id), Number(targetCharacter.user_id));
 
     db.prepare(
-      `INSERT OR IGNORE INTO friend_character_links (user_id, friend_character_id)
-       VALUES (?, ?)`
-    ).run(currentUserId, Number(targetCharacter.character_id));
+      `INSERT OR IGNORE INTO friend_character_links (user_id, source_character_id, friend_character_id)
+       VALUES (?, ?, ?)`
+    ).run(currentUserId, Number(sourceCharacter.id), Number(targetCharacter.character_id));
 
     emitSocialStateUpdateForUser(currentUserId);
 
@@ -13233,9 +13273,9 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
   }
 
   db.prepare(
-    `INSERT OR IGNORE INTO friend_links (user_id, friend_user_id)
-     VALUES (?, ?)`
-  ).run(currentUserId, Number(targetUser.id));
+    `INSERT OR IGNORE INTO friend_links (user_id, source_character_id, friend_user_id)
+     VALUES (?, ?, ?)`
+  ).run(currentUserId, Number(sourceCharacter.id), Number(targetUser.id));
 
   emitSocialStateUpdateForUser(currentUserId);
 
@@ -13257,11 +13297,22 @@ app.post("/api/social/friends/character/:friendCharacterId/delete", requireAuth,
     return res.status(400).json({ ok: false, error: "Freund konnte nicht zugeordnet werden." });
   }
 
+  const { sourceCharacter, hasExplicitSourceCharacterId } = resolveSocialSourceCharacterForRequest(req);
+  if (!sourceCharacter) {
+    return res.status(400).json({
+      ok: false,
+      error: hasExplicitSourceCharacterId
+        ? "Dein ausgewählter Charakter konnte nicht zugeordnet werden."
+        : "Bitte zuerst einen eigenen Charakter auswählen."
+    });
+  }
+
   db.prepare(
     `DELETE FROM friend_character_links
       WHERE user_id = ?
+        AND source_character_id = ?
         AND friend_character_id = ?`
-  ).run(currentUserId, friendCharacterId);
+  ).run(currentUserId, Number(sourceCharacter.id), friendCharacterId);
 
   emitSocialStateUpdateForUser(currentUserId);
 
@@ -13283,11 +13334,22 @@ app.post("/api/social/friends/:friendUserId/delete", requireAuth, (req, res) => 
     return res.status(400).json({ ok: false, error: "Freund konnte nicht zugeordnet werden." });
   }
 
+  const { sourceCharacter, hasExplicitSourceCharacterId } = resolveSocialSourceCharacterForRequest(req);
+  if (!sourceCharacter) {
+    return res.status(400).json({
+      ok: false,
+      error: hasExplicitSourceCharacterId
+        ? "Dein ausgewählter Charakter konnte nicht zugeordnet werden."
+        : "Bitte zuerst einen eigenen Charakter auswählen."
+    });
+  }
+
   db.prepare(
     `DELETE FROM friend_links
       WHERE user_id = ?
+        AND source_character_id = ?
         AND friend_user_id = ?`
-  ).run(currentUserId, friendUserId);
+  ).run(currentUserId, Number(sourceCharacter.id), friendUserId);
 
   emitSocialStateUpdateForUser(currentUserId);
 
@@ -21283,7 +21345,8 @@ function getSocialFriendRowsForUser(userId) {
 
   return db
     .prepare(
-      `SELECT u.id AS user_id,
+      `SELECT fl.source_character_id,
+              u.id AS user_id,
               u.username,
               u.account_number
          FROM friend_links fl
@@ -21302,7 +21365,8 @@ function getSocialFriendCharacterRowsForUser(userId) {
 
   return db
     .prepare(
-      `SELECT c.id AS friend_character_id,
+      `SELECT fcl.source_character_id,
+              c.id AS friend_character_id,
               c.name,
               c.user_id AS owner_user_id,
               u.username AS owner_username
@@ -21667,6 +21731,10 @@ function buildSocialStatePayloadForUser(userId) {
     const presence = getRealtimePresenceSummaryForUser(row.user_id);
     return {
       friend_type: "user",
+      source_character_id:
+        Number.isInteger(Number(row.source_character_id)) && Number(row.source_character_id) > 0
+          ? Number(row.source_character_id)
+          : null,
       user_id: Number(row.user_id),
       is_online: presence.is_online === true,
       online_name: String(presence.online_name || "").trim(),
@@ -21687,6 +21755,10 @@ function buildSocialStatePayloadForUser(userId) {
     const presence = getRealtimePresenceSummaryForCharacter(row.friend_character_id, row.owner_user_id);
     return {
       friend_type: "character",
+      source_character_id:
+        Number.isInteger(Number(row.source_character_id)) && Number(row.source_character_id) > 0
+          ? Number(row.source_character_id)
+          : null,
       user_id: Number(row.owner_user_id),
       friend_character_id: Number(row.friend_character_id),
       is_online: presence.is_online === true,

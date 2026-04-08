@@ -48,6 +48,7 @@
       ? payload.friends
           .map((entry) => ({
             friend_type: normalizeText(entry?.friend_type) || "user",
+            source_character_id: normalizeNumber(entry?.source_character_id),
             user_id: normalizeNumber(entry?.user_id),
             friend_character_id: normalizeNumber(entry?.friend_character_id),
             is_online: entry?.is_online === true,
@@ -96,14 +97,50 @@
     };
   }
 
+  function getCurrentSocialCharacterId() {
+    const globalCharacterId = normalizeNumber(window.__appActiveCharacterId);
+    if (globalCharacterId) {
+      return globalCharacterId;
+    }
+    return normalizeNumber(panel?.dataset?.socialSourceCharacterId);
+  }
+
+  function syncCurrentSocialCharacterId(nextCharacterId) {
+    const parsedCharacterId = normalizeNumber(nextCharacterId);
+    if (panel) {
+      panel.dataset.socialSourceCharacterId = parsedCharacterId ? String(parsedCharacterId) : "";
+    }
+    window.__appActiveCharacterId = parsedCharacterId;
+  }
+
+  function friendMatchesCurrentCharacter(entry, sourceCharacterId = getCurrentSocialCharacterId()) {
+    const entrySourceCharacterId = normalizeNumber(entry?.source_character_id);
+    if (!sourceCharacterId || !entrySourceCharacterId) {
+      return true;
+    }
+    return entrySourceCharacterId === sourceCharacterId;
+  }
+
+  function getCurrentCharacterFriends(state = socialState, sourceCharacterId = getCurrentSocialCharacterId()) {
+    const friends = Array.isArray(state?.friends) ? state.friends : [];
+    return friends.filter((entry) => friendMatchesCurrentCharacter(entry, sourceCharacterId));
+  }
+
+  function getFriendStateKey(entry) {
+    const sourceCharacterId = normalizeNumber(entry?.source_character_id) || 0;
+    if (entry?.friend_type === "character" && normalizeNumber(entry?.friend_character_id)) {
+      return `character:${sourceCharacterId}:${normalizeNumber(entry.friend_character_id)}`;
+    }
+    return `user:${sourceCharacterId}:${normalizeNumber(entry?.user_id) || 0}`;
+  }
+
   function publishSocialState(nextState, { allowNotifications = false } = {}) {
+    const currentSourceCharacterId = getCurrentSocialCharacterId();
     const previousFriendsByUserId = new Map(
-      (socialState.friends || [])
+      getCurrentCharacterFriends(socialState, currentSourceCharacterId)
         .filter((entry) => entry && (entry.user_id || entry.friend_character_id))
         .map((entry) => [
-          entry.friend_type === "character" && entry.friend_character_id
-            ? `character:${entry.friend_character_id}`
-            : `user:${entry.user_id}`,
+          getFriendStateKey(entry),
           entry
         ])
     );
@@ -118,12 +155,8 @@
     );
 
     if (allowNotifications && hasReceivedInitialState) {
-      normalizedState.friends.forEach((friend) => {
-        const previousEntry = previousFriendsByUserId.get(
-          friend.friend_type === "character" && friend.friend_character_id
-            ? `character:${friend.friend_character_id}`
-            : `user:${friend.user_id}`
-        );
+      getCurrentCharacterFriends(normalizedState, currentSourceCharacterId).forEach((friend) => {
+        const previousEntry = previousFriendsByUserId.get(getFriendStateKey(friend));
         if (!friend.is_online || previousEntry?.is_online === true) {
           return;
         }
@@ -206,7 +239,7 @@
   }
 
   function getVisibleFriends() {
-    return (socialState.friends || [])
+    return getCurrentCharacterFriends()
       .filter((entry) => entry?.is_online)
       .slice()
       .sort((leftFriend, rightFriend) =>
@@ -414,8 +447,8 @@
         () => {
           const removeAction =
             friend.friend_type === "character" && friend.friend_character_id
-              ? removeFriendCharacter(friend.friend_character_id)
-              : removeFriend(friend.user_id);
+              ? removeFriendCharacter(friend.friend_character_id, friend.source_character_id)
+              : removeFriend(friend.user_id, friend.source_character_id);
           removeAction.catch(() => {});
         },
         {
@@ -488,14 +521,15 @@
 
   function renderSocialState() {
     if (friendsList) {
+      const currentCharacterFriends = getCurrentCharacterFriends();
       const visibleFriends = getVisibleFriends();
-      if (!socialState.friends.length) {
+      if (!currentCharacterFriends.length) {
         renderListEntries({
           listNode: friendsList,
           pagerNode: friendsPager,
           listName: "friends",
           items: [],
-          emptyText: "Noch keine Freunde gespeichert.",
+          emptyText: "Für diesen Charakter sind noch keine Freunde gespeichert.",
           renderEntry: renderFriendEntry
         });
       } else if (!visibleFriends.length) {
@@ -616,7 +650,7 @@
   }
 
   async function addFriendByLookup(lookup) {
-    const payload = new URLSearchParams({
+    const payload = buildSocialParams({
       lookup: normalizeText(lookup)
     }).toString();
     const result = await requestJson("/api/social/friends", {
@@ -638,7 +672,7 @@
 
     const result = await requestJson("/api/social/friends", {
       method: "POST",
-      body: new URLSearchParams({
+      body: buildSocialParams({
         user_id: String(parsedUserId)
       }).toString()
     });
@@ -657,7 +691,7 @@
 
     const result = await requestJson("/api/social/friends", {
       method: "POST",
-      body: new URLSearchParams({
+      body: buildSocialParams({
         character_id: String(parsedCharacterId)
       }).toString()
     });
@@ -668,14 +702,15 @@
     return result;
   }
 
-  async function removeFriend(friendUserId) {
+  async function removeFriend(friendUserId, sourceCharacterId = null) {
     const parsedFriendUserId = normalizeNumber(friendUserId);
     if (!parsedFriendUserId) {
       return null;
     }
 
     const result = await requestJson(`/api/social/friends/${parsedFriendUserId}/delete`, {
-      method: "POST"
+      method: "POST",
+      body: buildSocialParams({}, sourceCharacterId).toString()
     });
     publishSocialState(result?.state || {}, {
       allowNotifications: false
@@ -684,14 +719,15 @@
     return result;
   }
 
-  async function removeFriendCharacter(friendCharacterId) {
+  async function removeFriendCharacter(friendCharacterId, sourceCharacterId = null) {
     const parsedFriendCharacterId = normalizeNumber(friendCharacterId);
     if (!parsedFriendCharacterId) {
       return null;
     }
 
     const result = await requestJson(`/api/social/friends/character/${parsedFriendCharacterId}/delete`, {
-      method: "POST"
+      method: "POST",
+      body: buildSocialParams({}, sourceCharacterId).toString()
     });
     publishSocialState(result?.state || {}, {
       allowNotifications: false
@@ -771,14 +807,53 @@
     return result;
   }
 
+  function buildSocialParams(values = {}, sourceCharacterId = null) {
+    const params = new URLSearchParams();
+    Object.entries(values || {}).forEach(([key, value]) => {
+      if (value == null) {
+        return;
+      }
+      const preparedValue =
+        typeof value === "number"
+          ? normalizeNumber(value)
+          : normalizeText(value);
+      if (!preparedValue) {
+        return;
+      }
+      params.set(key, String(preparedValue));
+    });
+
+    const resolvedSourceCharacterId = normalizeNumber(sourceCharacterId) || getCurrentSocialCharacterId();
+    if (resolvedSourceCharacterId) {
+      params.set("source_character_id", String(resolvedSourceCharacterId));
+    }
+    return params;
+  }
+
   function isFriendUserId(userId) {
     const parsedUserId = normalizeNumber(userId);
-    return Boolean(parsedUserId && socialState.friend_user_ids.includes(parsedUserId));
+    if (!parsedUserId) {
+      return false;
+    }
+    if (Array.isArray(socialState.friends) && socialState.friends.length) {
+      return getCurrentCharacterFriends().some(
+        (entry) => entry?.friend_type !== "character" && entry?.user_id === parsedUserId
+      );
+    }
+    return socialState.friend_user_ids.includes(parsedUserId);
   }
 
   function isFriendCharacterId(characterId) {
     const parsedCharacterId = normalizeNumber(characterId);
-    return Boolean(parsedCharacterId && socialState.friend_character_ids.includes(parsedCharacterId));
+    if (!parsedCharacterId) {
+      return false;
+    }
+    if (Array.isArray(socialState.friends) && socialState.friends.length) {
+      return getCurrentCharacterFriends().some(
+        (entry) => entry?.friend_type === "character" && entry?.friend_character_id === parsedCharacterId
+      );
+    }
+    return socialState.friend_character_ids.includes(parsedCharacterId);
   }
 
   function isIgnoredUserId(userId) {
@@ -797,7 +872,7 @@
     }
 
     try {
-      const dedupeKey = `social-friend-online:${friend.user_id}`;
+      const dedupeKey = `social-friend-online:${getFriendStateKey(friend)}`;
       const previousValue = Number(window.localStorage.getItem(dedupeKey) || "0");
       const now = Date.now();
       if (previousValue && now - previousValue < friendOnlineToastDurationMs) {
@@ -890,6 +965,11 @@
     refreshState().catch(() => {});
   });
 
+  window.addEventListener("app:active-character-change", (event) => {
+    syncCurrentSocialCharacterId(event?.detail?.characterId);
+    renderSocialState();
+  });
+
   window.appSocialApi = {
     openPanel,
     closePanel,
@@ -909,6 +989,7 @@
     isIgnoredCharacterId
   };
 
+  syncCurrentSocialCharacterId(getCurrentSocialCharacterId());
   publishSocialState(socialState, {
     allowNotifications: false
   });

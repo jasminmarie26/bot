@@ -528,6 +528,7 @@
       return;
     }
 
+    const previousCharacterId = normalizePositiveNumber(currentActiveCharacterId);
     const previousPresenceKey = currentPresenceKey;
     const previousAfkStateKey = getChatAfkStateKey(previousPresenceKey);
     const parsedCharacterId = Number(payload?.character_id);
@@ -543,6 +544,9 @@
           ? String(currentActiveCharacterId)
           : "";
     }
+    syncGlobalActiveCharacterId({
+      dispatch: previousCharacterId !== normalizePositiveNumber(currentActiveCharacterId)
+    });
 
     syncChatUrlCharacterId();
     syncChatCharacterLinks();
@@ -799,6 +803,16 @@
   }
 
   function normalizeSocialState(payload) {
+    const friends = Array.isArray(payload?.friends)
+      ? payload.friends
+          .map((entry) => ({
+            friend_type: String(entry?.friend_type || "").trim().toLowerCase() === "character" ? "character" : "user",
+            source_character_id: normalizePositiveNumber(entry?.source_character_id),
+            user_id: normalizePositiveNumber(entry?.user_id),
+            friend_character_id: normalizePositiveNumber(entry?.friend_character_id)
+          }))
+          .filter((entry) => entry.user_id)
+      : [];
     const friendUserIds = Array.isArray(payload?.friend_user_ids)
       ? payload.friend_user_ids.map((value) => normalizePositiveNumber(value)).filter(Boolean)
       : [];
@@ -813,12 +827,46 @@
       : [];
 
     return {
+      friends,
       friendUserIds: new Set(friendUserIds),
       friendCharacterIds: new Set(friendCharacterIds),
       ignoredAccountUserIds: new Set(ignoredAccountUserIds),
       ignoredCharacterIds: new Set(ignoredCharacterIds)
     };
   }
+
+  function getCurrentSocialSourceCharacterId() {
+    return normalizePositiveNumber(currentActiveCharacterId) || normalizePositiveNumber(window.__appActiveCharacterId);
+  }
+
+  function friendMatchesCurrentCharacter(entry, sourceCharacterId = getCurrentSocialSourceCharacterId()) {
+    const entrySourceCharacterId = normalizePositiveNumber(entry?.source_character_id);
+    if (!sourceCharacterId || !entrySourceCharacterId) {
+      return true;
+    }
+    return entrySourceCharacterId === sourceCharacterId;
+  }
+
+  function getCurrentCharacterFriendEntries() {
+    const friends = Array.isArray(socialState?.friends) ? socialState.friends : [];
+    return friends.filter((entry) => friendMatchesCurrentCharacter(entry));
+  }
+
+  function syncGlobalActiveCharacterId({ dispatch = false } = {}) {
+    const nextCharacterId = normalizePositiveNumber(currentActiveCharacterId);
+    window.__appActiveCharacterId = nextCharacterId;
+    if (dispatch) {
+      window.dispatchEvent(
+        new CustomEvent("app:active-character-change", {
+          detail: {
+            characterId: nextCharacterId
+          }
+        })
+      );
+    }
+  }
+
+  syncGlobalActiveCharacterId();
 
   function isIgnoredSocialEntry(entry) {
     if (!entry || entry.is_npc === true) {
@@ -835,12 +883,28 @@
 
   function isFriendUserId(userId) {
     const parsedUserId = normalizePositiveNumber(userId);
-    return Boolean(parsedUserId && socialState.friendUserIds.has(parsedUserId));
+    if (!parsedUserId) {
+      return false;
+    }
+    if (Array.isArray(socialState.friends) && socialState.friends.length) {
+      return getCurrentCharacterFriendEntries().some(
+        (entry) => entry?.friend_type !== "character" && entry?.user_id === parsedUserId
+      );
+    }
+    return socialState.friendUserIds.has(parsedUserId);
   }
 
   function isFriendCharacterId(characterId) {
     const parsedCharacterId = normalizePositiveNumber(characterId);
-    return Boolean(parsedCharacterId && socialState.friendCharacterIds.has(parsedCharacterId));
+    if (!parsedCharacterId) {
+      return false;
+    }
+    if (Array.isArray(socialState.friends) && socialState.friends.length) {
+      return getCurrentCharacterFriendEntries().some(
+        (entry) => entry?.friend_type === "character" && entry?.friend_character_id === parsedCharacterId
+      );
+    }
+    return socialState.friendCharacterIds.has(parsedCharacterId);
   }
 
   function isIgnoredAccountUserId(userId) {
@@ -999,6 +1063,7 @@
     if (chatBox) {
       chatBox.dataset.activeCharacterId = String(currentActiveCharacterId);
     }
+    syncGlobalActiveCharacterId();
   }
 
   function getWhisperStateKey(presenceKey = currentPresenceKey) {
@@ -3313,6 +3378,13 @@
 
   window.addEventListener("app:social-state", (event) => {
     socialState = normalizeSocialState(event?.detail || {});
+    renderOnlineCharacters(lastRenderedOnlineEntries.length ? lastRenderedOnlineEntries : captureRenderedOnlineEntriesFromDom());
+    renderWhisperThreadList();
+    renderWhisperThread();
+    applyOnlineMenuState();
+  });
+
+  window.addEventListener("app:active-character-change", () => {
     renderOnlineCharacters(lastRenderedOnlineEntries.length ? lastRenderedOnlineEntries : captureRenderedOnlineEntriesFromDom());
     renderWhisperThreadList();
     renderWhisperThread();

@@ -221,20 +221,24 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS friend_links (
     user_id INTEGER NOT NULL,
+    source_character_id INTEGER NOT NULL,
     friend_user_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, friend_user_id),
+    PRIMARY KEY (user_id, source_character_id, friend_user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE CASCADE,
     FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
     CHECK (user_id != friend_user_id)
   );
 
   CREATE TABLE IF NOT EXISTS friend_character_links (
     user_id INTEGER NOT NULL,
+    source_character_id INTEGER NOT NULL,
     friend_character_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, friend_character_id),
+    PRIMARY KEY (user_id, source_character_id, friend_character_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE CASCADE,
     FOREIGN KEY (friend_character_id) REFERENCES characters(id) ON DELETE CASCADE
   );
 
@@ -480,7 +484,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_festplay_applications_user_id
     ON festplay_applications(applicant_user_id);
   CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user
-    ON friend_links(friend_user_id, user_id);
+    ON friend_links(friend_user_id, user_id, source_character_id);
+  CREATE INDEX IF NOT EXISTS idx_friend_character_links_character_user
+    ON friend_character_links(friend_character_id, user_id, source_character_id);
   CREATE INDEX IF NOT EXISTS idx_ignored_accounts_ignored_user
     ON ignored_accounts(ignored_user_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_ignored_characters_user
@@ -516,6 +522,24 @@ const guestbookSettingsColumns = db
   .all()
   .map((column) => column.name);
 
+const friendLinkColumns = db
+  .prepare("PRAGMA table_info(friend_links)")
+  .all();
+const friendLinkColumnNames = friendLinkColumns.map((column) => column.name);
+const friendLinkPrimaryKeyColumns = friendLinkColumns
+  .filter((column) => Number(column?.pk) > 0)
+  .sort((a, b) => Number(a.pk || 0) - Number(b.pk || 0))
+  .map((column) => String(column?.name || "").trim());
+
+const friendCharacterLinkColumns = db
+  .prepare("PRAGMA table_info(friend_character_links)")
+  .all();
+const friendCharacterLinkColumnNames = friendCharacterLinkColumns.map((column) => column.name);
+const friendCharacterLinkPrimaryKeyColumns = friendCharacterLinkColumns
+  .filter((column) => Number(column?.pk) > 0)
+  .sort((a, b) => Number(a.pk || 0) - Number(b.pk || 0))
+  .map((column) => String(column?.name || "").trim());
+
 const ignoredAccountColumns = db
   .prepare("PRAGMA table_info(ignored_accounts)")
   .all()
@@ -535,6 +559,75 @@ const needsActiveChatRoomLogStandardRoomMigration =
     !activeChatRoomLogColumnNames.includes("standard_room_id") ||
     activeChatRoomLogPrimaryKeyColumns.join(",") !== "room_id,server_id,standard_room_id"
   );
+
+const needsFriendLinkSourceCharacterMigration =
+  friendLinkColumns.length > 0 &&
+  (
+    !friendLinkColumnNames.includes("source_character_id") ||
+    friendLinkPrimaryKeyColumns.join(",") !== "user_id,source_character_id,friend_user_id"
+  );
+
+const needsFriendCharacterLinkSourceCharacterMigration =
+  friendCharacterLinkColumns.length > 0 &&
+  (
+    !friendCharacterLinkColumnNames.includes("source_character_id") ||
+    friendCharacterLinkPrimaryKeyColumns.join(",") !== "user_id,source_character_id,friend_character_id"
+  );
+
+const friendLinkLegacySourceCharacterExpression = friendLinkColumnNames.includes("source_character_id")
+  ? `CASE
+       WHEN EXISTS (
+         SELECT 1
+           FROM characters c_source
+          WHERE c_source.id = fl.source_character_id
+            AND c_source.user_id = fl.user_id
+       ) THEN fl.source_character_id
+       ELSE (
+         SELECT c_source.id
+           FROM characters c_source
+          WHERE c_source.user_id = fl.user_id
+          ORDER BY c_source.updated_at DESC, c_source.id DESC
+          LIMIT 1
+       )
+     END`
+  : `(
+       SELECT c_source.id
+         FROM characters c_source
+        WHERE c_source.user_id = fl.user_id
+        ORDER BY c_source.updated_at DESC, c_source.id DESC
+        LIMIT 1
+     )`;
+
+const friendCharacterLinkLegacySourceCharacterFallbackExpression = `COALESCE(
+  (
+    SELECT c_source.id
+      FROM characters c_source
+      JOIN characters target_character ON target_character.id = fcl.friend_character_id
+     WHERE c_source.user_id = fcl.user_id
+       AND lower(COALESCE(c_source.server_id, '')) = lower(COALESCE(target_character.server_id, ''))
+     ORDER BY c_source.updated_at DESC, c_source.id DESC
+     LIMIT 1
+  ),
+  (
+    SELECT c_source.id
+      FROM characters c_source
+     WHERE c_source.user_id = fcl.user_id
+     ORDER BY c_source.updated_at DESC, c_source.id DESC
+     LIMIT 1
+  )
+)`;
+
+const friendCharacterLinkLegacySourceCharacterExpression = friendCharacterLinkColumnNames.includes("source_character_id")
+  ? `CASE
+       WHEN EXISTS (
+         SELECT 1
+           FROM characters c_source
+          WHERE c_source.id = fcl.source_character_id
+            AND c_source.user_id = fcl.user_id
+       ) THEN fcl.source_character_id
+       ELSE ${friendCharacterLinkLegacySourceCharacterFallbackExpression}
+     END`
+  : friendCharacterLinkLegacySourceCharacterFallbackExpression;
 
 if (needsActiveChatRoomLogStandardRoomMigration) {
   db.exec(`
@@ -583,6 +676,93 @@ if (needsActiveChatRoomLogStandardRoomMigration) {
     FROM active_chat_room_logs_legacy_standard_room_migration;
 
     DROP TABLE active_chat_room_logs_legacy_standard_room_migration;
+  `);
+}
+
+if (needsFriendLinkSourceCharacterMigration) {
+  db.exec(`
+    ALTER TABLE friend_links RENAME TO friend_links_legacy_source_character_migration;
+
+    CREATE TABLE friend_links (
+      user_id INTEGER NOT NULL,
+      source_character_id INTEGER NOT NULL,
+      friend_user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, source_character_id, friend_user_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CHECK (user_id != friend_user_id)
+    );
+
+    INSERT OR IGNORE INTO friend_links (
+      user_id,
+      source_character_id,
+      friend_user_id,
+      created_at
+    )
+    SELECT
+      migrated.user_id,
+      migrated.source_character_id,
+      migrated.friend_user_id,
+      migrated.created_at
+    FROM (
+      SELECT
+        fl.user_id,
+        ${friendLinkLegacySourceCharacterExpression} AS source_character_id,
+        fl.friend_user_id,
+        COALESCE(fl.created_at, CURRENT_TIMESTAMP) AS created_at
+      FROM friend_links_legacy_source_character_migration fl
+    ) migrated
+    WHERE migrated.source_character_id IS NOT NULL;
+
+    DROP TABLE friend_links_legacy_source_character_migration;
+
+    CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user
+      ON friend_links(friend_user_id, user_id, source_character_id);
+  `);
+}
+
+if (needsFriendCharacterLinkSourceCharacterMigration) {
+  db.exec(`
+    ALTER TABLE friend_character_links RENAME TO friend_character_links_legacy_source_character_migration;
+
+    CREATE TABLE friend_character_links (
+      user_id INTEGER NOT NULL,
+      source_character_id INTEGER NOT NULL,
+      friend_character_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, source_character_id, friend_character_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (friend_character_id) REFERENCES characters(id) ON DELETE CASCADE
+    );
+
+    INSERT OR IGNORE INTO friend_character_links (
+      user_id,
+      source_character_id,
+      friend_character_id,
+      created_at
+    )
+    SELECT
+      migrated.user_id,
+      migrated.source_character_id,
+      migrated.friend_character_id,
+      migrated.created_at
+    FROM (
+      SELECT
+        fcl.user_id,
+        ${friendCharacterLinkLegacySourceCharacterExpression} AS source_character_id,
+        fcl.friend_character_id,
+        COALESCE(fcl.created_at, CURRENT_TIMESTAMP) AS created_at
+      FROM friend_character_links_legacy_source_character_migration fcl
+    ) migrated
+    WHERE migrated.source_character_id IS NOT NULL;
+
+    DROP TABLE friend_character_links_legacy_source_character_migration;
+
+    CREATE INDEX IF NOT EXISTS idx_friend_character_links_character_user
+      ON friend_character_links(friend_character_id, user_id, source_character_id);
   `);
 }
 
