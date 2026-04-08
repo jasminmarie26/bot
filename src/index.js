@@ -17409,7 +17409,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geändert werden.`
       : "Charakter aktualisiert."
   );
-  return res.redirect(`/characters/${id}/edit`);
+  return res.redirect(getSafeExplicitReturnTarget(req.body.return_to, `/characters/${id}/edit`));
 });
 
 app.post("/characters/:id/delete", requireAuth, (req, res) => {
@@ -17918,10 +17918,12 @@ app.get("/characters/:id/guestbook/edit", requireAuth, (req, res) => {
     id,
     normalizeCharacterEditGuestbookPageId(req.query.page_id)
   );
+  const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
 
   return res.render("characters/guestbook/guestbook-editor", {
     title: `Gästebuch bearbeiten: ${character.name}`,
     character,
+    renameAvailability,
     pages: guestbookEditorState.pages,
     activePage: guestbookEditorState.activePage,
     settings: guestbookEditorState.settings
