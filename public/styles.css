@@ -9357,6 +9357,20 @@ body.page-guestbook-preview::after {
   gap: 0.28rem;
 }
 
+.character-form-basics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.character-form-basics label {
+  min-width: 0;
+}
+
+.character-form-basic-wide {
+  grid-column: 1 / -1;
+}
+
 .character-form-panel :where(
   input:not([type="color"]):not([type="range"]):not([type="radio"]):not([type="checkbox"]),
   textarea,
@@ -9794,6 +9808,22 @@ body.gb-editor-fullscreen-open {
     border-radius: 12px;
   }
 
+  .character-form-editor-journey {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    overflow-x: auto;
+  }
+
+  .character-form-editor-journey .character-editor-journey-track {
+    grid-template-columns: repeat(3, minmax(10rem, 1fr));
+    min-width: 31rem;
+  }
+
+  .character-form-editor-journey .character-editor-journey-arrow {
+    width: 2.35rem;
+    border-radius: 999px;
+  }
+
   .guestbook-editor-journey {
     overflow-x: auto;
   }
@@ -9805,6 +9835,10 @@ body.gb-editor-fullscreen-open {
 
   .character-form-panel {
     padding: 0.78rem;
+  }
+
+  .character-form-basics {
+    grid-template-columns: 1fr;
   }
 
   .gb-editor-form {

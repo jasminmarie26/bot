@@ -13,11 +13,89 @@
   : character.server_id === "larp"
     ? "LARP"
     : "Free RP"; %>
+<% const activeGuestbookEditor = mode === "edit" && typeof guestbookEditor !== "undefined" ? guestbookEditor : null; %>
+<% const activeGuestbookPage = activeGuestbookEditor?.activePage || null; %>
+<% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
 
-<section class="panel character-form-panel">
+<% if (activeGuestbookEditor) { %>
+  <nav
+    class="panel character-editor-journey character-form-editor-journey"
+    data-character-editor-journey
+    data-character-editor-storage-key="character-editor-step-<%= character.id %>"
+    aria-label="Bearbeitungsschritte"
+  >
+    <button
+      type="button"
+      class="character-editor-journey-arrow"
+      data-character-editor-nav="prev"
+      aria-label="Zum vorherigen Schritt"
+    >
+      &#8249;
+    </button>
+
+    <div class="character-editor-journey-track" role="tablist" aria-label="Bearbeitungsschritte">
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="character"
+        aria-controls="character-editor-panel-character"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">1</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Charakter &amp; Farben</strong>
+          <small>Name, Chat und Vorschau</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="guestbook-design"
+        aria-controls="guestbook-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">2</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Design &amp; Stil</strong>
+          <small>Theme, Farben und Aufbau</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="guestbook-content"
+        aria-controls="guestbook-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">3</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Inhalt &amp; Bilder</strong>
+          <small>Texte, Hinweise und BBCode</small>
+        </span>
+      </button>
+    </div>
+
+    <button
+      type="button"
+      class="character-editor-journey-arrow"
+      data-character-editor-nav="next"
+      aria-label="Zum n&auml;chsten Schritt"
+    >
+      &#8250;
+    </button>
+  </nav>
+<% } %>
+
+<section
+  id="character-editor-panel-character"
+  class="panel character-form-panel"
+  <% if (activeGuestbookEditor) { %>data-character-editor-panel="character"<% } %>
+>
   <div class="header-line">
     <div>
-      <h1><%= characterFormHeading %></h1>
+      <h1><%= activeGuestbookEditor ? "Charakter & Farben" : characterFormHeading %></h1>
       <p class="muted">
         Bereich: <strong><%= currentServerLabel %></strong>
       </p>
@@ -57,115 +135,393 @@
     <% if (safeReturnTo) { %>
       <input type="hidden" name="return_to" value="<%= safeReturnTo %>" />
     <% } %>
+    <% if (activeGuestbookPage) { %>
+      <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookPage.id %>" />
+    <% } %>
 
-    <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
+    <% if (activeGuestbookEditor) { %>
+      <div class="character-form-basics">
+        <label class="character-form-basic-wide">
+          Name
+          <% if (isNameLocked) { %>
+            <span class="gb-editor-helptext">
+              Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
+            </span>
+          <% } %>
+          <input
+            name="name"
+            required
+            maxlength="80"
+            value="<%= character.name || "" %>"
+            <%= isNameLocked ? "readonly" : "" %>
+          />
+        </label>
 
-    <label>
-      Name
-      <% if (isNameLocked) { %>
+        <label>
+          Spezies
+          <input
+            name="species"
+            maxlength="80"
+            value="<%= character.species || "" %>"
+          />
+        </label>
+
+        <label>
+          Alter
+          <input
+            name="age"
+            maxlength="40"
+            value="<%= character.age || "" %>"
+          />
+        </label>
+
+        <label>
+          Faceclaim
+          <input
+            name="faceclaim"
+            maxlength="120"
+            value="<%= character.faceclaim || "" %>"
+          />
+        </label>
+
+        <label class="character-form-basic-wide">
+          Avatar-URL
+          <input
+            name="avatar_url"
+            type="url"
+            inputmode="url"
+            maxlength="500"
+            placeholder="https://..."
+            value="<%= character.avatar_url || "" %>"
+          />
+        </label>
+      </div>
+
+      <label>
+        Chat-Farbe
         <span class="gb-editor-helptext">
-          Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
+          Diese Farbe wird f&uuml;r Namen und Schrift deines Charakters im Chat und in Bereichen verwendet.
         </span>
-      <% } %>
-      <input
-        name="name"
-        required
-        maxlength="80"
-        value="<%= character.name || "" %>"
-        <%= isNameLocked ? "readonly" : "" %>
-      />
-    </label>
 
-    <label>
-      Spezies
-      <input
-        name="species"
-        maxlength="80"
-        value="<%= character.species || "" %>"
-      />
-    </label>
+        <div class="character-color-row" data-character-color-root>
+          <div class="character-color-input-wrap">
+            <input
+              id="character-chat-color-text"
+              name="chat_text_color"
+              value="<%= character.chat_text_color || "#AEE7B7" %>"
+              maxlength="7"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button
+              id="character-chat-color-trigger"
+              class="character-color-trigger"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="character-chat-color-panel"
+              aria-label="Chat-Farbe ausw&auml;hlen"
+            >
+              <span id="character-chat-color-swatch" class="character-color-trigger-swatch" aria-hidden="true"></span>
+            </button>
+            <span id="character-chat-color-preview" class="gb-color-preview" aria-hidden="true">Aa</span>
+          </div>
 
-    <label>
-      Alter
-      <input
-        name="age"
-        maxlength="40"
-        value="<%= character.age || "" %>"
-      />
-    </label>
+          <div
+            id="character-chat-color-panel"
+            class="character-color-panel"
+            role="dialog"
+            aria-label="Chat-Farbe ausw&auml;hlen"
+            hidden
+          >
+            <div class="character-color-panel-grid">
+              <div
+                id="character-chat-color-surface"
+                class="character-color-surface"
+                tabindex="0"
+                role="slider"
+                aria-label="S&auml;ttigung und Helligkeit"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <span
+                  id="character-chat-color-surface-handle"
+                  class="character-color-surface-handle"
+                  aria-hidden="true"
+                ></span>
+              </div>
 
-    <label>
-      Faceclaim
-      <input
-        name="faceclaim"
-        maxlength="120"
-        value="<%= character.faceclaim || "" %>"
-      />
-    </label>
+              <div
+                id="character-chat-color-hue"
+                class="character-color-hue"
+                tabindex="0"
+                role="slider"
+                aria-label="Farbton"
+                aria-valuemin="0"
+                aria-valuemax="360"
+              >
+                <span
+                  id="character-chat-color-hue-handle"
+                  class="character-color-hue-handle"
+                  aria-hidden="true"
+                ></span>
+              </div>
+            </div>
 
-    <label>
-      Avatar-URL
-      <input
-        name="avatar_url"
-        type="url"
-        inputmode="url"
-        maxlength="500"
-        placeholder="https://..."
-        value="<%= character.avatar_url || "" %>"
-      />
-    </label>
+            <div class="character-color-panel-footer">
+              <span class="character-color-panel-label">Ausgew&auml;hlte Farbe</span>
+              <div class="character-color-panel-current">
+                <span id="character-chat-color-panel-swatch" class="character-color-panel-swatch" aria-hidden="true"></span>
+                <strong id="character-chat-color-panel-value">#AEE7B7</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </label>
 
-    <label>
-      Chat-Farbe
-      <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
-      <input
-        name="chat_text_color"
-        maxlength="7"
-        spellcheck="false"
-        autocomplete="off"
-        value="<%= character.chat_text_color || "#AEE7B7" %>"
-      />
-    </label>
+      <label class="character-chat-background-field">
+        Chat-Hintergrund
+        <span class="gb-editor-helptext">
+          W&auml;hle eine Hintergrundfarbe und optional ein Bild. Die Vorschau darunter aktualisiert sich direkt live.
+        </span>
+        <div class="character-color-row" data-character-background-color-root>
+          <span class="character-chat-background-option-label">Hintergrund-Farbe</span>
+          <div class="character-color-input-wrap">
+            <input
+              id="character-chat-background-color-text"
+              name="chat_background_color"
+              value="<%= character.chat_background_color || "#EFEFEF" %>"
+              maxlength="7"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button
+              id="character-chat-background-color-trigger"
+              class="character-color-trigger"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="character-chat-background-color-panel"
+              aria-label="Chat-Hintergrundfarbe ausw&auml;hlen"
+            >
+              <span
+                id="character-chat-background-color-swatch"
+                class="character-color-trigger-swatch"
+                aria-hidden="true"
+              ></span>
+            </button>
+            <span
+              id="character-chat-background-color-preview"
+              class="character-chat-background-color-preview"
+              aria-hidden="true"
+            >Bg</span>
+          </div>
 
-    <label>
-      Chat-Hintergrundfarbe
-      <span class="gb-editor-helptext">Optional, als Hex-Farbe wie <code>#EFEFEF</code>.</span>
-      <input
-        name="chat_background_color"
-        maxlength="7"
-        spellcheck="false"
-        autocomplete="off"
-        value="<%= character.chat_background_color || "#EFEFEF" %>"
-      />
-    </label>
+          <div
+            id="character-chat-background-color-panel"
+            class="character-color-panel"
+            role="dialog"
+            aria-label="Chat-Hintergrundfarbe ausw&auml;hlen"
+            hidden
+          >
+            <div class="character-color-panel-grid">
+              <div
+                id="character-chat-background-color-surface"
+                class="character-color-surface"
+                tabindex="0"
+                role="slider"
+                aria-label="S&auml;ttigung und Helligkeit"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <span
+                  id="character-chat-background-color-surface-handle"
+                  class="character-color-surface-handle"
+                  aria-hidden="true"
+                ></span>
+              </div>
 
-    <label>
-      Chat-Hintergrundbild
-      <input
-        name="chat_background_url"
-        type="url"
-        inputmode="url"
-        maxlength="500"
-        placeholder="https://..."
-        value="<%= character.chat_background_url || "" %>"
-      />
-    </label>
+              <div
+                id="character-chat-background-color-hue"
+                class="character-color-hue"
+                tabindex="0"
+                role="slider"
+                aria-label="Farbton"
+                aria-valuemin="0"
+                aria-valuemax="360"
+              >
+                <span
+                  id="character-chat-background-color-hue-handle"
+                  class="character-color-hue-handle"
+                  aria-hidden="true"
+                ></span>
+              </div>
+            </div>
 
-    <label>
-      Bild-Deckkraft
-      <input
-        name="chat_background_image_opacity"
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
-      />
-      <span class="gb-editor-helptext"><%= Number(character.chat_background_image_opacity ?? 100) %>%</span>
-    </label>
+            <div class="character-color-panel-footer">
+              <span class="character-color-panel-label">Ausgew&auml;hlte Farbe</span>
+              <div class="character-color-panel-current">
+                <span
+                  id="character-chat-background-color-panel-swatch"
+                  class="character-color-panel-swatch"
+                  aria-hidden="true"
+                ></span>
+                <strong id="character-chat-background-color-panel-value">#EFEFEF</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <span class="character-chat-background-option-label">Hintergrund-Bild</span>
+        <input
+          id="character-chat-background-url"
+          name="chat_background_url"
+          type="url"
+          inputmode="url"
+          maxlength="500"
+          placeholder="https://..."
+          value="<%= character.chat_background_url || "" %>"
+        />
+        <div class="character-chat-background-opacity-row">
+          <span class="character-chat-background-option-label">Bild-Deckkraft</span>
+          <div class="character-chat-background-opacity-controls">
+            <input
+              id="character-chat-background-opacity"
+              name="chat_background_image_opacity"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
+            />
+            <strong id="character-chat-background-opacity-value" class="character-chat-background-opacity-value">
+              <%= Number(character.chat_background_image_opacity ?? 100) %>%
+            </strong>
+          </div>
+        </div>
+        <div id="character-chat-background-preview" class="character-chat-background-preview" aria-live="polite">
+          <div class="character-chat-background-preview-copy">
+            <span class="character-chat-background-preview-label">Live-Vorschau</span>
+            <strong id="character-chat-background-preview-name" class="character-chat-background-preview-name">
+              <%= character.name || "Dein Charakter" %>:
+            </strong>
+            <p class="character-chat-background-preview-message">
+              Hier siehst du direkt, wie dein Chat mit diesem Hintergrund wirkt.
+            </p>
+            <small id="character-chat-background-preview-state" class="character-chat-background-preview-state">
+              Kein Hintergrund gesetzt.
+            </small>
+          </div>
+        </div>
+      </label>
+    <% } else { %>
+      <label>
+        Name
+        <% if (isNameLocked) { %>
+          <span class="gb-editor-helptext">
+            Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
+          </span>
+        <% } %>
+        <input
+          name="name"
+          required
+          maxlength="80"
+          value="<%= character.name || "" %>"
+          <%= isNameLocked ? "readonly" : "" %>
+        />
+      </label>
+
+      <label>
+        Spezies
+        <input
+          name="species"
+          maxlength="80"
+          value="<%= character.species || "" %>"
+        />
+      </label>
+
+      <label>
+        Alter
+        <input
+          name="age"
+          maxlength="40"
+          value="<%= character.age || "" %>"
+        />
+      </label>
+
+      <label>
+        Faceclaim
+        <input
+          name="faceclaim"
+          maxlength="120"
+          value="<%= character.faceclaim || "" %>"
+        />
+      </label>
+
+      <label>
+        Avatar-URL
+        <input
+          name="avatar_url"
+          type="url"
+          inputmode="url"
+          maxlength="500"
+          placeholder="https://..."
+          value="<%= character.avatar_url || "" %>"
+        />
+      </label>
+
+      <label>
+        Chat-Farbe
+        <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
+        <input
+          name="chat_text_color"
+          maxlength="7"
+          spellcheck="false"
+          autocomplete="off"
+          value="<%= character.chat_text_color || "#AEE7B7" %>"
+        />
+      </label>
+
+      <label>
+        Chat-Hintergrundfarbe
+        <span class="gb-editor-helptext">Optional, als Hex-Farbe wie <code>#EFEFEF</code>.</span>
+        <input
+          name="chat_background_color"
+          maxlength="7"
+          spellcheck="false"
+          autocomplete="off"
+          value="<%= character.chat_background_color || "#EFEFEF" %>"
+        />
+      </label>
+
+      <label>
+        Chat-Hintergrundbild
+        <input
+          name="chat_background_url"
+          type="url"
+          inputmode="url"
+          maxlength="500"
+          placeholder="https://..."
+          value="<%= character.chat_background_url || "" %>"
+        />
+      </label>
+
+      <label>
+        Bild-Deckkraft
+        <input
+          name="chat_background_image_opacity"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
+        />
+        <span class="gb-editor-helptext"><%= Number(character.chat_background_image_opacity ?? 100) %>%</span>
+      </label>
+    <% } %>
 
     <div class="character-form-actions">
-      <button type="submit" class="btn">Speichern</button>
+      <button type="submit" class="btn"><%= activeGuestbookEditor ? "Charakter speichern" : "Speichern" %></button>
       <% if (safeReturnTo) { %>
         <a class="btn btn-secondary" href="<%= safeReturnTo %>">Zur&uuml;ck</a>
       <% } %>
@@ -173,13 +529,54 @@
   </form>
 </section>
 
-<% if (mode === "edit" && character?.id) { %>
+<% if (activeGuestbookEditor) { const { pages, activePage, settings } = activeGuestbookEditor; %>
+  <section
+    id="guestbook-design"
+    class="panel character-form-panel character-guestbook-panel"
+    data-character-editor-panel="guestbook"
+    hidden
+  >
+    <div class="header-line character-guestbook-header">
+      <div>
+        <h2>G&auml;stebuch bearbeiten</h2>
+        <p>
+          Hier wechselst du direkt zwischen Design und Inhalt. Die drei Buttons oben und die Pfeile bleiben auf derselben Seite.
+        </p>
+      </div>
+    </div>
+
+    <% if ((pages || []).length > 1) { %>
+      <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
+        <% pages.forEach((page) => { %>
+          <a
+            class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+            data-character-guestbook-page-link
+            href="/characters/<%= character.id %>/edit?guestbook_page_id=<%= page.id %>#guestbook-design"
+          >
+            <%= page.page_number %>
+          </a>
+        <% }) %>
+      </nav>
+    <% } %>
+
+    <%- include("partials/guestbook-editor-form", {
+      character,
+      activePage,
+      settings,
+      guestbookEditorFormClass: "panel form gb-editor-form",
+      guestbookEditorUseOuterNavigation: true
+    }) %>
+  </section>
+
+  <script src="/guestbook-character-editor.js?v=<%= staticAssetVersion %>"></script>
+  <script src="/guestbook-editor-journey.js?v=<%= staticAssetVersion %>"></script>
+<% } else if (mode === "edit" && character?.id) { %>
   <section class="panel character-form-panel">
     <div class="header-line">
       <div>
         <h2>G&auml;stebuch</h2>
         <p class="muted">
-          Design, Inhalt und Seitenverwaltung liegen wieder auf der eigenen G&auml;stebuch-Seite.
+          G&auml;stebuch bearbeiten und ansehen.
         </p>
       </div>
     </div>
