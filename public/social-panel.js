@@ -216,6 +216,10 @@
       );
   }
 
+  function getVisibleCharacterFriends() {
+    return getVisibleFriends().filter((entry) => entry?.friend_type === "character");
+  }
+
   function createEntryCell(className, content) {
     const cell = document.createElement("div");
     cell.className = `social-panel-cell ${className}`;
@@ -546,7 +550,7 @@
     }
 
     if (badge) {
-      const onlineCount = getVisibleFriends().length;
+      const onlineCount = getVisibleCharacterFriends().length;
       badge.hidden = onlineCount < 1;
       badge.textContent = "";
     }
