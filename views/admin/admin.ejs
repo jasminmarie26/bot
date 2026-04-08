@@ -8,6 +8,10 @@
   const allowUserDeletion =
     typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
   const currentSearchQuery = String(searchQuery || "");
+  const currentSort = String(selectedSort || "name");
+  const resetFilterHref = currentSort === "created_at"
+    ? `${overviewBasePath}?sort=${encodeURIComponent(currentSort)}`
+    : overviewBasePath;
   const visibleUsers = Array.isArray(users) ? users : [];
   const totalFilteredUsers =
     typeof filteredUserCount === "number" ? filteredUserCount : visibleUsers.length;
@@ -195,10 +199,17 @@
         value="<%= currentSearchQuery %>"
       />
     </label>
+    <label class="admin-sort-field">
+      <span>Sortieren nach</span>
+      <select name="sort" class="admin-sort-select">
+        <option value="name" <%= currentSort === "name" ? "selected" : "" %>>Name</option>
+        <option value="created_at" <%= currentSort === "created_at" ? "selected" : "" %>>Erstellungsdatum</option>
+      </select>
+    </label>
     <div class="admin-table-actions">
-      <button class="btn" type="submit">Suchen</button>
+      <button class="btn" type="submit">Anwenden</button>
       <% if (currentSearchQuery) { %>
-        <a class="btn btn-secondary" href="<%= overviewBasePath %>">Zur&uuml;cksetzen</a>
+        <a class="btn btn-secondary" href="<%= resetFilterHref %>">Zur&uuml;cksetzen</a>
       <% } %>
     </div>
   </form>

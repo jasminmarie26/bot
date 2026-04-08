@@ -12,12 +12,16 @@
   <% const festplayIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const festplayLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const festplayLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
-  <% const festplayHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "/staff"
-    : ""; %>
-  <% const festplayHeaderIdentityTitle = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "Admin- und Moderatorenbereich im neuen Tab &ouml;ffnen"
-    : festplayIdentityName; %>
+  <% const festplayHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const festplayHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
+      : festplayIdentityName; %>
   <% const festplayBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
 
   <header class="rp-topline">

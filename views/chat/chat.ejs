@@ -32,12 +32,16 @@
   ? recentSiteUpdateRevisions
   : []; %>
 <% const showChatHeaderIdentity = Boolean(currentUser && chatIdentityName); %>
-<% const chatHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-  ? "/staff"
-  : ""; %>
-<% const chatHeaderIdentityTitle = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-  ? "Admin- und Moderatorenbereich im neuen Tab öffnen"
-  : chatIdentityName; %>
+<% const chatHeaderIdentityHref = currentUser?.is_admin
+  ? "/admin"
+  : currentUser?.is_moderator
+    ? "/staff"
+    : ""; %>
+<% const chatHeaderIdentityTitle = currentUser?.is_admin
+  ? "Adminbereich im neuen Tab öffnen"
+  : currentUser?.is_moderator
+    ? "Moderatorenbereich im neuen Tab öffnen"
+    : chatIdentityName; %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
 <% const chatRoomListHref = activeCharacter
   ? `/characters/${activeCharacter.id}#roomlist`

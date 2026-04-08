@@ -14,6 +14,8 @@
     typeof canModerateUsers === "undefined" ? false : Boolean(canModerateUsers);
   const canClearUserGuestbooks =
     typeof canClearGuestbooks === "undefined" ? true : Boolean(canClearGuestbooks);
+  const noteCategories = Array.isArray(moderationNoteCategories) ? moderationNoteCategories : [];
+  const moderationNoteLog = String(targetUser.moderation_status_note || "").trim();
 %>
 
 <section class="panel admin-user-page">
@@ -58,15 +60,15 @@
 
   <div class="admin-user-meta">
     <span>E-Mail: <%= targetUser.email || "-" %></span>
-    <span>Geburtsdatum: <%= targetUser.birth_date || "-" %></span>
+    <span>Geburtsdatum: <%= targetUser.birth_date_label || "-" %></span>
     <span>Charaktere: <%= targetUser.character_count %></span>
     <% if (targetUser.is_online && targetUser.online_location_label) { %>
       <span>Ort: <%= targetUser.online_location_label %></span>
     <% } %>
-    <span>Letzter Login: <%= targetUser.last_login_at || "-" %></span>
+    <span>Letzter Login: <%= targetUser.last_login_at_label || "-" %></span>
     <span>Letzte IP: <%= targetUser.last_login_ip || "-" %></span>
     <span>Doppelaccounts: <%= Number(targetUser.duplicate_accounts_allowed) === 1 ? "freigeschaltet" : "gesperrt" %></span>
-    <small>Erstellt: <%= targetUser.created_at %></small>
+    <small>Erstellt: <%= targetUser.created_at_label || "-" %></small>
   </div>
 </section>
 
@@ -93,20 +95,41 @@
           <% }) %>
         </select>
       </label>
-      <label class="admin-moderation-note-field">
-        Notiz
-        <textarea
-          name="moderation_status_note"
-          rows="5"
-          placeholder="Hier können Verwarnungen, Hinweise oder interne Notizen stehen."
-        ><%= targetUser.moderation_status_note || "" %></textarea>
+      <label>
+        Kategorie
+        <select name="moderation_note_category">
+          <option value="">Kategorie w&auml;hlen</option>
+          <% noteCategories.forEach((entry) => { %>
+            <option value="<%= entry.id %>"><%= entry.label %></option>
+          <% }) %>
+        </select>
       </label>
-      <button class="btn btn-secondary" type="submit">Status speichern</button>
+      <label class="admin-moderation-note-field">
+        Neue Notiz
+        <textarea
+          name="moderation_note_text"
+          rows="5"
+          placeholder="Notiz wird automatisch mit Datum, Uhrzeit und deinem Namen gespeichert."
+        ></textarea>
+      </label>
+      <button class="btn btn-secondary" type="submit">Status / Notiz speichern</button>
     </form>
+
+    <% if (moderationNoteLog) { %>
+      <div class="admin-note-log-wrap">
+        <h3>Notizverlauf</h3>
+        <pre class="admin-note-log"><%= moderationNoteLog %></pre>
+      </div>
+    <% } else { %>
+      <p class="muted">Noch keine Moderationsnotiz vorhanden.</p>
+    <% } %>
   <% } else { %>
     <div class="admin-user-meta">
       <span>Status: <%= targetUser.moderation_status.label %></span>
-      <span>Notiz: <%= targetUser.moderation_status_note || "Keine Notiz." %></span>
+    </div>
+    <div class="admin-note-log-wrap">
+      <h3>Notizverlauf</h3>
+      <pre class="admin-note-log"><%= moderationNoteLog || "Keine Notiz." %></pre>
     </div>
   <% } %>
 </section>
@@ -156,7 +179,7 @@
     <div class="admin-user-meta">
       <span>Name: <%= targetUser.username %></span>
       <span>E-Mail: <%= targetUser.email || "-" %></span>
-      <span>Geburtsdatum: <%= targetUser.birth_date || "-" %></span>
+      <span>Geburtsdatum: <%= targetUser.birth_date_label || "-" %></span>
     </div>
   <% } %>
 </section>
@@ -250,7 +273,7 @@
             <div class="admin-character-meta">
               <span><%= character.page_count %> Seiten</span>
               <span><%= character.entry_count %> Eintr&auml;ge</span>
-              <span><%= character.is_public ? "öffentlich" : "privat" %></span>
+              <span><%- character.is_public ? "&ouml;ffentlich" : "privat" %></span>
             </div>
           </a>
 

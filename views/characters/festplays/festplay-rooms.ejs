@@ -12,12 +12,16 @@
   <% const festplayRoomIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const festplayRoomLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const festplayRoomLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
-  <% const festplayRoomHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "/staff"
-    : ""; %>
-  <% const festplayRoomHeaderIdentityTitle = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "Admin- und Moderatorenbereich im neuen Tab &ouml;ffnen"
-    : festplayRoomIdentityName; %>
+  <% const festplayRoomHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const festplayRoomHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
+      : festplayRoomIdentityName; %>
   <% const formatFestplayBirthdayName = (entry) => {
     const label = String(entry?.name || "").trim();
     if (!label) return "";

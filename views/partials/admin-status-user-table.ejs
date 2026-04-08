@@ -6,7 +6,7 @@
 %>
 
 <div class="help-table-wrap" data-admin-status-pagination-root="<%= statusSectionKey %>">
-  <table class="help-table admin-user-table">
+  <table class="help-table admin-user-table admin-user-table-compact">
     <thead>
       <tr>
         <th>Account</th>
@@ -34,12 +34,15 @@
             </div>
             <div class="admin-table-subline">
               <span>#<%= user.account_number %></span>
-              <span>Erstellt: <%= user.created_at || "-" %></span>
-              <span>Letzter Login: <%= user.last_login_at || "-" %></span>
+              <span>Erstellt: <%= user.created_at_date_label || "-" %> | <%= user.created_at_time_label || "--:--" %></span>
+              <span>Letzter Login: <%= user.last_login_at_date_label || "-" %> | <%= user.last_login_at_time_label || "--:--" %></span>
+              <% if (user.is_online && user.online_location_label) { %>
+                <span>Ort: <%= user.online_location_label %></span>
+              <% } %>
             </div>
           </td>
           <td><%= user.email || "-" %></td>
-          <td><%= user.birth_date || "-" %></td>
+          <td><%= user.birth_date_label || "-" %></td>
           <td>
             <div class="admin-table-badges">
               <% if (user.is_admin) { %>
@@ -55,10 +58,8 @@
           </td>
           <td>
             <div class="admin-table-subline">
-              <% const statusNoteText = user.is_online
-                ? (user.online_location_label || "Gerade online.")
-                : (user.moderation_status_note || "Keine Notiz."); %>
-              <% const statusNoteIsEmpty = !user.is_online && !user.moderation_status_note; %>
+              <% const statusNoteText = user.moderation_status_note_preview || "Keine Notiz."; %>
+              <% const statusNoteIsEmpty = !user.moderation_status_note_preview; %>
               <span class="admin-status-badge is-<%= user.moderation_status.slug %>">
                 <%= user.moderation_status.label %>
               </span>

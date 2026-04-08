@@ -1,7 +1,7 @@
 <%- include("../partials/start") %>
 
 <%
-  const overviewBasePath = panelBasePath || "/staff/overview";
+  const overviewBasePath = panelBasePath || "/staff";
   const userBackupBasePath = panelUserBackupsPath || `${overviewBasePath}/user-backups`;
   const currentSearchQuery = String(searchQuery || "");
   const selectedServerFilter = String(activeServerFilter || "").trim().toLowerCase();

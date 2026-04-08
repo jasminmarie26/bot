@@ -12,12 +12,16 @@
   <% const roomcreateIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const roomcreateLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const roomcreateLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
-  <% const roomcreateHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "/staff"
-    : ""; %>
-  <% const roomcreateHeaderIdentityTitle = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "Admin- und Moderatorenbereich im neuen Tab &ouml;ffnen"
-    : roomcreateIdentityName; %>
+  <% const roomcreateHeaderIdentityHref = currentUser?.is_admin
+    ? "/admin"
+    : currentUser?.is_moderator
+      ? "/staff"
+      : ""; %>
+  <% const roomcreateHeaderIdentityTitle = currentUser?.is_admin
+    ? "Adminbereich im neuen Tab &ouml;ffnen"
+    : currentUser?.is_moderator
+      ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
+      : roomcreateIdentityName; %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>

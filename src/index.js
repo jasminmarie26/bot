@@ -1208,6 +1208,17 @@ function formatGermanDate(value) {
   }).format(parsed);
 }
 
+function formatGermanTime(value) {
+  const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
+  if (!parsed) return "";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(parsed);
+}
+
 function formatGermanDateTime(value) {
   const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
   if (!parsed) return "";
@@ -18547,7 +18558,7 @@ function normalizeModerationStatusLevel(value) {
 }
 
 function normalizeModerationStatusNote(value) {
-  return String(value || "").trim().slice(0, 2000);
+  return String(value || "").trim().slice(0, 8000);
 }
 
 function getModerationStatusDefinition(level) {
@@ -18556,6 +18567,84 @@ function getModerationStatusDefinition(level) {
     MODERATION_STATUS_DEFINITIONS.find((entry) => entry.level === normalizedLevel) ||
     MODERATION_STATUS_DEFINITIONS[0]
   );
+}
+
+const MODERATION_NOTE_CATEGORY_OPTIONS = Object.freeze([
+  { id: "regelverletzung", label: "Regelverletzung" },
+  { id: "jugendschutz", label: "Jugendschutz" },
+  { id: "paedophilie", label: "Pädophilie" },
+  { id: "belaestigung", label: "Belästigung" },
+  { id: "mehrfachaccount", label: "Mehrfachaccount" },
+  { id: "verdaechtiges-verhalten", label: "Verdächtiges Verhalten" },
+  { id: "spam", label: "Spam" },
+  { id: "sonstiges", label: "Sonstiges" }
+]);
+const MODERATION_NOTE_CATEGORY_LABELS = new Map(
+  MODERATION_NOTE_CATEGORY_OPTIONS.map((entry) => [entry.id, entry.label])
+);
+
+function normalizeModerationNoteCategory(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return MODERATION_NOTE_CATEGORY_LABELS.has(normalizedValue) ? normalizedValue : "";
+}
+
+function getModerationNoteCategoryLabel(categoryId) {
+  return MODERATION_NOTE_CATEGORY_LABELS.get(normalizeModerationNoteCategory(categoryId)) || "";
+}
+
+function getStaffActorLabel(user) {
+  const displayName = String(user?.display_name || "").trim();
+  const username = String(user?.username || "").trim();
+  return displayName || username || "Staff";
+}
+
+function getLatestModerationNotePreview(noteText) {
+  const blocks = String(noteText || "")
+    .split(/\n{2,}/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (!blocks.length) {
+    return "";
+  }
+
+  const latestEntry = blocks[blocks.length - 1].replace(/\s*\n\s*/g, " | ");
+  return latestEntry.length > 180 ? `${latestEntry.slice(0, 177)}...` : latestEntry;
+}
+
+function buildStaffDateTimeLabels(value) {
+  const date = formatGermanDate(value);
+  const time = formatGermanTime(value);
+  return {
+    date: date || "-",
+    time: time || "--:--",
+    compact: date ? `${date} | ${time || "--:--"}` : "-"
+  };
+}
+
+function appendModerationNoteEntry(existingNote, payload = {}) {
+  const currentNote = normalizeModerationStatusNote(existingNote);
+  const noteText = normalizeModerationStatusNote(payload.noteText || "");
+  const categoryId = normalizeModerationNoteCategory(payload.categoryId);
+  if (!noteText && !categoryId) {
+    return currentNote;
+  }
+
+  const timestamp = payload.timestamp instanceof Date ? payload.timestamp : new Date();
+  const entryParts = [`${formatGermanDate(timestamp)} ${formatGermanTime(timestamp)}`];
+  const categoryLabel = getModerationNoteCategoryLabel(categoryId);
+  const actorLabel = String(payload.actorLabel || "").trim() || "Staff";
+
+  if (categoryLabel) {
+    entryParts.push(categoryLabel);
+  }
+  entryParts.push(`von: ${actorLabel}`);
+
+  const nextEntryLines = [entryParts.join(" | ")];
+  if (noteText) {
+    nextEntryLines.push(noteText);
+  }
+
+  return [currentNote, nextEntryLines.join("\n")].filter(Boolean).join("\n\n");
 }
 
 function normalizeStaffOverviewSearchValue(value) {
@@ -18568,6 +18657,40 @@ function normalizeStaffOverviewSearchValue(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+}
+
+function normalizeStaffOverviewSortValue(value) {
+  return String(value || "").trim().toLowerCase() === "created_at" ? "created_at" : "name";
+}
+
+function compareStaffOverviewUsersByName(left, right) {
+  const nameCompare = String(left?.username || "").localeCompare(String(right?.username || ""), "de", {
+    sensitivity: "base"
+  });
+  if (nameCompare !== 0) {
+    return nameCompare;
+  }
+  return Number(left?.id || 0) - Number(right?.id || 0);
+}
+
+function sortStaffOverviewUsers(users, sortValue) {
+  const normalizedSortValue = normalizeStaffOverviewSortValue(sortValue);
+  const sortedUsers = Array.isArray(users) ? [...users] : [];
+
+  if (normalizedSortValue === "created_at") {
+    sortedUsers.sort((left, right) => {
+      const leftCreatedAt = parseSqliteDateTime(left?.created_at)?.getTime() || 0;
+      const rightCreatedAt = parseSqliteDateTime(right?.created_at)?.getTime() || 0;
+      if (leftCreatedAt !== rightCreatedAt) {
+        return rightCreatedAt - leftCreatedAt;
+      }
+      return compareStaffOverviewUsersByName(left, right);
+    });
+    return sortedUsers;
+  }
+
+  sortedUsers.sort(compareStaffOverviewUsersByName);
+  return sortedUsers;
 }
 
 function getStaffOverviewUserSearchText(user) {
@@ -18639,7 +18762,7 @@ function getStaffPanelConfig(user) {
   return {
     pageTitle: "Moderatorenbereich",
     panelTitle: "Moderatorenbereich",
-    panelBasePath: "/staff/overview",
+    panelBasePath: "/staff",
     userBackupsBasePath: "/staff/user-backups",
     userDetailsBasePath: "/staff/users",
     backLabel: "Zurück zum Moderatorenbereich",
@@ -18698,10 +18821,7 @@ function buildStaffUserLocationLabel(rawPath, rawTitle) {
   if (normalizedPathname === "/admin") {
     return "Adminbereich";
   }
-  if (normalizedPathname === "/staff") {
-    return "Admin- und Moderatorenbereich";
-  }
-  if (normalizedPathname === "/staff/overview") {
+  if (normalizedPathname === "/staff" || normalizedPathname === "/staff/overview") {
     return "Moderatorenbereich";
   }
   if (normalizedPathname === "/updates") {
@@ -18748,6 +18868,9 @@ function buildStaffUserLocationLabel(rawPath, rawTitle) {
 function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId = {}) {
   const parsedUserId = Number(user?.id);
   const sessionLocation = sessionLocationsByUserId[parsedUserId] || null;
+  const normalizedModerationStatusNote = normalizeModerationStatusNote(user.moderation_status_note);
+  const createdAtLabels = buildStaffDateTimeLabels(user.created_at);
+  const lastLoginLabels = buildStaffDateTimeLabels(user.last_login_at);
   return {
     ...user,
     is_online: onlineAccountUserIds.has(parsedUserId),
@@ -18756,19 +18879,17 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
       sessionLocation?.title
     ),
     moderation_status_level: normalizeModerationStatusLevel(user.moderation_status_level),
-    moderation_status_note: normalizeModerationStatusNote(user.moderation_status_note),
-    moderation_status: getModerationStatusDefinition(user.moderation_status_level)
+    moderation_status_note: normalizedModerationStatusNote,
+    moderation_status_note_preview: getLatestModerationNotePreview(normalizedModerationStatusNote),
+    moderation_status: getModerationStatusDefinition(user.moderation_status_level),
+    birth_date_label: formatGermanDate(user.birth_date) || "-",
+    created_at_date_label: createdAtLabels.date,
+    created_at_time_label: createdAtLabels.time,
+    created_at_label: createdAtLabels.compact,
+    last_login_at_date_label: lastLoginLabels.date,
+    last_login_at_time_label: lastLoginLabels.time,
+    last_login_at_label: lastLoginLabels.compact
   };
-}
-
-function renderStaffLanding(req, res) {
-  const isAdmin = Boolean(req.session.user?.is_admin);
-
-  return res.render("admin/staff", {
-    title: "Admin- und Moderatorenbereich",
-    staffOverviewPath: isAdmin ? "/admin" : "/staff/overview",
-    staffUserBackupsPath: isAdmin ? "/admin/user-backups" : "/staff/user-backups"
-  });
 }
 
 function renderStaffOverview(req, res) {
@@ -18778,7 +18899,11 @@ function renderStaffOverview(req, res) {
     decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId)
   );
   const searchQuery = String(req.query.q || "").trim();
-  const filteredUsers = filterStaffOverviewUsers(allUsers, searchQuery);
+  const selectedSort = normalizeStaffOverviewSortValue(req.query.sort);
+  const filteredUsers = sortStaffOverviewUsers(
+    filterStaffOverviewUsers(allUsers, searchQuery),
+    selectedSort
+  );
   const users = filteredUsers;
   const onlineUsers = filteredUsers.filter((user) => user.is_online);
   const greenUsers = filteredUsers.filter((user) => user.moderation_status_level === 1);
@@ -18817,6 +18942,7 @@ function renderStaffOverview(req, res) {
     redUsers,
     violetUsers,
     searchQuery,
+    selectedSort,
     filteredUserCount: filteredUsers.length,
     accountCount,
     adminCount,
@@ -18952,7 +19078,8 @@ function renderStaffUserDetails(req, res) {
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     targetUser,
     userCharacters,
-    statusDefinitions: MODERATION_STATUS_DEFINITIONS
+    statusDefinitions: MODERATION_STATUS_DEFINITIONS,
+    moderationNoteCategories: MODERATION_NOTE_CATEGORY_OPTIONS
   });
 }
 
@@ -18997,7 +19124,7 @@ app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
   return res.redirect("/dashboard");
 });
 
-app.get("/staff", requireAuth, requireStaff, renderStaffLanding);
+app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
 app.get("/staff/overview", requireAuth, requireStaff, renderStaffOverview);
 app.get("/admin/user-backups", requireAuth, requireAdmin, renderStaffUserBackups);
 app.get("/staff/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
@@ -19014,7 +19141,7 @@ function updateUserModerationStatus(req, res) {
   }
 
   const targetUser = db
-    .prepare("SELECT id, username FROM users WHERE id = ?")
+    .prepare("SELECT id, username, moderation_status_note FROM users WHERE id = ?")
     .get(targetId);
   if (!targetUser) {
     setFlash(req, "error", "User wurde nicht gefunden.");
@@ -19022,7 +19149,11 @@ function updateUserModerationStatus(req, res) {
   }
 
   const moderationStatusLevel = normalizeModerationStatusLevel(req.body.moderation_status_level);
-  const moderationStatusNote = normalizeModerationStatusNote(req.body.moderation_status_note);
+  const moderationStatusNote = appendModerationNoteEntry(targetUser.moderation_status_note, {
+    categoryId: req.body.moderation_note_category,
+    noteText: req.body.moderation_note_text,
+    actorLabel: getStaffActorLabel(req.session.user)
+  });
   const statusDefinition = getModerationStatusDefinition(moderationStatusLevel);
 
   db.prepare(
