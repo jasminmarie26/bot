@@ -6962,6 +6962,10 @@ function dedupeSavedNonFestplayRooms(rooms, serverId) {
   );
 
   sourceRooms.forEach((room) => {
+    if (!isCuratedPublicRoomVisibleOnServer(room, normalizedServerId)) {
+      return;
+    }
+
     const roomNameKey = normalizeRoomNameKey(room?.name_key || "") || toRoomNameKey(room?.name || "");
     const roomDescriptionKey = normalizeRoomDescription(room?.description || "");
     const dedupeKey = curatedRoomKeys.has(roomNameKey)
@@ -7737,6 +7741,39 @@ function getCuratedPublicRoomDefinition(room, serverId = null) {
       (definition) => normalizeRoomNameKey(definition?.key || definition?.name || "") === roomNameKey
     ) || null
   );
+}
+
+function getCuratedPublicRoomServerId(room) {
+  const explicitRoomNameKey = normalizeRoomNameKey(room?.name_key || "");
+  const roomNameKey = explicitRoomNameKey || toRoomNameKey(room?.name || "");
+  if (!roomNameKey) {
+    return "";
+  }
+
+  for (const [serverId, definitions] of Object.entries(CURATED_PUBLIC_ROOM_DEFINITIONS)) {
+    if (!Array.isArray(definitions) || !definitions.length) {
+      continue;
+    }
+
+    const matchesDefinition = definitions.some(
+      (definition) => normalizeRoomNameKey(definition?.key || definition?.name || "") === roomNameKey
+    );
+    if (matchesDefinition) {
+      return normalizeServer(serverId);
+    }
+  }
+
+  return "";
+}
+
+function isCuratedPublicRoomVisibleOnServer(room, serverId = null) {
+  const curatedServerId = getCuratedPublicRoomServerId(room);
+  if (!curatedServerId) {
+    return true;
+  }
+
+  const targetServerId = normalizeCharacterServerId(serverId || room?.server_id);
+  return curatedServerId === targetServerId;
 }
 
 function isCuratedPublicRoom(room, serverId = null) {
@@ -11239,11 +11276,11 @@ function ensureCuratedPublicRooms() {
   const findExistingRoomOnAnyServer = db.prepare(
     `SELECT id, description, teaser
        FROM chat_rooms
-      WHERE (
+      WHERE created_by_user_id = ?
+        AND (
           name_key = ?
-          OR (LOWER(name) = LOWER(?) AND created_by_user_id = ?)
+          OR LOWER(name) = LOWER(?)
         )
-        AND COALESCE(is_public_room, 0) = 1
         AND COALESCE(festplay_id, 0) = 0
         AND COALESCE(is_festplay_chat, 0) = 0
         AND COALESCE(is_manual_festplay_room, 0) = 0
@@ -11316,9 +11353,9 @@ function ensureCuratedPublicRooms() {
           nameKey
         ) ||
         findExistingRoomOnAnyServer.get(
+          anchor.userId,
           nameKey,
           normalizedName,
-          anchor.userId,
           nameKey
         );
       const override = getCuratedRoomOverride(serverId, nameKey);
