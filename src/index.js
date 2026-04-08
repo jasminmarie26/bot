@@ -6924,12 +6924,19 @@ function toRoomNameKey(roomName) {
   return normalizeRoomNameKey(normalizeRoomName(roomName));
 }
 
-function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription = "") {
+function findOwnedRoomByNameKey(userId, characterId, serverId, roomNameKey, roomDescription = "") {
   const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
   const normalizedServerId = normalizeCharacterServerId(serverId);
   const normalizedRoomNameKey = normalizeRoomNameKey(roomNameKey);
   const normalizedRoomDescription = normalizeRoomDescription(roomDescription);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedRoomNameKey) {
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !normalizedRoomNameKey
+  ) {
     return null;
   }
 
@@ -6939,6 +6946,7 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
        FROM chat_rooms
        WHERE server_id = ?
          AND created_by_user_id = ?
+         AND character_id = ?
          AND name_key = ?
          AND COALESCE(description, '') = ?
          AND COALESCE(festplay_id, 0) = 0
@@ -6946,7 +6954,13 @@ function findOwnedRoomByNameKey(userId, serverId, roomNameKey, roomDescription =
          AND COALESCE(is_festplay_chat, 0) = 0
          AND COALESCE(is_manual_festplay_room, 0) = 0
          AND COALESCE(is_festplay_side_chat, 0) = 0`
-    ).get(normalizedServerId, parsedUserId, normalizedRoomNameKey, normalizedRoomDescription) || null
+    ).get(
+      normalizedServerId,
+      parsedUserId,
+      parsedCharacterId,
+      normalizedRoomNameKey,
+      normalizedRoomDescription
+    ) || null
   );
 }
 
@@ -6994,21 +7008,28 @@ function dedupeSavedNonFestplayRooms(rooms, serverId) {
   return dedupedRooms;
 }
 
-function getSavedNonFestplayRoomsForUser(userId, serverId) {
+function getSavedNonFestplayRoomsForUser(userId, characterId, serverId) {
   const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
   const normalizedServerId = normalizeCharacterServerId(serverId);
   const supportsSortOrder = hasChatRoomColumn("sort_order");
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1
+  ) {
     return [];
   }
 
   const rooms = db
     .prepare(
-      `SELECT id, name, name_key, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, server_id,
+      `SELECT id, character_id, name, name_key, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, server_id,
               ${supportsSortOrder ? "COALESCE(sort_order, 0)" : "0"} AS sort_order
        FROM chat_rooms
        WHERE server_id = ?
          AND created_by_user_id = ?
+         AND character_id = ?
          AND COALESCE(festplay_id, 0) = 0
          AND COALESCE(is_saved_room, 0) = 1
          AND COALESCE(is_festplay_chat, 0) = 0
@@ -7016,7 +7037,7 @@ function getSavedNonFestplayRoomsForUser(userId, serverId) {
          AND COALESCE(is_festplay_side_chat, 0) = 0
         ORDER BY ${supportsSortOrder ? "COALESCE(sort_order, 0) ASC," : ""} created_at ASC, id ASC`
     )
-    .all(normalizedServerId, parsedUserId)
+    .all(normalizedServerId, parsedUserId, parsedCharacterId)
     .map((room) => ({
       ...room,
       sort_order: Number(room.sort_order) || 0,
@@ -7267,6 +7288,7 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
   const roomNameKey = toRoomNameKey(normalizedRoomName);
   const existingRoom = findOwnedRoomByNameKey(
     parsedUserId,
+    parsedCharacterId,
     normalizedServerId,
     roomNameKey,
     normalizedRoomDescription
@@ -7288,13 +7310,14 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
                FROM chat_rooms
               WHERE server_id = ?
                 AND created_by_user_id = ?
+                AND character_id = ?
                 AND COALESCE(festplay_id, 0) = 0
                 AND COALESCE(is_saved_room, 0) = 1
                 AND COALESCE(is_festplay_chat, 0) = 0
                 AND COALESCE(is_manual_festplay_room, 0) = 0
                 AND COALESCE(is_festplay_side_chat, 0) = 0`
           )
-          .get(normalizedServerId, parsedUserId)?.next_sort_order || 1
+          .get(normalizedServerId, parsedUserId, parsedCharacterId)?.next_sort_order || 1
       )
     : 0;
 
@@ -7339,8 +7362,9 @@ function ensureOwnedRoomForCharacter(userId, character, roomName, roomDescriptio
   };
 }
 
-function reorderOwnedRooms(userId, serverId, orderedRoomIds = []) {
+function reorderOwnedRooms(userId, characterId, serverId, orderedRoomIds = []) {
   const parsedUserId = Number(userId);
+  const parsedCharacterId = Number(characterId);
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomIds = Array.isArray(orderedRoomIds)
     ? orderedRoomIds
@@ -7348,11 +7372,18 @@ function reorderOwnedRooms(userId, serverId, orderedRoomIds = []) {
         .filter((value) => Number.isInteger(value) && value > 0)
     : [];
 
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedServerId || !normalizedRoomIds.length) {
+  if (
+    !Number.isInteger(parsedUserId) ||
+    parsedUserId < 1 ||
+    !Number.isInteger(parsedCharacterId) ||
+    parsedCharacterId < 1 ||
+    !normalizedServerId ||
+    !normalizedRoomIds.length
+  ) {
     return false;
   }
 
-  const availableRoomIds = getSavedNonFestplayRoomsForUser(parsedUserId, normalizedServerId)
+  const availableRoomIds = getSavedNonFestplayRoomsForUser(parsedUserId, parsedCharacterId, normalizedServerId)
     .map((room) => Number(room.id))
     .filter((roomId) => Number.isInteger(roomId) && roomId > 0);
 
@@ -7382,6 +7413,7 @@ function reorderOwnedRooms(userId, serverId, orderedRoomIds = []) {
       WHERE id = ?
         AND server_id = ?
         AND created_by_user_id = ?
+        AND character_id = ?
         AND COALESCE(festplay_id, 0) = 0
         AND COALESCE(is_saved_room, 0) = 1
         AND COALESCE(is_festplay_chat, 0) = 0
@@ -7391,7 +7423,7 @@ function reorderOwnedRooms(userId, serverId, orderedRoomIds = []) {
 
   db.transaction((roomIds) => {
     roomIds.forEach((roomId, index) => {
-      updateSortOrder.run(index + 1, roomId, normalizedServerId, parsedUserId);
+      updateSortOrder.run(index + 1, roomId, normalizedServerId, parsedUserId, parsedCharacterId);
     });
   })(orderedIds);
 
@@ -15686,7 +15718,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   const rooms = dedupeSavedNonFestplayRooms(
     db
     .prepare(
-        `SELECT r.id, r.name, r.name_key, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
+        `SELECT r.id, r.character_id, r.name, r.name_key, r.description, r.teaser, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id, r.created_at, r.created_by_user_id,
                 COALESCE(owner_character.name, '') AS creator_name,
                  CASE
                   WHEN r.created_by_user_id = ? THEN 1
@@ -15736,6 +15768,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         (room) =>
           room.is_saved_room &&
           (!room.is_public_room || isCuratedPublicRoom(room, character.server_id)) &&
+          Number(room.character_id) === Number(character.id) &&
           Number(room.created_by_user_id) === Number(req.session.user.id)
       ).map((room) => ({
         ...room,
@@ -25179,6 +25212,7 @@ io.on("connection", (socket) => {
         } else {
           conflictingRoom = findOwnedRoomByNameKey(
             socket.data.user.id,
+            room.character_id,
             room.server_id,
             nextRoomNameKey,
             requestedRoomDescription

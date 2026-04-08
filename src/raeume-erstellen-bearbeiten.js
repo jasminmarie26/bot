@@ -51,7 +51,11 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     }
 
     rememberPreferredCharacter(req, character);
-    const ownedRooms = getSavedNonFestplayRoomsForUser(req.session.user.id, character.server_id);
+    const ownedRooms = getSavedNonFestplayRoomsForUser(
+      req.session.user.id,
+      character.id,
+      character.server_id
+    );
     const selectedRoomId = Number(req.query.selected_room);
     const selectedRoom =
       ownedRooms.find((room) => Number(room.id) === selectedRoomId) || null;
@@ -115,7 +119,12 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     }
 
     try {
-      const updated = reorderOwnedRooms(req.session.user.id, character.server_id, orderedRoomIds);
+      const updated = reorderOwnedRooms(
+        req.session.user.id,
+        character.id,
+        character.server_id,
+        orderedRoomIds
+      );
       if (!updated) {
         if (isFetchRequest) {
           return res.status(400).json({ error: "Raumreihenfolge konnte nicht gespeichert werden." });
@@ -226,6 +235,7 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     const room = db
       .prepare(
         `SELECT id, server_id, created_by_user_id, name, description, teaser, image_url, email_log_enabled, is_locked, is_public_room, is_saved_room
+         , character_id
          FROM chat_rooms
          WHERE id = ?
            AND COALESCE(festplay_id, 0) = 0
@@ -237,6 +247,7 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     if (
       !room ||
       Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+      Number(room.character_id) !== Number(character.id) ||
       Number(room.is_saved_room) !== 1 ||
       normalizeServer(room.server_id) !== normalizeServer(character.server_id)
     ) {
@@ -274,9 +285,10 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     const nextRoomNameKey = toRoomNameKey(roomName);
     const currentRoomNameKey = toRoomNameKey(room.name);
     const conflictingRoom = nextRoomNameKey === currentRoomNameKey
-      ? null
+        ? null
       : findOwnedRoomByNameKey(
           req.session.user.id,
+          character.id,
           character.server_id,
           nextRoomNameKey,
           roomDescription
@@ -354,7 +366,7 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
 
     const room = db
       .prepare(
-        `SELECT id, name, server_id, created_by_user_id, is_public_room, is_saved_room
+        `SELECT id, name, server_id, created_by_user_id, character_id, is_public_room, is_saved_room
          FROM chat_rooms
          WHERE id = ?
            AND COALESCE(festplay_id, 0) = 0`
@@ -363,6 +375,7 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     if (
       !room ||
       Number(room.created_by_user_id) !== Number(req.session.user.id) ||
+      Number(room.character_id) !== Number(character.id) ||
       Number(room.is_saved_room) !== 1 ||
       normalizeServer(room.server_id) !== normalizeServer(character.server_id)
     ) {
