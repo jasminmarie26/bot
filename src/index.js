@@ -13189,18 +13189,27 @@ app.post("/api/social/friends", requireAuth, (req, res) => {
     return res.status(400).json({ ok: false, error: "Bitte einen Charakternamen eingeben." });
   }
 
-  const allowOwnCharacterFriends = currentUser?.is_admin === 1 || currentUser?.is_admin === true;
-  const ownCharacterTarget =
-    allowOwnCharacterFriends &&
-    ((Number.isInteger(directCharacterId) && directCharacterId > 0
+  const canManageOwnCharacterFriends = currentUser?.is_admin === 1 || currentUser?.is_admin === true;
+  const targetCharacter =
+    Number.isInteger(directCharacterId) && directCharacterId > 0
       ? getCharacterSocialTargetById(directCharacterId)
-      : findCharacterBySocialLookup(lookup)) ||
-      null);
-  if (ownCharacterTarget && Number(ownCharacterTarget.user_id) === currentUserId) {
+      : findCharacterBySocialLookup(lookup);
+
+  if (targetCharacter) {
+    if (Number(targetCharacter.user_id) === currentUserId && !canManageOwnCharacterFriends) {
+      return res.status(400).json({ ok: false, error: "Du kannst dich nicht selbst als Freund hinzufügen." });
+    }
+
+    db.prepare(
+      `DELETE FROM friend_links
+        WHERE user_id = ?
+          AND friend_user_id = ?`
+    ).run(currentUserId, Number(targetCharacter.user_id));
+
     db.prepare(
       `INSERT OR IGNORE INTO friend_character_links (user_id, friend_character_id)
        VALUES (?, ?)`
-    ).run(currentUserId, Number(ownCharacterTarget.character_id));
+    ).run(currentUserId, Number(targetCharacter.character_id));
 
     emitSocialStateUpdateForUser(currentUserId);
 
@@ -21314,12 +21323,20 @@ function getFriendWatcherUserIdsForUser(userId) {
 
   return db
     .prepare(
-      `SELECT user_id
-         FROM friend_links
-        WHERE friend_user_id = ?
-        ORDER BY user_id ASC`
+      `SELECT watcher.user_id
+         FROM (
+           SELECT fl.user_id
+             FROM friend_links fl
+            WHERE fl.friend_user_id = ?
+           UNION
+           SELECT fcl.user_id
+             FROM friend_character_links fcl
+             JOIN characters c ON c.id = fcl.friend_character_id
+            WHERE c.user_id = ?
+         ) watcher
+        ORDER BY watcher.user_id ASC`
     )
-    .all(parsedUserId)
+    .all(parsedUserId, parsedUserId)
     .map((row) => Number(row.user_id))
     .filter((value, index, list) => Number.isInteger(value) && value > 0 && list.indexOf(value) === index);
 }

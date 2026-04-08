@@ -2667,9 +2667,10 @@
     const isOwnEntry = hasUser && selectedOnlineEntry.userId === currentUserId;
     const hasSocialApi = typeof window.appSocialApi === "object" && window.appSocialApi !== null;
     const canManageOwnCharacterFriend = currentUserIsAdmin && isOwnEntry && hasCharacter;
-    const isFriend =
-      (hasUser && isFriendUserId(selectedOnlineEntry.userId)) ||
-      (canManageOwnCharacterFriend && isFriendCharacterId(selectedOnlineEntry.characterId));
+    const usesCharacterFriend = hasCharacter && (!isOwnEntry || canManageOwnCharacterFriend);
+    const isFriend = usesCharacterFriend
+      ? isFriendCharacterId(selectedOnlineEntry.characterId)
+      : (hasUser && isFriendUserId(selectedOnlineEntry.userId));
     const ignoresCharacter = hasCharacter && isIgnoredCharacterId(selectedOnlineEntry.characterId);
     const ignoresAccount = hasUser && isIgnoredAccountUserId(selectedOnlineEntry.userId);
 
@@ -2687,7 +2688,8 @@
 
     onlineActionWhisper.disabled = !hasUser;
     if (onlineActionFriend) {
-      onlineActionFriend.disabled = !hasSocialApi || ((!hasUser || isOwnEntry) && !canManageOwnCharacterFriend);
+      onlineActionFriend.disabled =
+        !hasSocialApi || (!usesCharacterFriend && (!hasUser || isOwnEntry));
       onlineActionFriend.textContent = isFriend ? "Freund entfernen" : "Als Freund speichern";
     }
     if (onlineActionIgnoreCharacter) {
@@ -2733,7 +2735,9 @@
       userId: Number.isInteger(userId) && userId > 0 ? userId : null,
       characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
       name,
-      isFriend: isFriendUserId(userId),
+      isFriend: Number.isInteger(characterId) && characterId > 0
+        ? isFriendCharacterId(characterId)
+        : isFriendUserId(userId),
       ignoresCharacter: isIgnoredCharacterId(characterId),
       ignoresAccount: isIgnoredAccountUserId(userId)
     };
@@ -3139,12 +3143,19 @@
     onlineActionFriend.addEventListener("click", async () => {
       if (!selectedOnlineEntry || !window.appSocialApi) return;
       try {
+        const hasCharacter =
+          Number.isInteger(selectedOnlineEntry?.characterId) &&
+          selectedOnlineEntry.characterId > 0;
+        const isOwnEntry =
+          Number.isInteger(selectedOnlineEntry?.userId) &&
+          selectedOnlineEntry.userId === currentUserId;
         const canManageOwnCharacterFriend =
           currentUserIsAdmin &&
-          Number.isInteger(selectedOnlineEntry?.characterId) &&
-          selectedOnlineEntry.characterId > 0 &&
-          Number(selectedOnlineEntry?.userId) === currentUserId;
-        if (canManageOwnCharacterFriend) {
+          hasCharacter &&
+          isOwnEntry;
+        const usesCharacterFriend = hasCharacter && (!isOwnEntry || canManageOwnCharacterFriend);
+
+        if (usesCharacterFriend) {
           if (isFriendCharacterId(selectedOnlineEntry.characterId)) {
             await window.appSocialApi.removeFriendCharacter(selectedOnlineEntry.characterId);
           } else {
