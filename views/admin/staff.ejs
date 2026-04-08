@@ -7,11 +7,28 @@
       title: "Adminbereich",
       description: "Volle Verwaltung f&uuml;r Accounts, Rollen, Rechte und verd&auml;chtige Konten.",
       hint: "Nur f&uuml;r Admins sichtbar.",
-      href: "/admin",
+      href: staffOverviewPath || "/admin",
       label: "Adminbereich &ouml;ffnen",
       external: false
     });
+  } else if (currentUser?.is_moderator) {
+    staffAreas.push({
+      title: "Moderatorenbereich",
+      description: "&Uuml;bersicht &uuml;ber Moderationsstatus, Online-Accounts und Staff-Werkzeuge.",
+      hint: "F&uuml;r Admins und Moderatoren.",
+      href: staffOverviewPath || "/staff/overview",
+      label: "Moderatorenbereich &ouml;ffnen",
+      external: false
+    });
   }
+  staffAreas.push({
+    title: "USER BACKUP",
+    description: "Beendete Raum-Logs in der Staff-Sicht durchsuchen und nachverfolgen.",
+    hint: currentUser?.is_admin ? "Nur f&uuml;r Admins sichtbar." : "F&uuml;r Admins und Moderatoren.",
+    href: staffUserBackupsPath || (currentUser?.is_admin ? "/admin/user-backups" : "/staff/user-backups"),
+    label: "USER BACKUP &ouml;ffnen",
+    external: false
+  });
   staffAreas.push(
     {
       title: "Live Updates",

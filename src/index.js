@@ -18624,6 +18624,7 @@ function getStaffPanelConfig(user) {
       pageTitle: "Adminbereich",
       panelTitle: "Adminbereich",
       panelBasePath: "/admin",
+      userBackupsBasePath: "/admin/user-backups",
       userDetailsBasePath: "/admin/users",
       backLabel: "Zurück zum Adminbereich",
       canEditUsers: true,
@@ -18638,7 +18639,8 @@ function getStaffPanelConfig(user) {
   return {
     pageTitle: "Moderatorenbereich",
     panelTitle: "Moderatorenbereich",
-    panelBasePath: "/staff",
+    panelBasePath: "/staff/overview",
+    userBackupsBasePath: "/staff/user-backups",
     userDetailsBasePath: "/staff/users",
     backLabel: "Zurück zum Moderatorenbereich",
     canEditUsers: false,
@@ -18697,6 +18699,9 @@ function buildStaffUserLocationLabel(rawPath, rawTitle) {
     return "Adminbereich";
   }
   if (normalizedPathname === "/staff") {
+    return "Admin- und Moderatorenbereich";
+  }
+  if (normalizedPathname === "/staff/overview") {
     return "Moderatorenbereich";
   }
   if (normalizedPathname === "/updates") {
@@ -18756,6 +18761,16 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
   };
 }
 
+function renderStaffLanding(req, res) {
+  const isAdmin = Boolean(req.session.user?.is_admin);
+
+  return res.render("admin/staff", {
+    title: "Admin- und Moderatorenbereich",
+    staffOverviewPath: isAdmin ? "/admin" : "/staff/overview",
+    staffUserBackupsPath: isAdmin ? "/admin/user-backups" : "/staff/user-backups"
+  });
+}
+
 function renderStaffOverview(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
   const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
@@ -18785,6 +18800,7 @@ function renderStaffOverview(req, res) {
     title: panelConfig.pageTitle,
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
+    panelUserBackupsPath: panelConfig.userBackupsBasePath,
     userDetailsBasePath: panelConfig.userDetailsBasePath,
     activeStaffTab: "overview",
     backLabel: panelConfig.backLabel,
@@ -18888,6 +18904,7 @@ function renderStaffUserBackups(req, res) {
     title: `${panelConfig.panelTitle}: USER BACKUP`,
     panelTitle: panelConfig.panelTitle,
     panelBasePath: panelConfig.panelBasePath,
+    panelUserBackupsPath: panelConfig.userBackupsBasePath,
     userDetailsBasePath: panelConfig.userDetailsBasePath,
     activeStaffTab: "user-backups",
     searchQuery,
@@ -18980,7 +18997,8 @@ app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
   return res.redirect("/dashboard");
 });
 
-app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
+app.get("/staff", requireAuth, requireStaff, renderStaffLanding);
+app.get("/staff/overview", requireAuth, requireStaff, renderStaffOverview);
 app.get("/admin/user-backups", requireAuth, requireAdmin, renderStaffUserBackups);
 app.get("/staff/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
 

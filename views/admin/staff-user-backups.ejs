@@ -1,8 +1,8 @@
 <%- include("../partials/start") %>
 
 <%
-  const overviewBasePath = panelBasePath || "/staff";
-  const userBackupBasePath = `${overviewBasePath}/user-backups`;
+  const overviewBasePath = panelBasePath || "/staff/overview";
+  const userBackupBasePath = panelUserBackupsPath || `${overviewBasePath}/user-backups`;
   const currentSearchQuery = String(searchQuery || "");
   const selectedServerFilter = String(activeServerFilter || "").trim().toLowerCase();
   const visibleLogs = Array.isArray(userBackupLogs) ? userBackupLogs : [];

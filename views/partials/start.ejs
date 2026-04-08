@@ -326,9 +326,7 @@
       currentUser &&
       (currentUser.is_admin || currentUser.is_moderator)
     ); %>
-    <% const topbarStaffAreaHref = currentUser
-      ? (currentUser.is_admin ? "/admin" : "/staff")
-      : ""; %>
+    <% const topbarStaffAreaHref = showTopbarStaffAreaLink ? "/staff" : ""; %>
     <% const topbarStaffAreaLabel = currentUser
       ? (currentUser.is_admin ? "Admin" : "Moderator")
       : ""; %>

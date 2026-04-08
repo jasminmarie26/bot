@@ -3,6 +3,7 @@
 <%
   const overviewTitle = panelTitle || "Adminbereich";
   const overviewBasePath = panelBasePath || "/admin";
+  const userBackupBasePath = panelUserBackupsPath || `${overviewBasePath}/user-backups`;
   const detailBasePath = userDetailsBasePath || "/admin/users";
   const allowUserDeletion =
     typeof canDeleteUsers === "undefined" ? true : Boolean(canDeleteUsers);
@@ -71,7 +72,7 @@
     </a>
     <a
       class="dashboard-role-link<%= activeStaffTab === 'user-backups' ? ' is-active' : '' %>"
-      href="<%= `${overviewBasePath}/user-backups` %>"
+      href="<%= userBackupBasePath %>"
     >
       <span class="dashboard-role-tab-title">USER BACKUP</span>
     </a>

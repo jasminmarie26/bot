@@ -15,16 +15,12 @@
     ? recentSiteUpdateRevisions
     : []; %>
   <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
-  <% const roomlistHeaderIdentityHref = currentUser?.is_admin
-    ? "/admin"
-    : currentUser?.is_moderator
-      ? "/staff"
-      : ""; %>
-  <% const roomlistHeaderIdentityTitle = currentUser?.is_admin
-    ? "Adminbereich im neuen Tab öffnen"
-    : currentUser?.is_moderator
-      ? "Moderatorenbereich im neuen Tab öffnen"
-      : roomlistIdentityName; %>
+  <% const roomlistHeaderIdentityHref = currentUser && (currentUser.is_admin || currentUser.is_moderator)
+    ? "/staff"
+    : ""; %>
+  <% const roomlistHeaderIdentityTitle = currentUser && (currentUser.is_admin || currentUser.is_moderator)
+    ? "Admin- und Moderatorenbereich im neuen Tab öffnen"
+    : roomlistIdentityName; %>
   <% const isLarpCharacterView = character.server_id === "larp"; %>
   <% const roomlistAreaHref =
     isLarpCharacterView
