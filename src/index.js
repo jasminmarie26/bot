@@ -17614,8 +17614,9 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     character.id,
     getAccountUserById(character.user_id)
   );
-  const guestbookMusicEmbedUrl = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled)
-    ? getYouTubeBackgroundMusicEmbedUrl(guestbookSettings?.music_url)
+  const guestbookMusicEnabled = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled);
+  const guestbookMusicVideoId = guestbookMusicEnabled
+    ? extractYouTubeVideoId(guestbookSettings?.music_url)
     : "";
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     guestbookPages,
@@ -17653,7 +17654,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     },
     guestbookPageNavigation,
     guestbookSettings,
-    guestbookMusicEmbedUrl,
+    guestbookMusicVideoId,
     guestbookPageTextColor: resolveGuestbookPageTextColor(
       guestbookSettings?.page_text_color,
       guestbookSettings?.theme_style

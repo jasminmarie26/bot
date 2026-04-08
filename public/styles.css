@@ -8730,6 +8730,36 @@ body.page-guestbook-preview::after {
   padding: 0 0 2.4rem;
 }
 
+.guestbook-background-music {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 45;
+  display: grid;
+  justify-items: end;
+  gap: 0.45rem;
+}
+
+.guestbook-background-music-player {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.guestbook-music-start-btn {
+  min-width: 10rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.guestbook-music-start-btn[hidden] {
+  display: none;
+}
+
 .guestbook-preview-header {
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   background: rgba(255, 255, 255, 0.97);

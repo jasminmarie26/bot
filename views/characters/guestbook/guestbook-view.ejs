@@ -316,22 +316,20 @@
   </section>
 </div>
 
-<% if (guestbookMusicEmbedUrl) { %>
+<% if (guestbookMusicVideoId) { %>
   <div
     class="guestbook-background-music"
-    aria-hidden="true"
-    style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;opacity:0;"
+    data-guestbook-music-root
+    data-video-id="<%= guestbookMusicVideoId %>"
   >
-    <iframe
-      src="<%= guestbookMusicEmbedUrl %>"
-      title="G&auml;stebuch Hintergrundmusik"
-      width="1"
-      height="1"
-      frameborder="0"
-      tabindex="-1"
-      allow="autoplay; encrypted-media; picture-in-picture"
-      referrerpolicy="strict-origin-when-cross-origin"
-    ></iframe>
+    <div
+      id="guestbook-background-music-player"
+      class="guestbook-background-music-player"
+      aria-hidden="true"
+    ></div>
+    <button type="button" class="btn btn-secondary guestbook-music-start-btn" data-guestbook-music-start hidden>
+      Musik starten
+    </button>
   </div>
 <% } %>
 
@@ -339,5 +337,8 @@
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
+<% if (guestbookMusicVideoId) { %>
+  <script src="/guestbook-music.js?v=<%= staticAssetVersion %>"></script>
+<% } %>
 
 <%- include("../../partials/end") %>
