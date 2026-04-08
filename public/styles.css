@@ -9310,6 +9310,19 @@ body.page-guestbook-preview::after {
   cursor: default;
 }
 
+.guestbook-editor-journey {
+  grid-template-columns: 1fr;
+}
+
+.guestbook-editor-journey .character-editor-journey-track {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guestbook-editor-journey .character-editor-journey-step {
+  width: 100%;
+  text-decoration: none;
+}
+
 .character-guestbook-panel {
   z-index: 1;
 }
@@ -9779,6 +9792,15 @@ body.gb-editor-fullscreen-open {
   .character-editor-journey-arrow {
     width: 100%;
     border-radius: 12px;
+  }
+
+  .guestbook-editor-journey {
+    overflow-x: auto;
+  }
+
+  .guestbook-editor-journey .character-editor-journey-track {
+    grid-template-columns: repeat(3, minmax(10rem, 1fr));
+    min-width: 31rem;
   }
 
   .character-form-panel {

@@ -68,6 +68,46 @@
     </div>
   </section>
 
+  <nav class="panel character-editor-journey guestbook-editor-journey" aria-label="G&auml;stebuch Schritte">
+    <div class="character-editor-journey-track">
+      <a class="character-editor-journey-step" href="/characters/<%= character.id %>/edit">
+        <span class="character-editor-journey-step-number">1</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Charakter</strong>
+          <small>Zur&uuml;ck zur Bearbeitung</small>
+        </span>
+      </a>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-guestbook-journey-step="design"
+        aria-controls="gb-editor-page-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">2</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Design</strong>
+          <small>Theme, Farben und Stil</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-guestbook-journey-step="content"
+        aria-controls="gb-editor-page-content"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">3</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Inhalt</strong>
+          <small>Bilder, Texte und BBCode</small>
+        </span>
+      </button>
+    </div>
+  </nav>
+
   <% if ((pages || []).length > 1) { %>
     <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
       <% pages.forEach((page) => { %>
@@ -81,7 +121,49 @@
     </nav>
   <% } %>
 
-  <%- include("../../partials/guestbook-editor-form", { guestbookEditorFormClass: "panel form gb-editor-form" }) %>
+  <%- include("../../partials/guestbook-editor-form", {
+    guestbookEditorFormClass: "panel form gb-editor-form",
+    guestbookEditorUseOuterNavigation: true
+  }) %>
 </section>
+
+<script>
+  (() => {
+    const journeyButtons = Array.from(document.querySelectorAll("[data-guestbook-journey-step]"));
+    if (!journeyButtons.length) {
+      return;
+    }
+
+    const setActiveStep = (stepName) => {
+      const normalizedStep = String(stepName || "").trim().toLowerCase() === "content" ? "content" : "design";
+      journeyButtons.forEach((button) => {
+        const isActive =
+          String(button.dataset.guestbookJourneyStep || "").trim().toLowerCase() === normalizedStep;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+    };
+
+    journeyButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextStep = String(button.dataset.guestbookJourneyStep || "").trim().toLowerCase() || "design";
+        if (typeof window.setGuestbookEditorPage === "function") {
+          window.setGuestbookEditorPage(nextStep);
+        }
+        setActiveStep(nextStep);
+      });
+    });
+
+    window.addEventListener("guestbook-editor-pagechange", (event) => {
+      setActiveStep(event.detail?.page);
+    });
+
+    const initialStep =
+      typeof window.getGuestbookEditorPage === "function"
+        ? window.getGuestbookEditorPage()
+        : "design";
+    setActiveStep(initialStep);
+  })();
+</script>
 
 <%- include("../../partials/end") %>
