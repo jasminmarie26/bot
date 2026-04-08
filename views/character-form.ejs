@@ -160,18 +160,7 @@
         <input type="hidden" name="species" value="<%= character.species || "" %>" />
         <input type="hidden" name="age" value="<%= character.age || "" %>" />
         <input type="hidden" name="faceclaim" value="<%= character.faceclaim || "" %>" />
-
-        <label class="character-form-basic-wide">
-          Avatar-URL
-          <input
-            name="avatar_url"
-            type="url"
-            inputmode="url"
-            maxlength="500"
-            placeholder="https://..."
-            value="<%= character.avatar_url || "" %>"
-          />
-        </label>
+        <input type="hidden" name="avatar_url" value="<%= character.avatar_url || "" %>" />
       </div>
 
       <label>
