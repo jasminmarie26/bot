@@ -157,32 +157,9 @@
           />
         </label>
 
-        <label>
-          Spezies
-          <input
-            name="species"
-            maxlength="80"
-            value="<%= character.species || "" %>"
-          />
-        </label>
-
-        <label>
-          Alter
-          <input
-            name="age"
-            maxlength="40"
-            value="<%= character.age || "" %>"
-          />
-        </label>
-
-        <label>
-          Faceclaim
-          <input
-            name="faceclaim"
-            maxlength="120"
-            value="<%= character.faceclaim || "" %>"
-          />
-        </label>
+        <input type="hidden" name="species" value="<%= character.species || "" %>" />
+        <input type="hidden" name="age" value="<%= character.age || "" %>" />
+        <input type="hidden" name="faceclaim" value="<%= character.faceclaim || "" %>" />
 
         <label class="character-form-basic-wide">
           Avatar-URL
