@@ -18697,7 +18697,14 @@ function normalizeStaffOverviewSearchValue(value) {
 }
 
 function normalizeStaffOverviewSortValue(value) {
-  return String(value || "").trim().toLowerCase() === "created_at" ? "created_at" : "name";
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  if (normalizedValue === "created_at") {
+    return "created_at";
+  }
+  if (normalizedValue === "last_online") {
+    return "last_online";
+  }
+  return "name";
 }
 
 function compareStaffOverviewUsersByName(left, right) {
@@ -18720,6 +18727,22 @@ function sortStaffOverviewUsers(users, sortValue) {
       const rightCreatedAt = parseSqliteDateTime(right?.created_at)?.getTime() || 0;
       if (leftCreatedAt !== rightCreatedAt) {
         return rightCreatedAt - leftCreatedAt;
+      }
+      return compareStaffOverviewUsersByName(left, right);
+    });
+    return sortedUsers;
+  }
+
+  if (normalizedSortValue === "last_online") {
+    sortedUsers.sort((left, right) => {
+      const leftLastOnline = left?.is_online
+        ? Number.MAX_SAFE_INTEGER
+        : (parseSqliteDateTime(left?.last_login_at)?.getTime() || 0);
+      const rightLastOnline = right?.is_online
+        ? Number.MAX_SAFE_INTEGER
+        : (parseSqliteDateTime(right?.last_login_at)?.getTime() || 0);
+      if (leftLastOnline !== rightLastOnline) {
+        return rightLastOnline - leftLastOnline;
       }
       return compareStaffOverviewUsersByName(left, right);
     });
