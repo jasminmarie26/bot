@@ -2,33 +2,72 @@
   const root = document.querySelector("[data-guestbook-music-root]");
   const playerHost = document.getElementById("guestbook-background-music-player");
   const startButton = document.querySelector("[data-guestbook-music-start]");
+  const volumeInput = document.querySelector("[data-guestbook-music-volume]");
+  const volumeValue = document.querySelector("[data-guestbook-music-volume-value]");
   const videoId = String(root?.dataset.videoId || "").trim();
 
-  if (!root || !playerHost || !videoId) {
+  if (!root || !playerHost || !startButton || !volumeInput || !volumeValue || !videoId) {
     return;
   }
 
   const AUTOPLAY_CHECK_DELAY_MS = 1100;
+  const DEFAULT_VOLUME = 28;
+  const STORAGE_KEY = "guestbook-music-volume";
   let player = null;
   let autoplayAttemptFinished = false;
   let isMutedFallbackActive = false;
   let playerReadyPromise = null;
   let initialInteractionBound = false;
 
-  const showStartButton = (label = "Musik starten") => {
-    if (!(startButton instanceof HTMLButtonElement)) {
+  const clampVolume = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+
+  const readStoredVolume = () => {
+    try {
+      const storedValue = window.localStorage.getItem(STORAGE_KEY);
+      if (storedValue === null) {
+        return DEFAULT_VOLUME;
+      }
+      return clampVolume(storedValue);
+    } catch (_error) {
+      return DEFAULT_VOLUME;
+    }
+  };
+
+  let currentVolume = readStoredVolume();
+
+  const persistVolume = (value) => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(value));
+    } catch (_error) {}
+  };
+
+  const renderVolume = (value) => {
+    const normalizedVolume = clampVolume(value);
+    volumeInput.value = String(normalizedVolume);
+    volumeValue.textContent = `${normalizedVolume}%`;
+  };
+
+  const applyVolumeToPlayer = () => {
+    if (!player) {
       return;
     }
 
+    try {
+      player.setVolume(currentVolume);
+      if (currentVolume <= 0) {
+        player.mute();
+      } else {
+        player.unMute();
+      }
+    } catch (_error) {}
+  };
+
+  const showStartButton = (label = "Musik starten") => {
     startButton.textContent = label;
     startButton.hidden = false;
   };
 
   const hideStartButton = () => {
-    if (!(startButton instanceof HTMLButtonElement)) {
-      return;
-    }
-
     startButton.hidden = true;
   };
 
@@ -158,8 +197,7 @@
             events: {
               onReady: () => {
                 try {
-                  player.unMute();
-                  player.setVolume(100);
+                  applyVolumeToPlayer();
                   player.playVideo();
                 } catch (_error) {}
 
@@ -192,8 +230,7 @@
   const activateMusic = async () => {
     try {
       await ensurePlayer();
-      player.unMute();
-      player.setVolume(100);
+      applyVolumeToPlayer();
       player.playVideo();
       isMutedFallbackActive = false;
 
@@ -209,11 +246,30 @@
     }
   };
 
-  if (startButton instanceof HTMLButtonElement) {
-    startButton.addEventListener("click", () => {
-      void activateMusic();
-    });
-  }
+  startButton.addEventListener("click", () => {
+    void activateMusic();
+  });
+
+  volumeInput.addEventListener("input", () => {
+    currentVolume = clampVolume(volumeInput.value);
+    persistVolume(currentVolume);
+    renderVolume(currentVolume);
+    applyVolumeToPlayer();
+  });
+
+  const activateMusicFromVolumeInteraction = () => {
+    void activateMusic();
+  };
+
+  volumeInput.addEventListener("change", activateMusicFromVolumeInteraction);
+  volumeInput.addEventListener("pointerup", activateMusicFromVolumeInteraction);
+  volumeInput.addEventListener("keyup", (event) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {
+      activateMusicFromVolumeInteraction();
+    }
+  });
+
+  renderVolume(currentVolume);
 
   void ensurePlayer().catch(() => {
     showStartButton("Musik starten");
