@@ -1,0 +1,231 @@
+<%- include("partials/start", { enableRealtime: false }) %>
+
+<% const activeGuestbookEditor = mode === "edit" ? guestbookEditor : null; %>
+<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
+<% const isLarpProfile = character.server_id === "larp"; %>
+<% const isLarpTestCharacter = isLarpProfile && !hasLarpStaffAccess; %>
+<% const characterFormHeading = isLarpProfile
+  ? (mode === "create" ? "Neues LARP-Profil" : "LARP-Profil bearbeiten")
+  : (mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten"); %>
+<% const safeReturnTo = typeof returnTo !== "undefined" ? returnTo : ""; %>
+<% const safeRenameAvailability = typeof renameAvailability !== "undefined" ? renameAvailability : null; %>
+<% const currentServerLabel = character.server_id === "erp"
+  ? "ERP"
+  : character.server_id === "larp"
+    ? "LARP"
+    : "Free RP"; %>
+
+<section class="panel character-form-panel">
+  <div class="header-line">
+    <div>
+      <h1><%= characterFormHeading %></h1>
+      <p class="muted">
+        Bereich: <strong><%= currentServerLabel %></strong>
+      </p>
+    </div>
+  </div>
+
+  <% if (isLarpProfile) { %>
+    <section class="panel dashboard-server-panel dashboard-subpanel">
+      <div class="header-line">
+        <div>
+          <span class="dashboard-status-pill"><%= hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang" %></span>
+          <h3>LARP-Profil</h3>
+          <p class="muted">
+            Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere.
+          </p>
+          <% if (isLarpTestCharacter) { %>
+            <p class="muted">
+              Wichtig: Wenn du den Bereich wieder verl&auml;sst, wird dein Testprofil gel&ouml;scht.
+            </p>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (error) { %>
+    <div class="inline-error"><%= error %></div>
+  <% } %>
+
+  <form
+    method="POST"
+    action="<%= mode === "create" ? "/characters" : `/characters/${character.id}/update` %>"
+    class="form"
+  >
+    <input type="hidden" name="server_id" value="<%= character.server_id || "free-rp" %>" />
+    <input type="hidden" name="festplay_id" value="<%= character.festplay_id || "" %>" />
+    <% if (safeReturnTo) { %>
+      <input type="hidden" name="return_to" value="<%= safeReturnTo %>" />
+    <% } %>
+    <% if (activeGuestbookEditor?.activePage) { %>
+      <input type="hidden" name="guestbook_page_id" value="<%= activeGuestbookEditor.activePage.id %>" />
+    <% } %>
+
+    <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
+
+    <label>
+      Name
+      <% if (isNameLocked) { %>
+        <span class="gb-editor-helptext">
+          Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
+        </span>
+      <% } %>
+      <input
+        name="name"
+        required
+        maxlength="80"
+        value="<%= character.name || "" %>"
+        <%= isNameLocked ? "readonly" : "" %>
+      />
+    </label>
+
+    <label>
+      Spezies
+      <input
+        name="species"
+        maxlength="80"
+        value="<%= character.species || "" %>"
+      />
+    </label>
+
+    <label>
+      Alter
+      <input
+        name="age"
+        maxlength="40"
+        value="<%= character.age || "" %>"
+      />
+    </label>
+
+    <label>
+      Faceclaim
+      <input
+        name="faceclaim"
+        maxlength="120"
+        value="<%= character.faceclaim || "" %>"
+      />
+    </label>
+
+    <label>
+      Avatar-URL
+      <input
+        name="avatar_url"
+        type="url"
+        inputmode="url"
+        maxlength="500"
+        placeholder="https://..."
+        value="<%= character.avatar_url || "" %>"
+      />
+    </label>
+
+    <label>
+      Chat-Farbe
+      <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
+      <input
+        name="chat_text_color"
+        maxlength="7"
+        spellcheck="false"
+        autocomplete="off"
+        value="<%= character.chat_text_color || "#AEE7B7" %>"
+      />
+    </label>
+
+    <label>
+      Chat-Hintergrundfarbe
+      <span class="gb-editor-helptext">Optional, als Hex-Farbe wie <code>#EFEFEF</code>.</span>
+      <input
+        name="chat_background_color"
+        maxlength="7"
+        spellcheck="false"
+        autocomplete="off"
+        value="<%= character.chat_background_color || "#EFEFEF" %>"
+      />
+    </label>
+
+    <label>
+      Chat-Hintergrundbild
+      <input
+        name="chat_background_url"
+        type="url"
+        inputmode="url"
+        maxlength="500"
+        placeholder="https://..."
+        value="<%= character.chat_background_url || "" %>"
+      />
+    </label>
+
+    <label>
+      Bild-Deckkraft
+      <input
+        name="chat_background_image_opacity"
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
+      />
+      <span class="gb-editor-helptext"><%= Number(character.chat_background_image_opacity ?? 100) %>%</span>
+    </label>
+
+    <div class="character-form-actions">
+      <button type="submit" class="btn">Speichern</button>
+      <% if (safeReturnTo) { %>
+        <a class="btn btn-secondary" href="<%= safeReturnTo %>">Zur&uuml;ck</a>
+      <% } %>
+    </div>
+  </form>
+</section>
+
+<% if (activeGuestbookEditor?.activePage) { const { pages, activePage, settings } = activeGuestbookEditor; %>
+  <section class="panel character-form-panel character-guestbook-panel">
+    <div class="header-line character-guestbook-header">
+      <div>
+        <h2>G&auml;stebuch bearbeiten</h2>
+        <p>Design, Inhalte und Bilder bleiben direkt unter dem Charakter erreichbar.</p>
+      </div>
+
+      <div class="gb-editor-actions">
+        <button class="btn" type="submit" form="guestbook-editor-form">Speichern</button>
+
+        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
+          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+          <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
+        </form>
+
+        <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
+          <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+          <button
+            class="btn btn-danger"
+            type="submit"
+            onclick="return confirm('Aktuelle Seite wirklich l&ouml;schen?')"
+          >
+            Aktuelle Seite l&ouml;schen
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <% if ((pages || []).length > 1) { %>
+      <nav class="gb-editor-tabs" aria-label="G&auml;stebuch Seiten">
+        <% pages.forEach((page) => { %>
+          <a
+            class="gb-editor-tab <%= page.id === activePage.id ? "is-active" : "" %>"
+            href="/characters/<%= character.id %>/edit?guestbook_page_id=<%= page.id %>"
+          >
+            <%= page.page_number %>
+          </a>
+        <% }) %>
+      </nav>
+    <% } %>
+
+    <%- include("partials/guestbook-editor-form", {
+      character,
+      activePage,
+      settings,
+      guestbookEditorFormClass: "panel form gb-editor-form"
+    }) %>
+  </section>
+<% } %>
+
+<%- include("partials/end") %>

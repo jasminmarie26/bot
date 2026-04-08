@@ -15508,7 +15508,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     return res.redirect("/dashboard/larp");
   }
 
-  res.render("characters/character-form", {
+  res.render("character-form", {
     title: "Neuer Charakter",
     mode: "create",
     error: null,
@@ -15547,7 +15547,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!payload.name) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Name ist erforderlich.",
@@ -15560,7 +15560,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!req.session.user?.is_admin && containsReservedCharacterNameTerm(payload.name)) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: RESERVED_CHARACTER_NAME_ERROR,
@@ -15573,7 +15573,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Avatar-URL muss mit http:// oder https:// starten.",
@@ -15586,7 +15586,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
@@ -15599,7 +15599,7 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
@@ -15617,7 +15617,7 @@ app.post("/characters", requireAuth, (req, res) => {
       targetServerId: payload.server_id
     })
   ) {
-    return res.status(400).render("characters/character-form", {
+    return res.status(400).render("character-form", {
       title: "Neuer Charakter",
       mode: "create",
       error: "Dieser Charaktername ist bereits vergeben.",
