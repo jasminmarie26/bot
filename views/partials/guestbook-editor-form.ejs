@@ -1583,12 +1583,44 @@
         return;
       }
 
+      const selectionState = getSelectionState();
+      const selectedTextLines = String(selectionState?.selectedText || "")
+        .replace(/\r\n?/g, "\n")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      const replaceSelectionWithSnippet = (snippet) => {
+        if (!selectionState) {
+          insertBbcodeAtSelection(snippet);
+          return;
+        }
+
+        const nextValue =
+          `${selectionState.value.slice(0, selectionState.selectionStart)}${snippet}${selectionState.value.slice(selectionState.selectionEnd)}`;
+        const nextSelectionStart = selectionState.selectionStart;
+        const nextSelectionEnd = selectionState.selectionStart + snippet.length;
+        updatePageContentField(nextValue, nextSelectionStart, nextSelectionEnd);
+      };
+
       if (normalizedTemplateType === "list-bullet") {
+        if (selectedTextLines.length) {
+          replaceSelectionWithSnippet(
+            `[list]\n${selectedTextLines.map((line) => `[li]${line}[/li]`).join("\n")}\n[/list]`
+          );
+          return;
+        }
         insertBbcodeAtSelection("[list]\n[li]Punkt 1[/li]\n[li]Punkt 2[/li]\n[/list]");
         return;
       }
 
       if (normalizedTemplateType === "list-numbered") {
+        if (selectedTextLines.length) {
+          replaceSelectionWithSnippet(
+            `[list=1]\n${selectedTextLines.map((line) => `[li]${line}[/li]`).join("\n")}\n[/list]`
+          );
+          return;
+        }
         insertBbcodeAtSelection("[list=1]\n[li]Punkt 1[/li]\n[li]Punkt 2[/li]\n[/list]");
         return;
       }
