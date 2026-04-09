@@ -63,10 +63,28 @@
       <div class="gb-editor-card gb-editor-section">
         <span class="gb-editor-subheading">Zensur</span>
         <span class="gb-editor-helptext">Direkt f&uuml;r diese Seite festlegen.</span>
-        <div class="gb-radio-list">
-          <label><input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> /> ab 18 schalten</label>
-          <label><input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> /> sexuelle Darstellung</label>
-          <label><input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> /> keine Altersbeschr&auml;nkung</label>
+        <div class="gb-radio-list gb-radio-card-list">
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Ab 18</strong>
+              <small>Nur f&uuml;r Erwachsene markieren</small>
+            </span>
+          </label>
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Sexuelle Darstellung</strong>
+              <small>Explizite Inhalte entsprechend kennzeichnen</small>
+            </span>
+          </label>
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Keine Altersbeschr&auml;nkung</strong>
+              <small>Ohne zus&auml;tzliche Zensur anzeigen</small>
+            </span>
+          </label>
         </div>
       </div>
 

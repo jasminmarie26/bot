@@ -9016,6 +9016,10 @@ body.page-guestbook-preview::after {
   .guestbook-music-controls {
     width: min(17rem, calc(100vw - 1rem));
   }
+
+  .gb-radio-card-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .guestbook-preview-header {
@@ -9371,6 +9375,47 @@ body.page-guestbook-preview::after {
   box-shadow: none;
   flex: 0 0 auto;
   vertical-align: middle;
+}
+
+.gb-radio-card-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.gb-radio-card {
+  align-items: flex-start;
+  gap: 0.68rem;
+  min-height: 5.2rem;
+  padding: 0.72rem 0.82rem;
+}
+
+.gb-radio-card-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.gb-radio-card-copy strong {
+  font-size: 0.9rem;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.gb-radio-card-copy small {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.gb-radio-card:has(input[type="radio"]:checked) {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
+  background: color-mix(in srgb, var(--accent) 10%, var(--field-bg) 90%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.gb-radio-card:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--accent) 42%, white 18%);
+  outline-offset: 2px;
 }
 
 .gb-editor-link-row {
@@ -10986,6 +11031,15 @@ body.gb-editor-fullscreen-open {
   margin: 0;
   flex: 0 0 auto;
   align-self: center;
+}
+
+.gb-editor-form .gb-radio-card {
+  align-items: flex-start;
+}
+
+.gb-editor-form .gb-radio-card input[type="radio"] {
+  margin-top: 0.18rem;
+  align-self: flex-start;
 }
 
 input,
