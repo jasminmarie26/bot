@@ -882,6 +882,7 @@
     let sourceViewSelectionEnd = 0;
     let sourceViewRequestId = 0;
     let activeBbcodeColorTrigger = null;
+    let bbcodeSelectionSnapshot = null;
 
     const syncThemeSensitiveFields = () => {
       const isTransparentPurTheme =
@@ -1406,6 +1407,7 @@
       }
 
       activeBbcodeColorTrigger = trigger;
+      bbcodeSelectionSnapshot = getSelectionState();
       const nextValue = String(initialValue || "").trim() || "#6EC8FF";
       bbcodeColorTextInput.value = nextValue;
       bbcodeColorPickerInput.value = getBbcodeColorPickerValue(nextValue).toLowerCase();
@@ -1433,7 +1435,9 @@
         return;
       }
 
-      wrapSelectionWithBbcode(`[color=${nextValue}]`, "[/color]", "Text");
+      wrapSelectionWithBbcode(`[color=${nextValue}]`, "[/color]", "Text", {
+        preferStoredSelection: true
+      });
       closeBbcodeColorPopover();
     };
 
@@ -1463,15 +1467,37 @@
       pageContentField.value = nextValue;
       focusPageContentField();
       pageContentField.setSelectionRange(selectionStart, selectionEnd);
+      bbcodeSelectionSnapshot = {
+        value: nextValue,
+        selectionStart,
+        selectionEnd,
+        selectedText: nextValue.slice(selectionStart, selectionEnd)
+      };
       pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
     };
 
-    const getSelectionState = () => {
+    const getSelectionState = ({ preferStoredSelection = false } = {}) => {
       if (!pageContentField) {
         return null;
       }
 
       const currentValue = String(pageContentField.value || "");
+      if (
+        preferStoredSelection &&
+        bbcodeSelectionSnapshot &&
+        bbcodeSelectionSnapshot.value === currentValue
+      ) {
+        return {
+          value: currentValue,
+          selectionStart: bbcodeSelectionSnapshot.selectionStart,
+          selectionEnd: bbcodeSelectionSnapshot.selectionEnd,
+          selectedText: currentValue.slice(
+            bbcodeSelectionSnapshot.selectionStart,
+            bbcodeSelectionSnapshot.selectionEnd
+          )
+        };
+      }
+
       const selectionStart = Number.isInteger(pageContentField.selectionStart)
         ? pageContentField.selectionStart
         : currentValue.length;
@@ -1520,8 +1546,8 @@
       focusPageContentField();
     };
 
-    const wrapSelectionWithBbcode = (openTag, closeTag, placeholder = "Text") => {
-      const selectionState = getSelectionState();
+    const wrapSelectionWithBbcode = (openTag, closeTag, placeholder = "Text", options = {}) => {
+      const selectionState = getSelectionState(options);
       if (!selectionState) {
         return;
       }
@@ -1878,6 +1904,12 @@
         renderBbcodeColorPopover();
       });
 
+      bbcodeColorPickerInput.addEventListener("change", () => {
+        bbcodeColorTextInput.value = bbcodeColorPickerInput.value.toUpperCase();
+        renderBbcodeColorPopover();
+        applyBbcodeColorValue();
+      });
+
       bbcodeColorTextInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -1946,12 +1978,22 @@
     }
 
     if (pageContentField) {
+      const syncCurrentBbcodeSelection = () => {
+        bbcodeSelectionSnapshot = getSelectionState();
+      };
+
       pageContentField.addEventListener("input", () => {
         recordHistoryState();
+        syncCurrentBbcodeSelection();
         if (isSourceViewActive()) {
           renderSourceViewHtml();
         }
       });
+
+      pageContentField.addEventListener("keyup", syncCurrentBbcodeSelection);
+      pageContentField.addEventListener("click", syncCurrentBbcodeSelection);
+      pageContentField.addEventListener("select", syncCurrentBbcodeSelection);
+      pageContentField.addEventListener("mouseup", syncCurrentBbcodeSelection);
 
       pageContentField.addEventListener("keydown", (event) => {
         if (
