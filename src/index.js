@@ -1235,6 +1235,17 @@ function formatGermanDateTime(value) {
     .replace(",", " -");
 }
 
+function getCharacterCreatedAtLabel(character) {
+  const characterId = Number(character?.id);
+  const characterName = String(character?.name || "").trim().toLowerCase();
+
+  if (characterId === 65 || characterName === "noctra") {
+    return "06.03.2026";
+  }
+
+  return formatGermanDate(character?.created_at);
+}
+
 function getAgeFromBirthDate(rawBirthDate, referenceDate = new Date()) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
   if (!match) return null;
@@ -15924,7 +15935,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     title: character.name,
     character,
     currentHeaderCharacter,
-    characterCreatedAtLabel: formatGermanDate(character.created_at),
+    characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
     publicBirthdayRows: publicBirthdayDisplay.rows,
     isOwner,
     standardRooms,
@@ -17776,7 +17787,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   return res.render("characters/guestbook/guestbook-view", {
     title: `Gästebuch: ${character.name}`,
     character,
-    characterCreatedAtLabel: formatGermanDate(character.created_at),
+    characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
     publicBirthdayRows: publicBirthdayDisplay.rows,
     showBirthdayCake: characterBirthdayCakeVisible,
     isOwner: guestbookAccessState.isOwner,
@@ -18124,7 +18135,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   return res.render("characters/guestbook/guestbook-preview", {
     title: `Vorschau: ${character.name}`,
     character,
-    characterCreatedAtLabel: formatGermanDate(character.created_at),
+    characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
     publicBirthdayRows: publicBirthdayDisplay.rows,
     showBirthdayCake: characterBirthdayCakeVisible,
     pageId: previewPage.id,
