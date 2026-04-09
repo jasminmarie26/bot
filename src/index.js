@@ -17427,6 +17427,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   }
 
   if (
+    nameChanged &&
     findCharacterNameConflictForTarget(payload.name, {
       excludedCharacterId: id,
       currentUserId: req.session.user.id,
