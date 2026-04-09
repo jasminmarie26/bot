@@ -55,6 +55,84 @@
     />
     <script>
       (() => {
+        const userAgent = String(window.navigator.userAgent || "");
+        const isChromiumBrowser =
+          /\b(?:Chrome|Chromium|CriOS)\//.test(userAgent) &&
+          !/\b(?:Edg|OPR)\//.test(userAgent);
+
+        if (!isChromiumBrowser) {
+          return;
+        }
+
+        const root = document.documentElement;
+        const enableSoftwareRendererFallback = () => {
+          root.classList.add("software-renderer");
+        };
+
+        try {
+          const canvas = document.createElement("canvas");
+          const contextOptions = {
+            alpha: false,
+            antialias: false,
+            depth: false,
+            failIfMajorPerformanceCaveat: false,
+            powerPreference: "low-power",
+            preserveDrawingBuffer: false,
+            stencil: false
+          };
+          const gl =
+            canvas.getContext("webgl2", contextOptions) ||
+            canvas.getContext("webgl", contextOptions) ||
+            canvas.getContext("experimental-webgl", contextOptions);
+
+          if (!gl) {
+            enableSoftwareRendererFallback();
+            return;
+          }
+
+          let renderer = "";
+          let vendor = "";
+
+          try {
+            const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+            if (debugInfo) {
+              renderer = String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || "");
+              vendor = String(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || "");
+            }
+          } catch (_error) {
+            // Renderer detection is best-effort only.
+          }
+
+          if (!renderer) {
+            try {
+              renderer = String(gl.getParameter(gl.RENDERER) || "");
+              vendor = vendor || String(gl.getParameter(gl.VENDOR) || "");
+            } catch (_error) {
+              // Ignore renderer fallback errors.
+            }
+          }
+
+          const rendererFingerprint = `${vendor} ${renderer}`.trim().toLowerCase();
+          if (
+            /swiftshader|software|llvmpipe|softpipe|basic render|microsoft basic render|mesa offscreen/i.test(
+              rendererFingerprint
+            )
+          ) {
+            enableSoftwareRendererFallback();
+          }
+
+          try {
+            gl.getExtension("WEBGL_lose_context")?.loseContext();
+          } catch (_error) {
+            // Ignore context cleanup errors.
+          }
+        } catch (_error) {
+          enableSoftwareRendererFallback();
+        }
+      })();
+    </script>
+    <script>
+      (() => {
         const isEdgeBrowser = /\bEdg\//.test(window.navigator.userAgent);
         if (!isEdgeBrowser) return;
 

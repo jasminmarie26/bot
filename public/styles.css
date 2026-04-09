@@ -13002,6 +13002,50 @@ body.chat-gradient-fallback.page-chat .role-name-moderator.has-crescentia-moons 
   }
 }
 
+html.software-renderer body {
+  background-attachment: scroll !important;
+}
+
+html.software-renderer body::before,
+html.software-renderer body::after {
+  animation: none !important;
+  background: none !important;
+  display: none !important;
+  filter: none !important;
+  opacity: 0 !important;
+}
+
+html.software-renderer *,
+html.software-renderer *::before,
+html.software-renderer *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html.software-renderer .topbar,
+html.software-renderer .panel,
+html.software-renderer .card,
+html.software-renderer .hero,
+html.software-renderer .list-item,
+html.software-renderer .character-mini-item,
+html.software-renderer .guestbook-item,
+html.software-renderer .chat-message,
+html.software-renderer .chat-box {
+  box-shadow: 0 10px 22px -20px var(--panel-shadow);
+}
+
+html.software-renderer .panel,
+html.software-renderer .card,
+html.software-renderer .hero {
+  animation: none !important;
+}
+
+html.software-renderer .page-home-screen,
+html.software-renderer .guestbook-layout::before,
+html.software-renderer .guestbook-preview-shell::before {
+  background-attachment: scroll !important;
+}
+
 @media (max-width: 900px) {
   .home-layout {
     grid-template-columns: 1fr;
