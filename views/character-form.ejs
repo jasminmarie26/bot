@@ -143,20 +143,14 @@
     <% if (activeGuestbookEditor) { %>
       <div class="character-form-basics">
         <input type="hidden" name="character_public_birthday_visibility_present" value="1" />
+        <input type="hidden" name="name" value="<%= character.name || "" %>" />
 
         <label class="character-form-basic-wide">
           Name
-          <% if (isNameLocked) { %>
-            <span class="gb-editor-helptext">
-              Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
-            </span>
-          <% } %>
           <input
-            name="name"
-            required
             maxlength="80"
             value="<%= character.name || "" %>"
-            <%= isNameLocked ? "readonly" : "" %>
+            disabled
           />
         </label>
 

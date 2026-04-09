@@ -9684,6 +9684,16 @@ body.page-guestbook-preview::after {
   padding: 0.5rem 0.62rem;
 }
 
+.character-form-panel :where(
+  input:not([type="color"]):not([type="range"]):not([type="radio"]):not([type="checkbox"]):disabled,
+  textarea:disabled,
+  select:disabled
+) {
+  opacity: 0.72;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .character-form-panel .btn {
   padding: 0.44rem 0.92rem;
 }

@@ -152,23 +152,17 @@
       <input type="hidden" name="age" value="<%= character.age || "" %>" />
       <input type="hidden" name="faceclaim" value="<%= character.faceclaim || "" %>" />
       <input type="hidden" name="avatar_url" value="<%= character.avatar_url || "" %>" />
+      <input type="hidden" name="name" value="<%= character.name || "" %>" />
       <input type="hidden" name="return_to" value="/characters/<%= character.id %>/guestbook/edit#character-editor-panel-character" />
 
       <% const isNameLocked = safeRenameAvailability && !safeRenameAvailability.can_change; %>
 
       <label>
         Name
-        <% if (isNameLocked) { %>
-          <span class="gb-editor-helptext">
-            Umbenennen ist nur alle 3 Monate m&ouml;glich. N&auml;chste &Auml;nderung ab <%= safeRenameAvailability.available_at_text %>.
-          </span>
-        <% } %>
         <input
-          name="name"
-          required
           maxlength="80"
           value="<%= character.name || "" %>"
-          <%= isNameLocked ? "readonly" : "" %>
+          disabled
         />
       </label>
 
