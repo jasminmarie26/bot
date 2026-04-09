@@ -67,6 +67,9 @@ db.exec(`
     faceclaim TEXT DEFAULT '',
     description TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
+    public_birth_show_age INTEGER NOT NULL DEFAULT 0,
+    public_birth_show_day_month INTEGER NOT NULL DEFAULT 0,
+    public_birth_show_year INTEGER NOT NULL DEFAULT 0,
     chat_background_url TEXT DEFAULT '',
     chat_background_color TEXT DEFAULT '#EFEFEF',
     chat_background_image_opacity INTEGER NOT NULL DEFAULT 100,
@@ -1058,6 +1061,18 @@ if (!userColumns.includes("account_number")) {
   db.exec("ALTER TABLE users ADD COLUMN account_number TEXT NOT NULL DEFAULT ''");
 }
 
+if (!characterColumns.includes("public_birth_show_age")) {
+  db.exec("ALTER TABLE characters ADD COLUMN public_birth_show_age INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!characterColumns.includes("public_birth_show_day_month")) {
+  db.exec("ALTER TABLE characters ADD COLUMN public_birth_show_day_month INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!characterColumns.includes("public_birth_show_year")) {
+  db.exec("ALTER TABLE characters ADD COLUMN public_birth_show_year INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!userColumns.includes("email_verified")) {
   db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1");
 }
@@ -1461,6 +1476,9 @@ db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id 
 db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id IS NOT NULL AND moderator_character_id < 1").run();
 db.prepare("UPDATE users SET email = '' WHERE email IS NULL").run();
 db.prepare("UPDATE users SET birth_date = '' WHERE birth_date IS NULL").run();
+db.prepare("UPDATE characters SET public_birth_show_age = 0 WHERE public_birth_show_age IS NULL").run();
+db.prepare("UPDATE characters SET public_birth_show_day_month = 0 WHERE public_birth_show_day_month IS NULL").run();
+db.prepare("UPDATE characters SET public_birth_show_year = 0 WHERE public_birth_show_year IS NULL").run();
 db.prepare("UPDATE festplay_permissions SET source = 'manual' WHERE source IS NULL OR trim(source) = ''").run();
 db.prepare("UPDATE guestbook_settings SET frame_color = '' WHERE frame_color IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET background_color = '' WHERE background_color IS NULL").run();

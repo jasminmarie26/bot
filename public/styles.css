@@ -9655,6 +9655,23 @@ body.page-guestbook-preview::after {
   min-width: 0;
 }
 
+.character-birthday-visibility-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  border-radius: 16px;
+  display: grid;
+  gap: 0.45rem;
+  background: color-mix(in srgb, var(--field-bg) 72%, transparent);
+}
+
+.character-birthday-visibility-fieldset legend {
+  padding: 0 0.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .character-form-basic-wide {
   grid-column: 1 / -1;
 }

@@ -16,6 +16,7 @@
 <% const activeGuestbookEditor = mode === "edit" && typeof guestbookEditor !== "undefined" ? guestbookEditor : null; %>
 <% const activeGuestbookPage = activeGuestbookEditor?.activePage || null; %>
 <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
+<% const canCharacterShowBirthday = Boolean(typeof accountBirthDate !== "undefined" ? accountBirthDate : ""); %>
 
 <% if (activeGuestbookEditor) { %>
   <nav
@@ -141,6 +142,8 @@
 
     <% if (activeGuestbookEditor) { %>
       <div class="character-form-basics">
+        <input type="hidden" name="character_public_birthday_visibility_present" value="1" />
+
         <label class="character-form-basic-wide">
           Name
           <% if (isNameLocked) { %>
@@ -161,6 +164,48 @@
         <input type="hidden" name="age" value="<%= character.age || "" %>" />
         <input type="hidden" name="faceclaim" value="<%= character.faceclaim || "" %>" />
         <input type="hidden" name="avatar_url" value="<%= character.avatar_url || "" %>" />
+
+        <fieldset class="character-form-basic-wide character-birthday-visibility-fieldset">
+          <legend>Geburtstag auf diesem Charakter anzeigen</legend>
+          <div class="account-birthday-visibility-options">
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_age"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_age ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Nur Alter</span>
+            </label>
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_day_month"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_day_month ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Tag und Monat</span>
+            </label>
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_year"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_year ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Jahr dazu</span>
+            </label>
+          </div>
+          <span class="gb-editor-helptext">
+            Standard ist alles aus. Die Angaben nutzen dein Geburtsdatum aus dem Account und gelten nur f&uuml;r diesen Charakter.
+            <% if (!canCharacterShowBirthday) { %>
+              Ohne Geburtsdatum im Account bleiben die H&auml;kchen deaktiviert.
+            <% } %>
+          </span>
+        </fieldset>
       </div>
 
       <label>
@@ -381,6 +426,8 @@
         </div>
       </label>
     <% } else { %>
+      <input type="hidden" name="character_public_birthday_visibility_present" value="1" />
+
       <label>
         Name
         <% if (isNameLocked) { %>
@@ -435,6 +482,48 @@
           value="<%= character.avatar_url || "" %>"
         />
       </label>
+
+      <fieldset class="character-birthday-visibility-fieldset">
+        <legend>Geburtstag auf diesem Charakter anzeigen</legend>
+        <div class="account-birthday-visibility-options">
+          <label class="checkbox account-table-checkbox">
+            <input
+              name="public_birth_show_age"
+              type="checkbox"
+              value="1"
+              <%= character.public_birth_show_age ? "checked" : "" %>
+              <%= canCharacterShowBirthday ? "" : "disabled" %>
+            />
+            <span>Nur Alter</span>
+          </label>
+          <label class="checkbox account-table-checkbox">
+            <input
+              name="public_birth_show_day_month"
+              type="checkbox"
+              value="1"
+              <%= character.public_birth_show_day_month ? "checked" : "" %>
+              <%= canCharacterShowBirthday ? "" : "disabled" %>
+            />
+            <span>Tag und Monat</span>
+          </label>
+          <label class="checkbox account-table-checkbox">
+            <input
+              name="public_birth_show_year"
+              type="checkbox"
+              value="1"
+              <%= character.public_birth_show_year ? "checked" : "" %>
+              <%= canCharacterShowBirthday ? "" : "disabled" %>
+            />
+            <span>Jahr dazu</span>
+          </label>
+        </div>
+        <span class="gb-editor-helptext">
+          Standard ist alles aus. Die Angaben nutzen dein Geburtsdatum aus dem Account und gelten nur f&uuml;r diesen Charakter.
+          <% if (!canCharacterShowBirthday) { %>
+            Ohne Geburtsdatum im Account bleiben die H&auml;kchen deaktiviert.
+          <% } %>
+        </span>
+      </fieldset>
 
       <label>
         Chat-Farbe

@@ -1347,6 +1347,56 @@ function buildPublicBirthdayDisplay(rawBirthDate, values, referenceDate = new Da
   };
 }
 
+function getCharacterPublicBirthdaySelection(characterValue, accountUser = null) {
+  const resolvedCharacter =
+    characterValue && typeof characterValue === "object"
+      ? characterValue
+      : getCharacterById(characterValue);
+  if (!resolvedCharacter) {
+    return {
+      showAge: false,
+      showDayMonth: false,
+      showYear: false
+    };
+  }
+
+  const resolvedAccountUser =
+    accountUser && typeof accountUser === "object"
+      ? accountUser
+      : getAccountUserById(resolvedCharacter.user_id);
+  const birthDate = normalizeBirthDate(resolvedAccountUser?.birth_date) || "";
+  return normalizePublicBirthdaySelection(resolvedCharacter, birthDate);
+}
+
+function getPublicBirthdayDisplayForCharacter(characterValue, accountUser = null, referenceDate = new Date()) {
+  const resolvedCharacter =
+    characterValue && typeof characterValue === "object"
+      ? characterValue
+      : getCharacterById(characterValue);
+  if (!resolvedCharacter) {
+    return {
+      rows: [],
+      hasVisibleInfo: false,
+      showCake: false
+    };
+  }
+
+  const resolvedAccountUser =
+    accountUser && typeof accountUser === "object"
+      ? accountUser
+      : getAccountUserById(resolvedCharacter.user_id);
+  const selection = getCharacterPublicBirthdaySelection(resolvedCharacter, resolvedAccountUser);
+  return buildPublicBirthdayDisplay(
+    resolvedAccountUser?.birth_date,
+    {
+      public_birth_show_age: selection.showAge ? 1 : 0,
+      public_birth_show_day_month: selection.showDayMonth ? 1 : 0,
+      public_birth_show_year: selection.showYear ? 1 : 0
+    },
+    referenceDate
+  );
+}
+
 function shouldShowBirthdayCakeForCharacter(
   characterId,
   accountUser = null,
@@ -1354,6 +1404,7 @@ function shouldShowBirthdayCakeForCharacter(
     userId = null,
     hasJoinedChat = null,
     connectedCharacterIds = null,
+    characterRecord = null,
     referenceDate = new Date()
   } = {}
 ) {
@@ -1372,8 +1423,8 @@ function shouldShowBirthdayCakeForCharacter(
     return false;
   }
 
-  const birthdayDisplay = buildPublicBirthdayDisplay(
-    resolvedAccountUser.birth_date,
+  const birthdayDisplay = getPublicBirthdayDisplayForCharacter(
+    characterRecord && typeof characterRecord === "object" ? characterRecord : parsedCharacterId,
     resolvedAccountUser,
     referenceDate
   );
@@ -2134,6 +2185,11 @@ function buildCharacterGuestbookEditorState(characterId, requestedPageId = null)
 }
 
 function buildCharacterEditFormViewModel(character, options = {}) {
+  const accountBirthDate = getAccountUserById(character.user_id)?.birth_date || "";
+  const nextCharacter = options.character || character;
+  const characterBirthdaySelection = getCharacterPublicBirthdaySelection(nextCharacter, {
+    birth_date: accountBirthDate
+  });
   return {
     title: options.title || `Bearbeiten: ${character.name}`,
     mode: "edit",
@@ -2142,7 +2198,13 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     serverOptions: SERVER_OPTIONS,
     renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
     guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
-    character: options.character || character
+    accountBirthDate,
+    character: {
+      ...nextCharacter,
+      public_birth_show_age: characterBirthdaySelection.showAge ? 1 : 0,
+      public_birth_show_day_month: characterBirthdaySelection.showDayMonth ? 1 : 0,
+      public_birth_show_year: characterBirthdaySelection.showYear ? 1 : 0
+    }
   };
 }
 
@@ -2813,10 +2875,6 @@ function renderAccountPage(req, res, options = {}) {
   }
 
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
-  const publicBirthdaySelection = normalizePublicBirthdaySelection(
-    accountUser,
-    accountUser.birth_date
-  );
 
   return res.render("account/account", {
     title: options.title || "Account",
@@ -2830,12 +2888,6 @@ function renderAccountPage(req, res, options = {}) {
       username: options.values?.username ?? accountUser.username ?? "",
       email: options.values?.email ?? accountUser.email ?? "",
       birth_date: accountUser.birth_date ?? "",
-      public_birth_show_age:
-        options.values?.public_birth_show_age ?? publicBirthdaySelection.showAge,
-      public_birth_show_day_month:
-        options.values?.public_birth_show_day_month ?? publicBirthdaySelection.showDayMonth,
-      public_birth_show_year:
-        options.values?.public_birth_show_year ?? publicBirthdaySelection.showYear,
       auto_afk_enabled:
         options.values?.auto_afk_enabled ??
         normalizeAutoAfkEnabled(accountUser.auto_afk_enabled),
@@ -4290,6 +4342,9 @@ function normalizeCharacterInput(body) {
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
     description: "",
+    public_birth_show_age: 0,
+    public_birth_show_day_month: 0,
+    public_birth_show_year: 0,
     chat_text_color: normalizeGuestbookColor(body.chat_text_color),
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
     chat_background_url: (body.chat_background_url || "").trim().slice(0, 500),
@@ -13071,14 +13126,6 @@ app.post("/account/update", requireAuth, (req, res) => {
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = normalizeBirthDate(accountUser.birth_date) || "";
-  const publicBirthdaySelection = normalizePublicBirthdaySelection(
-    {
-      public_birth_show_age: req.body.public_birth_show_age,
-      public_birth_show_day_month: req.body.public_birth_show_day_month,
-      public_birth_show_year: req.body.public_birth_show_year
-    },
-    birthDate
-  );
   const afkTimeoutMinutes = parseAfkTimeoutMinutes(rawAfkTimeoutMinutes);
   const usernameChanged = username !== accountUser.username;
   const usernameChangeInfo = getUsernameChangeAvailability(accountUser);
@@ -13090,9 +13137,6 @@ app.post("/account/update", requireAuth, (req, res) => {
       values: {
         username,
         email,
-        public_birth_show_age: publicBirthdaySelection.showAge,
-        public_birth_show_day_month: publicBirthdaySelection.showDayMonth,
-        public_birth_show_year: publicBirthdaySelection.showYear,
         auto_afk_enabled: autoAfkEnabled,
         afk_timeout_minutes: rawAfkTimeoutMinutes,
         guestbook_music_enabled: guestbookMusicEnabled,
@@ -13140,9 +13184,6 @@ app.post("/account/update", requireAuth, (req, res) => {
      SET username = ?,
          email = ?,
          birth_date = ?,
-         public_birth_show_age = ?,
-         public_birth_show_day_month = ?,
-         public_birth_show_year = ?,
          afk_timeout_minutes = ?,
          auto_afk_enabled = ?,
          guestbook_music_enabled = ?,
@@ -13154,9 +13195,6 @@ app.post("/account/update", requireAuth, (req, res) => {
     username,
     email,
     birthDate,
-    publicBirthdaySelection.showAge ? 1 : 0,
-    publicBirthdaySelection.showDayMonth ? 1 : 0,
-    publicBirthdaySelection.showYear ? 1 : 0,
     afkTimeoutMinutes,
     autoAfkEnabled ? 1 : 0,
     guestbookMusicEnabled ? 1 : 0,
@@ -15292,6 +15330,9 @@ app.get("/members", requireAuth, (req, res) => {
               c.user_id,
               c.name,
               c.server_id,
+              c.public_birth_show_age,
+              c.public_birth_show_day_month,
+              c.public_birth_show_year,
               c.is_public,
               c.updated_at,
               u.username AS owner_name
@@ -15311,6 +15352,7 @@ app.get("/members", requireAuth, (req, res) => {
         member.id,
         getBirthdayAccountUser(member.user_id),
         {
+          characterRecord: member,
           connectedCharacterIds: connectedChatCharacterIds
         }
       ),
@@ -15334,8 +15376,14 @@ app.get("/members", requireAuth, (req, res) => {
               u.moderator_character_id,
               admin_character.name AS admin_character_name,
               admin_character.server_id AS admin_character_server_id,
+              admin_character.public_birth_show_age AS admin_public_birth_show_age,
+              admin_character.public_birth_show_day_month AS admin_public_birth_show_day_month,
+              admin_character.public_birth_show_year AS admin_public_birth_show_year,
               moderator_character.name AS moderator_character_name,
-              moderator_character.server_id AS moderator_character_server_id
+              moderator_character.server_id AS moderator_character_server_id,
+              moderator_character.public_birth_show_age AS moderator_public_birth_show_age,
+              moderator_character.public_birth_show_day_month AS moderator_public_birth_show_day_month,
+              moderator_character.public_birth_show_year AS moderator_public_birth_show_year
        FROM users u
        LEFT JOIN characters admin_character ON admin_character.id = u.admin_character_id
        LEFT JOIN characters moderator_character ON moderator_character.id = u.moderator_character_id
@@ -15369,6 +15417,13 @@ app.get("/members", requireAuth, (req, res) => {
           adminCharacterId,
           getBirthdayAccountUser(user.id),
           {
+            characterRecord: {
+              id: adminCharacterId,
+              user_id: user.id,
+              public_birth_show_age: user.admin_public_birth_show_age,
+              public_birth_show_day_month: user.admin_public_birth_show_day_month,
+              public_birth_show_year: user.admin_public_birth_show_year
+            },
             connectedCharacterIds: connectedChatCharacterIds
           }
         )
@@ -15399,6 +15454,13 @@ app.get("/members", requireAuth, (req, res) => {
           moderatorCharacterId,
           getBirthdayAccountUser(user.id),
           {
+            characterRecord: {
+              id: moderatorCharacterId,
+              user_id: user.id,
+              public_birth_show_age: user.moderator_public_birth_show_age,
+              public_birth_show_day_month: user.moderator_public_birth_show_day_month,
+              public_birth_show_year: user.moderator_public_birth_show_year
+            },
             connectedCharacterIds: connectedChatCharacterIds
           }
         )
@@ -15619,6 +15681,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     serverOptions: SERVER_OPTIONS,
     staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
     returnTo: returnTarget,
+    accountBirthDate: getAccountUserById(req.session.user.id)?.birth_date || "",
     character: {
       server_id: requestedServer,
       festplay_id: null,
@@ -15629,6 +15692,9 @@ app.get("/characters/new", requireAuth, (req, res) => {
       description: "",
       chat_text_color: "#AEE7B7",
       avatar_url: "",
+      public_birth_show_age: 0,
+      public_birth_show_day_month: 0,
+      public_birth_show_year: 0,
       chat_background_url: "",
       chat_background_color: "#EFEFEF",
       chat_background_image_opacity: 100,
@@ -15642,7 +15708,24 @@ app.post("/characters", requireAuth, (req, res) => {
   const festplays = getFestplays();
   const fallbackReturnTarget = getCharacterAreaReturnTarget(payload.server_id);
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
+  const accountBirthDate = getAccountUserById(req.session.user.id)?.birth_date || "";
+  const characterBirthdaySelection = normalizePublicBirthdaySelection(req.body, accountBirthDate);
+  payload.public_birth_show_age = characterBirthdaySelection.showAge ? 1 : 0;
+  payload.public_birth_show_day_month = characterBirthdaySelection.showDayMonth ? 1 : 0;
+  payload.public_birth_show_year = characterBirthdaySelection.showYear ? 1 : 0;
   payload.festplay_id = null;
+  const renderCharacterCreateFormError = (error) =>
+    res.status(400).render("character-form", {
+      title: "Neuer Charakter",
+      mode: "create",
+      error,
+      festplays,
+      serverOptions: SERVER_OPTIONS,
+      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      returnTo: returnTarget,
+      accountBirthDate,
+      character: payload
+    });
 
   if (payload.server_id === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
     setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
@@ -15650,68 +15733,25 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!payload.name) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Name ist erforderlich.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError("Name ist erforderlich.");
   }
 
   if (!req.session.user?.is_admin && containsReservedCharacterNameTerm(payload.name)) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: RESERVED_CHARACTER_NAME_ERROR,
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError(RESERVED_CHARACTER_NAME_ERROR);
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Avatar-URL muss mit http:// oder https:// starten.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError("Avatar-URL muss mit http:// oder https:// starten.");
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Chat-Hintergrund-URL muss mit http:// oder https:// starten.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError("Chat-Hintergrund-URL muss mit http:// oder https:// starten.");
   }
 
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError(
+      "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden."
+    );
   }
 
   if (
@@ -15720,23 +15760,14 @@ app.post("/characters", requireAuth, (req, res) => {
       targetServerId: payload.server_id
     })
   ) {
-    return res.status(400).render("character-form", {
-      title: "Neuer Charakter",
-      mode: "create",
-      error: "Dieser Charaktername ist bereits vergeben.",
-      festplays,
-      serverOptions: SERVER_OPTIONS,
-      staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      returnTo: returnTarget,
-      character: payload
-    });
+    return renderCharacterCreateFormError("Dieser Charaktername ist bereits vergeben.");
   }
 
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, chat_background_url, chat_background_color, chat_background_image_opacity, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -15748,6 +15779,9 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.faceclaim,
       payload.description,
       payload.avatar_url,
+      payload.public_birth_show_age,
+      payload.public_birth_show_day_month,
+      payload.public_birth_show_year,
       payload.chat_background_url,
       payload.chat_background_color,
       payload.chat_background_image_opacity,
@@ -15884,7 +15918,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   if (currentHeaderCharacter) {
     rememberPreferredCharacter(req, currentHeaderCharacter);
   }
-  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
 
   return res.render("rooms/character-room-list", {
     title: character.name,
@@ -17299,7 +17333,20 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
   const payload = normalizeCharacterInput(req.body);
+  const accountBirthDate = getAccountUserById(character.user_id)?.birth_date || "";
   const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(req.body.guestbook_page_id);
+  const hasCharacterBirthdayVisibilityFields =
+    Object.prototype.hasOwnProperty.call(req.body || {}, "character_public_birthday_visibility_present");
+  if (hasCharacterBirthdayVisibilityFields) {
+    const characterBirthdaySelection = normalizePublicBirthdaySelection(req.body, accountBirthDate);
+    payload.public_birth_show_age = characterBirthdaySelection.showAge ? 1 : 0;
+    payload.public_birth_show_day_month = characterBirthdaySelection.showDayMonth ? 1 : 0;
+    payload.public_birth_show_year = characterBirthdaySelection.showYear ? 1 : 0;
+  } else {
+    payload.public_birth_show_age = Number(character.public_birth_show_age) === 1 ? 1 : 0;
+    payload.public_birth_show_day_month = Number(character.public_birth_show_day_month) === 1 ? 1 : 0;
+    payload.public_birth_show_year = Number(character.public_birth_show_year) === 1 ? 1 : 0;
+  }
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
@@ -17391,7 +17438,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, is_public = ?,
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, public_birth_show_age = ?, public_birth_show_day_month = ?, public_birth_show_year = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, is_public = ?,
          name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
@@ -17404,6 +17451,9 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.faceclaim,
     payload.description,
     payload.avatar_url,
+    payload.public_birth_show_age,
+    payload.public_birth_show_day_month,
+    payload.public_birth_show_year,
     payload.chat_background_url,
     payload.chat_background_color,
     payload.chat_background_image_opacity,
@@ -17680,10 +17730,13 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
-  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
   const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
     character.id,
-    getAccountUserById(character.user_id)
+    getAccountUserById(character.user_id),
+    {
+      characterRecord: character
+    }
   );
   const guestbookSearchCharacters = db
     .prepare(
@@ -18058,10 +18111,13 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     (pageId) => `/characters/${id}/guestbook/edit/preview?page_id=${pageId}`
   );
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
-  const publicBirthdayDisplay = getPublicBirthdayDisplayForUser(character.user_id);
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
   const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
     character.id,
-    getAccountUserById(character.user_id)
+    getAccountUserById(character.user_id),
+    {
+      characterRecord: character
+    }
   );
 
   return res.render("characters/guestbook/guestbook-preview", {
@@ -18484,7 +18540,8 @@ app.get("/chat", requireAuth, (req, res) => {
     activeCharacter?.id,
     req.session.user?.id ? getAccountUserById(req.session.user.id) : null,
     {
-      hasJoinedChat: true
+      hasJoinedChat: true,
+      characterRecord: activeCharacter
     }
   );
 
@@ -21185,7 +21242,8 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     selectedCharacterAppearance?.id || selectedCharacter?.id,
     birthdayAccountUser,
     {
-      hasJoinedChat: memberSocket?.data?.hasJoinedChat === true
+      hasJoinedChat: memberSocket?.data?.hasJoinedChat === true,
+      characterRecord: selectedCharacterAppearance || selectedCharacter || null
     }
   );
   memberSocket.emit("user:display-profile", {
@@ -23125,7 +23183,8 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, sta
       activeCharacterId,
       birthdayAccountUser,
       {
-        hasJoinedChat: memberSocket?.data?.hasJoinedChat === true
+        hasJoinedChat: memberSocket?.data?.hasJoinedChat === true,
+        characterRecord: chosenCharacter || null
       }
     );
 
