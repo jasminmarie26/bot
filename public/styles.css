@@ -9378,7 +9378,7 @@ body.page-guestbook-preview::after {
 }
 
 .gb-radio-card-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.55rem;
 }
 
@@ -9387,6 +9387,7 @@ body.page-guestbook-preview::after {
   gap: 0.68rem;
   min-height: 5.2rem;
   padding: 0.72rem 0.82rem;
+  align-content: start;
 }
 
 .gb-radio-card-copy {
@@ -9396,15 +9397,19 @@ body.page-guestbook-preview::after {
 }
 
 .gb-radio-card-copy strong {
+  display: block;
   font-size: 0.9rem;
   line-height: 1.15;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .gb-radio-card-copy small {
+  display: block;
   font-size: 0.72rem;
   line-height: 1.3;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .gb-radio-card:has(input[type="radio"]:checked) {
