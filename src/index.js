@@ -24488,7 +24488,7 @@ io.on("connection", (socket) => {
           emitSystemChatMessage(
             roomId,
             serverId,
-            "ist wieder zurück",
+            "ist wieder da.",
             {
               system_kind: "actor-message",
               presence_actor_name: afkDisplayName,
