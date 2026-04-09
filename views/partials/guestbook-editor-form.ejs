@@ -860,6 +860,7 @@
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
+    const bbcodeColorToolbarButton = editorForm?.querySelector('button[data-bbcode-option="color"]') || null;
     const bbcodeEditorShell = editorForm?.querySelector("[data-gb-bbcode-editor-shell]") || null;
     const bbcodeSourceField = editorForm?.querySelector("[data-gb-bbcode-source-view]") || null;
     const bbcodeToolbarMenus = Array.from(editorForm?.querySelectorAll(".gb-bbcode-menu") || []);
@@ -1429,6 +1430,24 @@
       closeBbcodeColorPopover();
     };
 
+    const toggleBbcodeColorPopoverFromToolbar = () => {
+      if (!bbcodeColorPopover || !(bbcodeColorToolbarButton instanceof HTMLElement)) {
+        return false;
+      }
+
+      bbcodeToolbarMenus.forEach((menu) => {
+        menu.removeAttribute("open");
+      });
+
+      if (!bbcodeColorPopover.hidden && activeBbcodeColorTrigger === bbcodeColorToolbarButton) {
+        closeBbcodeColorPopover();
+      } else {
+        openBbcodeColorPopover(bbcodeColorToolbarButton, bbcodeColorTextInput?.value || "#6EC8FF");
+      }
+
+      return true;
+    };
+
     const updatePageContentField = (nextValue, selectionStart, selectionEnd = selectionStart) => {
       if (!pageContentField) {
         return;
@@ -1637,16 +1656,7 @@
 
       const optionType = String(button.dataset.bbcodeOption || "").trim().toLowerCase();
       if (optionType === "color") {
-        if (bbcodeColorPopover) {
-          bbcodeToolbarMenus.forEach((menu) => {
-            menu.removeAttribute("open");
-          });
-
-          if (!bbcodeColorPopover.hidden && activeBbcodeColorTrigger === button) {
-            closeBbcodeColorPopover();
-          } else {
-            openBbcodeColorPopover(button, bbcodeColorTextInput?.value || "#6EC8FF");
-          }
+        if (button === bbcodeColorToolbarButton && toggleBbcodeColorPopoverFromToolbar()) {
           return "keep-open";
         }
 
@@ -1834,6 +1844,18 @@
         if (nextAction !== "keep-open") {
           closeBbcodeMenus();
         }
+      });
+    }
+
+    if (bbcodeColorToolbarButton) {
+      bbcodeColorToolbarButton.addEventListener("click", (event) => {
+        if (!bbcodeColorPopover) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        toggleBbcodeColorPopoverFromToolbar();
       });
     }
 
