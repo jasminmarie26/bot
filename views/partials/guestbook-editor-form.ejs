@@ -11,6 +11,8 @@
   data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+  <input type="hidden" name="preview_return_to" value="" />
+  <input type="hidden" name="preview_source_window_name" value="" />
 
   <div class="gb-editor-heading">
     <h2>Einstellungen</h2>
@@ -854,6 +856,13 @@
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029") %>;
     const editorForm = document.getElementById("guestbook-editor-form");
+    const previewReturnToField = editorForm?.querySelector('input[name="preview_return_to"]') || null;
+    const previewSourceWindowNameField =
+      editorForm?.querySelector('input[name="preview_source_window_name"]') || null;
+    const previewTargetName = "guestbook-preview-<%= character.id %>";
+    const previewSubmitButtons = Array.from(
+      document.querySelectorAll(`button[form="guestbook-editor-form"][formtarget="${previewTargetName}"]`)
+    );
     const editorPageTriggers = Array.from(document.querySelectorAll("[data-gb-editor-page-trigger]"));
     const editorPages = Array.from(document.querySelectorAll("[data-gb-editor-page]"));
     const themeStyleField = editorForm?.querySelector("[data-guestbook-theme-style]") || null;
@@ -883,6 +892,46 @@
     let sourceViewRequestId = 0;
     let activeBbcodeColorTrigger = null;
     let bbcodeSelectionSnapshot = null;
+    let editorWindowName = "";
+
+    const ensureEditorWindowName = () => {
+      if (editorWindowName) {
+        return editorWindowName;
+      }
+
+      const storageKey = "guestbook-editor-window-name";
+      try {
+        editorWindowName = String(window.sessionStorage.getItem(storageKey) || "").trim();
+      } catch (error) {}
+
+      if (!editorWindowName) {
+        editorWindowName = `guestbook-editor-<%= character.id %>-${Math.random().toString(36).slice(2, 10)}`;
+        try {
+          window.sessionStorage.setItem(storageKey, editorWindowName);
+        } catch (error) {}
+      }
+
+      try {
+        window.name = editorWindowName;
+      } catch (error) {}
+
+      return editorWindowName;
+    };
+
+    const preparePreviewSubmit = () => {
+      if (previewReturnToField) {
+        previewReturnToField.value = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      }
+
+      if (previewSourceWindowNameField) {
+        previewSourceWindowNameField.value = ensureEditorWindowName();
+      }
+    };
+
+    ensureEditorWindowName();
+    previewSubmitButtons.forEach((button) => {
+      button.addEventListener("click", preparePreviewSubmit);
+    });
 
     const syncThemeSensitiveFields = () => {
       const isTransparentPurTheme =
@@ -1873,9 +1922,16 @@
     };
 
     if (editorForm) {
-      editorForm.addEventListener("submit", () => {
+      editorForm.addEventListener("submit", (event) => {
         cancelPreviewSync();
         colorFieldControllers.forEach((controller) => controller.commit());
+
+        if (
+          String(event.submitter?.getAttribute?.("formtarget") || "").trim() ===
+          previewTargetName
+        ) {
+          preparePreviewSubmit();
+        }
       });
     }
 

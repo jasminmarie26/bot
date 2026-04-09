@@ -128,7 +128,14 @@
     </div>
 
     <div class="gb-editor-actions">
-      <a class="btn btn-secondary" href="<%= previewBackUrl %>">Zur&uuml;ck zum Editor</a>
+      <a
+        class="btn btn-secondary"
+        href="<%= previewBackUrl %>"
+        data-preview-back-link
+        data-preview-editor-window-name="<%= previewEditorWindowName || '' %>"
+      >
+        Zur&uuml;ck zum Editor
+      </a>
       <a class="btn" href="/characters/<%= character.id %>/guestbook">Live-G&auml;stebuch &ouml;ffnen</a>
     </div>
   </div>
@@ -159,5 +166,63 @@
 </div>
 
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
+<script>
+  (() => {
+    const previewBackLink = document.querySelector("[data-preview-back-link]");
+    if (!(previewBackLink instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const fallbackUrl = previewBackLink.href;
+    const targetWindowName = String(previewBackLink.dataset.previewEditorWindowName || "").trim();
+
+    const focusOriginEditor = () => {
+      const focusWindow = (targetWindow) => {
+        if (!targetWindow || targetWindow.closed) {
+          return false;
+        }
+
+        try {
+          targetWindow.location.href = fallbackUrl;
+          targetWindow.focus();
+          return true;
+        } catch (error) {
+          return false;
+        }
+      };
+
+      if (targetWindowName) {
+        try {
+          const namedWindow = window.open(fallbackUrl, targetWindowName);
+          if (focusWindow(namedWindow)) {
+            return true;
+          }
+        } catch (error) {}
+      }
+
+      try {
+        if (focusWindow(window.opener)) {
+          return true;
+        }
+      } catch (error) {}
+
+      return false;
+    };
+
+    previewBackLink.addEventListener("click", (event) => {
+      if (!focusOriginEditor()) {
+        return;
+      }
+
+      event.preventDefault();
+      window.close();
+      window.setTimeout(() => {
+        if (!window.closed) {
+          window.location.href = fallbackUrl;
+        }
+      }, 80);
+    });
+  })();
+</script>
 
 <%- include("../../partials/end") %>

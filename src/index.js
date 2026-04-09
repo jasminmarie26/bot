@@ -2183,6 +2183,11 @@ function buildGuestbookEditorReturnUrl(req, character, guestbookPageId = null) {
     : buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId);
 }
 
+function normalizeGuestbookPreviewWindowName(value) {
+  const normalized = String(value || "").trim();
+  return /^[A-Za-z0-9:_-]{1,120}$/.test(normalized) ? normalized : "";
+}
+
 function buildCharacterGuestbookEditorState(characterId, requestedPageId = null) {
   const pages = ensureGuestbookPages(characterId);
   const normalizedRequestedPageId = normalizeCharacterEditGuestbookPageId(requestedPageId);
@@ -2219,13 +2224,15 @@ function buildCharacterEditFormViewModel(character, options = {}) {
   };
 }
 
-function buildGuestbookPreviewSessionState(characterId, activePage, payload) {
+function buildGuestbookPreviewSessionState(characterId, activePage, payload, options = {}) {
   return {
     character_id: Number(characterId),
     page_id: Number(activePage?.id) || 0,
     page_number: Number(activePage?.page_number) || 1,
     settings: payload?.settings || {},
     page_content: String(payload?.pageContent || ""),
+    return_to: getSafeExplicitReturnTarget(options.returnTo, ""),
+    source_window_name: normalizeGuestbookPreviewWindowName(options.sourceWindowName),
     saved_at: Date.now()
   };
 }
@@ -2267,6 +2274,32 @@ function getGuestbookPreviewSessionState(req, characterId, requestedPageId = nul
   }
 
   if (canUseGuestbookPreviewSessionState(draftPreview, characterId, requestedPageId)) {
+    return draftPreview;
+  }
+
+  return null;
+}
+
+function getGuestbookPreviewOriginSessionState(req, characterId, mode = "") {
+  const normalizedMode = String(mode || "").trim().toLowerCase();
+  const explicitPreview = req?.session?.guestbookPreview || null;
+  const draftPreview = req?.session?.guestbookPreviewDraft || null;
+  const matchesCharacter = (previewState) =>
+    Boolean(previewState) && Number(previewState.character_id) === Number(characterId);
+
+  if (normalizedMode === "explicit") {
+    return matchesCharacter(explicitPreview) ? explicitPreview : null;
+  }
+
+  if (normalizedMode === "draft") {
+    return matchesCharacter(draftPreview) ? draftPreview : null;
+  }
+
+  if (matchesCharacter(explicitPreview)) {
+    return explicitPreview;
+  }
+
+  if (matchesCharacter(draftPreview)) {
     return draftPreview;
   }
 
@@ -18160,6 +18193,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const previewMode = String(req.query.preview_mode || "").trim().toLowerCase();
   const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const storedPreview = getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
+  const previewOriginState = getGuestbookPreviewOriginSessionState(req, id, previewMode);
   const canUseStoredPreview = Boolean(storedPreview);
 
   const previewPage = canUseStoredPreview
@@ -18219,7 +18253,17 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       compactImageLineBreaks: false,
       compactBlockLineBreaks: false
     }),
-    previewBackUrl: buildGuestbookEditorReturnUrl(req, character, previewPage.id)
+    previewBackUrl: getSafeExplicitReturnTarget(
+      previewOriginState?.return_to,
+      buildGuestbookEditorReturnUrl(
+        req,
+        character,
+        Number(previewOriginState?.page_id) || previewPage.id
+      )
+    ),
+    previewEditorWindowName: normalizeGuestbookPreviewWindowName(
+      previewOriginState?.source_window_name
+    )
   });
 });
 
@@ -18358,7 +18402,10 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
-  const nextPreviewState = buildGuestbookPreviewSessionState(id, activePage, payload);
+  const nextPreviewState = buildGuestbookPreviewSessionState(id, activePage, payload, {
+    returnTo: req.body.preview_return_to,
+    sourceWindowName: req.body.preview_source_window_name
+  });
 
   const isPreviewSyncRequest =
     String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest";
