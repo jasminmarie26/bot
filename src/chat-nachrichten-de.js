@@ -1,7 +1,7 @@
 function buildRaumPraesenzNachricht(kind, displayName) {
   const safeName = String(displayName || "").trim() || "Jemand";
   const isLeave = kind === "leave";
-  const suffix = isLeave ? "Verlässt den Chat" : "Betritt den Chat";
+  const suffix = isLeave ? "verlässt den Chat" : "betritt den Chat";
 
   return {
     text: `${safeName}: ${suffix}`,
