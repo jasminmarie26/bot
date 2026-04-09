@@ -526,6 +526,61 @@
             </div>
           </div>
         </details>
+        <div
+          class="gb-bbcode-color-popover"
+          data-gb-bbcode-color-popover
+          role="dialog"
+          aria-modal="false"
+          aria-label="Textfarbe auswählen"
+          hidden
+        >
+          <div class="gb-bbcode-color-popover-head">
+            <div class="gb-bbcode-color-popover-copy">
+              <strong>Textfarbe</strong>
+              <small>Hex oder CSS-Farbname einsetzen.</small>
+            </div>
+            <button
+              type="button"
+              class="gb-bbcode-color-close"
+              data-gb-bbcode-color-close
+              aria-label="Farbauswahl schließen"
+            >
+              ×
+            </button>
+          </div>
+
+          <label class="gb-bbcode-color-field">
+            <span>Farbwert</span>
+            <div class="gb-bbcode-color-input-row">
+              <span class="gb-bbcode-color-preview" data-gb-bbcode-color-preview aria-hidden="true"></span>
+              <input
+                type="text"
+                value="#6EC8FF"
+                maxlength="40"
+                spellcheck="false"
+                autocomplete="off"
+                data-gb-bbcode-color-text
+              />
+              <input
+                type="color"
+                value="#6ec8ff"
+                class="gb-bbcode-color-picker"
+                data-gb-bbcode-color-picker
+                aria-label="Farbe auswählen"
+              />
+            </div>
+          </label>
+
+          <div class="gb-bbcode-color-meta">
+            <strong data-gb-bbcode-color-value>#6EC8FF</strong>
+            <small data-gb-bbcode-color-status>Die Farbe wird so im Text eingefügt.</small>
+          </div>
+
+          <div class="gb-bbcode-color-actions">
+            <button type="button" class="btn btn-secondary" data-gb-bbcode-color-cancel>Abbrechen</button>
+            <button type="button" class="btn" data-gb-bbcode-color-apply>Einfügen</button>
+          </div>
+        </div>
         <span class="gb-editor-helptext">Text markieren oder den Cursor setzen. Überschrift, Schrift, Listen, Ausrichtung, Boxen und Medien lassen sich direkt über die Leiste einfügen.</span>
       </div>
       <div class="gb-bbcode-editor-shell" data-gb-bbcode-editor-shell>
@@ -808,6 +863,16 @@
     const bbcodeEditorShell = editorForm?.querySelector("[data-gb-bbcode-editor-shell]") || null;
     const bbcodeSourceField = editorForm?.querySelector("[data-gb-bbcode-source-view]") || null;
     const bbcodeToolbarMenus = Array.from(editorForm?.querySelectorAll(".gb-bbcode-menu") || []);
+    const bbcodeColorPopover = editorForm?.querySelector("[data-gb-bbcode-color-popover]") || null;
+    const bbcodeColorTextInput = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-text]") || null;
+    const bbcodeColorPickerInput = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-picker]") || null;
+    const bbcodeColorPreview = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-preview]") || null;
+    const bbcodeColorValue = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-value]") || null;
+    const bbcodeColorStatus = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-status]") || null;
+    const bbcodeColorApplyButton = bbcodeColorPopover?.querySelector("[data-gb-bbcode-color-apply]") || null;
+    const bbcodeColorDismissButtons = Array.from(
+      bbcodeColorPopover?.querySelectorAll("[data-gb-bbcode-color-cancel], [data-gb-bbcode-color-close]") || []
+    );
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     const htmlSourceUrl = String(editorForm?.dataset?.htmlSourceUrl || "").trim();
     let previewSyncTimeout = null;
@@ -815,6 +880,7 @@
     let sourceViewSelectionStart = 0;
     let sourceViewSelectionEnd = 0;
     let sourceViewRequestId = 0;
+    let activeBbcodeColorTrigger = null;
 
     const syncThemeSensitiveFields = () => {
       const isTransparentPurTheme =
@@ -1138,6 +1204,7 @@
           menu.removeAttribute("open");
         }
       });
+      closeBbcodeColorPopover({ restoreFocus: false });
     };
 
     const syncBbcodeToolbarButtons = () => {
@@ -1212,6 +1279,154 @@
       pageContentField.dispatchEvent(new Event("input", { bubbles: true }));
       isApplyingHistoryState = false;
       syncBbcodeToolbarButtons();
+    };
+
+    const normalizeBbcodeHexColor = (value) => {
+      const normalized = String(value || "").trim().toUpperCase();
+      if (/^#[0-9A-F]{6}$/.test(normalized)) {
+        return normalized;
+      }
+      if (/^#[0-9A-F]{3}$/.test(normalized)) {
+        return `#${normalized
+          .slice(1)
+          .split("")
+          .map((character) => `${character}${character}`)
+          .join("")}`;
+      }
+      return "";
+    };
+
+    const isValidBbcodeColorValue = (value) => {
+      const normalized = String(value || "").trim();
+      if (!normalized) {
+        return false;
+      }
+
+      if (normalizeBbcodeHexColor(normalized)) {
+        return true;
+      }
+
+      try {
+        return typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", normalized);
+      } catch (error) {
+        return false;
+      }
+    };
+
+    const getBbcodeColorPickerValue = (value) => normalizeBbcodeHexColor(value) || "#6EC8FF";
+
+    const renderBbcodeColorPopover = () => {
+      if (
+        !bbcodeColorPopover ||
+        !bbcodeColorTextInput ||
+        !bbcodeColorPickerInput ||
+        !bbcodeColorPreview ||
+        !bbcodeColorValue ||
+        !bbcodeColorStatus ||
+        !bbcodeColorApplyButton
+      ) {
+        return;
+      }
+
+      const rawValue = String(bbcodeColorTextInput.value || "").trim();
+      const normalizedHex = normalizeBbcodeHexColor(rawValue);
+      const isValid = isValidBbcodeColorValue(rawValue);
+      const previewValue = isValid ? (normalizedHex || rawValue) : "transparent";
+
+      bbcodeColorPopover.dataset.colorValid = isValid ? "true" : "false";
+      bbcodeColorPreview.style.setProperty("--gb-bbcode-preview-color", previewValue);
+      bbcodeColorValue.textContent = rawValue || "Keine Farbe gewählt";
+      bbcodeColorStatus.textContent = isValid
+        ? "Die Farbe wird so im Text eingefügt."
+        : "Bitte eine gültige Farbe eingeben, z. B. #6EC8FF oder skyblue.";
+      bbcodeColorApplyButton.disabled = !isValid;
+
+      if (normalizedHex) {
+        bbcodeColorPickerInput.value = normalizedHex.toLowerCase();
+      }
+    };
+
+    const positionBbcodeColorPopover = () => {
+      if (!bbcodeColorPopover || bbcodeColorPopover.hidden || !(activeBbcodeColorTrigger instanceof HTMLElement)) {
+        return;
+      }
+
+      const gap = 10;
+      const triggerRect = activeBbcodeColorTrigger.getBoundingClientRect();
+      const popoverRect = bbcodeColorPopover.getBoundingClientRect();
+      const popoverWidth = Math.max(popoverRect.width || 0, 276);
+      const popoverHeight = Math.max(popoverRect.height || 0, 188);
+      const maxLeft = Math.max(gap, window.innerWidth - popoverWidth - gap);
+      let left = Math.min(Math.max(gap, triggerRect.left), maxLeft);
+      let top = triggerRect.bottom + gap;
+
+      if (top + popoverHeight > window.innerHeight - gap) {
+        top = Math.max(gap, triggerRect.top - popoverHeight - gap);
+      }
+
+      bbcodeColorPopover.style.left = `${Math.round(left)}px`;
+      bbcodeColorPopover.style.top = `${Math.round(top)}px`;
+    };
+
+    const closeBbcodeColorPopover = ({ restoreFocus = true } = {}) => {
+      if (!bbcodeColorPopover || bbcodeColorPopover.hidden) {
+        return;
+      }
+
+      bbcodeColorPopover.hidden = true;
+      bbcodeColorPopover.classList.remove("is-open");
+      bbcodeColorPopover.removeAttribute("data-color-valid");
+
+      if (activeBbcodeColorTrigger instanceof HTMLElement) {
+        activeBbcodeColorTrigger.classList.remove("is-active");
+        if (restoreFocus) {
+          activeBbcodeColorTrigger.focus({ preventScroll: true });
+        }
+      }
+
+      activeBbcodeColorTrigger = null;
+    };
+
+    const openBbcodeColorPopover = (trigger, initialValue = "#6EC8FF") => {
+      if (
+        !bbcodeColorPopover ||
+        !bbcodeColorTextInput ||
+        !bbcodeColorPickerInput ||
+        !(trigger instanceof HTMLElement)
+      ) {
+        return;
+      }
+
+      activeBbcodeColorTrigger = trigger;
+      const nextValue = String(initialValue || "").trim() || "#6EC8FF";
+      bbcodeColorTextInput.value = nextValue;
+      bbcodeColorPickerInput.value = getBbcodeColorPickerValue(nextValue).toLowerCase();
+      bbcodeColorPopover.hidden = false;
+      bbcodeColorPopover.classList.add("is-open");
+      trigger.classList.add("is-active");
+      renderBbcodeColorPopover();
+
+      window.requestAnimationFrame(() => {
+        positionBbcodeColorPopover();
+        bbcodeColorTextInput.focus({ preventScroll: true });
+        bbcodeColorTextInput.select();
+      });
+    };
+
+    const applyBbcodeColorValue = () => {
+      if (!bbcodeColorTextInput) {
+        return;
+      }
+
+      const rawValue = String(bbcodeColorTextInput.value || "").trim();
+      const nextValue = normalizeBbcodeHexColor(rawValue) || rawValue;
+      if (!isValidBbcodeColorValue(nextValue)) {
+        renderBbcodeColorPopover();
+        return;
+      }
+
+      wrapSelectionWithBbcode(`[color=${nextValue}]`, "[/color]", "Text");
+      closeBbcodeColorPopover();
     };
 
     const updatePageContentField = (nextValue, selectionStart, selectionEnd = selectionStart) => {
@@ -1422,6 +1637,19 @@
 
       const optionType = String(button.dataset.bbcodeOption || "").trim().toLowerCase();
       if (optionType === "color") {
+        if (bbcodeColorPopover) {
+          bbcodeToolbarMenus.forEach((menu) => {
+            menu.removeAttribute("open");
+          });
+
+          if (!bbcodeColorPopover.hidden && activeBbcodeColorTrigger === button) {
+            closeBbcodeColorPopover();
+          } else {
+            openBbcodeColorPopover(button, bbcodeColorTextInput?.value || "#6EC8FF");
+          }
+          return "keep-open";
+        }
+
         const colorValue = window.prompt("Farbe eingeben, z. B. #6ec8ff", "#6ec8ff");
         if (!colorValue) {
           return;
@@ -1602,8 +1830,89 @@
         }
 
         event.preventDefault();
-        handleBbcodeToolbarAction(trigger);
-        closeBbcodeMenus();
+        const nextAction = handleBbcodeToolbarAction(trigger);
+        if (nextAction !== "keep-open") {
+          closeBbcodeMenus();
+        }
+      });
+    }
+
+    if (bbcodeColorTextInput && bbcodeColorPickerInput) {
+      renderBbcodeColorPopover();
+
+      bbcodeColorTextInput.addEventListener("input", () => {
+        renderBbcodeColorPopover();
+      });
+
+      bbcodeColorPickerInput.addEventListener("input", () => {
+        bbcodeColorTextInput.value = bbcodeColorPickerInput.value.toUpperCase();
+        renderBbcodeColorPopover();
+      });
+
+      bbcodeColorTextInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          applyBbcodeColorValue();
+          return;
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeBbcodeColorPopover();
+        }
+      });
+    }
+
+    if (bbcodeColorApplyButton) {
+      bbcodeColorApplyButton.addEventListener("click", () => {
+        applyBbcodeColorValue();
+      });
+    }
+
+    bbcodeColorDismissButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        closeBbcodeColorPopover();
+      });
+    });
+
+    if (bbcodeColorPopover) {
+      document.addEventListener("pointerdown", (event) => {
+        if (bbcodeColorPopover.hidden) {
+          return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Node)) {
+          return;
+        }
+
+        if (
+          bbcodeColorPopover.contains(target) ||
+          (activeBbcodeColorTrigger instanceof HTMLElement && activeBbcodeColorTrigger.contains(target))
+        ) {
+          return;
+        }
+
+        closeBbcodeColorPopover({ restoreFocus: false });
+      });
+
+      window.addEventListener("resize", () => {
+        positionBbcodeColorPopover();
+      });
+
+      window.addEventListener(
+        "scroll",
+        () => {
+          positionBbcodeColorPopover();
+        },
+        true
+      );
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !bbcodeColorPopover.hidden) {
+          event.preventDefault();
+          closeBbcodeColorPopover();
+        }
       });
     }
 
