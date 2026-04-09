@@ -9918,6 +9918,7 @@ body.gb-editor-fullscreen-open {
 }
 
 .gb-bbcode-toolbar-wrap {
+  position: relative;
   display: grid;
   gap: 0.38rem;
   min-width: 0;
@@ -10100,7 +10101,7 @@ body.gb-editor-fullscreen-open {
 }
 
 .gb-bbcode-color-popover {
-  position: fixed;
+  position: absolute;
   z-index: 24;
   width: min(19rem, calc(100vw - 1rem));
   padding: 0.82rem;

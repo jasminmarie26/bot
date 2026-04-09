@@ -1352,17 +1352,24 @@
         return;
       }
 
+      const popoverAnchor = bbcodeColorPopover.parentElement;
+      if (!(popoverAnchor instanceof HTMLElement)) {
+        return;
+      }
+
       const gap = 10;
+      const anchorRect = popoverAnchor.getBoundingClientRect();
       const triggerRect = activeBbcodeColorTrigger.getBoundingClientRect();
       const popoverRect = bbcodeColorPopover.getBoundingClientRect();
       const popoverWidth = Math.max(popoverRect.width || 0, 276);
       const popoverHeight = Math.max(popoverRect.height || 0, 188);
-      const maxLeft = Math.max(gap, window.innerWidth - popoverWidth - gap);
-      let left = Math.min(Math.max(gap, triggerRect.left), maxLeft);
-      let top = triggerRect.bottom + gap;
+      const anchorWidth = Math.max(popoverAnchor.clientWidth || 0, anchorRect.width || 0, popoverWidth);
+      const maxLeft = Math.max(0, anchorWidth - popoverWidth);
+      let left = Math.min(Math.max(0, triggerRect.right - anchorRect.left - popoverWidth), maxLeft);
+      let top = triggerRect.bottom - anchorRect.top + gap;
 
       if (top + popoverHeight > window.innerHeight - gap) {
-        top = Math.max(gap, triggerRect.top - popoverHeight - gap);
+        top = Math.max(0, triggerRect.top - anchorRect.top - popoverHeight - gap);
       }
 
       bbcodeColorPopover.style.left = `${Math.round(left)}px`;
