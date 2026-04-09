@@ -8686,10 +8686,46 @@ body.theme-atari .guestbook-entry-panel {
   z-index: 2;
 }
 
+.bb-fn[data-popup-align="start"] .bb-fn-popup {
+  left: 0;
+  right: auto;
+  transform: none;
+}
+
+.bb-fn[data-popup-align="end"] .bb-fn-popup {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.bb-fn[data-popup-side="bottom"] .bb-fn-popup {
+  top: calc(100% + 0.55rem);
+  bottom: auto;
+}
+
 .bb-fn:hover .bb-fn-popup,
 .bb-fn:focus-visible .bb-fn-popup {
   opacity: 1;
   transform: translateX(-50%) translateY(-2px);
+}
+
+.bb-fn[data-popup-align="start"]:hover .bb-fn-popup,
+.bb-fn[data-popup-align="start"]:focus-visible .bb-fn-popup,
+.bb-fn[data-popup-align="end"]:hover .bb-fn-popup,
+.bb-fn[data-popup-align="end"]:focus-visible .bb-fn-popup {
+  transform: translateY(-2px);
+}
+
+.bb-fn[data-popup-side="bottom"]:hover .bb-fn-popup,
+.bb-fn[data-popup-side="bottom"]:focus-visible .bb-fn-popup {
+  transform: translateX(-50%) translateY(2px);
+}
+
+.bb-fn[data-popup-side="bottom"][data-popup-align="start"]:hover .bb-fn-popup,
+.bb-fn[data-popup-side="bottom"][data-popup-align="start"]:focus-visible .bb-fn-popup,
+.bb-fn[data-popup-side="bottom"][data-popup-align="end"]:hover .bb-fn-popup,
+.bb-fn[data-popup-side="bottom"][data-popup-align="end"]:focus-visible .bb-fn-popup {
+  transform: translateY(2px);
 }
 
 .bb-button {
