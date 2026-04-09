@@ -811,6 +811,7 @@
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     const htmlSourceUrl = String(editorForm?.dataset?.htmlSourceUrl || "").trim();
     let previewSyncTimeout = null;
+    let previewSyncController = null;
     let sourceViewSelectionStart = 0;
     let sourceViewSelectionEnd = 0;
     let sourceViewRequestId = 0;
@@ -1508,20 +1509,49 @@
     recordHistoryState(true);
     syncBbcodeToolbarButtons();
 
+    const cancelPreviewSync = () => {
+      if (previewSyncTimeout) {
+        window.clearTimeout(previewSyncTimeout);
+        previewSyncTimeout = null;
+      }
+
+      if (previewSyncController) {
+        previewSyncController.abort();
+        previewSyncController = null;
+      }
+    };
+
     const syncPreviewDraft = () => {
       if (!editorForm || !previewSyncUrl) {
         return;
       }
 
+      if (previewSyncController) {
+        previewSyncController.abort();
+      }
+
+      const requestController = new AbortController();
+      previewSyncController = requestController;
       const formData = new FormData(editorForm);
       fetch(previewSyncUrl, {
         method: "POST",
         body: formData,
         credentials: "same-origin",
+        signal: requestController.signal,
         headers: {
           "X-Requested-With": "XMLHttpRequest"
         }
-      }).catch(() => {});
+      })
+        .catch((error) => {
+          if (error?.name !== "AbortError") {
+            return;
+          }
+        })
+        .finally(() => {
+          if (previewSyncController === requestController) {
+            previewSyncController = null;
+          }
+        });
     };
 
     const schedulePreviewSync = (delay = 220) => {
@@ -1541,6 +1571,7 @@
 
     if (editorForm) {
       editorForm.addEventListener("submit", () => {
+        cancelPreviewSync();
         colorFieldControllers.forEach((controller) => controller.commit());
       });
     }
@@ -1561,8 +1592,6 @@
       editorForm.addEventListener("change", () => {
         schedulePreviewSync(80);
       });
-
-      schedulePreviewSync(0);
     }
 
     if (bbcodeToolbar && pageContentField) {

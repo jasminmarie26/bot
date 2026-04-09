@@ -2219,6 +2219,74 @@ function buildCharacterEditFormViewModel(character, options = {}) {
   };
 }
 
+function buildGuestbookPreviewSessionState(characterId, activePage, payload) {
+  return {
+    character_id: Number(characterId),
+    page_id: Number(activePage?.id) || 0,
+    page_number: Number(activePage?.page_number) || 1,
+    settings: payload?.settings || {},
+    page_content: String(payload?.pageContent || ""),
+    saved_at: Date.now()
+  };
+}
+
+function canUseGuestbookPreviewSessionState(previewState, characterId, requestedPageId = null) {
+  const parsedCharacterId = Number(characterId);
+  const parsedRequestedPageId = Number(requestedPageId);
+
+  if (!previewState || Number(previewState.character_id) !== parsedCharacterId) {
+    return false;
+  }
+
+  if (!Number.isInteger(parsedRequestedPageId) || parsedRequestedPageId < 1) {
+    return true;
+  }
+
+  return Number(previewState.page_id) === parsedRequestedPageId;
+}
+
+function getGuestbookPreviewSessionState(req, characterId, requestedPageId = null, mode = "") {
+  const normalizedMode = String(mode || "").trim().toLowerCase();
+  const explicitPreview = req?.session?.guestbookPreview || null;
+  const draftPreview = req?.session?.guestbookPreviewDraft || null;
+
+  if (normalizedMode === "explicit") {
+    return canUseGuestbookPreviewSessionState(explicitPreview, characterId, requestedPageId)
+      ? explicitPreview
+      : null;
+  }
+
+  if (normalizedMode === "draft") {
+    return canUseGuestbookPreviewSessionState(draftPreview, characterId, requestedPageId)
+      ? draftPreview
+      : null;
+  }
+
+  if (canUseGuestbookPreviewSessionState(explicitPreview, characterId, requestedPageId)) {
+    return explicitPreview;
+  }
+
+  if (canUseGuestbookPreviewSessionState(draftPreview, characterId, requestedPageId)) {
+    return draftPreview;
+  }
+
+  return null;
+}
+
+function clearGuestbookPreviewSessionState(req, characterId) {
+  if (!req?.session) {
+    return;
+  }
+
+  const parsedCharacterId = Number(characterId);
+  ["guestbookPreview", "guestbookPreviewDraft"].forEach((key) => {
+    const previewState = req.session[key];
+    if (previewState && Number(previewState.character_id) === parsedCharacterId) {
+      delete req.session[key];
+    }
+  });
+}
+
 function getEmailDomain(email) {
   const normalized = normalizeEmail(email);
   const atIndex = normalized.lastIndexOf("@");
@@ -18089,14 +18157,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
 
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
+  const previewMode = String(req.query.preview_mode || "").trim().toLowerCase();
   const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
-
-  const storedPreview = req.session.guestbookPreview;
-  const canUseStoredPreview = Boolean(
-    storedPreview &&
-      Number(storedPreview.character_id) === id &&
-      (!requestedPageId || Number(storedPreview.page_id) === requestedPageId)
-  );
+  const storedPreview = getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
+  const canUseStoredPreview = Boolean(storedPreview);
 
   const previewPage = canUseStoredPreview
     ? pages.find((page) => page.id === Number(storedPreview.page_id)) || fallbackPage
@@ -18120,7 +18184,10 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     pages,
     previewPage.id,
-    (pageId) => `/characters/${id}/guestbook/edit/preview?page_id=${pageId}`
+    (pageId) =>
+      `/characters/${id}/guestbook/edit/preview?page_id=${pageId}${
+        previewMode ? `&preview_mode=${encodeURIComponent(previewMode)}` : ""
+      }`
   );
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
   const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
@@ -18147,6 +18214,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       previewSettings?.theme_style
     ),
     topbarCharacter,
+    previewMode,
     previewHtml: renderGuestbookBbcode(previewContent, {
       compactImageLineBreaks: false,
       compactBlockLineBreaks: false
@@ -18263,9 +18331,7 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     refreshConnectedUserDisplay(req.session.user.id);
   }
 
-  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
-    delete req.session.guestbookPreview;
-  }
+  clearGuestbookPreviewSessionState(req, id);
 
   emitHomeStatsUpdate();
   setFlash(req, "success", "Gästebuch gespeichert.");
@@ -18292,18 +18358,15 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
-
-  req.session.guestbookPreview = {
-    character_id: id,
-    page_id: activePage.id,
-    page_number: activePage.page_number,
-    settings: payload.settings,
-    page_content: payload.pageContent,
-    saved_at: Date.now()
-  };
+  const nextPreviewState = buildGuestbookPreviewSessionState(id, activePage, payload);
 
   const isPreviewSyncRequest =
     String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest";
+  if (isPreviewSyncRequest) {
+    req.session.guestbookPreviewDraft = nextPreviewState;
+  } else {
+    req.session.guestbookPreview = nextPreviewState;
+  }
 
   return req.session.save((error) => {
     if (error) {
@@ -18327,7 +18390,7 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       return res.status(204).end();
     }
 
-    return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}`);
+    return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}&preview_mode=explicit`);
   });
 });
 
@@ -18399,9 +18462,7 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
       sourcePageSettings.theme_style
     );
 
-  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
-    delete req.session.guestbookPreview;
-  }
+  clearGuestbookPreviewSessionState(req, id);
 
   setFlash(req, "success", `Seite ${nextPageNumber} erstellt.`);
   return res.redirect(buildGuestbookEditorReturnUrl(req, character, info.lastInsertRowid));
@@ -18447,9 +18508,7 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   renumberGuestbookPages(id);
   const remainingPages = ensureGuestbookPages(id);
   const redirectPage = remainingPages[0];
-  if (req.session.guestbookPreview && Number(req.session.guestbookPreview.character_id) === id) {
-    delete req.session.guestbookPreview;
-  }
+  clearGuestbookPreviewSessionState(req, id);
   setFlash(req, "success", "Aktuelle Seite gelöscht.");
   return res.redirect(buildGuestbookEditorReturnUrl(req, character, redirectPage.id));
 });
