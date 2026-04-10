@@ -6046,6 +6046,19 @@ body.theme-future.page-home-screen .home-copyright {
   align-self: end;
 }
 
+.admin-ip-block-quick-form {
+  margin-top: 0.55rem;
+}
+
+.admin-ip-block-form {
+  grid-template-columns: minmax(15rem, 20rem) auto;
+  gap: 0.6rem 0.75rem;
+}
+
+.admin-ip-block-form .admin-table-actions {
+  align-self: end;
+}
+
 .admin-note-log-wrap {
   display: grid;
   gap: 0.4rem;
@@ -6091,6 +6104,10 @@ body.theme-future.page-home-screen .home-copyright {
   }
 
   .admin-moderation-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-ip-block-form {
     grid-template-columns: 1fr;
   }
 }

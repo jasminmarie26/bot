@@ -381,6 +381,15 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS blocked_login_ips (
+    ip TEXT PRIMARY KEY,
+    created_by_user_id INTEGER,
+    created_by_label TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+  );
+
   CREATE TABLE IF NOT EXISTS character_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -502,6 +511,11 @@ db.exec(`
 
 const userColumns = db
   .prepare("PRAGMA table_info(users)")
+  .all()
+  .map((column) => column.name);
+
+const blockedLoginIpColumns = db
+  .prepare("PRAGMA table_info(blocked_login_ips)")
   .all()
   .map((column) => column.name);
 
@@ -1149,6 +1163,22 @@ if (!userColumns.includes("oauth_password_pending")) {
   db.exec("ALTER TABLE users ADD COLUMN oauth_password_pending INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!blockedLoginIpColumns.includes("created_by_user_id")) {
+  db.exec("ALTER TABLE blocked_login_ips ADD COLUMN created_by_user_id INTEGER");
+}
+
+if (!blockedLoginIpColumns.includes("created_by_label")) {
+  db.exec("ALTER TABLE blocked_login_ips ADD COLUMN created_by_label TEXT NOT NULL DEFAULT ''");
+}
+
+if (!blockedLoginIpColumns.includes("created_at")) {
+  db.exec("ALTER TABLE blocked_login_ips ADD COLUMN created_at TEXT NOT NULL DEFAULT ''");
+}
+
+if (!blockedLoginIpColumns.includes("updated_at")) {
+  db.exec("ALTER TABLE blocked_login_ips ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''");
+}
+
 if (!characterColumns.includes("festplay_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_id INTEGER");
 }
@@ -1463,6 +1493,11 @@ db.exec(
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_room_permissions_user_id ON chat_room_permissions(user_id)");
 db.exec("DROP INDEX IF EXISTS idx_chat_rooms_character_name_key");
 db.exec("CREATE INDEX IF NOT EXISTS idx_chat_rooms_character_id ON chat_rooms(character_id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_blocked_login_ips_updated_at ON blocked_login_ips(updated_at)");
+db.prepare("UPDATE blocked_login_ips SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL OR created_at = ''").run();
+db.prepare(
+  "UPDATE blocked_login_ips SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL OR updated_at = ''"
+).run();
 
 if (!ignoredAccountColumns.includes("label")) {
   db.exec("ALTER TABLE ignored_accounts ADD COLUMN label TEXT NOT NULL DEFAULT ''");

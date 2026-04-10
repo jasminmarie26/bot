@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const net = require("net");
 const express = require("express");
 const session = require("express-session");
 const SQLiteStore = require("connect-sqlite3")(session);
@@ -2338,6 +2339,90 @@ function getRequestIp(req) {
     return forwarded.split(",")[0].trim().slice(0, 120);
   }
   return String(req.ip || req.socket?.remoteAddress || "").trim().slice(0, 120);
+}
+
+const BLOCKED_LOGIN_IP_ERROR_MESSAGE =
+  "Diese IP-Adresse ist für Anmeldungen gesperrt. Bitte melde dich beim Team.";
+
+function normalizeBlockedLoginIp(value) {
+  const normalizedIp = normalizeComparableIp(value);
+  return normalizedIp && net.isIP(normalizedIp) ? normalizedIp : "";
+}
+
+function getBlockedLoginIpEntry(value) {
+  const normalizedIp = normalizeBlockedLoginIp(value);
+  if (!normalizedIp) {
+    return null;
+  }
+
+  const entry = db
+    .prepare(
+      `SELECT ip, created_by_user_id, created_by_label, created_at, updated_at
+         FROM blocked_login_ips
+        WHERE ip = ?`
+    )
+    .get(normalizedIp);
+
+  return entry
+    ? {
+        ...entry,
+        ip: normalizedIp,
+        created_at_label: formatGermanDateTime(entry.created_at),
+        updated_at_label: formatGermanDateTime(entry.updated_at)
+      }
+    : null;
+}
+
+function upsertBlockedLoginIp(ipAddress, actorUser) {
+  const normalizedIp = normalizeBlockedLoginIp(ipAddress);
+  if (!normalizedIp) {
+    return null;
+  }
+
+  const actorUserId = Number(actorUser?.id);
+  const actorLabel = getStaffActorLabel(actorUser);
+  db.prepare(
+    `INSERT INTO blocked_login_ips (
+       ip,
+       created_by_user_id,
+       created_by_label,
+       created_at,
+       updated_at
+     )
+     VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     ON CONFLICT(ip) DO UPDATE SET
+       created_by_user_id = excluded.created_by_user_id,
+       created_by_label = excluded.created_by_label,
+       updated_at = CURRENT_TIMESTAMP`
+  ).run(
+    normalizedIp,
+    Number.isInteger(actorUserId) && actorUserId > 0 ? actorUserId : null,
+    actorLabel
+  );
+
+  return getBlockedLoginIpEntry(normalizedIp);
+}
+
+function removeBlockedLoginIp(ipAddress) {
+  const normalizedIp = normalizeBlockedLoginIp(ipAddress);
+  if (!normalizedIp) {
+    return false;
+  }
+
+  const result = db.prepare("DELETE FROM blocked_login_ips WHERE ip = ?").run(normalizedIp);
+  return Number(result.changes || 0) > 0;
+}
+
+function getBlockedLoginIpEntryForRequest(req) {
+  return getBlockedLoginIpEntry(getRequestIp(req));
+}
+
+function renderBlockedLoginIpLoginPage(req, res, values = {}) {
+  return renderLoginPage(req, res, {
+    status: 403,
+    error: BLOCKED_LOGIN_IP_ERROR_MESSAGE,
+    values
+  });
 }
 
 function getHostnameFromUrl(value) {
@@ -12720,6 +12805,11 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const username = (req.body.username || "").trim().slice(0, 24);
   const password = req.body.password || "";
+  const blockedLoginIpEntry = getBlockedLoginIpEntryForRequest(req);
+
+  if (blockedLoginIpEntry) {
+    return renderBlockedLoginIpLoginPage(req, res, { username });
+  }
 
   const user = db
     .prepare(
@@ -12940,6 +13030,11 @@ app.post("/auth/google/start", async (req, res, next) => {
     return renderOAuthVerificationFailure(req, res, "google", captchaCheck.reason);
   }
 
+  if (getBlockedLoginIpEntryForRequest(req)) {
+    setFlash(req, "error", BLOCKED_LOGIN_IP_ERROR_MESSAGE);
+    return res.redirect("/login");
+  }
+
   return passport.authenticate("google", {
     scope: ["profile", "email"],
     session: false
@@ -12949,6 +13044,11 @@ app.post("/auth/google/start", async (req, res, next) => {
 app.get("/auth/google/callback", (req, res, next) => {
   if (!GOOGLE_AUTH_ENABLED) {
     setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.google));
+    return res.redirect("/login");
+  }
+
+  if (getBlockedLoginIpEntryForRequest(req)) {
+    setFlash(req, "error", BLOCKED_LOGIN_IP_ERROR_MESSAGE);
     return res.redirect("/login");
   }
 
@@ -13032,6 +13132,11 @@ app.post("/auth/facebook/start", async (req, res, next) => {
     return renderOAuthVerificationFailure(req, res, "facebook", captchaCheck.reason);
   }
 
+  if (getBlockedLoginIpEntryForRequest(req)) {
+    setFlash(req, "error", BLOCKED_LOGIN_IP_ERROR_MESSAGE);
+    return res.redirect("/login");
+  }
+
   return passport.authenticate("facebook", {
     scope: ["email"],
     session: false
@@ -13041,6 +13146,11 @@ app.post("/auth/facebook/start", async (req, res, next) => {
 app.get("/auth/facebook/callback", (req, res, next) => {
   if (!FACEBOOK_AUTH_ENABLED) {
     setFlash(req, "error", getOAuthDisabledMessage(OAUTH_PROVIDERS.facebook));
+    return res.redirect("/login");
+  }
+
+  if (getBlockedLoginIpEntryForRequest(req)) {
+    setFlash(req, "error", BLOCKED_LOGIN_IP_ERROR_MESSAGE);
     return res.redirect("/login");
   }
 
@@ -19391,6 +19501,7 @@ function renderStaffUserDetails(req, res) {
     return res.redirect(panelConfig.panelBasePath);
   }
 
+  const blockedLoginIpEntry = getBlockedLoginIpEntry(targetUser.last_login_ip);
   const userCharacters = getAdminUserCharacters(targetId);
 
   return res.render("admin/admin-user", {
@@ -19406,6 +19517,7 @@ function renderStaffUserDetails(req, res) {
     canDeleteUsers: panelConfig.canDeleteUsers,
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     targetUser,
+    blockedLoginIpEntry,
     userCharacters,
     statusDefinitions: MODERATION_STATUS_DEFINITIONS,
     moderationNoteCategories: MODERATION_NOTE_CATEGORY_OPTIONS
@@ -19498,6 +19610,53 @@ function updateUserModerationStatus(req, res) {
 
 app.post("/admin/users/:id/moderation-status", requireAuth, requireAdmin, updateUserModerationStatus);
 app.post("/staff/users/:id/moderation-status", requireAuth, requireStaff, updateUserModerationStatus);
+
+function updateUserLoginIpBlock(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
+  const targetId = Number(req.params.id);
+  if (!Number.isInteger(targetId) || targetId < 1) {
+    setFlash(req, "error", "User-ID ist ungültig.");
+    return res.redirect(panelConfig.panelBasePath);
+  }
+
+  const targetUser = db
+    .prepare("SELECT id, username FROM users WHERE id = ?")
+    .get(targetId);
+  if (!targetUser) {
+    setFlash(req, "error", "User wurde nicht gefunden.");
+    return res.redirect(panelConfig.panelBasePath);
+  }
+
+  const action = req.body.action === "unblock" ? "unblock" : "block";
+  const normalizedIp = normalizeBlockedLoginIp(req.body.ip_address);
+  if (!normalizedIp) {
+    setFlash(req, "error", "Bitte gib eine gültige IP-Adresse ein.");
+    return res.redirect(`${panelConfig.userDetailsBasePath}/${targetId}`);
+  }
+
+  if (action === "block") {
+    const currentRequestIp = normalizeBlockedLoginIp(getRequestIp(req));
+    if (currentRequestIp && normalizedIp === currentRequestIp) {
+      setFlash(req, "error", "Deine aktuelle IP-Adresse kannst du hier nicht sperren.");
+      return res.redirect(`${panelConfig.userDetailsBasePath}/${targetId}`);
+    }
+
+    upsertBlockedLoginIp(normalizedIp, req.session.user);
+    setFlash(req, "success", `IP-Adresse ${normalizedIp} ist jetzt für Logins gesperrt.`);
+    return res.redirect(`${panelConfig.userDetailsBasePath}/${targetId}`);
+  }
+
+  const removed = removeBlockedLoginIp(normalizedIp);
+  if (removed) {
+    setFlash(req, "success", `IP-Adresse ${normalizedIp} ist wieder freigegeben.`);
+  } else {
+    setFlash(req, "success", `IP-Adresse ${normalizedIp} war nicht gesperrt.`);
+  }
+  return res.redirect(`${panelConfig.userDetailsBasePath}/${targetId}`);
+}
+
+app.post("/admin/users/:id/login-ip-block", requireAuth, requireAdmin, updateUserLoginIpBlock);
+app.post("/staff/users/:id/login-ip-block", requireAuth, requireStaff, updateUserLoginIpBlock);
 
 app.post("/admin/impersonation/stop", requireAuth, (req, res) => {
   const adminUserId = Number(req.session.admin_impersonator_user_id);

@@ -16,6 +16,8 @@
     typeof canClearGuestbooks === "undefined" ? true : Boolean(canClearGuestbooks);
   const noteCategories = Array.isArray(moderationNoteCategories) ? moderationNoteCategories : [];
   const moderationNoteLog = String(targetUser.moderation_status_note || "").trim();
+  const blockedIpEntry = blockedLoginIpEntry || null;
+  const loginIpBlockPath = `${userDetailsBasePath}/${targetUser.id}/login-ip-block`;
 %>
 
 <section class="panel admin-user-page">
@@ -131,6 +133,51 @@
       <h3>Notizverlauf</h3>
       <pre class="admin-note-log"><%= moderationNoteLog || "Keine Notiz." %></pre>
     </div>
+  <% } %>
+</section>
+
+<section class="panel">
+  <h2>IP-Sperre</h2>
+  <p class="muted">Gesperrte IPs k&ouml;nnen sich weder per Passwort noch per Google/Facebook anmelden.</p>
+
+  <div class="admin-user-meta">
+    <span>Letzte Login-IP: <%= targetUser.last_login_ip || "-" %></span>
+    <% if (blockedIpEntry) { %>
+      <span>Status: Gesperrt</span>
+      <span>Von: <%= blockedIpEntry.created_by_label || "-" %></span>
+      <span>Seit: <%= blockedIpEntry.created_at_label || "-" %></span>
+    <% } else { %>
+      <span>Status: Nicht gesperrt</span>
+    <% } %>
+  </div>
+
+  <% if (canModerateAccount) { %>
+    <% if (targetUser.last_login_ip) { %>
+      <form method="POST" action="<%= loginIpBlockPath %>" class="admin-inline-form admin-ip-block-quick-form">
+        <input type="hidden" name="ip_address" value="<%= targetUser.last_login_ip %>" />
+        <input type="hidden" name="action" value="<%= blockedIpEntry ? "unblock" : "block" %>" />
+        <button class="btn <%= blockedIpEntry ? "btn-secondary" : "btn-danger" %>" type="submit">
+          <%= blockedIpEntry ? "Letzte IP entsperren" : "Letzte IP sperren" %>
+        </button>
+      </form>
+    <% } %>
+
+    <form method="POST" action="<%= loginIpBlockPath %>" class="admin-inline-form admin-ip-block-form">
+      <label>
+        IP-Adresse
+        <input
+          name="ip_address"
+          maxlength="120"
+          placeholder="127.0.0.1 oder 2001:db8::1"
+          autocomplete="off"
+          required
+        />
+      </label>
+      <div class="admin-table-actions">
+        <button class="btn btn-danger" type="submit" name="action" value="block">IP sperren</button>
+        <button class="btn btn-secondary" type="submit" name="action" value="unblock">IP entsperren</button>
+      </div>
+    </form>
   <% } %>
 </section>
 
