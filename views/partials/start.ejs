@@ -369,6 +369,11 @@
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
     ); %>
+    <% const hideTopbarAreaLinkOnLoggedInHome = Boolean(
+      currentUser &&
+      !topbarGuestbookModeActive &&
+      currentPath === "/"
+    ); %>
     <% const topbarCharacterCreatedAtLabel =
       typeof characterCreatedAtLabel !== "undefined" ? String(characterCreatedAtLabel || "").trim() : ""; %>
     <% const topbarBirthdayRows = Array.isArray(
@@ -602,7 +607,9 @@
             <% } %>
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
-                <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
+                <% if (!hideTopbarAreaLinkOnLoggedInHome) { %>
+                  <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
+                <% } %>
                 <a href="/members"<%= topbarUseSameTabNavigation ? "" : ' target="_blank" rel="noopener noreferrer"' %>>Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a
