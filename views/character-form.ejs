@@ -438,86 +438,88 @@
         />
       </label>
 
-      <label>
-        Spezies
-        <input
-          name="species"
-          maxlength="80"
-          value="<%= character.species || "" %>"
-        />
-      </label>
+      <% if (mode !== "create") { %>
+        <label>
+          Spezies
+          <input
+            name="species"
+            maxlength="80"
+            value="<%= character.species || "" %>"
+          />
+        </label>
 
-      <label>
-        Alter
-        <input
-          name="age"
-          maxlength="40"
-          value="<%= character.age || "" %>"
-        />
-      </label>
+        <label>
+          Alter
+          <input
+            name="age"
+            maxlength="40"
+            value="<%= character.age || "" %>"
+          />
+        </label>
 
-      <label>
-        Faceclaim
-        <input
-          name="faceclaim"
-          maxlength="120"
-          value="<%= character.faceclaim || "" %>"
-        />
-      </label>
+        <label>
+          Faceclaim
+          <input
+            name="faceclaim"
+            maxlength="120"
+            value="<%= character.faceclaim || "" %>"
+          />
+        </label>
 
-      <label>
-        Avatar-URL
-        <input
-          name="avatar_url"
-          type="url"
-          inputmode="url"
-          maxlength="500"
-          placeholder="https://..."
-          value="<%= character.avatar_url || "" %>"
-        />
-      </label>
+        <label>
+          Avatar-URL
+          <input
+            name="avatar_url"
+            type="url"
+            inputmode="url"
+            maxlength="500"
+            placeholder="https://..."
+            value="<%= character.avatar_url || "" %>"
+          />
+        </label>
 
-      <fieldset class="character-birthday-visibility-fieldset">
-        <legend>Geburtstag auf diesem Charakter anzeigen</legend>
-        <div class="account-birthday-visibility-options">
-          <label class="checkbox account-table-checkbox">
-            <input
-              name="public_birth_show_age"
-              type="checkbox"
-              value="1"
-              <%= character.public_birth_show_age ? "checked" : "" %>
-              <%= canCharacterShowBirthday ? "" : "disabled" %>
-            />
-            <span>Nur Alter</span>
-          </label>
-          <label class="checkbox account-table-checkbox">
-            <input
-              name="public_birth_show_day_month"
-              type="checkbox"
-              value="1"
-              <%= character.public_birth_show_day_month ? "checked" : "" %>
-              <%= canCharacterShowBirthday ? "" : "disabled" %>
-            />
-            <span>Tag und Monat</span>
-          </label>
-          <label class="checkbox account-table-checkbox">
-            <input
-              name="public_birth_show_year"
-              type="checkbox"
-              value="1"
-              <%= character.public_birth_show_year ? "checked" : "" %>
-              <%= canCharacterShowBirthday ? "" : "disabled" %>
-            />
-            <span>Jahr dazu</span>
-          </label>
-        </div>
-        <span class="gb-editor-helptext">
-          Standard ist alles aus. Die Angaben nutzen dein Geburtsdatum aus dem Account und gelten nur f&uuml;r diesen Charakter.
-          <% if (!canCharacterShowBirthday) { %>
-            Ohne Geburtsdatum im Account bleiben die H&auml;kchen deaktiviert.
-          <% } %>
-        </span>
-      </fieldset>
+        <fieldset class="character-birthday-visibility-fieldset">
+          <legend>Geburtstag auf diesem Charakter anzeigen</legend>
+          <div class="account-birthday-visibility-options">
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_age"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_age ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Nur Alter</span>
+            </label>
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_day_month"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_day_month ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Tag und Monat</span>
+            </label>
+            <label class="checkbox account-table-checkbox">
+              <input
+                name="public_birth_show_year"
+                type="checkbox"
+                value="1"
+                <%= character.public_birth_show_year ? "checked" : "" %>
+                <%= canCharacterShowBirthday ? "" : "disabled" %>
+              />
+              <span>Jahr dazu</span>
+            </label>
+          </div>
+          <span class="gb-editor-helptext">
+            Standard ist alles aus. Die Angaben nutzen dein Geburtsdatum aus dem Account und gelten nur f&uuml;r diesen Charakter.
+            <% if (!canCharacterShowBirthday) { %>
+              Ohne Geburtsdatum im Account bleiben die H&auml;kchen deaktiviert.
+            <% } %>
+          </span>
+        </fieldset>
+      <% } %>
 
       <label>
         Chat-Farbe
