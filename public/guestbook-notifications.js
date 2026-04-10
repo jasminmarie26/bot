@@ -204,6 +204,9 @@
     head.appendChild(closeButton);
     card.appendChild(head);
 
+    const body = document.createElement("div");
+    body.className = "guestbook-notification-panel-body";
+
     let currentActionWrap = null;
     let currentActionText = null;
     let currentActionLink = null;
@@ -370,8 +373,8 @@
       composeSection.appendChild(composeSummary);
       composeSection.appendChild(composeForm);
 
-      card.appendChild(currentActionWrap);
-      card.appendChild(composeSection);
+      body.appendChild(currentActionWrap);
+      body.appendChild(composeSection);
     }
 
     const threadWrap = document.createElement("section");
@@ -385,7 +388,8 @@
 
     threadShell.appendChild(thread);
     threadWrap.appendChild(threadShell);
-    card.appendChild(threadWrap);
+    body.appendChild(threadWrap);
+    card.appendChild(body);
     panel.appendChild(card);
     document.body.appendChild(panel);
 

@@ -12224,8 +12224,19 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 #guestbook-notification-panel .chat-whisper-panel-card {
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.8rem;
+  overflow: hidden;
+}
+
+#guestbook-notification-panel .guestbook-notification-panel-body {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.14rem;
 }
 
 #guestbook-notification-panel .guestbook-notification-approval-shell {
