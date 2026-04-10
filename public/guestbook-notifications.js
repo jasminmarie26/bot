@@ -124,7 +124,7 @@
     const latestSignoff = String(payload?.latest?.signoff || "").trim();
     const latestDecoration = String(payload?.latest?.decoration || "").trim();
     const hasVisibleNotification = latestId > 0 && latestType.length > 0;
-    const keepLinkVisible = hasVisibleNotification || canComposeNotifications;
+    const keepLinkVisible = hasVisibleNotification;
     const title = buildNotificationTitle(
       latestType,
       latestCharacterName,
@@ -802,12 +802,6 @@
     const hasVisibleNotification =
       Number(currentNotification.id || 0) > 0 &&
       normalizeNotificationType(currentNotification.type).length > 0;
-
-    if (canComposeNotifications) {
-      event.preventDefault();
-      await openSystemNotificationPanel(true);
-      return;
-    }
 
     if (!hasVisibleNotification) {
       event.preventDefault();

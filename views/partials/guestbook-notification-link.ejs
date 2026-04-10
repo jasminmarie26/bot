@@ -332,7 +332,7 @@
     data-notification-wish="<%= latestGuestbookNotification?.wish || "" %>"
     data-notification-signoff="<%= latestGuestbookNotification?.signoff || "" %>"
     data-notification-decoration="<%= latestGuestbookNotification?.decoration || "" %>"
-    <%= latestGuestbookNotification || canComposeGuestbookMail ? "" : "hidden" %>
+    <%= guestbookNotificationCount > 0 || latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
