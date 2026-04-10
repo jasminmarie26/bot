@@ -168,6 +168,16 @@
   const siteTitleLabel = chatTabSiteLabel;
   let unreadChatTabCount = 0;
   const chatBottomSnapThresholdPx = 48;
+  let skipChatReloadSnapshotOnUnload = false;
+
+  function clearChatReloadSnapshot() {
+    removeSessionStorage(chatReloadSnapshotKey);
+  }
+
+  function prepareForIntentionalChatLeave() {
+    skipChatReloadSnapshotOnUnload = true;
+    clearChatReloadSnapshot();
+  }
 
   function getChatBottomDistance() {
     if (!chatScroll) {
@@ -1182,6 +1192,11 @@
   }
 
   function saveChatReloadSnapshot(reason = "page-reload") {
+    if (skipChatReloadSnapshotOnUnload) {
+      clearChatReloadSnapshot();
+      return;
+    }
+
     writeSessionStorage(
       chatReloadSnapshotKey,
       JSON.stringify({
@@ -3390,6 +3405,29 @@
     renderWhisperThread();
     applyOnlineMenuState();
   });
+
+  const chatBrandLink = document.querySelector(".rp-topline .rp-logo");
+  if (chatBrandLink instanceof HTMLAnchorElement) {
+    chatBrandLink.addEventListener("click", (event) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const target = String(chatBrandLink.getAttribute("target") || "").trim().toLowerCase();
+      if (target && target !== "_self") {
+        return;
+      }
+
+      prepareForIntentionalChatLeave();
+    });
+  }
 
   const handleChatViewportResize = () => {
     const shouldKeepBottom = isChatNearBottom();
