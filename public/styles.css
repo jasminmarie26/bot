@@ -1928,6 +1928,7 @@ a:hover {
 }
 
 .guestbook-notification-link,
+.guestbook-compose-link,
 .character-notes-link,
 .social-panel-toggle {
   position: relative;
@@ -1952,6 +1953,8 @@ a:hover {
 
 .guestbook-notification-link:hover,
 .guestbook-notification-link:focus-visible,
+.guestbook-compose-link:hover,
+.guestbook-compose-link:focus-visible,
 .character-notes-link:hover,
 .character-notes-link:focus-visible,
 .social-panel-toggle:hover,
@@ -1964,6 +1967,13 @@ a:hover {
 }
 
 .character-notes-link.is-open {
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
+  color: color-mix(in srgb, var(--link) 88%, white 12%);
+}
+
+.guestbook-notification-link.is-open,
+.guestbook-compose-link.is-open {
   background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
   border-color: color-mix(in srgb, var(--link) 44%, var(--field-edge) 56%);
   color: color-mix(in srgb, var(--link) 88%, white 12%);
@@ -1989,6 +1999,7 @@ a:hover {
 }
 
 .guestbook-notification-icon,
+.guestbook-compose-icon,
 .character-notes-link-icon,
 .social-panel-toggle-icon {
   display: inline-flex;
@@ -1998,6 +2009,7 @@ a:hover {
 }
 
 .guestbook-notification-icon svg,
+.guestbook-compose-icon svg,
 .character-notes-link-icon svg,
 .social-panel-toggle-icon svg {
   width: 1rem;
@@ -2008,6 +2020,8 @@ a:hover {
 
 .guestbook-notification-icon svg path,
 .guestbook-notification-icon svg rect,
+.guestbook-compose-icon svg path,
+.guestbook-compose-icon svg rect,
 .character-notes-link-icon svg path,
 .character-notes-link-icon svg rect,
 .social-panel-toggle-icon svg path,
@@ -2020,6 +2034,12 @@ a:hover {
 }
 
 .guestbook-notification-icon .guestbook-envelope-fill {
+  fill: currentColor;
+  opacity: 0.14;
+  stroke: none;
+}
+
+.guestbook-compose-icon .guestbook-compose-paper-fill {
   fill: currentColor;
   opacity: 0.14;
   stroke: none;
@@ -12268,32 +12288,42 @@ body.page-guestbook-view .guestbook-entry-heading {
   padding-right: 0.14rem;
 }
 
-#guestbook-notification-panel .guestbook-notification-compose-field textarea {
-  min-height: clamp(7.5rem, 18vh, 10rem);
-  height: clamp(7.5rem, 18vh, 10rem);
-  max-height: min(28vh, 12rem);
+#guestbook-notification-panel .guestbook-notification-compose-toggle[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(62vh, 44rem);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 0.16rem;
+}
+
+#guestbook-notification-panel .guestbook-notification-compose-form {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0.72rem;
+}
+
+#guestbook-notification-panel .guestbook-notification-compose-field textarea {
+  min-height: clamp(8.5rem, 22vh, 13rem);
+  height: clamp(8.5rem, 22vh, 13rem);
+  max-height: none;
 }
 
 #guestbook-notification-panel .guestbook-notification-compose-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  padding-top: 0.55rem;
-  padding-bottom: 0.2rem;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--field-bg) 0%, transparent) 0%,
-    color-mix(in srgb, var(--field-bg) 86%, black 14%) 38%
-  );
+  position: static;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: transparent;
 }
 
 #guestbook-notification-panel .guestbook-notification-compose-toggle[open] ~ .chat-whisper-thread-wrap .guestbook-notification-approval-shell {
-  max-height: min(18vh, 180px);
+  max-height: min(24vh, 240px);
 }
 
 #guestbook-notification-panel .guestbook-notification-compose-toggle[open] ~ .chat-whisper-thread-wrap .whisper-thread {
-  max-height: min(12vh, 120px);
+  max-height: min(18vh, 180px);
 }
 
 #guestbook-notification-panel .guestbook-notification-approval-shell {

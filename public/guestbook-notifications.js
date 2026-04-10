@@ -1,6 +1,7 @@
 (() => {
   const notificationLink = document.querySelector("[data-guestbook-notification-root]");
   if (!notificationLink) return;
+  const composeShortcutLink = document.querySelector("[data-guestbook-compose-root]");
 
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
@@ -165,6 +166,18 @@
     updateCurrentNotificationShortcut();
   }
 
+  function syncPanelShortcutState() {
+    const isOpen = Boolean(systemPanelElements && !systemPanelElements.panel.hidden);
+
+    notificationLink.classList.toggle("is-open", isOpen);
+    notificationLink.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+    if (composeShortcutLink) {
+      composeShortcutLink.classList.toggle("is-open", isOpen);
+      composeShortcutLink.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+  }
+
   function getSystemPanelElements() {
     if (systemPanelElements) {
       return systemPanelElements;
@@ -220,6 +233,7 @@
     let composeHint = null;
     let composeStatus = null;
     let composeSubmit = null;
+    let composeSection = null;
 
     if (canComposeNotifications) {
       currentActionWrap = document.createElement("div");
@@ -237,7 +251,7 @@
       currentActionWrap.appendChild(currentActionText);
       currentActionWrap.appendChild(currentActionLink);
 
-      const composeSection = document.createElement("details");
+      composeSection = document.createElement("details");
       composeSection.className = "guestbook-notification-compose guestbook-notification-compose-toggle";
 
       const composeSummary = document.createElement("summary");
@@ -395,6 +409,7 @@
 
     const closePanel = () => {
       panel.hidden = true;
+      syncPanelShortcutState();
     };
 
     closeButton.addEventListener("click", closePanel);
@@ -410,6 +425,7 @@
       currentActionWrap,
       currentActionText,
       currentActionLink,
+      composeSection,
       composeForm,
       messageTypeSelect,
       recipientScopeSelect,
@@ -422,6 +438,50 @@
       composeSubmit
     };
     return systemPanelElements;
+  }
+
+  function openComposeShortcut(options = {}) {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.composeSection || !panelElements.composeForm) {
+      return;
+    }
+
+    const normalizedMessageType = normalizeNotificationType(options.messageType || staffMailNotificationType);
+    const normalizedRecipientScope = normalizeNotificationType(options.recipientScope || "single");
+
+    if (panelElements.messageTypeSelect) {
+      const hasRequestedType = Array.from(panelElements.messageTypeSelect.options || []).some(
+        (option) => normalizeNotificationType(option.value) === normalizedMessageType
+      );
+      if (hasRequestedType) {
+        panelElements.messageTypeSelect.value = normalizedMessageType;
+      }
+    }
+
+    if (panelElements.recipientScopeSelect) {
+      const hasRequestedScope = Array.from(panelElements.recipientScopeSelect.options || []).some(
+        (option) => normalizeNotificationType(option.value) === normalizedRecipientScope
+      );
+      if (hasRequestedScope) {
+        panelElements.recipientScopeSelect.value = normalizedRecipientScope;
+      }
+    }
+
+    panelElements.composeSection.open = true;
+    syncComposeFormState();
+    setComposeStatus("");
+
+    window.requestAnimationFrame(() => {
+      panelElements.composeSection.scrollIntoView({
+        block: "nearest",
+        inline: "nearest"
+      });
+
+      const focusTarget = !panelElements.recipientField?.hidden && panelElements.recipientInput
+        ? panelElements.recipientInput
+        : panelElements.subjectInput || panelElements.messageInput;
+      focusTarget?.focus();
+    });
   }
 
   function updateCurrentNotificationShortcut() {
@@ -706,10 +766,14 @@
     return response.json();
   }
 
-  async function openSystemNotificationPanel(markRead = true) {
+  async function openSystemNotificationPanel(markRead = true, options = {}) {
     const panelElements = getSystemPanelElements();
     panelElements.panel.hidden = false;
+    syncPanelShortcutState();
     updateCurrentNotificationShortcut();
+    if (options.openCompose) {
+      openComposeShortcut(options);
+    }
     renderSystemNotificationList([], { loading: true });
 
     try {
@@ -758,7 +822,19 @@
     await openSystemNotificationPanel(true);
   });
 
+  if (composeShortcutLink) {
+    composeShortcutLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await openSystemNotificationPanel(true, {
+        openCompose: true,
+        messageType: staffMailNotificationType,
+        recipientScope: "single"
+      });
+    });
+  }
+
   const panelElements = getSystemPanelElements();
+  syncPanelShortcutState();
   if (
     panelElements.composeForm &&
     panelElements.messageTypeSelect &&
