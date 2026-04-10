@@ -8,6 +8,7 @@
     '</svg>'
   ].join("");
 
+  const chatShell = document.getElementById("chat-shell");
   const chatBox = document.getElementById("chat-box");
   const chatScroll = document.getElementById("chat-scroll");
   const chatFeed = document.getElementById("chat-feed");
@@ -367,6 +368,32 @@
     return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : fallback;
   }
 
+  function hexToRgb(value, fallback = "#EFEFEF") {
+    const normalized = normalizeHexColor(value, fallback);
+    return {
+      r: Number.parseInt(normalized.slice(1, 3), 16),
+      g: Number.parseInt(normalized.slice(3, 5), 16),
+      b: Number.parseInt(normalized.slice(5, 7), 16)
+    };
+  }
+
+  function getHexBrightness(value, fallback = "#EFEFEF") {
+    const { r, g, b } = hexToRgb(value, fallback);
+    return (r * 299 + g * 587 + b * 114) / 1000;
+  }
+
+  function getReadableUiTextColor(value, fallback = "#EFEFEF") {
+    return getHexBrightness(value, fallback) > 150 ? "#1A1C20" : "#F4F5F7";
+  }
+
+  function getReadableUiMutedColor(value, fallback = "#EFEFEF") {
+    return getHexBrightness(value, fallback) > 150 ? "#5F6670" : "rgba(244, 245, 247, 0.72)";
+  }
+
+  function getReadableUiBorderColor(value, fallback = "#EFEFEF") {
+    return getHexBrightness(value, fallback) > 150 ? "rgba(26, 28, 32, 0.16)" : "rgba(244, 245, 247, 0.22)";
+  }
+
   function normalizeBackgroundUrl(value) {
     const normalized = String(value || "").trim();
     return /^https?:\/\/.+/i.test(normalized) ? normalized : "";
@@ -393,13 +420,54 @@
     const nextBackgroundColor = normalizeHexColor(payload?.chat_background_color, "#EFEFEF");
     const nextBackgroundUrl = normalizeBackgroundUrl(payload?.chat_background_url);
     const nextOpacity = normalizeOpacityPercent(payload?.chat_background_image_opacity, 100);
+    const nextChatInputBackgroundColor = normalizeHexColor(
+      payload?.chat_input_background_color,
+      "#EFEFEF"
+    );
+    const nextChatOnlineListBackgroundColor = normalizeHexColor(
+      payload?.chat_online_list_background_color,
+      "#EFEFEF"
+    );
+    const appearanceRoot = chatShell || chatBox || document.body;
 
-    chatBox.style.setProperty("--character-chat-background-color", nextBackgroundColor);
-    chatBox.style.setProperty(
+    appearanceRoot.style.setProperty("--character-chat-background-color", nextBackgroundColor);
+    appearanceRoot.style.setProperty(
       "--character-chat-background-image",
       nextBackgroundUrl ? `url(${JSON.stringify(nextBackgroundUrl)})` : "none"
     );
-    chatBox.style.setProperty("--character-chat-background-image-opacity", String(nextOpacity / 100));
+    appearanceRoot.style.setProperty("--character-chat-background-image-opacity", String(nextOpacity / 100));
+    appearanceRoot.style.setProperty(
+      "--character-chat-input-background-color",
+      nextChatInputBackgroundColor
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-input-text-color",
+      getReadableUiTextColor(nextChatInputBackgroundColor, "#EFEFEF")
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-input-placeholder-color",
+      getReadableUiMutedColor(nextChatInputBackgroundColor, "#EFEFEF")
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-input-border-color",
+      getReadableUiBorderColor(nextChatInputBackgroundColor, "#EFEFEF")
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-online-panel-background-color",
+      nextChatOnlineListBackgroundColor
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-online-panel-text-color",
+      getReadableUiTextColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-online-panel-muted-color",
+      getReadableUiMutedColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
+    );
+    appearanceRoot.style.setProperty(
+      "--character-chat-online-panel-border-color",
+      getReadableUiBorderColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
+    );
   }
 
   function formatRoleDisplayName(rawName, roleStyle = "") {

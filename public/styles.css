@@ -10759,6 +10759,51 @@ body.gb-editor-fullscreen-open {
   gap: 0.55rem;
 }
 
+.character-chat-ui-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.character-chat-ui-color-field {
+  display: grid;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.character-simple-color-input-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.character-simple-color-picker {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.45rem;
+  padding: 0.18rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--field-bg) 90%, black 10%);
+  cursor: pointer;
+}
+
+.character-simple-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.character-simple-color-picker::-webkit-color-swatch,
+.character-simple-color-picker::-moz-color-swatch {
+  border: 0;
+  border-radius: 8px;
+}
+
+.character-simple-color-preview {
+  min-width: 4rem;
+  font-size: 0.76rem;
+}
+
 .character-chat-background-option-label {
   font-size: 0.8rem;
   font-weight: 700;
@@ -11784,9 +11829,10 @@ body.page-guestbook-view .guestbook-entry-heading {
   height: 100%;
   overflow: hidden;
   padding: 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
+  border: 1px solid var(--character-chat-online-panel-border-color, #d3d8df);
   border-radius: 14px;
-  background: #efefef;
+  background: var(--character-chat-online-panel-background-color, #efefef);
+  color: var(--character-chat-online-panel-text-color, #1a1c20);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -11841,7 +11887,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 .chat-online-panel h2 {
   margin: 0 0 0.48rem;
   font-size: 0.9rem;
-  color: #1a1c20;
+  color: var(--character-chat-online-panel-text-color, #1a1c20);
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
@@ -11873,7 +11919,7 @@ body.page-guestbook-view .guestbook-entry-heading {
   border: 1px solid var(--field-edge);
   border-radius: 9px;
   background: color-mix(in srgb, var(--field-bg) 82%, white 18%);
-  color: #1a1c20;
+  color: var(--character-chat-online-panel-text-color, #1a1c20);
   text-decoration: none;
   padding: 0.34rem 0.44rem;
   line-height: 1.25;
@@ -11896,7 +11942,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .chat-online-item.is-disabled {
-  color: var(--muted);
+  color: var(--character-chat-online-panel-muted-color, var(--muted));
 }
 
 .chat-online-trigger {
@@ -11926,7 +11972,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 .chat-online-name {
   display: inline-block;
   max-width: 100%;
-  color: #1a1c20;
+  color: var(--character-chat-online-panel-text-color, #1a1c20);
 }
 
 .chat-online-name.is-afk {
@@ -11936,7 +11982,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 .chat-online-typing {
   display: inline-block;
   margin-left: 0.46rem;
-  color: var(--muted);
+  color: var(--character-chat-online-panel-muted-color, var(--muted));
   font-size: 0.82em;
   font-style: italic;
   line-height: 1.15;
@@ -12275,6 +12321,10 @@ body.page-guestbook-view .guestbook-entry-heading {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.8rem;
   overflow: hidden;
+}
+
+.page-chat .chat-online-panel .muted {
+  color: var(--character-chat-online-panel-muted-color, var(--muted));
 }
 
 #guestbook-notification-panel .guestbook-notification-panel-body {
@@ -13042,16 +13092,29 @@ body.page-guestbook-view .guestbook-entry-heading {
   overflow-y: hidden;
 }
 
-.page-chat #chat-input,
+.page-chat #chat-input {
+  background: var(--character-chat-input-background-color, #efefef);
+  border-color: var(--character-chat-input-border-color, #d3d8df);
+  color: var(--character-chat-input-text-color, #1a1c20);
+}
+
 .page-chat #whisper-input {
   background: #efefef;
   border-color: #d3d8df;
   color: #1a1c20;
 }
 
-.page-chat #chat-input::placeholder,
+.page-chat #chat-input::placeholder {
+  color: var(--character-chat-input-placeholder-color, #6f7680);
+}
+
 .page-chat #whisper-input::placeholder {
   color: #6f7680;
+}
+
+.page-chat #chat-input::placeholder,
+.page-chat #whisper-input::placeholder {
+  opacity: 1;
 }
 
 .chat-box .chat-system {

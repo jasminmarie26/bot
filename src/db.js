@@ -73,6 +73,8 @@ db.exec(`
     chat_background_url TEXT DEFAULT '',
     chat_background_color TEXT DEFAULT '#EFEFEF',
     chat_background_image_opacity INTEGER NOT NULL DEFAULT 100,
+    chat_input_background_color TEXT NOT NULL DEFAULT '#EFEFEF',
+    chat_online_list_background_color TEXT NOT NULL DEFAULT '#EFEFEF',
     is_public INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1205,6 +1207,14 @@ if (!characterColumns.includes("chat_background_color")) {
 
 if (!characterColumns.includes("chat_background_image_opacity")) {
   db.exec("ALTER TABLE characters ADD COLUMN chat_background_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!characterColumns.includes("chat_input_background_color")) {
+  db.exec("ALTER TABLE characters ADD COLUMN chat_input_background_color TEXT NOT NULL DEFAULT '#EFEFEF'");
+}
+
+if (!characterColumns.includes("chat_online_list_background_color")) {
+  db.exec("ALTER TABLE characters ADD COLUMN chat_online_list_background_color TEXT NOT NULL DEFAULT '#EFEFEF'");
 }
 
 if (!festplayPermissionColumns.includes("source")) {

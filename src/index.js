@@ -4547,6 +4547,8 @@ function normalizeCharacterInput(body) {
     chat_background_url: (body.chat_background_url || "").trim().slice(0, 500),
     chat_background_color: normalizeChatBackgroundColor(body.chat_background_color),
     chat_background_image_opacity: normalizeGuestbookOpacity(body.chat_background_image_opacity, 100),
+    chat_input_background_color: normalizeChatBackgroundColor(body.chat_input_background_color),
+    chat_online_list_background_color: normalizeChatBackgroundColor(body.chat_online_list_background_color),
     is_public: 1
   };
 }
@@ -6203,6 +6205,8 @@ function getPreferredFestplayChatCharacterForUser(userId, festplayId, preferredC
                 c.chat_background_url,
                 c.chat_background_color,
                 c.chat_background_image_opacity,
+                c.chat_input_background_color,
+                c.chat_online_list_background_color,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
            FROM characters c
            LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -15920,6 +15924,8 @@ app.get("/characters/new", requireAuth, (req, res) => {
       chat_background_url: "",
       chat_background_color: "#EFEFEF",
       chat_background_image_opacity: 100,
+      chat_input_background_color: "#EFEFEF",
+      chat_online_list_background_color: "#EFEFEF",
       is_public: 1
     }
   });
@@ -15976,6 +15982,18 @@ app.post("/characters", requireAuth, (req, res) => {
     );
   }
 
+  if (!isOptionalHexColorInputValid(req.body?.chat_input_background_color)) {
+    return renderCharacterCreateFormError(
+      "Die Farbe f\u00fcr das Nachrichtenfeld muss als Hex-Farbe wie #EFEFEF angegeben werden."
+    );
+  }
+
+  if (!isOptionalHexColorInputValid(req.body?.chat_online_list_background_color)) {
+    return renderCharacterCreateFormError(
+      "Die Farbe f\u00fcr die Online-Liste muss als Hex-Farbe wie #EFEFEF angegeben werden."
+    );
+  }
+
   if (
     findCharacterNameConflictForTarget(payload.name, {
       currentUserId: req.session.user.id,
@@ -15988,8 +16006,8 @@ app.post("/characters", requireAuth, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, chat_input_background_color, chat_online_list_background_color, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -16007,6 +16025,8 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.chat_background_url,
       payload.chat_background_color,
       payload.chat_background_image_opacity,
+      payload.chat_input_background_color,
+      payload.chat_online_list_background_color,
       payload.is_public
     );
 
@@ -17584,6 +17604,16 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       100
     );
   }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_input_background_color")) {
+    payload.chat_input_background_color = normalizeChatBackgroundColor(
+      character.chat_input_background_color
+    );
+  }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_online_list_background_color")) {
+    payload.chat_online_list_background_color = normalizeChatBackgroundColor(
+      character.chat_online_list_background_color
+    );
+  }
   const nameChanged = payload.name !== character.name;
   const characterFormValues = renameAvailability.can_change
     ? { ...character, ...payload }
@@ -17619,6 +17649,18 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
     return renderCharacterFormError(
       "Chat-Hintergrund-Farbe muss als Hex-Farbe wie #EFEFEF angegeben werden."
+    );
+  }
+
+  if (!isOptionalHexColorInputValid(req.body?.chat_input_background_color)) {
+    return renderCharacterFormError(
+      "Die Farbe f\u00fcr das Nachrichtenfeld muss als Hex-Farbe wie #EFEFEF angegeben werden."
+    );
+  }
+
+  if (!isOptionalHexColorInputValid(req.body?.chat_online_list_background_color)) {
+    return renderCharacterFormError(
+      "Die Farbe f\u00fcr die Online-Liste muss als Hex-Farbe wie #EFEFEF angegeben werden."
     );
   }
 
@@ -17661,7 +17703,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, public_birth_show_age = ?, public_birth_show_day_month = ?, public_birth_show_year = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, is_public = ?,
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, public_birth_show_age = ?, public_birth_show_day_month = ?, public_birth_show_year = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, chat_input_background_color = ?, chat_online_list_background_color = ?, is_public = ?,
          name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
@@ -17680,6 +17722,8 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.chat_background_url,
     payload.chat_background_color,
     payload.chat_background_image_opacity,
+    payload.chat_input_background_color,
+    payload.chat_online_list_background_color,
     payload.is_public,
     nameChanged ? 1 : 0,
     id
@@ -18748,6 +18792,12 @@ app.get("/chat", requireAuth, (req, res) => {
         chat_background_image_opacity: normalizeGuestbookOpacity(
           preferredCharacter.chat_background_image_opacity,
           100
+        ),
+        chat_input_background_color: normalizeChatBackgroundColor(
+          preferredCharacter.chat_input_background_color
+        ),
+        chat_online_list_background_color: normalizeChatBackgroundColor(
+          preferredCharacter.chat_online_list_background_color
         )
       };
     }
@@ -20644,6 +20694,8 @@ function getPreferredCharacterForUser(
                 c.chat_background_url,
                 c.chat_background_color,
                 c.chat_background_image_opacity,
+                c.chat_input_background_color,
+                c.chat_online_list_background_color,
                 COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
          FROM characters c
          LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -20663,6 +20715,8 @@ function getPreferredCharacterForUser(
               c.chat_background_url,
               c.chat_background_color,
               c.chat_background_image_opacity,
+              c.chat_input_background_color,
+              c.chat_online_list_background_color,
               COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
        FROM characters c
        LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
@@ -20932,6 +20986,10 @@ function emitCharacterAppearanceUpdate(userId, characterId) {
     chat_background_image_opacity: normalizeGuestbookOpacity(
       character.chat_background_image_opacity,
       100
+    ),
+    chat_input_background_color: normalizeChatBackgroundColor(character.chat_input_background_color),
+    chat_online_list_background_color: normalizeChatBackgroundColor(
+      character.chat_online_list_background_color
     )
   });
 }
@@ -21535,6 +21593,12 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     chat_background_image_opacity: normalizeGuestbookOpacity(
       selectedCharacterAppearance?.chat_background_image_opacity,
       100
+    ),
+    chat_input_background_color: normalizeChatBackgroundColor(
+      selectedCharacterAppearance?.chat_input_background_color
+    ),
+    chat_online_list_background_color: normalizeChatBackgroundColor(
+      selectedCharacterAppearance?.chat_online_list_background_color
     ),
     auto_afk_enabled: normalizeAutoAfkEnabled(memberSocket?.data?.user?.auto_afk_enabled),
     afk_timeout_minutes: normalizeAfkTimeoutMinutes(memberSocket?.data?.user?.afk_timeout_minutes)

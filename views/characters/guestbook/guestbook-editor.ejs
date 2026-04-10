@@ -371,6 +371,65 @@
             </strong>
           </div>
         </div>
+        <div class="character-chat-ui-color-grid">
+          <label class="character-chat-ui-color-field">
+            <span class="character-chat-background-option-label">Nachricht eingeben</span>
+            <span class="gb-editor-helptext">
+              Hintergrundfarbe f&uuml;r dein Texteingabefeld unten im Chat.
+            </span>
+            <div class="character-simple-color-input-wrap">
+              <input
+                id="character-chat-input-background-color-text"
+                name="chat_input_background_color"
+                value="<%= character.chat_input_background_color || "#EFEFEF" %>"
+                maxlength="7"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <input
+                id="character-chat-input-background-color-picker"
+                class="character-simple-color-picker"
+                type="color"
+                value="<%= character.chat_input_background_color || "#EFEFEF" %>"
+                aria-label="Farbe f&uuml;r das Eingabefeld ausw&auml;hlen"
+              />
+              <span
+                id="character-chat-input-background-color-preview"
+                class="gb-color-preview character-simple-color-preview"
+                aria-hidden="true"
+              >Aa</span>
+            </div>
+          </label>
+
+          <label class="character-chat-ui-color-field">
+            <span class="character-chat-background-option-label">Online-Liste</span>
+            <span class="gb-editor-helptext">
+              Hintergrundfarbe f&uuml;r die rechte Online-Charakterliste im Chat.
+            </span>
+            <div class="character-simple-color-input-wrap">
+              <input
+                id="character-chat-online-list-background-color-text"
+                name="chat_online_list_background_color"
+                value="<%= character.chat_online_list_background_color || "#EFEFEF" %>"
+                maxlength="7"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <input
+                id="character-chat-online-list-background-color-picker"
+                class="character-simple-color-picker"
+                type="color"
+                value="<%= character.chat_online_list_background_color || "#EFEFEF" %>"
+                aria-label="Farbe f&uuml;r die Online-Liste ausw&auml;hlen"
+              />
+              <span
+                id="character-chat-online-list-background-color-preview"
+                class="gb-color-preview character-simple-color-preview"
+                aria-hidden="true"
+              >Liste</span>
+            </div>
+          </label>
+        </div>
         <div id="character-chat-background-preview" class="character-chat-background-preview" aria-live="polite">
           <div class="character-chat-background-preview-copy">
             <span class="character-chat-background-preview-label">Live-Vorschau</span>

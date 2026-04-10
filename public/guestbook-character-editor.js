@@ -23,6 +23,18 @@
   const backgroundColorHueHandle = document.getElementById("character-chat-background-color-hue-handle");
   const backgroundColorPanelSwatch = document.getElementById("character-chat-background-color-panel-swatch");
   const backgroundColorPanelValue = document.getElementById("character-chat-background-color-panel-value");
+  const chatInputBackgroundColorText = document.getElementById("character-chat-input-background-color-text");
+  const chatInputBackgroundColorPicker = document.getElementById("character-chat-input-background-color-picker");
+  const chatInputBackgroundColorPreview = document.getElementById("character-chat-input-background-color-preview");
+  const chatOnlineListBackgroundColorText = document.getElementById(
+    "character-chat-online-list-background-color-text"
+  );
+  const chatOnlineListBackgroundColorPicker = document.getElementById(
+    "character-chat-online-list-background-color-picker"
+  );
+  const chatOnlineListBackgroundColorPreview = document.getElementById(
+    "character-chat-online-list-background-color-preview"
+  );
   const chatBackgroundInput = document.getElementById("character-chat-background-url");
   const chatBackgroundOpacityInput = document.getElementById("character-chat-background-opacity");
   const chatBackgroundOpacityValue = document.getElementById("character-chat-background-opacity-value");
@@ -348,6 +360,44 @@
     updateEnhancedBackgroundPreview();
   };
 
+  const bindSimpleColorField = ({
+    textInput,
+    pickerInput,
+    previewNode,
+    fallback = "#EFEFEF"
+  }) => {
+    if (!textInput || !pickerInput || !previewNode) {
+      return;
+    }
+
+    const render = (value, forceText = false) => {
+      const normalized = normalizeBackgroundColor(value || fallback);
+      if (forceText) {
+        textInput.value = normalized;
+      }
+      pickerInput.value = normalized;
+      previewNode.style.backgroundColor = normalized;
+      previewNode.style.color = getReadablePreviewTextColor(normalized);
+    };
+
+    textInput.addEventListener("input", () => {
+      const normalized = normalizeHexColor(textInput.value);
+      if (normalized) {
+        render(normalized);
+      }
+    });
+
+    textInput.addEventListener("blur", () => {
+      render(textInput.value, true);
+    });
+
+    pickerInput.addEventListener("input", () => {
+      render(pickerInput.value, true);
+    });
+
+    render(textInput.value || fallback, true);
+  };
+
   const openColorPanel = () => {
     colorPanel.hidden = false;
     colorTrigger.setAttribute("aria-expanded", "true");
@@ -448,5 +498,15 @@
 
   setStateFromHex(colorText.value, true);
   setBackgroundColorStateFromHex(backgroundColorText.value || "#EFEFEF", true);
+  bindSimpleColorField({
+    textInput: chatInputBackgroundColorText,
+    pickerInput: chatInputBackgroundColorPicker,
+    previewNode: chatInputBackgroundColorPreview
+  });
+  bindSimpleColorField({
+    textInput: chatOnlineListBackgroundColorText,
+    pickerInput: chatOnlineListBackgroundColorPicker,
+    previewNode: chatOnlineListBackgroundColorPreview
+  });
   renderBackgroundPreview();
 })();
