@@ -215,12 +215,6 @@
       }
 
       event.preventDefault();
-      window.close();
-      window.setTimeout(() => {
-        if (!window.closed) {
-          window.location.href = fallbackUrl;
-        }
-      }, 80);
     });
   })();
 </script>
