@@ -82,10 +82,12 @@
 ) / 100; %>
 <% const chatInputBackgroundColor = normalizeChatUiColor(activeCharacter?.chat_input_background_color, "#EFEFEF"); %>
 <% const chatOnlineListBackgroundColor = normalizeChatUiColor(activeCharacter?.chat_online_list_background_color, "#EFEFEF"); %>
-<% const chatShellStyle = [
+<% const chatBackgroundStyle = [
   `--character-chat-background-color: ${chatBackgroundColor};`,
   `--character-chat-background-image-opacity: ${chatBackgroundImageOpacity};`,
-  chatBackgroundUrl ? `--character-chat-background-image: url(${JSON.stringify(chatBackgroundUrl)});` : "",
+  chatBackgroundUrl ? `--character-chat-background-image: url(${JSON.stringify(chatBackgroundUrl)});` : ""
+].filter(Boolean).join(" "); %>
+<% const chatShellStyle = [
   `--character-chat-input-background-color: ${chatInputBackgroundColor};`,
   `--character-chat-input-text-color: ${getChatUiTextColor(chatInputBackgroundColor)};`,
   `--character-chat-input-placeholder-color: ${getChatUiMutedColor(chatInputBackgroundColor)};`,
@@ -435,6 +437,7 @@
         <div
           id="chat-box"
           class="chat-box"
+          style="<%= chatBackgroundStyle %>"
           data-room-id="<%= activeRoom ? activeRoom.id : '' %>"
           data-server-id="<%= activeServerId %>"
           data-standard-room-id="<%= standardRoom ? standardRoom.id : '' %>"

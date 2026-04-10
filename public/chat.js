@@ -428,43 +428,44 @@
       payload?.chat_online_list_background_color,
       "#EFEFEF"
     );
-    const appearanceRoot = chatShell || chatBox || document.body;
+    const backgroundRoot = chatBox || chatShell || document.body;
+    const uiRoot = chatShell || chatBox || document.body;
 
-    appearanceRoot.style.setProperty("--character-chat-background-color", nextBackgroundColor);
-    appearanceRoot.style.setProperty(
+    backgroundRoot.style.setProperty("--character-chat-background-color", nextBackgroundColor);
+    backgroundRoot.style.setProperty(
       "--character-chat-background-image",
       nextBackgroundUrl ? `url(${JSON.stringify(nextBackgroundUrl)})` : "none"
     );
-    appearanceRoot.style.setProperty("--character-chat-background-image-opacity", String(nextOpacity / 100));
-    appearanceRoot.style.setProperty(
+    backgroundRoot.style.setProperty("--character-chat-background-image-opacity", String(nextOpacity / 100));
+    uiRoot.style.setProperty(
       "--character-chat-input-background-color",
       nextChatInputBackgroundColor
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-input-text-color",
       getReadableUiTextColor(nextChatInputBackgroundColor, "#EFEFEF")
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-input-placeholder-color",
       getReadableUiMutedColor(nextChatInputBackgroundColor, "#EFEFEF")
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-input-border-color",
       getReadableUiBorderColor(nextChatInputBackgroundColor, "#EFEFEF")
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-online-panel-background-color",
       nextChatOnlineListBackgroundColor
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-online-panel-text-color",
       getReadableUiTextColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-online-panel-muted-color",
       getReadableUiMutedColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
     );
-    appearanceRoot.style.setProperty(
+    uiRoot.style.setProperty(
       "--character-chat-online-panel-border-color",
       getReadableUiBorderColor(nextChatOnlineListBackgroundColor, "#EFEFEF")
     );
