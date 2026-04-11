@@ -1028,6 +1028,9 @@
 
     if (!hasVisibleNotification) {
       event.preventDefault();
+      if (canComposeNotifications) {
+        await openSystemNotificationPanel(false);
+      }
       return;
     }
 

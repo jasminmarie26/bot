@@ -32,7 +32,7 @@
   ]; %>
   <% const isSystemNotification = systemNotificationTypes.includes(latestNotificationType); %>
   <% const guestbookNotificationTitle = !latestGuestbookNotification
-    ? "Briefe"
+    ? "Briefe & Gaestebuch-Nachrichten"
     : latestNotificationType === "festplay_application"
     ? latestGuestbookNotification?.festplay_name
       ? latestGuestbookNotification?.applicant_character_name
@@ -291,29 +291,6 @@
       </div>
     </div>
   </div>
-  <% if (canComposePersonalStaffPm) { %>
-    <button
-      type="button"
-      class="guestbook-compose-link"
-      aria-label="<%= guestbookComposeTitle %>"
-      title="<%= guestbookComposeTitle %>"
-      aria-haspopup="dialog"
-      aria-controls="guestbook-notification-panel"
-      aria-expanded="false"
-      data-guestbook-compose-root
-    >
-      <span class="guestbook-compose-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path class="guestbook-compose-paper-fill" d="M6.1 4.1h8.9l3 3v11.15A1.65 1.65 0 0 1 16.35 20H6.75A1.65 1.65 0 0 1 5.1 18.35V5.75A1.65 1.65 0 0 1 6.75 4.1Z" />
-          <path d="M15 4.1v3h3" />
-          <path d="M8.05 9.25h6.8" />
-          <path d="M8.05 12.1h4.35" />
-          <path d="m11.7 16.95 4.65-4.65 1.85 1.85-4.65 4.65-2.65.8z" />
-          <path d="m15.95 12.7 1.2-1.2a1.15 1.15 0 0 1 1.65 0l.35.35a1.17 1.17 0 0 1 0 1.65l-1.2 1.2" />
-        </svg>
-      </span>
-    </button>
-  <% } %>
   <a
     class="guestbook-notification-link<%= isSystemNotification ? ' guestbook-notification-link-system' : '' %>"
     href="/guestbook/notifications/open"
@@ -338,7 +315,6 @@
     data-notification-wish="<%= latestGuestbookNotification?.wish || "" %>"
     data-notification-signoff="<%= latestGuestbookNotification?.signoff || "" %>"
     data-notification-decoration="<%= latestGuestbookNotification?.decoration || "" %>"
-    <%= guestbookNotificationCount > 0 || latestGuestbookNotification ? "" : "hidden" %>
   >
     <span class="guestbook-notification-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" focusable="false">
