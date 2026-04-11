@@ -347,7 +347,7 @@
       recipientInput.autocomplete = "off";
       recipientInput.placeholder = canUseAdvancedComposeControls
         ? "Accountname, Accountnummer oder Charaktername"
-        : "Accountname, Accountnummer oder Charaktername";
+        : "Charaktername";
 
       recipientField.appendChild(recipientLabel);
       recipientField.appendChild(recipientInput);
@@ -738,11 +738,11 @@
     }
 
     panelElements.recipientInput.placeholder = isPersonalStaffPm
-      ? "Accountname, Accountnummer oder Charaktername"
+      ? "Charaktername"
       : "Accountname, Accountnummer oder Charaktername";
 
     panelElements.composeHint.textContent = isPersonalStaffPm
-      ? "Schreibe eine persönliche PM an einen einzelnen User. Suche per Accountname, Accountnummer oder Charaktername."
+      ? "Schreibe eine persönliche PM an einen einzelnen User. Gib den Charakternamen ein."
       : isSingleRecipient
       ? isSystemMessage
         ? "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
