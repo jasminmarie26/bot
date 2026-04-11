@@ -1719,11 +1719,6 @@ function normalizeSystemNotificationActorUserId(value) {
   return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
 }
 
-function normalizeSystemNotificationCharacterId(value) {
-  const parsedValue = Number(value);
-  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
-}
-
 function createSystemNotificationEntries(entries) {
   const normalizedEntries = (Array.isArray(entries) ? entries : [])
     .map((entry) => {
@@ -1753,10 +1748,8 @@ function createSystemNotificationEntries(entries) {
         isRead: Number(entry?.isRead) === 1 ? 1 : 0,
         senderUserId: normalizeSystemNotificationActorUserId(entry?.senderUserId),
         senderLabel: String(entry?.senderLabel || "").trim().slice(0, 120),
-        sourceCharacterId: normalizeSystemNotificationCharacterId(entry?.sourceCharacterId),
         recipientUserId: normalizeSystemNotificationActorUserId(entry?.recipientUserId),
         recipientLabel: String(entry?.recipientLabel || "").trim().slice(0, 120),
-        targetCharacterId: normalizeSystemNotificationCharacterId(entry?.targetCharacterId),
         mailboxKind: normalizeSystemNotificationMailboxKind(entry?.mailboxKind)
       };
     })
@@ -1778,15 +1771,13 @@ function createSystemNotificationEntries(entries) {
        message,
        sender_user_id,
        sender_label,
-       source_character_id,
        recipient_user_id,
        recipient_label,
-       target_character_id,
        mailbox_kind,
        is_read,
        created_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))
      ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
   );
   const changedUserIds = [];
@@ -1801,10 +1792,8 @@ function createSystemNotificationEntries(entries) {
         record.message,
         record.senderUserId,
         record.senderLabel,
-        record.sourceCharacterId,
         record.recipientUserId,
         record.recipientLabel,
-        record.targetCharacterId,
         record.mailboxKind,
         record.isRead
       );
@@ -1958,7 +1947,7 @@ function createSystemNotificationForUserIds(userIds, notificationType, notificat
   ).createdCount;
 }
 
-function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, message, options = {}) {
+function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, message) {
   const senderUserId = Number(senderUser?.id);
   const recipientUserId = Number(recipientUser?.id);
   if (
@@ -1983,10 +1972,8 @@ function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, 
     };
   }
 
-  const senderLabel =
-    String(options?.senderLabel || "").trim().slice(0, 120) || buildGuestbookNotificationSenderLabel(senderUser);
-  const recipientLabel =
-    String(options?.recipientLabel || "").trim().slice(0, 120) || buildGuestbookNotificationSenderLabel(recipientUser);
+  const senderLabel = buildGuestbookNotificationSenderLabel(senderUser);
+  const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUser);
   const notificationKey = buildSystemNotificationUniqueKey("staff-pm");
 
   return createSystemNotificationEntries([
@@ -1998,10 +1985,8 @@ function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, 
       message: normalizedMessage,
       senderUserId,
       senderLabel,
-      sourceCharacterId: options?.sourceCharacterId,
       recipientUserId,
       recipientLabel,
-      targetCharacterId: options?.targetCharacterId,
       mailboxKind: "inbox",
       isRead: 0
     },
@@ -2013,114 +1998,12 @@ function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, 
       message: normalizedMessage,
       senderUserId,
       senderLabel,
-      sourceCharacterId: options?.sourceCharacterId,
       recipientUserId,
       recipientLabel,
-      targetCharacterId: options?.targetCharacterId,
       mailboxKind: "sent",
       isRead: 1
     }
   ]);
-}
-
-function isSystemNotificationVisibleForActiveCharacter(notification, activeCharacter) {
-  const normalizedType = normalizeNotificationType(notification?.notification_type || notification?.type || "");
-  if (normalizedType !== PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
-    return true;
-  }
-
-  const mailboxKind = normalizeSystemNotificationMailboxKind(notification?.mailbox_kind);
-  const sourceCharacterId = normalizeSystemNotificationCharacterId(notification?.source_character_id);
-  const targetCharacterId = normalizeSystemNotificationCharacterId(notification?.target_character_id);
-  if (!sourceCharacterId && !targetCharacterId) {
-    return true;
-  }
-
-  const activeCharacterId = Number(activeCharacter?.id);
-  if (!Number.isInteger(activeCharacterId) || activeCharacterId < 1) {
-    return false;
-  }
-
-  if (mailboxKind === "sent") {
-    return !sourceCharacterId || sourceCharacterId === activeCharacterId;
-  }
-
-  return !targetCharacterId || targetCharacterId === activeCharacterId;
-}
-
-function filterSystemNotificationsForActiveCharacter(notifications, activeCharacter) {
-  return (Array.isArray(notifications) ? notifications : []).filter((notification) =>
-    isSystemNotificationVisibleForActiveCharacter(notification, activeCharacter)
-  );
-}
-
-function getAllSystemNotificationRowsForUser(userId, unreadOnly = false) {
-  const parsedUserId = Number(userId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
-    return [];
-  }
-
-  return db
-    .prepare(
-      `SELECT sn.id,
-              sn.user_id,
-              sn.notification_type,
-              sn.notification_key,
-              sn.title,
-              sn.message,
-              sn.sender_user_id,
-              sn.sender_label,
-              sn.source_character_id,
-              sn.recipient_user_id,
-              sn.recipient_label,
-              sn.target_character_id,
-              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
-              sn.is_read,
-              sn.created_at
-         FROM system_notifications sn
-        WHERE sn.user_id = ?
-          AND trim(COALESCE(sn.message, '')) != ''
-          ${unreadOnly ? "AND sn.is_read = 0" : ""}
-        ORDER BY sn.created_at DESC, sn.id DESC`
-    )
-    .all(parsedUserId);
-}
-
-function getSystemNotificationRowForUser(notificationId, userId) {
-  const parsedNotificationId = Number(notificationId);
-  const parsedUserId = Number(userId);
-  if (
-    !Number.isInteger(parsedNotificationId) ||
-    parsedNotificationId < 1 ||
-    !Number.isInteger(parsedUserId) ||
-    parsedUserId < 1
-  ) {
-    return null;
-  }
-
-  return db
-    .prepare(
-      `SELECT sn.id,
-              sn.user_id,
-              sn.notification_type,
-              sn.notification_key,
-              sn.title,
-              sn.message,
-              sn.sender_user_id,
-              sn.sender_label,
-              sn.source_character_id,
-              sn.recipient_user_id,
-              sn.recipient_label,
-              sn.target_character_id,
-              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
-              sn.is_read,
-              sn.created_at
-         FROM system_notifications sn
-        WHERE sn.id = ?
-          AND sn.user_id = ?
-        LIMIT 1`
-    )
-    .get(parsedNotificationId, parsedUserId);
 }
 
 function buildSystemNotificationUniqueKey(prefix = "system") {
@@ -10619,19 +10502,24 @@ function getUnreadFestplayApplicationNotificationCountForUser(userId) {
   );
 }
 
-function getUnreadSystemNotificationCountForUser(userId, options = {}) {
+function getUnreadSystemNotificationCountForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return 0;
   }
 
-  return filterSystemNotificationsForActiveCharacter(
-    getAllSystemNotificationRowsForUser(parsedUserId, true),
-    options?.activeCharacter || null
-  ).length;
+  return Number(
+    db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM system_notifications
+         WHERE user_id = ? AND is_read = 0`
+      )
+      .get(parsedUserId)?.count || 0
+  );
 }
 
-function getUnreadGuestbookNotificationCountForUser(userId, options = {}) {
+function getUnreadGuestbookNotificationCountForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return 0;
@@ -10650,7 +10538,7 @@ function getUnreadGuestbookNotificationCountForUser(userId, options = {}) {
   return (
     guestbookCount +
     getUnreadFestplayApplicationNotificationCountForUser(parsedUserId) +
-    getUnreadSystemNotificationCountForUser(parsedUserId, options)
+    getUnreadSystemNotificationCountForUser(parsedUserId)
   );
 }
 
@@ -10726,29 +10614,67 @@ function getFestplayApprovalNotificationsForUser(userId, unreadOnly = false, lim
     .all(parsedUserId, parsedLimit);
 }
 
-function getLatestSystemNotificationForUser(userId, unreadOnly = true, options = {}) {
+function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return null;
   }
 
-  return filterSystemNotificationsForActiveCharacter(
-    getAllSystemNotificationRowsForUser(parsedUserId, unreadOnly),
-    options?.activeCharacter || null
-  )[0] || null;
+  return db
+    .prepare(
+      `SELECT sn.id,
+              sn.user_id,
+              sn.notification_type,
+              sn.notification_key,
+              sn.title,
+              sn.message,
+              sn.sender_user_id,
+              sn.sender_label,
+              sn.recipient_user_id,
+              sn.recipient_label,
+              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
+              sn.is_read,
+              sn.created_at
+        FROM system_notifications sn
+       WHERE sn.user_id = ?
+         AND trim(COALESCE(sn.message, '')) != ''
+         ${unreadOnly ? "AND sn.is_read = 0" : ""}
+       ORDER BY sn.created_at DESC, sn.id DESC
+       LIMIT 1`
+    )
+    .get(parsedUserId);
 }
 
-function getSystemNotificationsForUser(userId, unreadOnly = false, limit = 25, options = {}) {
+function getSystemNotificationsForUser(userId, unreadOnly = false, limit = 25) {
   const parsedUserId = Number(userId);
   const parsedLimit = Math.max(1, Math.min(100, Number(limit) || 25));
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return [];
   }
 
-  return filterSystemNotificationsForActiveCharacter(
-    getAllSystemNotificationRowsForUser(parsedUserId, unreadOnly),
-    options?.activeCharacter || null
-  ).slice(0, parsedLimit);
+  return db
+    .prepare(
+      `SELECT sn.id,
+              sn.user_id,
+              sn.notification_type,
+              sn.notification_key,
+              sn.title,
+              sn.message,
+              sn.sender_user_id,
+              sn.sender_label,
+              sn.recipient_user_id,
+              sn.recipient_label,
+              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
+              sn.is_read,
+              sn.created_at
+        FROM system_notifications sn
+       WHERE sn.user_id = ?
+         AND trim(COALESCE(sn.message, '')) != ''
+         ${unreadOnly ? "AND sn.is_read = 0" : ""}
+       ORDER BY sn.created_at DESC, sn.id DESC
+       LIMIT ?`
+    )
+    .all(parsedUserId, parsedLimit);
 }
 
 function compareNotificationRecency(left, right) {
@@ -10779,18 +10705,18 @@ function getSystemInboxNotificationsForUser(userId, options = {}) {
   }
 
   return [
-    ...getSystemNotificationsForUser(parsedUserId, unreadOnly, parsedLimit, options),
+    ...getSystemNotificationsForUser(parsedUserId, unreadOnly, parsedLimit),
     ...getFestplayApprovalNotificationsForUser(parsedUserId, unreadOnly, parsedLimit)
   ]
     .sort(compareNotificationRecency)
     .slice(0, parsedLimit);
 }
 
-function getLatestSystemInboxNotificationForUser(userId, unreadOnly = false, options = {}) {
-  return getSystemInboxNotificationsForUser(userId, { ...options, unreadOnly, limit: 1 })[0] || null;
+function getLatestSystemInboxNotificationForUser(userId, unreadOnly = false) {
+  return getSystemInboxNotificationsForUser(userId, { unreadOnly, limit: 1 })[0] || null;
 }
 
-function getLatestGuestbookNotificationForUser(userId, unreadOnly = true, options = {}) {
+function getLatestGuestbookNotificationForUser(userId, unreadOnly = true) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return null;
@@ -10818,7 +10744,7 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true, option
     )
     .get(parsedUserId);
   const festplayNotification = getLatestFestplayApplicationNotificationForUser(parsedUserId, unreadOnly);
-  const systemNotification = getLatestSystemNotificationForUser(parsedUserId, unreadOnly, options);
+  const systemNotification = getLatestSystemNotificationForUser(parsedUserId, unreadOnly);
 
   return pickLatestNotification([
     guestbookNotification,
@@ -10827,15 +10753,15 @@ function getLatestGuestbookNotificationForUser(userId, unreadOnly = true, option
   ]);
 }
 
-function getLatestVisibleGuestbookNotificationForUser(userId, options = {}) {
+function getLatestVisibleGuestbookNotificationForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return null;
   }
 
-  return getUnreadGuestbookNotificationCountForUser(parsedUserId, options) > 0
-    ? getLatestGuestbookNotificationForUser(parsedUserId, true, options)
-    : getLatestSystemInboxNotificationForUser(parsedUserId, false, options);
+  return getUnreadGuestbookNotificationCountForUser(parsedUserId) > 0
+    ? getLatestGuestbookNotificationForUser(parsedUserId, true)
+    : getLatestSystemInboxNotificationForUser(parsedUserId, false);
 }
 
 function socketChannelForGuestbookNotifications(userId) {
@@ -10908,10 +10834,8 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
       message: String(notification.message || "").trim(),
       sender_user_id: Number(notification.sender_user_id) || 0,
       sender_label: String(notification.sender_label || "").trim(),
-      source_character_id: Number(notification.source_character_id) || 0,
       recipient_user_id: Number(notification.recipient_user_id) || 0,
       recipient_label: String(notification.recipient_label || "").trim(),
-      target_character_id: Number(notification.target_character_id) || 0,
       mailbox_kind: normalizeSystemNotificationMailboxKind(notification.mailbox_kind),
       is_read: Number(notification.is_read) === 1,
       created_at: String(notification.created_at || "").trim()
@@ -11118,10 +11042,10 @@ function buildGuestbookNotificationPayloadForUser(userId, options = {}) {
     };
   }
 
-  const count = getUnreadGuestbookNotificationCountForUser(parsedUserId, options);
+  const count = getUnreadGuestbookNotificationCountForUser(parsedUserId);
   const latestNotification = count > 0
-    ? getLatestGuestbookNotificationForUser(parsedUserId, true, options)
-    : getLatestSystemInboxNotificationForUser(parsedUserId, false, options);
+    ? getLatestGuestbookNotificationForUser(parsedUserId, true)
+    : getLatestSystemInboxNotificationForUser(parsedUserId, false);
 
   return {
     count,
@@ -11137,63 +11061,10 @@ function buildSystemInboxListForUser(userId, options = {}) {
 
   return getSystemInboxNotificationsForUser(parsedUserId, {
     unreadOnly: false,
-    limit: options?.limit || 30,
-    activeCharacter: options?.activeCharacter || null
+    limit: options?.limit || 30
   })
     .map((notification) => buildNotificationPayloadEntryForUser(notification, parsedUserId, options))
     .filter(Boolean);
-}
-
-function getPreferredNotificationCharacterForSocket(socket) {
-  const currentUserId = Number(socket?.data?.user?.id);
-  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
-    return null;
-  }
-
-  const activeCharacterId = Number(socket?.data?.activeCharacterId);
-  if (Number.isInteger(activeCharacterId) && activeCharacterId > 0) {
-    const activeCharacter = getCharacterById(activeCharacterId);
-    if (activeCharacter && Number(activeCharacter.user_id) === currentUserId) {
-      return activeCharacter;
-    }
-  }
-
-  const preferredMap = normalizePreferredCharacterMap(
-    socket?.data?.preferredCharacterIds || socket?.request?.session?.preferred_character_ids
-  );
-  const preferredServerId = getStoredCharacterServerId(socket?.request?.session?.preferred_character_server_id);
-  const candidateServerIds = preferredServerId ? [preferredServerId] : [];
-  CHARACTER_SERVER_IDS.forEach((serverId) => {
-    if (
-      !candidateServerIds.includes(serverId) &&
-      Number.isInteger(Number(preferredMap[serverId])) &&
-      Number(preferredMap[serverId]) > 0
-    ) {
-      candidateServerIds.push(serverId);
-    }
-  });
-  const candidateIds = candidateServerIds
-    .map((serverId) => Number(preferredMap[serverId]))
-    .filter((characterId) => Number.isInteger(characterId) && characterId > 0);
-
-  for (const characterId of candidateIds) {
-    const character = getCharacterById(characterId);
-    if (character && Number(character.user_id) === currentUserId) {
-      return character;
-    }
-  }
-
-  return db
-    .prepare(
-      `SELECT c.*, u.username AS owner_name, f.name AS festplay_name
-       FROM characters c
-       JOIN users u ON u.id = c.user_id
-       LEFT JOIN festplays f ON f.id = c.festplay_id
-       WHERE c.user_id = ?
-       ORDER BY c.updated_at DESC, c.id DESC
-       LIMIT 1`
-    )
-    .get(currentUserId);
 }
 
 function emitGuestbookNotificationUpdateForUser(userId) {
@@ -11202,14 +11073,10 @@ function emitGuestbookNotificationUpdateForUser(userId) {
     return;
   }
 
-  getAllSocketsForUser(parsedUserId).forEach((memberSocket) => {
-    memberSocket.emit(
-      "guestbook:notification:update",
-      buildGuestbookNotificationPayloadForUser(parsedUserId, {
-        activeCharacter: getPreferredNotificationCharacterForSocket(memberSocket)
-      })
-    );
-  });
+  io.to(socketChannelForGuestbookNotifications(parsedUserId)).emit(
+    "guestbook:notification:update",
+    buildGuestbookNotificationPayloadForUser(parsedUserId)
+  );
 }
 
 function markGuestbookNotificationAsRead(notificationId, userId) {
@@ -11235,32 +11102,17 @@ function markGuestbookNotificationAsRead(notificationId, userId) {
   }
 }
 
-function markAllSystemInboxNotificationsAsReadForUser(userId, options = {}) {
+function markAllSystemInboxNotificationsAsReadForUser(userId) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return false;
   }
 
-  const visibleSystemNotificationIds = filterSystemNotificationsForActiveCharacter(
-    getAllSystemNotificationRowsForUser(parsedUserId, true),
-    options?.activeCharacter || null
-  )
-    .map((notification) => Number(notification?.id))
-    .filter((notificationId) => Number.isInteger(notificationId) && notificationId > 0);
-
-  let systemChanges = 0;
-  if (visibleSystemNotificationIds.length > 0) {
-    const placeholders = visibleSystemNotificationIds.map(() => "?").join(", ");
-    systemChanges = Number(
-      db.prepare(
-        `UPDATE system_notifications
-         SET is_read = 1
-         WHERE user_id = ?
-           AND is_read = 0
-           AND id IN (${placeholders})`
-      ).run(parsedUserId, ...visibleSystemNotificationIds).changes || 0
-    );
-  }
+  const systemResult = db.prepare(
+    `UPDATE system_notifications
+     SET is_read = 1
+     WHERE user_id = ? AND is_read = 0`
+  ).run(parsedUserId);
   const approvalResult = db.prepare(
     `UPDATE festplay_application_notifications
      SET is_read = 1
@@ -11269,7 +11121,7 @@ function markAllSystemInboxNotificationsAsReadForUser(userId, options = {}) {
        AND is_read = 0`
   ).run(parsedUserId);
 
-  const hasChanges = systemChanges > 0 || Number(approvalResult.changes || 0) > 0;
+  const hasChanges = Number(systemResult.changes || 0) > 0 || Number(approvalResult.changes || 0) > 0;
   if (hasChanges) {
     emitGuestbookNotificationUpdateForUser(parsedUserId);
   }
@@ -11277,7 +11129,7 @@ function markAllSystemInboxNotificationsAsReadForUser(userId, options = {}) {
   return hasChanges;
 }
 
-function markSystemNotificationAsRead(notificationId, userId, options = {}) {
+function markSystemNotificationAsRead(notificationId, userId) {
   const parsedNotificationId = Number(notificationId);
   const parsedUserId = Number(userId);
   if (
@@ -11285,14 +11137,6 @@ function markSystemNotificationAsRead(notificationId, userId, options = {}) {
     parsedNotificationId < 1 ||
     !Number.isInteger(parsedUserId) ||
     parsedUserId < 1
-  ) {
-    return;
-  }
-
-  const notification = getSystemNotificationRowForUser(parsedNotificationId, parsedUserId);
-  if (
-    !notification ||
-    !isSystemNotificationVisibleForActiveCharacter(notification, options?.activeCharacter || null)
   ) {
     return;
   }
@@ -11308,7 +11152,7 @@ function markSystemNotificationAsRead(notificationId, userId, options = {}) {
   }
 }
 
-function deleteSystemInboxNotification(notificationId, userId, notificationType, options = {}) {
+function deleteSystemInboxNotification(notificationId, userId, notificationType) {
   const parsedNotificationId = Number(notificationId);
   const parsedUserId = Number(userId);
   const normalizedType = String(notificationType || "").trim().toLowerCase();
@@ -11319,21 +11163,6 @@ function deleteSystemInboxNotification(notificationId, userId, notificationType,
     parsedUserId < 1
   ) {
     return false;
-  }
-
-  const systemNotificationType =
-    normalizedType === BIRTHDAY_NOTIFICATION_TYPE ||
-    HOLIDAY_NOTIFICATION_TYPE_SET.has(normalizedType) ||
-    CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(normalizedType);
-  if (systemNotificationType) {
-    const notification = getSystemNotificationRowForUser(parsedNotificationId, parsedUserId);
-    if (
-      !notification ||
-      normalizeNotificationType(notification.notification_type) !== normalizedType ||
-      !isSystemNotificationVisibleForActiveCharacter(notification, options?.activeCharacter || null)
-    ) {
-      return false;
-    }
   }
 
   let result = { changes: 0 };
@@ -14474,9 +14303,7 @@ app.post("/rp-board/entries/:entryId/delete", requireAuth, (req, res) => {
 app.get("/guestbook/notifications/system", requireAuth, (req, res) => {
   const activeCharacter = getPreferredMenuCharacterForUser(req);
   if (String(req.query.mark_read || "").trim() === "1") {
-    markAllSystemInboxNotificationsAsReadForUser(req.session.user.id, {
-      activeCharacter
-    });
+    markAllSystemInboxNotificationsAsReadForUser(req.session.user.id);
   }
 
   return res.json({
@@ -14491,10 +14318,7 @@ app.get("/guestbook/notifications/system", requireAuth, (req, res) => {
 });
 
 app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
-  const activeCharacter = getPreferredMenuCharacterForUser(req);
-  const latestNotification = getLatestVisibleGuestbookNotificationForUser(req.session.user.id, {
-    activeCharacter
-  });
+  const latestNotification = getLatestVisibleGuestbookNotificationForUser(req.session.user.id);
   const notificationType = String(latestNotification?.notification_type || "").trim();
 
   if (!latestNotification) {
@@ -14558,9 +14382,7 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   }
 
   if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
-    markSystemNotificationAsRead(latestNotification.id, req.session.user.id, {
-      activeCharacter
-    });
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
     const birthdayGreetingText = buildBirthdayGreetingPlainTextForUser(req.session.user.id, {
       activeCharacter: getPreferredMenuCharacterForUser(req),
       notificationId: latestNotification.id,
@@ -14576,9 +14398,7 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   }
 
   if (HOLIDAY_NOTIFICATION_TYPE_SET.has(notificationType)) {
-    markSystemNotificationAsRead(latestNotification.id, req.session.user.id, {
-      activeCharacter
-    });
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
     const holidayTitle = String(latestNotification.title || "").trim();
     const holidayMessage = String(latestNotification.message || "").trim();
     const flashText = [holidayTitle, holidayMessage].filter(Boolean).join(": ");
@@ -14591,9 +14411,7 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   }
 
   if (CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(notificationType)) {
-    markSystemNotificationAsRead(latestNotification.id, req.session.user.id, {
-      activeCharacter
-    });
+    markSystemNotificationAsRead(latestNotification.id, req.session.user.id);
     const customTitle = String(latestNotification.title || "").trim();
     const customMessage = String(latestNotification.message || "").trim();
     const flashText = [customTitle, customMessage].filter(Boolean).join(": ");
@@ -14642,7 +14460,6 @@ app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
 app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, res) => {
   const notificationId = Number(req.params.notificationId);
   const notificationType = String(req.body.type || "").trim().toLowerCase();
-  const activeCharacter = getPreferredMenuCharacterForUser(req);
 
   if (!Number.isInteger(notificationId) || notificationId < 1) {
     return res.status(404).json({ ok: false });
@@ -14651,25 +14468,19 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
   if (notificationType === "festplay_application" || notificationType === "festplay_approval") {
     markFestplayApplicationNotificationAsRead(notificationId, req.session.user.id);
   } else if (notificationType === BIRTHDAY_NOTIFICATION_TYPE) {
-    markSystemNotificationAsRead(notificationId, req.session.user.id, {
-      activeCharacter
-    });
+    markSystemNotificationAsRead(notificationId, req.session.user.id);
   } else if (
     HOLIDAY_NOTIFICATION_TYPE_SET.has(notificationType) ||
     CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(notificationType)
   ) {
-    markSystemNotificationAsRead(notificationId, req.session.user.id, {
-      activeCharacter
-    });
+    markSystemNotificationAsRead(notificationId, req.session.user.id);
   } else {
     markGuestbookNotificationAsRead(notificationId, req.session.user.id);
   }
 
   return res.json({
     ok: true,
-    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id, {
-      activeCharacter
-    })
+    payload: buildGuestbookNotificationPayloadForUser(req.session.user.id)
   });
 });
 
@@ -14750,17 +14561,6 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
   }
 
   const activeCharacter = getPreferredMenuCharacterForUser(req);
-  const personalPmUsesCharacterLookup = messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE && !canSendStaffMail;
-  if (
-    personalPmUsesCharacterLookup &&
-    (!activeCharacter || !Number.isInteger(Number(activeCharacter.id)) || Number(activeCharacter.id) < 1)
-  ) {
-    return res.status(400).json({
-      ok: false,
-      error: "missing-source-character",
-      message: "Bitte wähle zuerst den Charakter aus, mit dem du die PM schreiben möchtest."
-    });
-  }
   const senderLabel = buildGuestbookNotificationSenderLabel(req.session.user);
   const notificationTitle =
     messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
@@ -14780,24 +14580,12 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       });
     }
 
-    const targetCharacter = personalPmUsesCharacterLookup ? findCharacterBySocialLookup(recipientLookup) : null;
-    const targetUser = personalPmUsesCharacterLookup
-      ? targetCharacter
-        ? getUserForSessionById(targetCharacter.user_id) || {
-            id: Number(targetCharacter.user_id) || 0,
-            username: String(targetCharacter.owner_username || "").trim(),
-            is_admin: Number(targetCharacter.is_admin) === 1,
-            is_moderator: Number(targetCharacter.is_moderator) === 1
-          }
-        : null
-      : findUserBySocialLookup(recipientLookup);
+    const targetUser = findUserBySocialLookup(recipientLookup);
     if (!targetUser) {
       return res.status(404).json({
         ok: false,
         error: "recipient-not-found",
-        message: personalPmUsesCharacterLookup
-          ? "Der Charakter wurde nicht gefunden."
-          : "Der Empfänger wurde nicht gefunden."
+        message: "Der Empfänger wurde nicht gefunden."
       });
     }
 
@@ -14819,9 +14607,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
 
     recipientUserIds = [Number(targetUser.id)];
     const recipientUserRecord = getUserForSessionById(targetUser.id) || targetUser;
-    const recipientLabel = personalPmUsesCharacterLookup
-      ? String(targetCharacter?.name || "").trim() || buildGuestbookNotificationSenderLabel(recipientUserRecord)
-      : buildGuestbookNotificationSenderLabel(recipientUserRecord);
+    const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUserRecord);
     successMessage =
       messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE
         ? `Die PM wurde an ${recipientLabel} verschickt.`
@@ -14834,15 +14620,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
         req.session.user,
         recipientUserRecord,
         subject,
-        message,
-        {
-          senderLabel: personalPmUsesCharacterLookup
-            ? String(activeCharacter?.name || "").trim() || senderLabel
-            : senderLabel,
-          recipientLabel,
-          sourceCharacterId: personalPmUsesCharacterLookup ? Number(activeCharacter?.id) || null : null,
-          targetCharacterId: personalPmUsesCharacterLookup ? Number(targetCharacter?.character_id) || null : null
-        }
+        message
       );
 
       if (createdPm.createdCount < 2) {
@@ -14921,18 +14699,16 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
 app.post("/guestbook/notifications/:notificationId/delete", requireAuth, (req, res) => {
   const notificationId = Number(req.params.notificationId);
   const notificationType = String(req.body.type || "").trim().toLowerCase();
-  const activeCharacter = getPreferredMenuCharacterForUser(req);
 
   if (!Number.isInteger(notificationId) || notificationId < 1) {
     return res.status(404).json({ ok: false });
   }
 
-  if (!deleteSystemInboxNotification(notificationId, req.session.user.id, notificationType, {
-    activeCharacter
-  })) {
+  if (!deleteSystemInboxNotification(notificationId, req.session.user.id, notificationType)) {
     return res.status(404).json({ ok: false });
   }
 
+  const activeCharacter = getPreferredMenuCharacterForUser(req);
   return res.json({
     ok: true,
     notifications: buildSystemInboxListForUser(req.session.user.id, {
@@ -24549,9 +24325,7 @@ io.on("connection", (socket) => {
     socket.join(socketChannelForSocialUpdates(socket.data.user.id));
     socket.emit(
       "guestbook:notification:update",
-      buildGuestbookNotificationPayloadForUser(socket.data.user.id, {
-        activeCharacter: getPreferredNotificationCharacterForSocket(socket)
-      })
+      buildGuestbookNotificationPayloadForUser(socket.data.user.id)
     );
     socket.emit(
       "social:update",
