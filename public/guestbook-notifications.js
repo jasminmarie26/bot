@@ -142,6 +142,13 @@
     notificationLink.title = hasVisibleNotification ? title : "Briefe";
     notificationLink.setAttribute("aria-label", hasVisibleNotification ? title : "Briefe");
     notificationLink.setAttribute("aria-disabled", keepLinkVisible ? "false" : "true");
+    if (latestType === "guestbook_entry") {
+      notificationLink.target = "_blank";
+      notificationLink.rel = "noopener noreferrer";
+    } else {
+      notificationLink.removeAttribute("target");
+      notificationLink.removeAttribute("rel");
+    }
     notificationLink.dataset.notificationCount = String(count);
     notificationLink.dataset.notificationId = String(latestId);
     notificationLink.dataset.notificationType = latestType;

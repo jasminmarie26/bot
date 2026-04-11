@@ -319,6 +319,7 @@
     href="/guestbook/notifications/open"
     aria-label="<%= guestbookNotificationTitle %>"
     title="<%= guestbookNotificationTitle %>"
+    <%= latestNotificationType === "guestbook_entry" ? 'target="_blank" rel="noopener noreferrer"' : "" %>
     aria-expanded="false"
     data-guestbook-notification-root
     data-can-compose-personal-staff-pm="<%= canComposePersonalStaffPm ? "true" : "false" %>"
