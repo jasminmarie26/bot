@@ -14597,15 +14597,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       });
     }
 
-    if (messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
-      if (!isPrivilegedStaffUser(targetUser)) {
-        return res.status(403).json({
-          ok: false,
-          error: "recipient-not-staff",
-          message: "Persönliche PMs können nur an Administratoren oder Moderatoren geschickt werden."
-        });
-      }
-    } else if (!isUserOnRpServers(targetUser.id)) {
+    if (messageType !== PERSONAL_STAFF_PM_NOTIFICATION_TYPE && !isUserOnRpServers(targetUser.id)) {
       return res.status(400).json({
         ok: false,
         error: "recipient-not-on-rp",
@@ -14665,7 +14657,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       return res.status(400).json({
         ok: false,
         error: "invalid-recipient-scope",
-        message: "Persönliche PMs können nur an einen einzelnen Administrator oder Moderator geschickt werden."
+        message: "Persönliche PMs können nur an einen einzelnen User geschickt werden."
       });
     }
 
