@@ -221,14 +221,18 @@ db.exec(`
     message TEXT NOT NULL DEFAULT '',
     sender_user_id INTEGER,
     sender_label TEXT NOT NULL DEFAULT '',
+    source_character_id INTEGER,
     recipient_user_id INTEGER,
     recipient_label TEXT NOT NULL DEFAULT '',
+    target_character_id INTEGER,
     mailbox_kind TEXT NOT NULL DEFAULT 'inbox',
     is_read INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE SET NULL,
+    FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (target_character_id) REFERENCES characters(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS friend_links (
@@ -1270,6 +1274,14 @@ if (!systemNotificationColumns.includes("recipient_label")) {
   db.exec("ALTER TABLE system_notifications ADD COLUMN recipient_label TEXT NOT NULL DEFAULT ''");
 }
 
+if (!systemNotificationColumns.includes("source_character_id")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN source_character_id INTEGER");
+}
+
+if (!systemNotificationColumns.includes("target_character_id")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN target_character_id INTEGER");
+}
+
 if (!systemNotificationColumns.includes("mailbox_kind")) {
   db.exec("ALTER TABLE system_notifications ADD COLUMN mailbox_kind TEXT NOT NULL DEFAULT 'inbox'");
 }
@@ -1530,6 +1542,9 @@ db.exec(
 );
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_system_notifications_user_mailbox_created ON system_notifications(user_id, mailbox_kind, created_at)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_system_notifications_character_scope ON system_notifications(user_id, source_character_id, target_character_id, created_at)"
 );
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user ON friend_links(friend_user_id, user_id)"
