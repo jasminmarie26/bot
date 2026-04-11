@@ -1947,7 +1947,101 @@ function createSystemNotificationForUserIds(userIds, notificationType, notificat
   ).createdCount;
 }
 
-function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, message) {
+function buildGuestbookNotificationSentCopyKey(notificationKey, senderUserId) {
+  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 96);
+  const parsedSenderUserId = Number(senderUserId);
+  const senderSuffix =
+    Number.isInteger(parsedSenderUserId) && parsedSenderUserId > 0 ? String(parsedSenderUserId) : "copy";
+  const baseKey = normalizedNotificationKey || buildSystemNotificationUniqueKey("guestbook-mail");
+  return `${baseKey}:sent:${senderSuffix}`.slice(0, 120);
+}
+
+function createGuestbookDeliveredNotifications({
+  senderUser,
+  recipientUserIds,
+  notificationType,
+  notificationKey,
+  inboxTitle,
+  sentTitle,
+  message,
+  recipientUserId = null,
+  recipientLabel = ""
+}) {
+  const parsedSenderUserId = Number(senderUser?.id);
+  const normalizedRecipientUserIds = Array.from(
+    new Set(
+      (Array.isArray(recipientUserIds) ? recipientUserIds : [])
+        .map((userId) => Number(userId))
+        .filter((userId) => Number.isInteger(userId) && userId > 0)
+    )
+  );
+  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase();
+  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
+  const normalizedInboxTitle = String(inboxTitle || "").trim().slice(0, 160);
+  const normalizedSentTitle = String(sentTitle || "").trim().slice(0, 160);
+  const normalizedMessage = normalizeStaffNotificationMessage(message);
+  const normalizedRecipientLabel = String(recipientLabel || "").trim().slice(0, 120);
+  const normalizedRecipientUserId = normalizeSystemNotificationActorUserId(recipientUserId);
+
+  if (
+    !Number.isInteger(parsedSenderUserId) ||
+    parsedSenderUserId < 1 ||
+    normalizedRecipientUserIds.length < 1 ||
+    !CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET.has(normalizedNotificationType) ||
+    !normalizedNotificationKey ||
+    !normalizedInboxTitle ||
+    !normalizedSentTitle ||
+    !normalizedMessage
+  ) {
+    return {
+      createdCount: 0,
+      changedUserIds: []
+    };
+  }
+
+  const senderLabel = buildGuestbookNotificationSenderLabel(senderUser);
+  const senderCopyRecipientLabel =
+    normalizedRecipientUserIds.length === 1
+      ? normalizedRecipientLabel ||
+        buildGuestbookNotificationSenderLabel(getUserForSessionById(normalizedRecipientUserId) || null)
+      : `${normalizedRecipientUserIds.length} Accounts`;
+  const senderCopyRecipientUserId =
+    normalizedRecipientUserIds.length === 1
+      ? normalizedRecipientUserId || normalizedRecipientUserIds[0]
+      : null;
+
+  const entries = normalizedRecipientUserIds.map((targetUserId) => ({
+    userId: targetUserId,
+    notificationType: normalizedNotificationType,
+    notificationKey: normalizedNotificationKey,
+    title: normalizedInboxTitle,
+    message: normalizedMessage,
+    senderUserId: parsedSenderUserId,
+    senderLabel,
+    recipientUserId: normalizedRecipientUserIds.length === 1 ? senderCopyRecipientUserId : targetUserId,
+    recipientLabel: normalizedRecipientUserIds.length === 1 ? senderCopyRecipientLabel : "",
+    mailboxKind: "inbox",
+    isRead: 0
+  }));
+
+  entries.push({
+    userId: parsedSenderUserId,
+    notificationType: normalizedNotificationType,
+    notificationKey: buildGuestbookNotificationSentCopyKey(normalizedNotificationKey, parsedSenderUserId),
+    title: normalizedSentTitle,
+    message: normalizedMessage,
+    senderUserId: parsedSenderUserId,
+    senderLabel,
+    recipientUserId: senderCopyRecipientUserId,
+    recipientLabel: senderCopyRecipientLabel,
+    mailboxKind: "sent",
+    isRead: 1
+  });
+
+  return createSystemNotificationEntries(entries);
+}
+
+function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, message, options = {}) {
   const senderUserId = Number(senderUser?.id);
   const recipientUserId = Number(recipientUser?.id);
   if (
@@ -1972,8 +2066,11 @@ function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, 
     };
   }
 
-  const senderLabel = buildGuestbookNotificationSenderLabel(senderUser);
-  const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUser);
+  const senderLabel =
+    String(options?.senderLabel || "").trim().slice(0, 120) || buildGuestbookNotificationSenderLabel(senderUser);
+  const recipientLabel =
+    String(options?.recipientLabel || "").trim().slice(0, 120) ||
+    buildGuestbookNotificationSenderLabel(recipientUser);
   const notificationKey = buildSystemNotificationUniqueKey("staff-pm");
 
   return createSystemNotificationEntries([
@@ -14317,6 +14414,52 @@ app.get("/guestbook/notifications/system", requireAuth, (req, res) => {
   });
 });
 
+app.get("/guestbook/notifications/recipient-suggestions", requireAuth, (req, res) => {
+  if (!canSendGuestbookPersonalStaffPm(req.session.user)) {
+    return res.status(403).json({
+      ok: false,
+      error: "forbidden",
+      message: "Du musst eingeloggt sein, um Empfänger suchen zu können."
+    });
+  }
+
+  const currentUserId = Number(req.session.user?.id);
+  const query = normalizeSocialLookupValue(req.query.q || "");
+  if (!query) {
+    return res.json({
+      ok: true,
+      suggestions: []
+    });
+  }
+
+  const suggestions = getGuestbookNotificationRecipientSuggestions(query, 8)
+    .filter((entry) => Number(entry?.user_id) !== currentUserId)
+    .map((entry) => {
+      const characterName = String(entry?.name || "").trim();
+      const ownerUsername = String(entry?.owner_username || "").trim();
+      const serverLabel = getServerLabel(entry?.server_id);
+      const metaParts = [];
+      if (serverLabel) {
+        metaParts.push(serverLabel);
+      }
+      if (ownerUsername) {
+        metaParts.push(`@${ownerUsername}`);
+      }
+      return {
+        value: characterName,
+        label: characterName,
+        meta: metaParts.join(" · "),
+        character_id: Number(entry?.character_id) || 0
+      };
+    })
+    .filter((entry) => entry.label);
+
+  return res.json({
+    ok: true,
+    suggestions
+  });
+});
+
 app.get("/guestbook/notifications/open", requireAuth, (req, res) => {
   const latestNotification = getLatestVisibleGuestbookNotificationForUser(req.session.user.id);
   const notificationType = String(latestNotification?.notification_type || "").trim();
@@ -14569,6 +14712,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
         ? `PM von ${senderLabel}: ${subject}`.slice(0, 160)
         : `Brief von ${senderLabel}: ${subject}`.slice(0, 160);
   let recipientUserIds = [];
+  let singleRecipientLabel = "";
   let successMessage = "Der Brief wurde verschickt.";
 
   if (recipientScope === "single") {
@@ -14580,8 +14724,8 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       });
     }
 
-    const targetUser = findUserBySocialLookup(recipientLookup);
-    if (!targetUser) {
+    const resolvedRecipient = resolveGuestbookNotificationRecipient(recipientLookup);
+    if (!resolvedRecipient?.user) {
       return res.status(404).json({
         ok: false,
         error: "recipient-not-found",
@@ -14589,6 +14733,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       });
     }
 
+    const targetUser = resolvedRecipient.user;
     if (Number(targetUser.id) === Number(req.session.user.id)) {
       return res.status(400).json({
         ok: false,
@@ -14606,21 +14751,26 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
     }
 
     recipientUserIds = [Number(targetUser.id)];
-    const recipientUserRecord = getUserForSessionById(targetUser.id) || targetUser;
-    const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUserRecord);
+    const recipientLabel =
+      String(resolvedRecipient.recipientLabel || "").trim() || buildGuestbookNotificationSenderLabel(targetUser);
+    singleRecipientLabel = recipientLabel;
     successMessage =
       messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE
         ? `Die PM wurde an ${recipientLabel} verschickt.`
         : messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
-        ? `Die Systemnachricht wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`
-        : `Der Brief wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`;
+        ? `Die Systemnachricht wurde an ${recipientLabel} verschickt.`
+        : `Der Brief wurde an ${recipientLabel} verschickt.`;
 
     if (messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
       const createdPm = createPersonalStaffPmNotifications(
         req.session.user,
-        recipientUserRecord,
+        targetUser,
         subject,
-        message
+        message,
+        {
+          senderLabel,
+          recipientLabel
+        }
       );
 
       if (createdPm.createdCount < 2) {
@@ -14667,15 +14817,30 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
         : `Der Brief wurde an ${recipientUserIds.length} Accounts verschickt.`;
   }
 
-  const createdCount = createSystemNotificationForUserIds(
-    recipientUserIds,
-    messageType,
-    buildSystemNotificationUniqueKey(messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE ? "admin-system" : "staff-mail"),
-    notificationTitle,
-    message
+  const notificationKey = buildSystemNotificationUniqueKey(
+    messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE ? "admin-system" : "staff-mail"
   );
+  const sentTitle =
+    recipientScope === "single"
+      ? messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+        ? `Systemnachricht an ${singleRecipientLabel}: ${subject}`.slice(0, 160)
+        : `Brief an ${singleRecipientLabel}: ${subject}`.slice(0, 160)
+      : messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+        ? `Systemnachricht an ${recipientUserIds.length} Accounts: ${subject}`.slice(0, 160)
+        : `Brief an ${recipientUserIds.length} Accounts: ${subject}`.slice(0, 160);
+  const createdResult = createGuestbookDeliveredNotifications({
+    senderUser: req.session.user,
+    recipientUserIds,
+    notificationType: messageType,
+    notificationKey,
+    inboxTitle: notificationTitle,
+    sentTitle,
+    message,
+    recipientUserId: recipientScope === "single" ? recipientUserIds[0] : null,
+    recipientLabel: singleRecipientLabel
+  });
 
-  if (createdCount < 1) {
+  if (createdResult.createdCount < recipientUserIds.length + 1) {
     return res.status(500).json({
       ok: false,
       error: "send-failed",
@@ -14685,7 +14850,7 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
 
   return res.json({
     ok: true,
-    sent_count: createdCount,
+    sent_count: recipientUserIds.length,
     message: successMessage,
     notifications: buildSystemInboxListForUser(req.session.user.id, {
       activeCharacter
@@ -21995,6 +22160,10 @@ function normalizeSocialLookupValue(value) {
   return String(value || "").trim().replace(/^#/, "").slice(0, 80);
 }
 
+function escapeSqlLikePattern(value) {
+  return String(value || "").replace(/[\\%_]/g, "\\$&");
+}
+
 function isPrivilegedStaffUser(user) {
   return Boolean(
     user?.is_admin === 1 ||
@@ -22075,6 +22244,95 @@ function findCharacterBySocialLookup(value) {
         LIMIT 1`
     )
     .get(normalizedValue);
+}
+
+function resolveGuestbookNotificationRecipient(value) {
+  const normalizedValue = normalizeSocialLookupValue(value);
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (!/^\d+$/.test(normalizedValue)) {
+    const characterMatch = findCharacterBySocialLookup(normalizedValue);
+    if (characterMatch) {
+      const ownerUserId = Number(characterMatch.user_id);
+      const ownerUser =
+        (Number.isInteger(ownerUserId) && ownerUserId > 0
+          ? getUserForSessionById(ownerUserId) ||
+            db
+              .prepare(
+                `SELECT id, username, account_number, display_name, is_admin, is_moderator
+                   FROM users
+                  WHERE id = ?
+                  LIMIT 1`
+              )
+              .get(ownerUserId)
+          : null) || null;
+
+      if (ownerUser) {
+        const matchedCharacterName = String(characterMatch.name || "").trim();
+        return {
+          user: ownerUser,
+          matchedCharacterName,
+          recipientLabel: matchedCharacterName || buildGuestbookNotificationSenderLabel(ownerUser),
+          characterId: Number(characterMatch.character_id) || 0,
+          lookupKind: "character"
+        };
+      }
+    }
+  }
+
+  const userMatch = findUserBySocialLookup(normalizedValue);
+  if (!userMatch) {
+    return null;
+  }
+
+  const userRecord = getUserForSessionById(userMatch.id) || userMatch;
+  return {
+    user: userRecord,
+    matchedCharacterName: "",
+    recipientLabel: buildGuestbookNotificationSenderLabel(userRecord),
+    characterId: 0,
+    lookupKind: /^\d+$/.test(normalizedValue) ? "account_number" : "account"
+  };
+}
+
+function getGuestbookNotificationRecipientSuggestions(value, limit = 8) {
+  const normalizedValue = normalizeSocialLookupValue(value);
+  const parsedLimit = Math.max(1, Math.min(12, Number(limit) || 8));
+  if (!normalizedValue) {
+    return [];
+  }
+
+  const escapedValue = escapeSqlLikePattern(normalizedValue);
+  const prefixPattern = `${escapedValue}%`;
+  const containsPattern = `%${escapedValue}%`;
+
+  return db
+    .prepare(
+      `SELECT c.id AS character_id,
+              c.name,
+              c.server_id,
+              c.user_id,
+              u.username AS owner_username
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE c.user_id IS NOT NULL
+          AND trim(COALESCE(c.name, '')) != ''
+          AND (
+            lower(c.name) LIKE lower(?) ESCAPE '\\'
+            OR lower(c.name) LIKE lower(?) ESCAPE '\\'
+          )
+        ORDER BY CASE
+                   WHEN lower(c.name) = lower(?) THEN 0
+                   WHEN lower(c.name) LIKE lower(?) ESCAPE '\\' THEN 1
+                   ELSE 2
+                 END,
+                 lower(c.name) ASC,
+                 c.id ASC
+        LIMIT ?`
+    )
+    .all(prefixPattern, containsPattern, normalizedValue, prefixPattern, parsedLimit);
 }
 
 function getCharacterSocialTargetById(characterId) {

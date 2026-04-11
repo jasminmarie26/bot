@@ -6,6 +6,7 @@
   const badge = notificationLink.querySelector("[data-guestbook-notification-badge]");
   const notificationHref = "/guestbook/notifications/open";
   const systemNotificationFetchUrl = "/guestbook/notifications/system";
+  const recipientSuggestionUrl = "/guestbook/notifications/recipient-suggestions";
   const sendNotificationUrl = "/guestbook/notifications/send";
   const approvalNotificationType = "festplay_approval";
   const birthdayNotificationType = "birthday_greeting";
@@ -34,6 +35,9 @@
   ]);
   const canUseRealtimeUpdates = typeof io === "function";
   let systemPanelElements = null;
+  let recipientSuggestionRequestTimer = 0;
+  let recipientSuggestionAbortController = null;
+  let recipientSuggestionRequestToken = 0;
 
   function normalizeNotificationType(notificationType) {
     return String(notificationType || "").trim().toLowerCase();
@@ -239,6 +243,7 @@
     let recipientScopeSelect = null;
     let recipientField = null;
     let recipientInput = null;
+    let recipientSuggestionList = null;
     let subjectInput = null;
     let messageInput = null;
     let composeHint = null;
@@ -345,12 +350,27 @@
       recipientInput.name = "recipient_lookup";
       recipientInput.maxLength = 80;
       recipientInput.autocomplete = "off";
+      recipientInput.spellcheck = false;
+      recipientInput.setAttribute("aria-autocomplete", "list");
+      recipientInput.setAttribute("aria-expanded", "false");
       recipientInput.placeholder = canUseAdvancedComposeControls
         ? "Accountname, Accountnummer oder Charaktername"
         : "Charaktername";
+      const recipientLookupWrap = document.createElement("div");
+      recipientLookupWrap.className = "guestbook-notification-recipient-lookup";
+
+      recipientSuggestionList = document.createElement("div");
+      recipientSuggestionList.className = "guestbook-notification-recipient-suggestions";
+      recipientSuggestionList.hidden = true;
+      recipientSuggestionList.id = "guestbook-notification-recipient-suggestions";
+      recipientSuggestionList.setAttribute("role", "listbox");
+
+      recipientInput.setAttribute("aria-controls", recipientSuggestionList.id);
 
       recipientField.appendChild(recipientLabel);
-      recipientField.appendChild(recipientInput);
+      recipientLookupWrap.appendChild(recipientInput);
+      recipientLookupWrap.appendChild(recipientSuggestionList);
+      recipientField.appendChild(recipientLookupWrap);
 
       const subjectField = document.createElement("label");
       subjectField.className = "guestbook-notification-compose-field guestbook-notification-compose-field-full";
@@ -460,6 +480,7 @@
       recipientScopeSelect,
       recipientField,
       recipientInput,
+      recipientSuggestionList,
       subjectInput,
       messageInput,
       composeHint,
@@ -704,6 +725,154 @@
     panelElements.composeStatus.classList.toggle("is-error", Boolean(isError) && text.length > 0);
   }
 
+  function cancelRecipientSuggestionRequests() {
+    if (recipientSuggestionRequestTimer) {
+      window.clearTimeout(recipientSuggestionRequestTimer);
+      recipientSuggestionRequestTimer = 0;
+    }
+
+    if (recipientSuggestionAbortController) {
+      recipientSuggestionAbortController.abort();
+      recipientSuggestionAbortController = null;
+    }
+  }
+
+  function hideRecipientSuggestions() {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.recipientSuggestionList) {
+      return;
+    }
+
+    panelElements.recipientSuggestionList.replaceChildren();
+    panelElements.recipientSuggestionList.hidden = true;
+    if (panelElements.recipientInput) {
+      panelElements.recipientInput.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function applyRecipientSuggestion(suggestionValue) {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.recipientInput) {
+      return;
+    }
+
+    panelElements.recipientInput.value = String(suggestionValue || "").trim();
+    hideRecipientSuggestions();
+    panelElements.recipientInput.focus();
+  }
+
+  function renderRecipientSuggestions(suggestions) {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.recipientSuggestionList || !panelElements.recipientInput) {
+      return;
+    }
+
+    panelElements.recipientSuggestionList.replaceChildren();
+    const items = Array.isArray(suggestions) ? suggestions.filter(Boolean) : [];
+    if (!items.length) {
+      panelElements.recipientSuggestionList.hidden = true;
+      panelElements.recipientInput.setAttribute("aria-expanded", "false");
+      return;
+    }
+
+    items.forEach((suggestion) => {
+      const optionButton = document.createElement("button");
+      optionButton.type = "button";
+      optionButton.className = "guestbook-notification-recipient-option";
+      optionButton.setAttribute("role", "option");
+
+      const optionLabel = document.createElement("strong");
+      optionLabel.textContent = String(suggestion.label || suggestion.value || "").trim();
+      optionButton.appendChild(optionLabel);
+
+      const optionMetaText = String(suggestion.meta || "").trim();
+      if (optionMetaText) {
+        const optionMeta = document.createElement("small");
+        optionMeta.textContent = optionMetaText;
+        optionButton.appendChild(optionMeta);
+      }
+
+      optionButton.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        applyRecipientSuggestion(suggestion.value || suggestion.label || "");
+      });
+
+      panelElements.recipientSuggestionList.appendChild(optionButton);
+    });
+
+    panelElements.recipientSuggestionList.hidden = false;
+    panelElements.recipientInput.setAttribute("aria-expanded", "true");
+  }
+
+  async function fetchRecipientSuggestions(query) {
+    const trimmedQuery = String(query || "").trim();
+    if (!trimmedQuery) {
+      cancelRecipientSuggestionRequests();
+      hideRecipientSuggestions();
+      return;
+    }
+
+    if (recipientSuggestionAbortController) {
+      recipientSuggestionAbortController.abort();
+    }
+
+    const requestToken = ++recipientSuggestionRequestToken;
+    recipientSuggestionAbortController =
+      typeof AbortController === "function" ? new AbortController() : null;
+
+    const response = await window.fetch(
+      `${recipientSuggestionUrl}?q=${encodeURIComponent(trimmedQuery)}`,
+      {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        signal: recipientSuggestionAbortController?.signal
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("recipient_suggestions_failed");
+    }
+
+    const result = await response.json().catch(() => null);
+    if (requestToken !== recipientSuggestionRequestToken) {
+      return;
+    }
+
+    recipientSuggestionAbortController = null;
+    renderRecipientSuggestions(result?.suggestions || []);
+  }
+
+  function queueRecipientSuggestions() {
+    const panelElements = getSystemPanelElements();
+    if (!panelElements.recipientInput || !panelElements.recipientField) {
+      return;
+    }
+
+    const query = String(panelElements.recipientInput.value || "").trim();
+    const isRecipientInputActive =
+      !panelElements.recipientField.hidden && !panelElements.recipientInput.disabled;
+    if (!isRecipientInputActive || query.length < 1) {
+      cancelRecipientSuggestionRequests();
+      hideRecipientSuggestions();
+      return;
+    }
+
+    if (recipientSuggestionRequestTimer) {
+      window.clearTimeout(recipientSuggestionRequestTimer);
+    }
+
+    recipientSuggestionRequestTimer = window.setTimeout(() => {
+      recipientSuggestionRequestTimer = 0;
+      fetchRecipientSuggestions(query).catch((error) => {
+        if (error?.name === "AbortError") {
+          return;
+        }
+        hideRecipientSuggestions();
+      });
+    }, 120);
+  }
+
   function syncComposeFormState() {
     const panelElements = getSystemPanelElements();
     if (
@@ -735,6 +904,7 @@
     panelElements.recipientInput.required = isSingleRecipient;
     if (!isSingleRecipient) {
       panelElements.recipientInput.value = "";
+      hideRecipientSuggestions();
     }
 
     panelElements.recipientInput.placeholder = isPersonalStaffPm
@@ -750,6 +920,14 @@
       : isSystemMessage
         ? "Geht als Systemnachricht an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren."
         : "Geht als Brief an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren.";
+
+    if (isPersonalStaffPm) {
+      panelElements.composeHint.textContent =
+        "Schreibe eine persönliche PM an einen einzelnen User. Beim Tippen erscheinen Vorschläge für Charakternamen.";
+    } else if (isSingleRecipient) {
+      panelElements.composeHint.textContent =
+        "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Charakternamen werden direkt vorgeschlagen, Accountname oder Nummer gehen weiter manuell.";
+    }
   }
 
   async function sendSystemNotification(formValues) {
@@ -893,6 +1071,28 @@
       syncComposeFormState();
     });
 
+    panelElements.recipientInput.addEventListener("input", () => {
+      queueRecipientSuggestions();
+    });
+
+    panelElements.recipientInput.addEventListener("focus", () => {
+      if (String(panelElements.recipientInput.value || "").trim()) {
+        queueRecipientSuggestions();
+      }
+    });
+
+    panelElements.recipientInput.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        hideRecipientSuggestions();
+      }, 120);
+    });
+
+    panelElements.recipientInput.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        hideRecipientSuggestions();
+      }
+    });
+
     panelElements.composeForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
@@ -922,6 +1122,8 @@
         }
         panelElements.subjectInput.value = "";
         panelElements.messageInput.value = "";
+        cancelRecipientSuggestionRequests();
+        hideRecipientSuggestions();
         syncComposeFormState();
         setComposeStatus(result?.message || "Der Brief wurde verschickt.");
       } catch (error) {
@@ -931,6 +1133,12 @@
       }
     });
   }
+
+  document.addEventListener("click", (event) => {
+    if (!panelElements.recipientField?.contains(event.target)) {
+      hideRecipientSuggestions();
+    }
+  });
 
   panelElements.thread.addEventListener("click", async (event) => {
     const deleteButton = event.target.closest("[data-system-delete]");
