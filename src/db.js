@@ -219,9 +219,16 @@ db.exec(`
     notification_key TEXT NOT NULL DEFAULT '',
     title TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL DEFAULT '',
+    sender_user_id INTEGER,
+    sender_label TEXT NOT NULL DEFAULT '',
+    recipient_user_id INTEGER,
+    recipient_label TEXT NOT NULL DEFAULT '',
+    mailbox_kind TEXT NOT NULL DEFAULT 'inbox',
     is_read INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS friend_links (
@@ -834,6 +841,11 @@ const festplayApplicationNotificationColumns = db
   .all()
   .map((column) => column.name);
 
+const systemNotificationColumns = db
+  .prepare("PRAGMA table_info(system_notifications)")
+  .all()
+  .map((column) => column.name);
+
 if (!userColumns.includes("is_admin")) {
   db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
 }
@@ -1242,6 +1254,44 @@ if (!festplayApplicationNotificationColumns.includes("actor_name")) {
   db.exec("ALTER TABLE festplay_application_notifications ADD COLUMN actor_name TEXT NOT NULL DEFAULT ''");
 }
 
+if (!systemNotificationColumns.includes("sender_user_id")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN sender_user_id INTEGER");
+}
+
+if (!systemNotificationColumns.includes("sender_label")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN sender_label TEXT NOT NULL DEFAULT ''");
+}
+
+if (!systemNotificationColumns.includes("recipient_user_id")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN recipient_user_id INTEGER");
+}
+
+if (!systemNotificationColumns.includes("recipient_label")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN recipient_label TEXT NOT NULL DEFAULT ''");
+}
+
+if (!systemNotificationColumns.includes("mailbox_kind")) {
+  db.exec("ALTER TABLE system_notifications ADD COLUMN mailbox_kind TEXT NOT NULL DEFAULT 'inbox'");
+}
+
+db.exec(`
+  UPDATE system_notifications
+     SET sender_label = ''
+   WHERE sender_label IS NULL
+`);
+
+db.exec(`
+  UPDATE system_notifications
+     SET recipient_label = ''
+   WHERE recipient_label IS NULL
+`);
+
+db.exec(`
+  UPDATE system_notifications
+     SET mailbox_kind = 'inbox'
+   WHERE trim(COALESCE(mailbox_kind, '')) = ''
+`);
+
 if (!chatRoomColumns.includes("is_festplay_chat")) {
   db.exec("ALTER TABLE chat_rooms ADD COLUMN is_festplay_chat INTEGER NOT NULL DEFAULT 0");
 }
@@ -1477,6 +1527,9 @@ db.exec(
 );
 db.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_system_notifications_user_type_key ON system_notifications(user_id, notification_type, notification_key)"
+);
+db.exec(
+  "CREATE INDEX IF NOT EXISTS idx_system_notifications_user_mailbox_created ON system_notifications(user_id, mailbox_kind, created_at)"
 );
 db.exec(
   "CREATE INDEX IF NOT EXISTS idx_friend_links_friend_user ON friend_links(friend_user_id, user_id)"

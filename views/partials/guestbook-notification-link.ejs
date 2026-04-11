@@ -11,11 +11,14 @@
     noteCharacters.some((entry) => Number(entry.id) === candidateId)
   ) || Number(noteCharacters[0]?.id || 0); %>
   <% const guestbookNotificationBadgeText = guestbookNotificationCount > 99 ? "99+" : String(guestbookNotificationCount || 0); %>
+  <% const canComposePersonalStaffPm = Boolean(currentUser); %>
   <% const canComposeGuestbookMail = Boolean(currentUser?.is_admin || currentUser?.is_moderator); %>
   <% const canComposeGuestbookSystemMessage = Boolean(currentUser?.is_admin); %>
   <% const guestbookComposeTitle = canComposeGuestbookSystemMessage
     ? "Brief oder Systemnachricht schreiben"
-    : "Brief schreiben"; %>
+    : canComposeGuestbookMail
+      ? "Brief schreiben"
+      : "Persönliche PM an Team schreiben"; %>
   <% const latestNotificationType = latestGuestbookNotification?.type || latestGuestbookNotification?.notification_type || "guestbook_entry"; %>
   <% const systemNotificationTypes = [
     "festplay_approval",
@@ -23,6 +26,7 @@
     "holiday_easter",
     "holiday_christmas",
     "holiday_nikolaus",
+    "staff_pm",
     "staff_mail",
     "admin_system_message"
   ]; %>
@@ -287,7 +291,7 @@
       </div>
     </div>
   </div>
-  <% if (canComposeGuestbookMail || canComposeGuestbookSystemMessage) { %>
+  <% if (canComposePersonalStaffPm) { %>
     <button
       type="button"
       class="guestbook-compose-link"
@@ -317,6 +321,7 @@
     title="<%= guestbookNotificationTitle %>"
     aria-expanded="false"
     data-guestbook-notification-root
+    data-can-compose-personal-staff-pm="<%= canComposePersonalStaffPm ? "true" : "false" %>"
     data-can-compose-staff-mail="<%= canComposeGuestbookMail ? "true" : "false" %>"
     data-can-compose-admin-system="<%= canComposeGuestbookSystemMessage ? "true" : "false" %>"
     data-notification-count="<%= guestbookNotificationCount || 0 %>"

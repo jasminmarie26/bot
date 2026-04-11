@@ -190,6 +190,7 @@ const BIRTHDAY_GREETING_SIGNOFFS = [
 const BIRTHDAY_NOTIFICATION_TYPE = "birthday_greeting";
 const BIRTHDAY_NOTIFICATION_TITLE = "Geburtstagsgrüße vom Heldenhafte Reisen Team";
 const BIRTHDAY_NOTIFICATION_DECORATION = "🎉 🎂 ✨";
+const PERSONAL_STAFF_PM_NOTIFICATION_TYPE = "staff_pm";
 const STAFF_MAIL_NOTIFICATION_TYPE = "staff_mail";
 const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
@@ -200,6 +201,7 @@ const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
 });
 const HOLIDAY_NOTIFICATION_TYPE_SET = new Set(Object.values(HOLIDAY_NOTIFICATION_TYPES));
 const CUSTOM_SYSTEM_NOTIFICATION_TYPE_SET = new Set([
+  PERSONAL_STAFF_PM_NOTIFICATION_TYPE,
   STAFF_MAIL_NOTIFICATION_TYPE,
   ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
 ]);
@@ -1708,24 +1710,56 @@ function getActiveHolidayNotificationConfig(referenceDate = new Date()) {
   return HOLIDAY_NOTIFICATION_CONFIGS.find((entry) => entry.matchesDate(now)) || null;
 }
 
-function createSystemNotificationForAllUsers(notificationType, notificationKey, title, message) {
-  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
-  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
-  const normalizedTitle = String(title || "").trim().slice(0, 160);
-  const normalizedMessage = String(message || "").trim().slice(0, 4000);
+function normalizeSystemNotificationMailboxKind(value) {
+  return String(value || "").trim().toLowerCase() === "sent" ? "sent" : "inbox";
+}
 
-  if (
-    !normalizedNotificationType ||
-    !normalizedNotificationKey ||
-    !normalizedTitle ||
-    !normalizedMessage
-  ) {
-    return 0;
-  }
+function normalizeSystemNotificationActorUserId(value) {
+  const parsedValue = Number(value);
+  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
+}
 
-  const userRows = db.prepare("SELECT id FROM users").all();
-  if (!Array.isArray(userRows) || userRows.length < 1) {
-    return 0;
+function createSystemNotificationEntries(entries) {
+  const normalizedEntries = (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const parsedUserId = Number(entry?.userId);
+      const normalizedNotificationType = String(entry?.notificationType || "").trim().toLowerCase().slice(0, 80);
+      const normalizedNotificationKey = String(entry?.notificationKey || "").trim().slice(0, 120);
+      const normalizedTitle = String(entry?.title || "").trim().slice(0, 160);
+      const normalizedMessage = String(entry?.message || "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
+
+      if (
+        !Number.isInteger(parsedUserId) ||
+        parsedUserId < 1 ||
+        !normalizedNotificationType ||
+        !normalizedNotificationKey ||
+        !normalizedTitle ||
+        !normalizedMessage
+      ) {
+        return null;
+      }
+
+      return {
+        userId: parsedUserId,
+        notificationType: normalizedNotificationType,
+        notificationKey: normalizedNotificationKey,
+        title: normalizedTitle,
+        message: normalizedMessage,
+        isRead: Number(entry?.isRead) === 1 ? 1 : 0,
+        senderUserId: normalizeSystemNotificationActorUserId(entry?.senderUserId),
+        senderLabel: String(entry?.senderLabel || "").trim().slice(0, 120),
+        recipientUserId: normalizeSystemNotificationActorUserId(entry?.recipientUserId),
+        recipientLabel: String(entry?.recipientLabel || "").trim().slice(0, 120),
+        mailboxKind: normalizeSystemNotificationMailboxKind(entry?.mailboxKind)
+      };
+    })
+    .filter(Boolean);
+
+  if (!normalizedEntries.length) {
+    return {
+      createdCount: 0,
+      changedUserIds: []
+    };
   }
 
   const insertNotificationStatement = db.prepare(
@@ -1735,40 +1769,71 @@ function createSystemNotificationForAllUsers(notificationType, notificationKey, 
        notification_key,
        title,
        message,
+       sender_user_id,
+       sender_label,
+       recipient_user_id,
+       recipient_label,
+       mailbox_kind,
        is_read,
        created_at
      )
-     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))
      ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
   );
   const changedUserIds = [];
-  const createNotificationsTx = db.transaction((rows) => {
-    for (const row of rows) {
-      const userId = Number(row?.id);
-      if (!Number.isInteger(userId) || userId < 1) {
-        continue;
-      }
-
+  let createdCount = 0;
+  const createNotificationsTx = db.transaction((records) => {
+    for (const record of records) {
       const result = insertNotificationStatement.run(
-        userId,
-        normalizedNotificationType,
-        normalizedNotificationKey,
-        normalizedTitle,
-        normalizedMessage
+        record.userId,
+        record.notificationType,
+        record.notificationKey,
+        record.title,
+        record.message,
+        record.senderUserId,
+        record.senderLabel,
+        record.recipientUserId,
+        record.recipientLabel,
+        record.mailboxKind,
+        record.isRead
       );
       if (Number(result.changes || 0) > 0) {
-        changedUserIds.push(userId);
+        createdCount += 1;
+        changedUserIds.push(record.userId);
       }
     }
   });
 
-  createNotificationsTx(userRows);
+  createNotificationsTx(normalizedEntries);
 
-  for (const userId of changedUserIds) {
+  const uniqueChangedUserIds = Array.from(new Set(changedUserIds));
+  for (const userId of uniqueChangedUserIds) {
     emitGuestbookNotificationUpdateForUser(userId);
   }
 
-  return changedUserIds.length;
+  return {
+    createdCount,
+    changedUserIds: uniqueChangedUserIds
+  };
+}
+
+function createSystemNotificationForAllUsers(notificationType, notificationKey, title, message) {
+  const userRows = db.prepare("SELECT id FROM users").all();
+  if (!Array.isArray(userRows) || userRows.length < 1) {
+    return 0;
+  }
+
+  return createSystemNotificationEntries(
+    userRows.map((row) => ({
+      userId: Number(row?.id),
+      notificationType,
+      notificationKey,
+      title,
+      message,
+      mailboxKind: "inbox",
+      isRead: 0
+    }))
+  ).createdCount;
 }
 
 function deleteExpiredHolidayNotifications(referenceDate = new Date()) {
@@ -1841,56 +1906,22 @@ function processScheduledHolidayNotifications(referenceDate = new Date()) {
 }
 
 function createSystemNotification(userId, notificationType, notificationKey, title, message) {
-  const parsedUserId = Number(userId);
-  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
-  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
-  const normalizedTitle = String(title || "").trim().slice(0, 160);
-  const normalizedMessage = String(message || "").trim().slice(0, 4000);
-
-  if (
-    !Number.isInteger(parsedUserId) ||
-    parsedUserId < 1 ||
-    !normalizedNotificationType ||
-    !normalizedNotificationKey ||
-    !normalizedTitle ||
-    !normalizedMessage
-  ) {
-    return false;
-  }
-
-  const result = db.prepare(
-    `INSERT INTO system_notifications (
-       user_id,
-       notification_type,
-       notification_key,
-       title,
-       message,
-       is_read,
-       created_at
-     )
-     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
-     ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
-  ).run(
-    parsedUserId,
-    normalizedNotificationType,
-    normalizedNotificationKey,
-    normalizedTitle,
-    normalizedMessage
+  return (
+    createSystemNotificationEntries([
+      {
+        userId,
+        notificationType,
+        notificationKey,
+        title,
+        message,
+        mailboxKind: "inbox",
+        isRead: 0
+      }
+    ]).createdCount > 0
   );
-
-  if (result.changes > 0) {
-    emitGuestbookNotificationUpdateForUser(parsedUserId);
-    return true;
-  }
-
-  return false;
 }
 
 function createSystemNotificationForUserIds(userIds, notificationType, notificationKey, title, message) {
-  const normalizedNotificationType = String(notificationType || "").trim().toLowerCase().slice(0, 80);
-  const normalizedNotificationKey = String(notificationKey || "").trim().slice(0, 120);
-  const normalizedTitle = String(title || "").trim().slice(0, 160);
-  const normalizedMessage = String(message || "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
   const normalizedUserIds = Array.from(
     new Set(
       (Array.isArray(userIds) ? userIds : [])
@@ -1899,52 +1930,80 @@ function createSystemNotificationForUserIds(userIds, notificationType, notificat
     )
   );
 
-  if (
-    normalizedUserIds.length < 1 ||
-    !normalizedNotificationType ||
-    !normalizedNotificationKey ||
-    !normalizedTitle ||
-    !normalizedMessage
-  ) {
+  if (normalizedUserIds.length < 1) {
     return 0;
   }
 
-  const insertNotificationStatement = db.prepare(
-    `INSERT INTO system_notifications (
-       user_id,
-       notification_type,
-       notification_key,
-       title,
-       message,
-       is_read,
-       created_at
-     )
-     VALUES (?, ?, ?, ?, ?, 0, strftime('%Y-%m-%d %H:%M:%f', 'now'))
-     ON CONFLICT(user_id, notification_type, notification_key) DO NOTHING`
-  );
-  const changedUserIds = [];
-  const createNotificationsTx = db.transaction((targetUserIds) => {
-    for (const targetUserId of targetUserIds) {
-      const result = insertNotificationStatement.run(
-        targetUserId,
-        normalizedNotificationType,
-        normalizedNotificationKey,
-        normalizedTitle,
-        normalizedMessage
-      );
-      if (Number(result.changes || 0) > 0) {
-        changedUserIds.push(targetUserId);
-      }
-    }
-  });
+  return createSystemNotificationEntries(
+    normalizedUserIds.map((targetUserId) => ({
+      userId: targetUserId,
+      notificationType,
+      notificationKey,
+      title,
+      message,
+      mailboxKind: "inbox",
+      isRead: 0
+    }))
+  ).createdCount;
+}
 
-  createNotificationsTx(normalizedUserIds);
-
-  for (const userId of changedUserIds) {
-    emitGuestbookNotificationUpdateForUser(userId);
+function createPersonalStaffPmNotifications(senderUser, recipientUser, subject, message) {
+  const senderUserId = Number(senderUser?.id);
+  const recipientUserId = Number(recipientUser?.id);
+  if (
+    !Number.isInteger(senderUserId) ||
+    senderUserId < 1 ||
+    !Number.isInteger(recipientUserId) ||
+    recipientUserId < 1 ||
+    senderUserId === recipientUserId
+  ) {
+    return {
+      createdCount: 0,
+      changedUserIds: []
+    };
   }
 
-  return changedUserIds.length;
+  const normalizedSubject = normalizeStaffNotificationSubject(subject);
+  const normalizedMessage = normalizeStaffNotificationMessage(message);
+  if (!normalizedSubject || !normalizedMessage) {
+    return {
+      createdCount: 0,
+      changedUserIds: []
+    };
+  }
+
+  const senderLabel = buildGuestbookNotificationSenderLabel(senderUser);
+  const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUser);
+  const notificationKey = buildSystemNotificationUniqueKey("staff-pm");
+
+  return createSystemNotificationEntries([
+    {
+      userId: recipientUserId,
+      notificationType: PERSONAL_STAFF_PM_NOTIFICATION_TYPE,
+      notificationKey,
+      title: `PM von ${senderLabel}: ${normalizedSubject}`.slice(0, 160),
+      message: normalizedMessage,
+      senderUserId,
+      senderLabel,
+      recipientUserId,
+      recipientLabel,
+      mailboxKind: "inbox",
+      isRead: 0
+    },
+    {
+      userId: senderUserId,
+      notificationType: PERSONAL_STAFF_PM_NOTIFICATION_TYPE,
+      notificationKey,
+      title: `PM an ${recipientLabel}: ${normalizedSubject}`.slice(0, 160),
+      message: normalizedMessage,
+      senderUserId,
+      senderLabel,
+      recipientUserId,
+      recipientLabel,
+      mailboxKind: "sent",
+      isRead: 1
+    }
+  ]);
 }
 
 function buildSystemNotificationUniqueKey(prefix = "system") {
@@ -1963,6 +2022,10 @@ function normalizeStaffNotificationMessage(value) {
   return String(value || "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
 }
 
+function canSendGuestbookPersonalStaffPm(user) {
+  return Boolean(user?.id);
+}
+
 function canSendGuestbookStaffMail(user) {
   return Boolean(user?.is_admin || user?.is_moderator);
 }
@@ -1973,8 +2036,9 @@ function canSendGuestbookAdminSystemMessage(user) {
 
 function buildGuestbookNotificationSenderLabel(user) {
   const displayName = String(user?.display_name || "").trim();
+  const defaultDisplayName = !displayName && user ? String(getUserDefaultDisplayName(user) || "").trim() : "";
   const username = String(user?.username || "").trim();
-  return displayName || username || "Heldenhafte Reisen Team";
+  return displayName || defaultDisplayName || username || "Heldenhafte Reisen Team";
 }
 
 function getRpBroadcastRecipientUserIds() {
@@ -10564,9 +10628,14 @@ function getLatestSystemNotificationForUser(userId, unreadOnly = true) {
               sn.notification_key,
               sn.title,
               sn.message,
+              sn.sender_user_id,
+              sn.sender_label,
+              sn.recipient_user_id,
+              sn.recipient_label,
+              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
               sn.is_read,
               sn.created_at
-       FROM system_notifications sn
+        FROM system_notifications sn
        WHERE sn.user_id = ?
          AND trim(COALESCE(sn.message, '')) != ''
          ${unreadOnly ? "AND sn.is_read = 0" : ""}
@@ -10591,9 +10660,14 @@ function getSystemNotificationsForUser(userId, unreadOnly = false, limit = 25) {
               sn.notification_key,
               sn.title,
               sn.message,
+              sn.sender_user_id,
+              sn.sender_label,
+              sn.recipient_user_id,
+              sn.recipient_label,
+              COALESCE(sn.mailbox_kind, 'inbox') AS mailbox_kind,
               sn.is_read,
               sn.created_at
-       FROM system_notifications sn
+        FROM system_notifications sn
        WHERE sn.user_id = ?
          AND trim(COALESCE(sn.message, '')) != ''
          ${unreadOnly ? "AND sn.is_read = 0" : ""}
@@ -10758,6 +10832,11 @@ function buildNotificationPayloadEntryForUser(notification, userId, options = {}
       type: normalizedType,
       title: String(notification.title || "").trim(),
       message: String(notification.message || "").trim(),
+      sender_user_id: Number(notification.sender_user_id) || 0,
+      sender_label: String(notification.sender_label || "").trim(),
+      recipient_user_id: Number(notification.recipient_user_id) || 0,
+      recipient_label: String(notification.recipient_label || "").trim(),
+      mailbox_kind: normalizeSystemNotificationMailboxKind(notification.mailbox_kind),
       is_read: Number(notification.is_read) === 1,
       created_at: String(notification.created_at || "").trim()
     };
@@ -14406,21 +14485,25 @@ app.post("/guestbook/notifications/:notificationId/dismiss", requireAuth, (req, 
 });
 
 app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
-  if (!canSendGuestbookStaffMail(req.session.user)) {
+  if (!canSendGuestbookPersonalStaffPm(req.session.user)) {
     return res.status(403).json({
       ok: false,
       error: "forbidden",
-      message: "Nur Admins und Moderatoren dürfen Briefe verschicken."
+      message: "Du musst eingeloggt sein, um Briefe zu verschicken."
     });
   }
 
-  const messageType = String(req.body.message_type || STAFF_MAIL_NOTIFICATION_TYPE).trim().toLowerCase();
+  const canSendStaffMail = canSendGuestbookStaffMail(req.session.user);
+  const canSendAdminSystemMessage = canSendGuestbookAdminSystemMessage(req.session.user);
+  const defaultMessageType = canSendStaffMail ? STAFF_MAIL_NOTIFICATION_TYPE : PERSONAL_STAFF_PM_NOTIFICATION_TYPE;
+  const messageType = String(req.body.message_type || defaultMessageType).trim().toLowerCase();
   const recipientScope = String(req.body.recipient_scope || "single").trim().toLowerCase();
   const recipientLookup = normalizeSocialLookupValue(req.body.recipient_lookup);
   const subject = normalizeStaffNotificationSubject(req.body.subject);
   const message = normalizeStaffNotificationMessage(req.body.message);
 
   if (
+    messageType !== PERSONAL_STAFF_PM_NOTIFICATION_TYPE &&
     messageType !== STAFF_MAIL_NOTIFICATION_TYPE &&
     messageType !== ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
   ) {
@@ -14433,12 +14516,23 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
 
   if (
     messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE &&
-    !canSendGuestbookAdminSystemMessage(req.session.user)
+    !canSendAdminSystemMessage
   ) {
     return res.status(403).json({
       ok: false,
       error: "forbidden",
       message: "Nur Admins dürfen Systemnachrichten verschicken."
+    });
+  }
+
+  if (
+    (messageType === STAFF_MAIL_NOTIFICATION_TYPE || messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE) &&
+    !canSendStaffMail
+  ) {
+    return res.status(403).json({
+      ok: false,
+      error: "forbidden",
+      message: "Nur Admins und Moderatoren dürfen diese Briefart verschicken."
     });
   }
 
@@ -14471,7 +14565,9 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
   const notificationTitle =
     messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
       ? `Systemnachricht: ${subject}`.slice(0, 160)
-      : `Brief von ${senderLabel}: ${subject}`.slice(0, 160);
+      : messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE
+        ? `PM von ${senderLabel}: ${subject}`.slice(0, 160)
+        : `Brief von ${senderLabel}: ${subject}`.slice(0, 160);
   let recipientUserIds = [];
   let successMessage = "Der Brief wurde verschickt.";
 
@@ -14493,7 +14589,23 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
       });
     }
 
-    if (!isUserOnRpServers(targetUser.id)) {
+    if (Number(targetUser.id) === Number(req.session.user.id)) {
+      return res.status(400).json({
+        ok: false,
+        error: "recipient-self",
+        message: "Du kannst dir selbst keinen Brief schicken."
+      });
+    }
+
+    if (messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
+      if (!isPrivilegedStaffUser(targetUser)) {
+        return res.status(403).json({
+          ok: false,
+          error: "recipient-not-staff",
+          message: "Persönliche PMs können nur an Administratoren oder Moderatoren geschickt werden."
+        });
+      }
+    } else if (!isUserOnRpServers(targetUser.id)) {
       return res.status(400).json({
         ok: false,
         error: "recipient-not-on-rp",
@@ -14502,10 +14614,43 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
     }
 
     recipientUserIds = [Number(targetUser.id)];
+    const recipientUserRecord = getUserForSessionById(targetUser.id) || targetUser;
+    const recipientLabel = buildGuestbookNotificationSenderLabel(recipientUserRecord);
     successMessage =
-      messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
+      messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE
+        ? `Die PM wurde an ${recipientLabel} verschickt.`
+        : messageType === ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE
         ? `Die Systemnachricht wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`
         : `Der Brief wurde an ${String(targetUser.username || "den Account").trim()} verschickt.`;
+
+    if (messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
+      const createdPm = createPersonalStaffPmNotifications(
+        req.session.user,
+        recipientUserRecord,
+        subject,
+        message
+      );
+
+      if (createdPm.createdCount < 2) {
+        return res.status(500).json({
+          ok: false,
+          error: "send-failed",
+          message: "Die PM konnte gerade nicht verschickt werden."
+        });
+      }
+
+      return res.json({
+        ok: true,
+        sent_count: createdPm.createdCount,
+        message: successMessage,
+        notifications: buildSystemInboxListForUser(req.session.user.id, {
+          activeCharacter
+        }),
+        payload: buildGuestbookNotificationPayloadForUser(req.session.user.id, {
+          activeCharacter
+        })
+      });
+    }
   } else {
     recipientUserIds = getRpBroadcastRecipientUserIds();
     if (recipientUserIds.length < 1) {
@@ -14513,6 +14658,14 @@ app.post("/guestbook/notifications/send", requireAuth, (req, res) => {
         ok: false,
         error: "no-rp-recipients",
         message: "Es wurden keine Accounts auf FREE-RP oder ERP gefunden."
+      });
+    }
+
+    if (messageType === PERSONAL_STAFF_PM_NOTIFICATION_TYPE) {
+      return res.status(400).json({
+        ok: false,
+        error: "invalid-recipient-scope",
+        message: "Persönliche PMs können nur an einen einzelnen Administrator oder Moderator geschickt werden."
       });
     }
 

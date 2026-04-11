@@ -12,19 +12,23 @@
   const easterNotificationType = "holiday_easter";
   const christmasNotificationType = "holiday_christmas";
   const nikolausNotificationType = "holiday_nikolaus";
+  const personalStaffPmNotificationType = "staff_pm";
   const staffMailNotificationType = "staff_mail";
   const adminSystemMessageNotificationType = "admin_system_message";
   const defaultBirthdayTitle = "Geburtstagsgr\u00fc\u00dfe vom Heldenhafte Reisen Team";
   const defaultBirthdayDecoration = "\uD83C\uDF89 \uD83C\uDF82 \u2728";
+  const canComposePersonalStaffPm = notificationLink.dataset.canComposePersonalStaffPm === "true";
   const canComposeStaffMail = notificationLink.dataset.canComposeStaffMail === "true";
   const canComposeAdminSystem = notificationLink.dataset.canComposeAdminSystem === "true";
-  const canComposeNotifications = canComposeStaffMail || canComposeAdminSystem;
+  const canComposeNotifications = canComposePersonalStaffPm || canComposeStaffMail || canComposeAdminSystem;
+  const defaultComposeMessageType = canComposeStaffMail ? staffMailNotificationType : personalStaffPmNotificationType;
   const systemNotificationTypes = new Set([
     approvalNotificationType,
     birthdayNotificationType,
     easterNotificationType,
     christmasNotificationType,
     nikolausNotificationType,
+    personalStaffPmNotificationType,
     staffMailNotificationType,
     adminSystemMessageNotificationType
   ]);
@@ -270,6 +274,8 @@
       const messageTypeLabel = document.createElement("span");
       messageTypeLabel.textContent = "Art";
 
+      const canUseAdvancedComposeControls = canComposeStaffMail || canComposeAdminSystem;
+
       messageTypeSelect = document.createElement("select");
       messageTypeSelect.name = "message_type";
 
@@ -278,6 +284,11 @@
         mailOption.value = staffMailNotificationType;
         mailOption.textContent = "Brief";
         messageTypeSelect.appendChild(mailOption);
+      } else if (canComposePersonalStaffPm) {
+        const personalPmOption = document.createElement("option");
+        personalPmOption.value = personalStaffPmNotificationType;
+        personalPmOption.textContent = "Persönliche PM";
+        messageTypeSelect.appendChild(personalPmOption);
       }
 
       if (canComposeAdminSystem) {
@@ -301,13 +312,17 @@
 
       const singleOption = document.createElement("option");
       singleOption.value = "single";
-      singleOption.textContent = "Einzelnen Account";
+      singleOption.textContent = canUseAdvancedComposeControls
+        ? "Einzelnen Account"
+        : "Administrator oder Moderator";
       recipientScopeSelect.appendChild(singleOption);
 
-      const rpAllOption = document.createElement("option");
-      rpAllOption.value = "rp_all";
-      rpAllOption.textContent = "Alle auf FREE-RP & ERP";
-      recipientScopeSelect.appendChild(rpAllOption);
+      if (canUseAdvancedComposeControls) {
+        const rpAllOption = document.createElement("option");
+        rpAllOption.value = "rp_all";
+        rpAllOption.textContent = "Alle auf FREE-RP & ERP";
+        recipientScopeSelect.appendChild(rpAllOption);
+      }
 
       recipientScopeField.appendChild(recipientScopeLabel);
       recipientScopeField.appendChild(recipientScopeSelect);
@@ -323,7 +338,9 @@
       recipientInput.name = "recipient_lookup";
       recipientInput.maxLength = 80;
       recipientInput.autocomplete = "off";
-      recipientInput.placeholder = "Accountname, Accountnummer oder Charaktername";
+      recipientInput.placeholder = canUseAdvancedComposeControls
+        ? "Accountname, Accountnummer oder Charaktername"
+        : "Admin-, Moderator-, Account- oder Charaktername";
 
       recipientField.appendChild(recipientLabel);
       recipientField.appendChild(recipientInput);
@@ -362,6 +379,11 @@
       composeGrid.appendChild(recipientField);
       composeGrid.appendChild(subjectField);
       composeGrid.appendChild(messageField);
+
+      if (!canUseAdvancedComposeControls) {
+        messageTypeField.hidden = true;
+        recipientScopeField.hidden = true;
+      }
 
       composeHint = document.createElement("p");
       composeHint.className = "guestbook-notification-compose-hint";
@@ -446,7 +468,7 @@
       return;
     }
 
-    const normalizedMessageType = normalizeNotificationType(options.messageType || staffMailNotificationType);
+    const normalizedMessageType = normalizeNotificationType(options.messageType || defaultComposeMessageType);
     const normalizedRecipientScope = normalizeNotificationType(options.recipientScope || "single");
 
     if (panelElements.messageTypeSelect) {
@@ -613,7 +635,9 @@
     const notification = entry || {};
     const copy = buildSystemNotificationCopy(notification);
     const article = document.createElement("article");
-    article.className = "whisper-thread-message is-incoming guestbook-notification-approval-message";
+    article.className = `whisper-thread-message ${
+      normalizeNotificationType(notification.mailbox_kind) === "sent" ? "is-outgoing" : "is-incoming"
+    } guestbook-notification-approval-message`;
     if (notification.is_read) {
       article.classList.add("guestbook-notification-letter-read");
     }
@@ -686,10 +710,18 @@
       return;
     }
 
-    const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || staffMailNotificationType);
+    const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || defaultComposeMessageType);
     const recipientScope = normalizeNotificationType(panelElements.recipientScopeSelect.value || "single");
-    const isSingleRecipient = recipientScope === "single";
+    const isPersonalStaffPm = messageType === personalStaffPmNotificationType;
+    const isSingleRecipient = isPersonalStaffPm || recipientScope === "single";
     const isSystemMessage = messageType === adminSystemMessageNotificationType;
+
+    if (isPersonalStaffPm) {
+      panelElements.recipientScopeSelect.value = "single";
+      panelElements.recipientScopeSelect.disabled = true;
+    } else {
+      panelElements.recipientScopeSelect.disabled = false;
+    }
 
     panelElements.recipientField.hidden = !isSingleRecipient;
     panelElements.recipientInput.disabled = !isSingleRecipient;
@@ -698,7 +730,13 @@
       panelElements.recipientInput.value = "";
     }
 
-    panelElements.composeHint.textContent = isSingleRecipient
+    panelElements.recipientInput.placeholder = isPersonalStaffPm
+      ? "Admin-, Moderator-, Account- oder Charaktername"
+      : "Accountname, Accountnummer oder Charaktername";
+
+    panelElements.composeHint.textContent = isPersonalStaffPm
+      ? "Schreibe eine persönliche PM an einen Administrator oder Moderator. Suche per Accountname, Accountnummer oder Charaktername."
+      : isSingleRecipient
       ? isSystemMessage
         ? "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
         : "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
@@ -819,9 +857,9 @@
   if (composeShortcutLink) {
     composeShortcutLink.addEventListener("click", async (event) => {
       event.preventDefault();
-      await openSystemNotificationPanel(true, {
+      await openSystemNotificationPanel(false, {
         openCompose: true,
-        messageType: staffMailNotificationType,
+        messageType: canComposeStaffMail ? staffMailNotificationType : personalStaffPmNotificationType,
         recipientScope: "single"
       });
     });
@@ -851,7 +889,7 @@
     panelElements.composeForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || staffMailNotificationType);
+      const messageType = normalizeNotificationType(panelElements.messageTypeSelect.value || defaultComposeMessageType);
       const recipientScope = normalizeNotificationType(panelElements.recipientScopeSelect.value || "single");
 
       panelElements.composeSubmit.disabled = true;
