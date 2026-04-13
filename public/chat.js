@@ -1536,8 +1536,7 @@
   }
 
   const socket = io({
-    transports: ["websocket"],
-    closeOnBeforeunload: true
+    transports: ["websocket"]
   });
 
   socket.on("chat:message", appendMessage);

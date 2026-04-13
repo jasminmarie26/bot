@@ -32,8 +32,7 @@
     .toLowerCase();
 
   const socket = io({
-    transports: ["websocket"],
-    closeOnBeforeunload: true
+    transports: ["websocket"]
   });
 
   function syncPresenceSubscriptions() {
