@@ -21580,7 +21580,12 @@ function hasOtherSocketInChannel(
   const presenceKey = getPresenceIdentityKey(userId, characterId);
 
   return getAllSocketsForUser(userId).some((memberSocket) => {
-    if (!memberSocket) {
+    if (
+      !memberSocket ||
+      memberSocket.connected !== true ||
+      !memberSocket.data?.user ||
+      memberSocket.data?.hasJoinedChat !== true
+    ) {
       return false;
     }
 
