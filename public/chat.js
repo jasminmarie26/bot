@@ -1539,6 +1539,20 @@
     transports: ["websocket"]
   });
 
+  function disconnectChatSocketForUnload() {
+    if (serverRestartReloadInProgress) {
+      return;
+    }
+
+    try {
+      if (socket.connected || socket.active) {
+        socket.disconnect();
+      }
+    } catch (_error) {
+      // Ignore unload disconnect failures.
+    }
+  }
+
   socket.on("chat:message", appendMessage);
   socket.on("chat:whisper", handleWhisperMessage);
   socket.on("chat:online-characters", (entries) => {
@@ -3413,11 +3427,15 @@
   input.addEventListener("blur", stopTypingIndicator);
   resizeChatInput();
   window.addEventListener("beforeunload", () => {
+    window.__chatImmediateLeave?.notifyImmediateChatLeave();
     stopTypingIndicator();
     saveChatReloadSnapshot("page-reload");
+    disconnectChatSocketForUnload();
   });
   window.addEventListener("pagehide", () => {
+    window.__chatImmediateLeave?.notifyImmediateChatLeave();
     saveChatReloadSnapshot("page-reload");
+    disconnectChatSocketForUnload();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {

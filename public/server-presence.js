@@ -35,6 +35,16 @@
     transports: ["websocket"]
   });
 
+  function disconnectPresenceSocketForUnload() {
+    try {
+      if (socket.connected || socket.active) {
+        socket.disconnect();
+      }
+    } catch (_error) {
+      // Ignore unload disconnect failures.
+    }
+  }
+
   function syncPresenceSubscriptions() {
     if (serverId) {
       socket.emit("presence:set", {
@@ -446,6 +456,9 @@
   socket.on("connect", () => {
     syncPresenceSubscriptions();
   });
+
+  window.addEventListener("beforeunload", disconnectPresenceSocketForUnload);
+  window.addEventListener("pagehide", disconnectPresenceSocketForUnload);
 
   if (!isRoomListPage) {
     socket.on("user:display-profile", updateHeaderIdentity);
