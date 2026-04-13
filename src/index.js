@@ -21072,6 +21072,43 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomI
   const resolvedStandardRoom = normalizedRoomId
     ? null
     : getStandardRoomContext(normalizedServerId, standardRoomId);
+
+  function isActiveChannelMember(memberSocket) {
+    if (
+      !memberSocket?.id ||
+      memberSocket?.connected !== true ||
+      !memberSocket?.data?.user ||
+      memberSocket?.data?.hasJoinedChat !== true
+    ) {
+      return false;
+    }
+
+    const socketRoomId =
+      Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
+        ? memberSocket.data.roomId
+        : null;
+    if (socketRoomId !== normalizedRoomId) {
+      return false;
+    }
+
+    const socketServerId = getSocketChannelServerId(memberSocket, socketRoomId, normalizedServerId);
+    if (normalizedRoomId != null) {
+      return socketServerId === normalizedServerId;
+    }
+
+    const socketStandardRoomId = getSocketChannelStandardRoomId(
+      memberSocket,
+      socketRoomId,
+      socketServerId,
+      resolvedStandardRoom?.standardRoomId || ""
+    );
+
+    return (
+      socketStandardRoomId === resolvedStandardRoom?.standardRoomId &&
+      (resolvedStandardRoom?.room?.shared_scope || socketServerId === normalizedServerId)
+    );
+  }
+
   const sockets = [];
   const seenSocketIds = new Set();
   const members = io.sockets.adapter.rooms.get(
@@ -21084,7 +21121,7 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomI
   if (members && members.size > 0) {
     for (const socketId of members) {
       const memberSocket = io.sockets.sockets.get(socketId);
-      if (memberSocket) {
+      if (isActiveChannelMember(memberSocket)) {
         seenSocketIds.add(socketId);
         sockets.push(memberSocket);
       }
@@ -21097,41 +21134,8 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomI
   }
 
   for (const memberSocket of allSockets.values()) {
-    if (
-      !memberSocket?.id ||
-      seenSocketIds.has(memberSocket.id) ||
-      !memberSocket?.data?.user ||
-      memberSocket?.data?.hasJoinedChat !== true
-    ) {
+    if (seenSocketIds.has(memberSocket?.id) || !isActiveChannelMember(memberSocket)) {
       continue;
-    }
-
-    const socketRoomId =
-      Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
-        ? memberSocket.data.roomId
-        : null;
-    const socketServerId = getSocketChannelServerId(memberSocket, socketRoomId, normalizedServerId);
-    if (socketRoomId !== normalizedRoomId) {
-      continue;
-    }
-
-    if (normalizedRoomId != null) {
-      if (socketServerId !== normalizedServerId) {
-        continue;
-      }
-    } else {
-      const socketStandardRoomId = getSocketChannelStandardRoomId(
-        memberSocket,
-        socketRoomId,
-        socketServerId,
-        resolvedStandardRoom?.standardRoomId || ""
-      );
-      if (socketStandardRoomId !== resolvedStandardRoom?.standardRoomId) {
-        continue;
-      }
-      if (!resolvedStandardRoom?.room?.shared_scope && socketServerId !== normalizedServerId) {
-        continue;
-      }
     }
 
     seenSocketIds.add(memberSocket.id);
@@ -21163,17 +21167,6 @@ function emitToRoomChannelMembers(roomId, serverId, eventName, payload, standard
   const resolvedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
-  const channelName = socketChannelForRoom(
-    normalizedRoomId,
-    normalizedServerId,
-    resolvedStandardRoomId
-  );
-  const members = io.sockets.adapter.rooms.get(channelName);
-  if (members && members.size > 0) {
-    io.to(channelName).emit(eventName, payload);
-    return;
-  }
-
   getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((memberSocket) => {
     memberSocket.emit(eventName, payload);
   });

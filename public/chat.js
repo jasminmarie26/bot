@@ -1530,6 +1530,7 @@
     }
 
     serverRestartReloadInProgress = true;
+    window.__chatImmediateLeave?.setServerRestartReloadInProgress(true);
     saveChatReloadSnapshot("server-instance-reload");
     window.location.reload();
   }
@@ -2112,45 +2113,12 @@
   updateSoundToggle();
   let hasJoinedCurrentChatSession = false;
   let lastDisconnectAt = 0;
-  let immediateChatLeaveSent = false;
 
   window.addEventListener("app:server-instance-reload", reloadChatAfterServerRestart);
 
-  function notifyImmediateChatLeave() {
-    if (immediateChatLeaveSent || !socket?.id || serverRestartReloadInProgress) {
-      return;
-    }
-
-    immediateChatLeaveSent = true;
-    const payload = new URLSearchParams();
-    payload.set("socketId", socket.id);
-
-    if (typeof window.navigator.sendBeacon === "function") {
-      try {
-        window.navigator.sendBeacon("/chat/disconnect-now", payload);
-        return;
-      } catch (_error) {
-        // Fall back to keepalive fetch below.
-      }
-    }
-
-    try {
-      window.fetch("/chat/disconnect-now", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
-        body: payload.toString(),
-        credentials: "same-origin",
-        keepalive: true
-      }).catch(() => {});
-    } catch (_error) {
-      // Ignore unload transport failures.
-    }
-  }
-
   socket.on("connect", () => {
-    immediateChatLeaveSent = false;
+    window.__chatImmediateLeave?.setSocketId(socket.id || "");
+    window.__chatImmediateLeave?.setServerRestartReloadInProgress(false);
     const isRecoveredServerRestart =
       pendingChatReloadRecovery?.reason === "server-instance-reload";
     const isRecoveredPageReload =
@@ -2200,6 +2168,7 @@
   });
 
   socket.on("disconnect", () => {
+    window.__chatImmediateLeave?.setSocketId("");
     lastDisconnectAt = Date.now();
     clearAfkTimer();
   });
@@ -3446,11 +3415,9 @@
   window.addEventListener("beforeunload", () => {
     stopTypingIndicator();
     saveChatReloadSnapshot("page-reload");
-    notifyImmediateChatLeave();
   });
   window.addEventListener("pagehide", () => {
     saveChatReloadSnapshot("page-reload");
-    notifyImmediateChatLeave();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
