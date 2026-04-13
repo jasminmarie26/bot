@@ -19195,7 +19195,7 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     memberSocket.data.skipDisconnectPresence === true &&
     !memberSocket.data.user?.is_admin &&
     !memberSocket.data.user?.is_moderator;
-  const pendingDisconnectEntry = schedulePendingChatDisconnect({
+  schedulePendingChatDisconnect({
     userId: memberSocket.data.user.id,
     characterId: previousCharacterId,
     roomId: previousRoomId,
@@ -19203,7 +19203,8 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     standardRoomId: previousStandardRoomId,
     displayName: disconnectDisplayProfile.label || `User ${memberSocket.data.user?.id || "?"}`,
     chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
-    skipPresence: shouldSkipDisconnectPresence
+    skipPresence: shouldSkipDisconnectPresence,
+    socketId: memberSocket.id
   });
 
   memberSocket.data.immediateDisconnectHandled = true;
@@ -19215,6 +19216,8 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
   memberSocket.data.standardRoomId = "";
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
+  memberSocket.data.hasJoinedChat = false;
+  emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
   maybeRemoveEmptyRoom(previousRoomId);
   return res.sendStatus(204);
 });
@@ -24312,6 +24315,53 @@ function finalizeChatDisconnectEntry(entry) {
   return true;
 }
 
+function queuePendingChatDisconnectFinalization(key, delayMs = CHAT_RECONNECT_GRACE_MS) {
+  const normalizedKey = String(key || "").trim();
+  if (!normalizedKey) {
+    return;
+  }
+
+  const entry = pendingChatDisconnects.get(normalizedKey);
+  if (!entry) {
+    return;
+  }
+
+  if (entry.timer) {
+    clearTimeout(entry.timer);
+  }
+
+  entry.timer = setTimeout(() => {
+    const activeEntry = pendingChatDisconnects.get(normalizedKey);
+    if (!activeEntry) {
+      return;
+    }
+
+    const activePresenceSockets = getPresenceSocketsInChannel(
+      activeEntry.roomId,
+      activeEntry.serverId,
+      { key: activeEntry.presenceKey },
+      activeEntry.standardRoomId
+    );
+    if (activePresenceSockets.length > 0) {
+      const waitingOnSameSocket =
+        activeEntry.socketId &&
+        activePresenceSockets.every((memberSocket) => memberSocket?.id === activeEntry.socketId);
+
+      if (waitingOnSameSocket && activeEntry.retryCount < 8) {
+        activeEntry.retryCount += 1;
+        queuePendingChatDisconnectFinalization(normalizedKey, 250);
+        return;
+      }
+
+      pendingChatDisconnects.delete(normalizedKey);
+      return;
+    }
+
+    pendingChatDisconnects.delete(normalizedKey);
+    finalizeChatDisconnectEntry(activeEntry);
+  }, Math.max(0, Number(delayMs) || 0));
+}
+
 function schedulePendingChatDisconnect({
   userId,
   roomId,
@@ -24320,7 +24370,8 @@ function schedulePendingChatDisconnect({
   displayName = "",
   chatTextColor = "",
   skipPresence = false,
-  characterId = null
+  characterId = null,
+  socketId = ""
 }) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -24360,16 +24411,14 @@ function schedulePendingChatDisconnect({
     displayName: String(displayName || "").trim(),
     chatTextColor: String(chatTextColor || "").trim(),
     skipPresence: Boolean(skipPresence),
+    socketId: String(socketId || "").trim(),
+    retryCount: 0,
     expiresAt: disconnectExpiresAt,
     timer: null
   };
 
-  entry.timer = setTimeout(() => {
-    pendingChatDisconnects.delete(key);
-    finalizeChatDisconnectEntry(entry);
-  }, disconnectGraceMs);
-
   pendingChatDisconnects.set(key, entry);
+  queuePendingChatDisconnectFinalization(key, disconnectGraceMs);
   return entry;
 }
 
@@ -26447,7 +26496,8 @@ io.on("connection", (socket) => {
         standardRoomId: previousStandardRoomId,
         displayName: disconnectDisplayProfile.label || `User ${socket.data.user?.id || "?"}`,
         chatTextColor: disconnectDisplayProfile?.chat_text_color || "",
-        skipPresence: shouldSkipDisconnectPresence
+        skipPresence: shouldSkipDisconnectPresence,
+        socketId: socket.id
       });
       touchFestplayActivityForRoom(previousRoom);
       maybeRemoveEmptyRoom(previousRoomId);
