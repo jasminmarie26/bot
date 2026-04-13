@@ -19156,8 +19156,14 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     return res.sendStatus(204);
   }
 
+  const sessionUserId = Number(req.session.user?.id);
   const memberSocket = io.sockets.sockets.get(requestedSocketId);
-  if (!memberSocket || Number(memberSocket.data?.user?.id) !== Number(req.session.user?.id)) {
+  if (!memberSocket || Number(memberSocket.data?.user?.id) !== sessionUserId) {
+    const pendingDisconnect = clearPendingChatDisconnectBySocketId(requestedSocketId, sessionUserId);
+    if (pendingDisconnect) {
+      finalizeChatDisconnectEntry(pendingDisconnect);
+      maybeRemoveEmptyRoom(pendingDisconnect.roomId);
+    }
     return res.sendStatus(204);
   }
 
@@ -19195,7 +19201,7 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
     memberSocket.data.skipDisconnectPresence === true &&
     !memberSocket.data.user?.is_admin &&
     !memberSocket.data.user?.is_moderator;
-  schedulePendingChatDisconnect({
+  const immediateDisconnectEntry = schedulePendingChatDisconnect({
     userId: memberSocket.data.user.id,
     characterId: previousCharacterId,
     roomId: previousRoomId,
@@ -19211,13 +19217,25 @@ app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
   await Promise.resolve(
     memberSocket.leave(socketChannelForRoom(previousRoomId, previousServerId, previousStandardRoomId))
   );
-  memberSocket.disconnect(true);
   memberSocket.data.roomId = null;
   memberSocket.data.standardRoomId = "";
   memberSocket.data.serverId = null;
   memberSocket.data.presenceServerId = null;
   memberSocket.data.hasJoinedChat = false;
-  emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
+  memberSocket.disconnect(true);
+  const finalizedDisconnectEntry =
+    clearPendingChatDisconnect(
+      memberSocket.data.user.id,
+      previousRoomId,
+      previousServerId,
+      previousCharacterId,
+      previousStandardRoomId
+    ) || immediateDisconnectEntry;
+  if (finalizedDisconnectEntry) {
+    finalizeChatDisconnectEntry(finalizedDisconnectEntry);
+  } else {
+    emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
+  }
   maybeRemoveEmptyRoom(previousRoomId);
   return res.sendStatus(204);
 });
@@ -24225,6 +24243,30 @@ function clearPendingChatDisconnect(
   clearTimeout(entry.timer);
   pendingChatDisconnects.delete(key);
   return entry;
+}
+
+function clearPendingChatDisconnectBySocketId(socketId, userId = null) {
+  const normalizedSocketId = String(socketId || "").trim();
+  const parsedUserId = Number(userId);
+  if (!normalizedSocketId) {
+    return null;
+  }
+
+  for (const [key, entry] of pendingChatDisconnects.entries()) {
+    if (!entry || String(entry.socketId || "").trim() !== normalizedSocketId) {
+      continue;
+    }
+
+    if (Number.isInteger(parsedUserId) && parsedUserId > 0 && Number(entry.userId) !== parsedUserId) {
+      continue;
+    }
+
+    clearTimeout(entry.timer);
+    pendingChatDisconnects.delete(key);
+    return entry;
+  }
+
+  return null;
 }
 
 function getRemainingRoomCleanupBootGraceMs() {
