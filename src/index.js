@@ -16724,7 +16724,11 @@ app.post("/characters", requireAuth, (req, res) => {
   });
 
   emitHomeStatsUpdate();
-  setFlash(req, "success", "Charakter gespeichert.");
+  setFlash(
+    req,
+    "success",
+    payload.server_id === LARP_SERVER_ID ? "Profil gespeichert." : "Charakter gespeichert."
+  );
   return res.redirect(returnTarget);
 });
 
