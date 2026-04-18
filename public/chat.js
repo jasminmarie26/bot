@@ -1509,10 +1509,14 @@
       return;
     }
 
+    const snapshotReason = serverRestartReloadInProgress
+      ? "server-instance-reload"
+      : String(reason || "").trim() || "page-reload";
+
     writeSessionStorage(
       chatReloadSnapshotKey,
       JSON.stringify({
-        reason: String(reason || "").trim() || "page-reload",
+        reason: snapshotReason,
         disconnectAt: lastDisconnectAt > 0 ? lastDisconnectAt : Date.now(),
         scrollTop: chatScroll.scrollTop,
         characterId:

@@ -25496,16 +25496,15 @@ io.on("connection", (socket) => {
         nextStandardRoomId
       );
     }
-    const shouldSuppressReconnectPresence =
-      shouldMarkReconnectSuppression;
-    const shouldSuppressStaffServerReloadWelcome = Boolean(
-      (socket.data.user?.is_admin || socket.data.user?.is_moderator) &&
+    const shouldSuppressServerReloadReconnectPresence = Boolean(
       isReconnectJoin &&
       (
         reloadReason === "server-instance-reload" ||
         getRemainingRoomCleanupBootGraceMs() > 0
       )
     );
+    const shouldSuppressReconnectPresence =
+      shouldMarkReconnectSuppression || shouldSuppressServerReloadReconnectPresence;
     const hasOtherPresenceInNextChannel = hasOtherSocketInChannel(
       socket.data.user.id,
       nextRoomId,
@@ -25587,7 +25586,6 @@ io.on("connection", (socket) => {
       if (
         !shouldSuppressExplicitEnterPresence &&
         !shouldSuppressReconnectPresence &&
-        !shouldSuppressStaffServerReloadWelcome &&
         !hasOtherPresenceInNextChannel
       ) {
         emitSystemChatMessage(
@@ -25607,7 +25605,6 @@ io.on("connection", (socket) => {
       } else if (
         !shouldSuppressExplicitEnterPresence &&
         !shouldSuppressReconnectPresence &&
-        !shouldSuppressStaffServerReloadWelcome &&
         reloadReason !== "server-instance-reload"
       ) {
         emitDirectSystemMessageToSocket(socket, nextPresenceMessage.text, {
