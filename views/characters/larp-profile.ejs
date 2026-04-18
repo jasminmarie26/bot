@@ -669,7 +669,11 @@
   }
 </style>
 
-<%- include("../partials/larp-navigation", { activeLarpNavLabel: "Home", larpNavCompact: true }) %>
+<%- include("../partials/larp-navigation", {
+  activeLarpNavLabel: "Profil",
+  larpNavCompact: true,
+  larpNavCharacter: character
+}) %>
 
 <section class="larp-profile-page">
   <section class="panel larp-profile-hero">
