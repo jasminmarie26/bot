@@ -6,9 +6,9 @@
     { label: "Forum", href: `/characters/${character.id}/edit`, caret: true },
     { label: "Projekte & Gilden", href: "#", caret: true },
     { label: "Mitglieder", href: "/members", caret: true },
-    { label: "Kalender", href: "#", badge: "9", caret: true },
-    { label: "Datenbank", href: `/characters/${character.id}/guestbook`, badge: "1", caret: true },
-    { label: "Galerie", href: "#", badge: "1", caret: true },
+    { label: "Kalender", href: "#", caret: true },
+    { label: "Datenbank", href: `/characters/${character.id}/guestbook`, caret: true },
+    { label: "Galerie", href: "#", caret: true },
     { label: "Storys", href: "#", caret: true },
     { label: "Artikel", href: "#", caret: false },
     { label: "Tickets", href: "#", caret: true }
@@ -17,182 +17,228 @@
 
 <style>
   .larp-list-shell {
-    min-height: 220px;
-    padding: 28px 0 10px;
+    min-height: 160px;
+    padding: 18px 0 6px;
   }
 
   .larp-list-stage {
-    padding: 26px;
-    border: 1px solid rgba(193, 209, 216, 0.44);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(179, 200, 209, 0.36), rgba(206, 215, 209, 0.26)),
-      linear-gradient(135deg, rgba(176, 191, 181, 0.24), rgba(156, 183, 199, 0.28));
-    box-shadow: 0 18px 44px rgba(35, 56, 68, 0.14);
-    backdrop-filter: blur(8px);
+    position: relative;
+    padding: 10px 0;
   }
 
   .larp-list-nav {
-    padding: 6px;
-    border: 1px solid rgba(162, 181, 191, 0.45);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--panel-edge);
     border-radius: 8px;
-    background: rgba(222, 231, 232, 0.42);
+    background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
+    box-shadow: 0 18px 38px -30px var(--panel-shadow);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+
+  .larp-list-nav::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 160ms ease;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--panel-bg) 0%, transparent 100%) 0%,
+      color-mix(in srgb, var(--panel-bg) 88%, white 12%) 100%
+    );
+  }
+
+  .larp-list-nav.is-overflowing:not(.is-end)::after {
+    opacity: 1;
+  }
+
+  .larp-list-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .larp-list-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .larp-list-overflow-arrow {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  .larp-list-nav.is-overflowing:not(.is-end) .larp-list-overflow-arrow {
+    opacity: 0.82;
   }
 
   .larp-list-menu {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-wrap: nowrap;
+    gap: 2px;
     margin: 0;
-    padding: 0;
+    padding: 4px;
     list-style: none;
+    width: max-content;
+    min-width: 100%;
   }
 
   .larp-list-item {
     display: flex;
+    flex: 0 0 auto;
   }
 
   .larp-list-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 48px;
-    padding: 0 14px;
+    gap: 0;
+    min-height: 40px;
+    padding: 0 12px;
     border-radius: 6px;
-    color: #526777;
-    font-size: 0.98rem;
+    color: var(--text);
+    font-size: 0.93rem;
     font-weight: 700;
     line-height: 1;
     text-decoration: none;
     white-space: nowrap;
+    opacity: 0.92;
   }
 
   .larp-list-link.is-active {
-    background: rgba(255, 255, 255, 0.38);
-    color: #405767;
+    background: color-mix(in srgb, var(--field-bg) 52%, white 48%);
+    color: var(--text);
   }
 
   .larp-list-link:hover,
   .larp-list-link:focus-visible {
-    background: rgba(255, 255, 255, 0.28);
-    color: #425969;
-  }
-
-  .larp-list-icon {
-    position: relative;
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    background: rgba(89, 105, 118, 0.9);
-    flex: 0 0 12px;
-  }
-
-  .larp-list-icon::after {
-    content: "";
-    position: absolute;
-    inset: 3px;
-    border: 1px solid rgba(240, 245, 247, 0.6);
-    border-radius: 2px;
+    background: color-mix(in srgb, var(--field-bg) 44%, white 30%);
+    color: var(--text);
+    opacity: 1;
   }
 
   .larp-list-text {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
   }
 
   .larp-list-caret {
-    width: 6px;
-    height: 6px;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(45deg) translateY(-1px);
+    width: 7px;
+    height: 7px;
+    border-right: 1.4px solid currentColor;
+    border-bottom: 1.4px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
     opacity: 0.8;
     flex: 0 0 auto;
   }
 
-  .larp-list-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: #ff4a3b;
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 800;
-    line-height: 1;
-    box-shadow: 0 8px 18px rgba(255, 74, 59, 0.25);
+  .larp-list-overflow-arrow::before {
+    content: "";
+    display: block;
+    width: 9px;
+    height: 9px;
+    border-top: 1.8px solid currentColor;
+    border-right: 1.8px solid currentColor;
+    transform: rotate(45deg);
   }
 
   @media (max-width: 920px) {
-    .larp-list-stage {
-      padding: 18px;
+    .larp-list-shell {
+      padding-top: 14px;
     }
 
     .larp-list-link {
-      min-height: 44px;
-      padding: 0 12px;
-      font-size: 0.92rem;
+      min-height: 38px;
+      padding: 0 10px;
+      font-size: 0.9rem;
     }
   }
 
   @media (max-width: 640px) {
     .larp-list-shell {
-      padding-top: 18px;
-    }
-
-    .larp-list-stage {
-      padding: 12px;
-    }
-
-    .larp-list-nav {
-      padding: 4px;
+      padding-top: 10px;
     }
 
     .larp-list-menu {
-      gap: 2px;
-    }
-
-    .larp-list-link {
-      width: 100%;
-      justify-content: flex-start;
-    }
-
-    .larp-list-item {
-      width: 100%;
+      padding-right: 34px;
     }
   }
 </style>
 
 <section class="larp-list-shell">
   <div class="larp-list-stage">
-    <nav class="larp-list-nav" aria-label="LARP Navigation">
-      <ul class="larp-list-menu">
-        <% menuItems.forEach((item) => { %>
-          <li class="larp-list-item">
-            <a
-              class="larp-list-link<%= item.active ? " is-active" : "" %>"
-              href="<%= item.href %>"
-            >
-              <span class="larp-list-icon" aria-hidden="true"></span>
-              <span class="larp-list-text">
-                <span><%= item.label %></span>
-                <% if (item.badge) { %>
-                  <span class="larp-list-badge"><%= item.badge %></span>
-                <% } %>
-                <% if (item.caret) { %>
-                  <span class="larp-list-caret" aria-hidden="true"></span>
-                <% } %>
-              </span>
-            </a>
-          </li>
-        <% }) %>
-      </ul>
+    <nav class="larp-list-nav" aria-label="LARP Navigation" data-larp-list-nav>
+      <div class="larp-list-scroll" data-larp-list-scroll>
+        <ul class="larp-list-menu">
+          <% menuItems.forEach((item) => { %>
+            <li class="larp-list-item">
+              <a
+                class="larp-list-link<%= item.active ? " is-active" : "" %>"
+                href="<%= item.href %>"
+              >
+                <span class="larp-list-text">
+                  <span><%= item.label %></span>
+                  <% if (item.caret) { %>
+                    <span class="larp-list-caret" aria-hidden="true"></span>
+                  <% } %>
+                </span>
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+      <span class="larp-list-overflow-arrow" aria-hidden="true"></span>
     </nav>
   </div>
 </section>
+
+<script>
+  (() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const nav = document.querySelector("[data-larp-list-nav]");
+      const scrollArea = document.querySelector("[data-larp-list-scroll]");
+      if (!nav || !scrollArea) return;
+
+      const syncOverflowState = () => {
+        const maxScrollLeft = Math.max(0, scrollArea.scrollWidth - scrollArea.clientWidth);
+        const isOverflowing = maxScrollLeft > 6;
+        const isEnd = scrollArea.scrollLeft >= maxScrollLeft - 6;
+
+        nav.classList.toggle("is-overflowing", isOverflowing);
+        nav.classList.toggle("is-end", !isOverflowing || isEnd);
+      };
+
+      syncOverflowState();
+      scrollArea.addEventListener("scroll", syncOverflowState, { passive: true });
+      window.addEventListener("resize", syncOverflowState);
+
+      if ("ResizeObserver" in window) {
+        const observer = new ResizeObserver(syncOverflowState);
+        observer.observe(scrollArea);
+      }
+    });
+  })();
+</script>
 
 <%- include("../partials/end") %>
