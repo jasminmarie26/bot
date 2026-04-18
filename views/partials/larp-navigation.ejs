@@ -6,10 +6,8 @@
   const resolvedLarpNavCharacter = providedLarpNavCharacter || ambientLarpNavCharacter;
   const resolvedLarpNavCharacterId = Number(resolvedLarpNavCharacter?.id || 0);
   const larpHomeHref = resolvedLarpNavCharacterId > 0 ? `/characters/${resolvedLarpNavCharacterId}/home` : "";
-  const larpProfileHref = resolvedLarpNavCharacterId > 0 ? `/characters/${resolvedLarpNavCharacterId}` : "";
   const larpNavItems = [
     { label: "Home", icon: "home", href: larpHomeHref, active: activeLarpNav === "Home" },
-    { label: "Profil", icon: "profile", href: larpProfileHref, active: activeLarpNav === "Profil" },
     { label: "Forum", icon: "forum", caret: true, active: activeLarpNav === "Forum" },
     { label: "Projekte & Gilden", icon: "shield", caret: true, active: activeLarpNav === "Projekte & Gilden" },
     { label: "Mitglieder", icon: "group", caret: true, active: activeLarpNav === "Mitglieder" },
@@ -28,13 +26,6 @@
           <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
             <path d="M2.2 7.1 8 2.5l5.8 4.6"></path>
             <path d="M3.3 6.3v6.2h3.1V8.8h3.2v3.7h3.1V6.3"></path>
-          </svg>
-        `;
-      case "profile":
-        return `
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <circle cx="8" cy="5.2" r="2.1"></circle>
-            <path d="M3.8 13c.7-2.3 2.2-3.5 4.2-3.5s3.5 1.2 4.2 3.5"></path>
           </svg>
         `;
       case "forum":
