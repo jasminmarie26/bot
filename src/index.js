@@ -3236,6 +3236,9 @@ function renderAccountPage(req, res, options = {}) {
 
   return res.render("account/account", {
     title: options.title || "Account",
+    accountHeading: options.accountHeading || "Account",
+    accountDescription: options.accountDescription || "Hier kannst du deine Kontodaten bearbeiten.",
+    accountUpdateAction: options.accountUpdateAction || "/account/update",
     error: options.error || null,
     accountUser: {
       ...accountUser,
@@ -13607,6 +13610,15 @@ app.get("/account", requireAuth, (req, res) => {
   return renderAccountPage(req, res);
 });
 
+app.get("/account/larp", requireAuth, (req, res) => {
+  return renderAccountPage(req, res, {
+    title: "LARP Account",
+    accountHeading: "LARP Account",
+    accountDescription: "Hier kannst du deine Kontodaten für den LARP-Bereich bearbeiten.",
+    accountUpdateAction: "/account/update?return_to=%2Faccount%2Flarp"
+  });
+});
+
 app.post("/account/update", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   if (!Number.isInteger(currentUserId) || currentUserId < 1) {
@@ -13622,6 +13634,9 @@ app.post("/account/update", requireAuth, (req, res) => {
     return res.redirect("/login");
   }
 
+  const requestedReturnTo = String(req.body.return_to || req.query.return_to || "").trim();
+  const accountReturnTo = requestedReturnTo === "/account/larp" ? "/account/larp" : "/account";
+  const isLarpAccountReturn = accountReturnTo === "/account/larp";
   const username = String(req.body.username || "").trim().slice(0, 24);
   const email = normalizeEmail(req.body.email || "");
   const autoAfkEnabled = String(req.body.auto_afk_enabled || "").trim() === "1";
@@ -13636,6 +13651,14 @@ app.post("/account/update", requireAuth, (req, res) => {
 
   const renderWithError = (errorMessage) =>
     renderAccountPage(req, res, {
+      title: isLarpAccountReturn ? "LARP Account" : "Account",
+      accountHeading: isLarpAccountReturn ? "LARP Account" : "Account",
+      accountDescription: isLarpAccountReturn
+        ? "Hier kannst du deine Kontodaten für den LARP-Bereich bearbeiten."
+        : "Hier kannst du deine Kontodaten bearbeiten.",
+      accountUpdateAction: isLarpAccountReturn
+        ? "/account/update?return_to=%2Faccount%2Flarp"
+        : "/account/update",
       error: errorMessage,
       accountUser,
       values: {
@@ -13732,7 +13755,7 @@ app.post("/account/update", requireAuth, (req, res) => {
     setFlash(req, "success", "Account gespeichert.");
   }
 
-  return res.redirect("/account");
+  return res.redirect(accountReturnTo);
 });
 
 app.get("/api/social/state", requireAuth, (req, res) => {

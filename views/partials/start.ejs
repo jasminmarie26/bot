@@ -316,6 +316,8 @@
       currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
     <% const accountDisplayName =
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
+    <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
+    <% const accountMenuHref = isLarpMenuContext ? "/account/larp" : "/account"; %>
     <% const menuCharacterIsAdmin = Boolean(
       menuCharacter &&
       currentUser &&
@@ -710,14 +712,16 @@
                       <span>Konto: <%= accountDisplayName %></span>
                     <% } %>
                     <span>Account Nr.: <%= currentUser.account_number %></span>
-                    <% if (menuCharacter) { %>
+                    <% if (menuCharacter && !isLarpMenuContext) { %>
                       <span data-live-character-name>Charakter: <%= menuCharacter.name %></span>
                       <span data-live-character-server-label>Server: <%= menuCharacter.server_id === "larp" ? "LARP" : (menuCharacter.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
+                    <% } else if (menuCharacter) { %>
+                      <span data-live-character-server-label>Server: LARP</span>
                     <% } %>
                   </div>
 
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
-                    <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
+                    <a href="<%= accountMenuHref %>" target="_blank" rel="noopener noreferrer">Account</a>
                     <% if (!isDashboardPath) { %>
                       <a href="/dashboard">Charakterliste</a>
                     <% } %>
