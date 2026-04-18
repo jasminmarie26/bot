@@ -1,4 +1,4 @@
-<%- include("../partials/start", { pageClass: "page-larp-profile", topbarCharacter }) %>
+<%- include("../partials/start", { pageClass: "page-larp-profile", topbarCharacter, hideTopbar: true }) %>
 
 <%
   const hasAvatar = Boolean(String(character.avatar_url || "").trim());
