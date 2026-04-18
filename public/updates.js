@@ -88,7 +88,6 @@
   let serverInstanceReloadPending = false;
   const isChatPage = document.body?.classList?.contains("page-chat") === true;
   const isAdminUser = document.body?.dataset.currentUserIsAdmin === "true";
-  let serverInstanceNoticeElement = null;
   let adminReloadTonePlayed = false;
 
   if (
@@ -131,38 +130,6 @@
       adminReloadTonePlayed = true;
       playAdminServerReloadTone();
     }
-
-    if (!serverInstanceNoticeElement) {
-      const notice = document.createElement("div");
-      notice.setAttribute("role", "status");
-      notice.setAttribute("aria-live", "polite");
-      notice.textContent = "Neue Version wird geladen...";
-      notice.style.position = "fixed";
-      notice.style.left = "50%";
-      notice.style.top = "18px";
-      notice.style.transform = "translateX(-50%)";
-      notice.style.zIndex = "99999";
-      notice.style.padding = "0.85rem 1.15rem";
-      notice.style.borderRadius = "999px";
-      notice.style.background = "rgba(12, 18, 28, 0.94)";
-      notice.style.color = "#f8fafc";
-      notice.style.boxShadow = "0 18px 40px rgba(15, 23, 42, 0.35)";
-      notice.style.fontSize = "0.95rem";
-      notice.style.fontWeight = "700";
-      notice.style.letterSpacing = "0.01em";
-      notice.style.opacity = "0";
-      notice.style.transition = "opacity 160ms ease";
-      document.body.appendChild(notice);
-      serverInstanceNoticeElement = notice;
-      window.requestAnimationFrame(() => {
-        if (serverInstanceNoticeElement) {
-          serverInstanceNoticeElement.style.opacity = "1";
-        }
-      });
-      return;
-    }
-
-    serverInstanceNoticeElement.style.opacity = "1";
   }
 
   function playAdminServerReloadTone() {
