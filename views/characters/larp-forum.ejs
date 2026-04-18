@@ -16,6 +16,12 @@
     { label: "Erhaltene Reaktionen:", value: 0 },
     { label: "Punkte:", value: larpHomeEntryCount }
   ];
+  const larpHomeOnline = typeof larpOnlineSummary !== "undefined" && larpOnlineSummary ? larpOnlineSummary : {};
+  const larpHomeOnlineMembers = Array.isArray(larpHomeOnline.members) ? larpHomeOnline.members : [];
+  const larpHomeOnlineMemberCount = Number(larpHomeOnline.memberCount || larpHomeOnlineMembers.length || 0);
+  const larpHomeOnlineRecordCount = Number(larpHomeOnline.recordCount || larpHomeOnlineMemberCount || 0);
+  const larpHomeOnlineRecordDate = String(larpHomeOnline.recordDateLabel || "").trim();
+  const larpHomeOnlineMemberLabel = larpHomeOnlineMemberCount === 1 ? "Mitglied" : "Mitglieder";
 %>
 
 <style>
@@ -156,6 +162,60 @@
     font-weight: 600;
   }
 
+  .larp-home-online {
+    display: grid;
+    gap: 1rem;
+    padding: 1.45rem 1.8rem 1.55rem;
+    border-radius: 8px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--panel-bg) 90%, white 10%),
+      color-mix(in srgb, var(--accent) 16%, var(--panel-bg) 84%)
+    );
+  }
+
+  .larp-home-online h2 {
+    margin: 0;
+    color: color-mix(in srgb, var(--accent) 64%, var(--text) 36%);
+    font-size: 1.28rem;
+    line-height: 1.25;
+  }
+
+  .larp-home-online-meta {
+    display: grid;
+    gap: 0.24rem;
+  }
+
+  .larp-home-online-meta p {
+    margin: 0;
+    color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
+    font-size: 1.04rem;
+    line-height: 1.45;
+  }
+
+  .larp-home-online-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.22rem 0.45rem;
+    align-items: center;
+  }
+
+  .larp-home-online-member {
+    color: color-mix(in srgb, var(--accent) 68%, var(--text) 32%);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .larp-home-online-member:hover,
+  .larp-home-online-member:focus-visible {
+    text-decoration: underline;
+  }
+
+  .larp-home-online-empty {
+    margin: 0;
+    color: var(--muted);
+  }
+
   @media (max-width: 860px) {
     .larp-home-welcome {
       grid-template-columns: 1fr;
@@ -234,6 +294,29 @@
         </div>
       </div>
     </aside>
+  </section>
+
+  <section class="panel larp-home-online" aria-label="Benutzer online">
+    <h2>Benutzer online</h2>
+
+    <div class="larp-home-online-meta">
+      <p><%= larpHomeOnlineMemberCount %> <%= larpHomeOnlineMemberLabel %> online</p>
+      <p>
+        Rekord: <%= larpHomeOnlineRecordCount %> Benutzer<% if (larpHomeOnlineRecordDate) { %>
+          (<%= larpHomeOnlineRecordDate %>)
+        <% } %>
+      </p>
+    </div>
+
+    <% if (larpHomeOnlineMembers.length) { %>
+      <div class="larp-home-online-members" aria-label="Aktuell online">
+        <% larpHomeOnlineMembers.forEach((member, index) => { %>
+          <a class="larp-home-online-member" href="<%= member.href %>"><%= member.name %></a><%= index < larpHomeOnlineMembers.length - 1 ? "," : "" %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p class="larp-home-online-empty">Gerade ist kein LARP-Mitglied online.</p>
+    <% } %>
   </section>
 </section>
 

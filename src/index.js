@@ -15476,6 +15476,110 @@ function getCharacterGuestbookStats(characterId, options = {}) {
   };
 }
 
+function formatGermanLongDate(value) {
+  const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
+  if (!parsed) return "";
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(parsed);
+}
+
+function getLarpHomeOnlineMembers() {
+  const { onlineAccountUserIds } = getOnlineAccountActivitySnapshot();
+  const onlineUserIds = Array.from(onlineAccountUserIds || [])
+    .map((userId) => Number(userId))
+    .filter((userId) => Number.isInteger(userId) && userId > 0);
+
+  if (!onlineUserIds.length) {
+    return [];
+  }
+
+  const placeholders = onlineUserIds.map(() => "?").join(", ");
+  return db
+    .prepare(
+      `SELECT c.id,
+              c.user_id,
+              c.name,
+              u.username
+         FROM characters c
+         JOIN users u ON u.id = c.user_id
+        WHERE c.server_id = ?
+          AND c.user_id IN (${placeholders})
+        ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(LARP_SERVER_ID, ...onlineUserIds)
+    .map((entry) => {
+      const profileName = String(entry.name || entry.username || "").trim();
+      return {
+        userId: Number(entry.user_id) || 0,
+        characterId: Number(entry.id) || 0,
+        name: profileName || "LARP-Profil",
+        href: `/characters/${Number(entry.id) || ""}`
+      };
+    })
+    .filter((entry) => entry.characterId > 0);
+}
+
+function getLarpHomeOnlineRecord() {
+  const row =
+    db
+      .prepare(
+        `SELECT larp_online_record_count,
+                larp_online_record_at
+           FROM site_home_settings
+          WHERE id = 1`
+      )
+      .get() || {};
+
+  const count = Math.max(0, Number(row.larp_online_record_count || 0));
+  const recordAt = String(row.larp_online_record_at || "").trim();
+  return {
+    count,
+    recordAt,
+    dateLabel: formatGermanLongDate(recordAt)
+  };
+}
+
+function updateLarpHomeOnlineRecord(count) {
+  const memberCount = Math.max(0, Number(count) || 0);
+  const currentRecord = getLarpHomeOnlineRecord();
+  if (memberCount <= currentRecord.count) {
+    return currentRecord;
+  }
+
+  const now = new Date();
+  db
+    .prepare(
+      `UPDATE site_home_settings
+          SET larp_online_record_count = ?,
+              larp_online_record_at = CURRENT_TIMESTAMP
+        WHERE id = 1`
+    )
+    .run(memberCount);
+
+  return {
+    count: memberCount,
+    recordAt: now.toISOString(),
+    dateLabel: formatGermanLongDate(now)
+  };
+}
+
+function buildLarpHomeOnlineSummary() {
+  const members = getLarpHomeOnlineMembers();
+  const memberCount = members.length;
+  const record = updateLarpHomeOnlineRecord(memberCount);
+
+  return {
+    memberCount,
+    recordCount: Math.max(memberCount, record.count),
+    recordDateLabel: record.dateLabel,
+    members
+  };
+}
+
 function renderLarpHomePage(req, res, character) {
   const isOwner = Number(req.session.user?.id) === Number(character.user_id);
   const isAdmin = req.session.user?.is_admin === true;
@@ -15498,7 +15602,8 @@ function renderLarpHomePage(req, res, character) {
     publicBirthdayRows: publicBirthdayDisplay.rows,
     guestbookStats: getCharacterGuestbookStats(character.id, {
       includePrivate: isOwner || isAdmin
-    })
+    }),
+    larpOnlineSummary: buildLarpHomeOnlineSummary()
   });
 }
 

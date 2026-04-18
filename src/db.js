@@ -377,7 +377,9 @@ db.exec(`
     hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
     hero_body TEXT NOT NULL DEFAULT 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.',
     updates_title TEXT NOT NULL DEFAULT 'Live Updates',
-    account_number_migration_version INTEGER NOT NULL DEFAULT 0
+    account_number_migration_version INTEGER NOT NULL DEFAULT 0,
+    larp_online_record_count INTEGER NOT NULL DEFAULT 0,
+    larp_online_record_at TEXT NOT NULL DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS registration_guard_events (
@@ -1504,6 +1506,14 @@ if (!siteHomeSettingsColumns.includes("account_number_migration_version")) {
   );
 }
 
+if (!siteHomeSettingsColumns.includes("larp_online_record_count")) {
+  db.exec("ALTER TABLE site_home_settings ADD COLUMN larp_online_record_count INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!siteHomeSettingsColumns.includes("larp_online_record_at")) {
+  db.exec("ALTER TABLE site_home_settings ADD COLUMN larp_online_record_at TEXT NOT NULL DEFAULT ''");
+}
+
 if (!siteUpdateColumns.includes("updated_at")) {
   db.exec("ALTER TABLE site_updates ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''");
 }
@@ -1915,6 +1925,12 @@ db.prepare(
 ).run();
 db.prepare(
   "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET larp_online_record_count = 0 WHERE larp_online_record_count IS NULL"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET larp_online_record_at = '' WHERE larp_online_record_at IS NULL"
 ).run();
 db.prepare(
   "UPDATE site_updates SET updated_at = created_at WHERE updated_at IS NULL OR trim(updated_at) = ''"
