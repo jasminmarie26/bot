@@ -50,6 +50,7 @@
   const roomInviteDeclineBtn = document.getElementById("room-invite-decline");
   const headerIdentity = document.querySelector("[data-header-identity]");
   const userMenuIdentity = document.querySelector("[data-chat-user-menu-identity]");
+  const chatUserMenus = Array.from(document.querySelectorAll(".rp-user-menu"));
   const chatRoomListLink = document.querySelector("[data-chat-roomlist-link]");
   const chatRpBoardLinks = Array.from(document.querySelectorAll("[data-rp-board-link-root]"));
   const chatCharacterLinkTargets = Array.from(document.querySelectorAll("[data-chat-character-href-template]"));
@@ -1971,6 +1972,14 @@
     updateSoundToggle();
   }
 
+  function closeChatUserMenus() {
+    chatUserMenus.forEach((menu) => {
+      if (menu instanceof HTMLDetailsElement) {
+        menu.open = false;
+      }
+    });
+  }
+
   function toggleSoundPanel() {
     if (isSoundPanelOpen) {
       closeSoundPanel();
@@ -3680,12 +3689,17 @@
     if (!target.closest(".chat-sound-menu")) {
       closeSoundPanel();
     }
+
+    if (!target.closest(".rp-user-menu")) {
+      closeChatUserMenus();
+    }
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeOnlineMenu();
       closeSoundPanel();
+      closeChatUserMenus();
       closeWhisperPanel();
     }
   });
