@@ -114,12 +114,14 @@
   .larp-list-nav {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--panel-edge);
+    border: 1px solid color-mix(in srgb, var(--panel-edge) 34%, #b7c1ca 66%);
     border-radius: 8px;
-    background: color-mix(in srgb, var(--panel-bg) 36%, white 64%);
-    box-shadow: 0 18px 38px -30px var(--panel-shadow);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: rgba(228, 232, 235, 0.94);
+    box-shadow:
+      0 14px 30px -24px rgba(18, 28, 38, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 
   .larp-list-nav::after {
@@ -134,8 +136,8 @@
     transition: opacity 160ms ease;
     background: linear-gradient(
       90deg,
-      color-mix(in srgb, var(--panel-bg) 0%, transparent 100%) 0%,
-      color-mix(in srgb, var(--panel-bg) 88%, white 12%) 100%
+      rgba(228, 232, 235, 0) 0%,
+      rgba(228, 232, 235, 0.98) 100%
     );
   }
 
@@ -167,7 +169,7 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: color-mix(in srgb, var(--muted) 84%, var(--text) 16%);
+    color: #536678;
     opacity: 0;
     transform: translateY(-50%);
     pointer-events: none;
@@ -203,7 +205,7 @@
     min-height: 40px;
     padding: 0 12px;
     border-radius: 6px;
-    color: color-mix(in srgb, var(--muted) 80%, var(--text) 20%);
+    color: #536678;
     font-size: 0.93rem;
     font-weight: 700;
     line-height: 1;
@@ -212,17 +214,18 @@
     opacity: 0.92;
     cursor: default;
     background: transparent;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.26);
   }
 
   .larp-list-link.is-active {
-    background: color-mix(in srgb, var(--field-bg) 18%, white 82%);
-    color: color-mix(in srgb, var(--muted) 68%, var(--text) 32%);
+    background: rgba(245, 247, 249, 0.94);
+    color: #495d70;
   }
 
   .larp-list-link:hover,
   .larp-list-link:focus-visible {
-    background: color-mix(in srgb, var(--field-bg) 14%, white 86%);
-    color: color-mix(in srgb, var(--muted) 70%, var(--text) 30%);
+    background: rgba(243, 246, 248, 0.78);
+    color: #4f6275;
     opacity: 1;
   }
 
