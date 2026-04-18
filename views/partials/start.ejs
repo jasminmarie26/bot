@@ -321,6 +321,12 @@
     <% const accountDisplayName =
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
+    <% const menuCharacterEditHref = menuCharacter
+      ? `/characters/${menuCharacter.id}/edit${isLarpMenuContext ? `?mode=edit&return_to=${encodeURIComponent(`/characters/${menuCharacter.id}`)}` : ""}`
+      : ""; %>
+    <% const menuCharacterEditHrefTemplate = isLarpMenuContext
+      ? "/characters/__CHARACTER_ID__/edit?mode=edit&return_to=/characters/__CHARACTER_ID__"
+      : "/characters/__CHARACTER_ID__/edit"; %>
     <% const accountMenuHref = isLarpMenuContext ? "/account/larp" : "/account"; %>
     <% const menuCharacterIsAdmin = Boolean(
       menuCharacter &&
@@ -732,10 +738,10 @@
                         <% if (canEditMenuCharacter) { %>
                           <span class="topbar-user-menu-inline-separator" aria-hidden="true">&middot;</span>
                           <a
-                            href="/characters/<%= menuCharacter.id %>/edit"
+                            href="<%= menuCharacterEditHref %>"
                             target="_blank"
                             rel="noopener noreferrer"
-                            data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
+                            data-live-character-href-template="<%= menuCharacterEditHrefTemplate %>"
                           >Profil bearbeiten</a>
                         <% } %>
                       </div>

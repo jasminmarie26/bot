@@ -72,7 +72,7 @@
         <div class="character-mini-grid">
           <% larpCharacters.forEach((char) => { %>
             <article class="character-mini-card">
-              <a class="character-mini-item" href="/characters/<%= char.id %>/edit" title="<%= char.name %> bearbeiten">
+              <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %> Profil ansehen">
                 <span class="character-mini-name"><%= char.name %></span>
               </a>
               <div class="character-mini-actions">

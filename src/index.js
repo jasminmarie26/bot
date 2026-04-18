@@ -1238,6 +1238,41 @@ function formatGermanDateTime(value) {
     .replace(",", " -");
 }
 
+function formatRelativeTimeFromNow(value, referenceDate = new Date()) {
+  const parsed = value instanceof Date ? value : parseSqliteDateTime(value);
+  if (!parsed) return "";
+
+  const reference =
+    referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+      ? referenceDate
+      : new Date();
+  const diffMs = reference.getTime() - parsed.getTime();
+  if (!Number.isFinite(diffMs)) return "";
+
+  if (Math.abs(diffMs) < 45 * 1000) {
+    return "gerade eben";
+  }
+
+  const rtf = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto" });
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (Math.abs(diffMs) < hourMs) {
+    return rtf.format(-Math.round(diffMs / minuteMs), "minute");
+  }
+
+  if (Math.abs(diffMs) < dayMs) {
+    return rtf.format(-Math.round(diffMs / hourMs), "hour");
+  }
+
+  if (Math.abs(diffMs) < 7 * dayMs) {
+    return rtf.format(-Math.round(diffMs / dayMs), "day");
+  }
+
+  return formatGermanDateTime(parsed);
+}
+
 function getCharacterCreatedAtLabel(character) {
   const characterId = Number(character?.id);
   const characterName = String(character?.name || "").trim().toLowerCase();
@@ -2369,7 +2404,11 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     birth_date: accountBirthDate
   });
   return {
-    title: options.title || `Bearbeiten: ${character.name}`,
+    title:
+      options.title ||
+      (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
+        ? `LARP-Profil bearbeiten: ${character.name}`
+        : `Bearbeiten: ${character.name}`),
     mode: "edit",
     error: options.error || null,
     festplays: options.festplays || getFestplays(),
@@ -2377,6 +2416,7 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
     guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
     accountBirthDate,
+    returnTo: options.returnTo || "",
     character: {
       ...nextCharacter,
       public_birth_show_age: characterBirthdaySelection.showAge ? 1 : 0,
@@ -4708,6 +4748,7 @@ function normalizeCharacterInput(body) {
     public_birth_show_year: 0,
     chat_text_color: normalizeGuestbookColor(body.chat_text_color),
     avatar_url: (body.avatar_url || "").trim().slice(0, 500),
+    larp_profile_title_image_url: (body.larp_profile_title_image_url || "").trim().slice(0, 500),
     chat_background_url: (body.chat_background_url || "").trim().slice(0, 500),
     chat_background_color: normalizeChatBackgroundColor(body.chat_background_color),
     chat_background_image_opacity: normalizeGuestbookOpacity(body.chat_background_image_opacity, 100),
@@ -15327,6 +15368,123 @@ function getDashboardLarpGuilds(userId) {
   return [];
 }
 
+function getCharacterGuestbookStats(characterId, options = {}) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return {
+      pageCount: 0,
+      entryCount: 0
+    };
+  }
+
+  const includePrivate = options.includePrivate === true ? 1 : 0;
+  const row =
+    db
+      .prepare(
+        `SELECT
+            (SELECT COUNT(*) FROM guestbook_pages WHERE character_id = ?) AS page_count,
+            (
+              SELECT COUNT(*)
+              FROM guestbook_entries
+              WHERE character_id = ?
+                AND (? = 1 OR COALESCE(is_private, 0) = 0)
+            ) AS entry_count`
+      )
+      .get(parsedCharacterId, parsedCharacterId, includePrivate) || {};
+
+  return {
+    pageCount: Number(row.page_count || 0),
+    entryCount: Number(row.entry_count || 0)
+  };
+}
+
+function isLarpActivityLocation(rawPath, rawTitle = "") {
+  const normalizedTitle = normalizeSessionTrackedPageTitle(rawTitle);
+  if (/^larp\b/i.test(normalizedTitle)) {
+    return true;
+  }
+
+  const normalizedPath = normalizeSessionTrackedPagePath(rawPath);
+  if (!normalizedPath) {
+    return false;
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(normalizedPath, "https://heldenhaftereisen.invalid");
+  } catch (_error) {
+    return false;
+  }
+
+  const normalizedPathname = String(parsedUrl.pathname || "/").replace(/\/+$/, "") || "/";
+  if (normalizedPathname === "/dashboard/larp" || normalizedPathname === "/account/larp") {
+    return true;
+  }
+
+  if (normalizedPathname === "/chat") {
+    const requestedServerId = normalizeServer(parsedUrl.searchParams.get("server"));
+    if (requestedServerId === LARP_SERVER_ID) {
+      return true;
+    }
+
+    const requestedCharacterId = Number(parsedUrl.searchParams.get("character_id"));
+    if (Number.isInteger(requestedCharacterId) && requestedCharacterId > 0) {
+      return normalizeCharacterServerId(getCharacterById(requestedCharacterId)?.server_id) === LARP_SERVER_ID;
+    }
+
+    return false;
+  }
+
+  const characterMatch = normalizedPathname.match(
+    /^\/characters\/(\d+)(?:\/(edit|guestbook|guestbook\/edit|guestbook\/edit\/preview))?$/i
+  );
+  if (!characterMatch) {
+    return false;
+  }
+
+  return normalizeCharacterServerId(getCharacterById(Number(characterMatch[1]))?.server_id) === LARP_SERVER_ID;
+}
+
+function trackLarpCharacterActivity(characterId, rawPath, rawTitle = "") {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return false;
+  }
+
+  const normalizedPath = normalizeSessionTrackedPagePath(rawPath);
+  const normalizedTitle = normalizeSessionTrackedPageTitle(rawTitle);
+  if (!normalizedPath && !normalizedTitle) {
+    return false;
+  }
+
+  return (
+    db
+      .prepare(
+        `UPDATE characters
+            SET last_larp_activity_at = CURRENT_TIMESTAMP,
+                last_larp_activity_path = ?,
+                last_larp_activity_title = ?
+          WHERE id = ?
+            AND server_id = ?`
+      )
+      .run(normalizedPath, normalizedTitle, parsedCharacterId, LARP_SERVER_ID).changes > 0
+  );
+}
+
+function buildLarpActivitySummary(activityAt, rawPath, rawTitle, options = {}) {
+  const absoluteLabel = formatGermanDateTime(activityAt);
+  const relativeLabel = formatRelativeTimeFromNow(activityAt);
+  const locationLabel = buildStaffUserLocationLabel(rawPath, rawTitle);
+
+  return {
+    hasValue: Boolean(absoluteLabel || locationLabel),
+    absoluteLabel,
+    relativeLabel,
+    locationLabel,
+    isLive: options.isLive === true
+  };
+}
+
 function ensureFestplayRoomForCharacter(
   userId,
   character,
@@ -15704,9 +15862,14 @@ app.get("/dashboard/larp", requireAuth, (req, res) => {
   const accountUser = getAccountUserById(req.session.user.id);
   const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
   const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+  const larpDashboardTitle = "LARP Bereich";
+
+  if (larpCharacters[0]?.id) {
+    trackLarpCharacterActivity(larpCharacters[0].id, req.originalUrl, larpDashboardTitle);
+  }
 
   return res.render("serverliste/larp", {
-    title: "LARP Bereich",
+    title: larpDashboardTitle,
     larpSection,
     larpCharacters,
     larpGuilds,
@@ -16357,6 +16520,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
       description: "",
       chat_text_color: "#AEE7B7",
       avatar_url: "",
+      larp_profile_title_image_url: "",
       public_birth_show_age: 0,
       public_birth_show_day_month: 0,
       public_birth_show_year: 0,
@@ -16411,6 +16575,10 @@ app.post("/characters", requireAuth, (req, res) => {
     return renderCharacterCreateFormError("Avatar-URL muss mit http:// oder https:// starten.");
   }
 
+  if (!isAvatarUrlValid(payload.larp_profile_title_image_url)) {
+    return renderCharacterCreateFormError("Titelbild-URL muss mit http:// oder https:// starten.");
+  }
+
   if (!isAvatarUrlValid(payload.chat_background_url)) {
     return renderCharacterCreateFormError("Chat-Hintergrund-URL muss mit http:// oder https:// starten.");
   }
@@ -16445,8 +16613,8 @@ app.post("/characters", requireAuth, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, chat_input_background_color, chat_online_list_background_color, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, larp_profile_title_image_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, chat_input_background_color, chat_online_list_background_color, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -16458,6 +16626,7 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.faceclaim,
       payload.description,
       payload.avatar_url,
+      payload.larp_profile_title_image_url,
       payload.public_birth_show_age,
       payload.public_birth_show_day_month,
       payload.public_birth_show_year,
@@ -16498,6 +16667,58 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
+    });
+  }
+
+  if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID) {
+    const larpProfileTitle = `LARP-Profil: ${character.name}`;
+    const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+    const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
+    const liveSessionLocation = sessionLocationsByUserId[Number(character.user_id)] || null;
+    const liveSeenAt = Number(liveSessionLocation?.seenAt || 0);
+    const hasLiveLarpActivity =
+      onlineAccountUserIds.has(Number(character.user_id)) &&
+      isLarpActivityLocation(liveSessionLocation?.path, liveSessionLocation?.title) &&
+      Number.isFinite(liveSeenAt) &&
+      liveSeenAt > 0;
+
+    let lastActivity = buildLarpActivitySummary(
+      character.last_larp_activity_at,
+      character.last_larp_activity_path,
+      character.last_larp_activity_title
+    );
+
+    if (hasLiveLarpActivity) {
+      lastActivity = buildLarpActivitySummary(new Date(liveSeenAt), liveSessionLocation?.path, liveSessionLocation?.title, {
+        isLive: true
+      });
+    }
+
+    if (isOwner) {
+      rememberPreferredCharacter(req, character);
+      trackLarpCharacterActivity(character.id, req.originalUrl, larpProfileTitle);
+      lastActivity = buildLarpActivitySummary(new Date(), req.originalUrl, larpProfileTitle, {
+        isLive: true
+      });
+    }
+
+    return res.render("characters/larp-profile", {
+      title: larpProfileTitle,
+      metaDescription: `${character.name} im LARP-Bereich von Heldenhafte Reisen.`,
+      character,
+      topbarCharacter: isOwner ? character : getPreferredMenuCharacterForUser(req),
+      isOwner,
+      memberSinceLabel: getCharacterCreatedAtLabel(character),
+      publicBirthdayRows: publicBirthdayDisplay.rows,
+      guestbookStats: getCharacterGuestbookStats(id, {
+        includePrivate: isOwner || isAdmin
+      }),
+      larpGuildCount: getDashboardLarpGuilds(character.user_id).length,
+      lastActivity,
+      isCharacterOnline: onlineAccountUserIds.has(Number(character.user_id)),
+      profileCoverUrl: String(character.larp_profile_title_image_url || character.chat_background_url || "").trim(),
+      profileEditHref: `/characters/${character.id}/edit?mode=edit&return_to=${encodeURIComponent(`/characters/${character.id}`)}`,
+      profileGuestbookHref: `/characters/${character.id}/guestbook`
     });
   }
 
@@ -17983,10 +18204,13 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
   }
 
   const requestedMode = String(req.query.mode || "").trim().toLowerCase();
+  const requestedReturnTo = getSafeExplicitReturnTarget(req.query.return_to, "");
   if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID && requestedMode !== "edit") {
     const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+    const larpForumTitle = `LARP Forum: ${character.name}`;
+    trackLarpCharacterActivity(character.id, req.originalUrl, larpForumTitle);
     return res.render("characters/larp-forum", {
-      title: `LARP Forum: ${character.name}`,
+      title: larpForumTitle,
       metaDescription: `${character.name} landet im modernen LARP-Forum von Heldenhafte Reisen.`,
       character,
       topbarCharacter: character,
@@ -18000,12 +18224,16 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
   const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(
     req.query.guestbook_page_id || req.query.page_id
   );
+  if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID) {
+    trackLarpCharacterActivity(character.id, req.originalUrl, `LARP-Profil bearbeiten: ${character.name}`);
+  }
 
   return res.render(
     "character-form",
     buildCharacterEditFormViewModel(character, {
       renameAvailability,
-      requestedGuestbookPageId
+      requestedGuestbookPageId,
+      returnTo: requestedReturnTo
     })
   );
 });
@@ -18045,6 +18273,9 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
   }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "larp_profile_title_image_url")) {
+    payload.larp_profile_title_image_url = String(character.larp_profile_title_image_url || "").trim().slice(0, 500);
+  }
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "chat_background_url")) {
     payload.chat_background_url = String(character.chat_background_url || "").trim().slice(0, 500);
   }
@@ -18079,6 +18310,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
         festplays,
         renameAvailability,
         requestedGuestbookPageId,
+        returnTo: getSafeExplicitReturnTarget(req.body.return_to, ""),
         character: characterFormValues
       })
     );
@@ -18093,6 +18325,10 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
     return renderCharacterFormError("Avatar-URL muss mit http:// oder https:// starten.");
+  }
+
+  if (!isAvatarUrlValid(payload.larp_profile_title_image_url)) {
+    return renderCharacterFormError("Titelbild-URL muss mit http:// oder https:// starten.");
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
@@ -18156,7 +18392,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE characters
-     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, public_birth_show_age = ?, public_birth_show_day_month = ?, public_birth_show_year = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, chat_input_background_color = ?, chat_online_list_background_color = ?, is_public = ?,
+     SET server_id = ?, festplay_id = ?, name = ?, species = ?, age = ?, faceclaim = ?, description = ?, avatar_url = ?, larp_profile_title_image_url = ?, public_birth_show_age = ?, public_birth_show_day_month = ?, public_birth_show_year = ?, chat_background_url = ?, chat_background_color = ?, chat_background_image_opacity = ?, chat_input_background_color = ?, chat_online_list_background_color = ?, is_public = ?,
          name_changed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE name_changed_at END,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
@@ -18169,6 +18405,7 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
     payload.faceclaim,
     payload.description,
     payload.avatar_url,
+    payload.larp_profile_title_image_url,
     payload.public_birth_show_age,
     payload.public_birth_show_day_month,
     payload.public_birth_show_year,
@@ -18204,7 +18441,14 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
       ? `Charakter aktualisiert. Der Name kann wieder ab ${formatGermanDate(addUtcCalendarMonths(new Date(), CHARACTER_RENAME_COOLDOWN_MONTHS))} geändert werden.`
       : "Charakter aktualisiert."
   );
-  return res.redirect(getSafeExplicitReturnTarget(req.body.return_to, `/characters/${id}/edit`));
+  return res.redirect(
+    getSafeExplicitReturnTarget(
+      req.body.return_to,
+      normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
+        ? `/characters/${id}/edit?mode=edit`
+        : `/characters/${id}/edit`
+    )
+  );
 });
 
 app.post("/characters/:id/delete", requireAuth, (req, res) => {
@@ -18451,6 +18695,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
   const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+  const guestbookTitle =
+    normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
+      ? `LARP-Gästebuch: ${character.name}`
+      : `Gästebuch: ${character.name}`;
   const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
     character.id,
     getAccountUserById(character.user_id),
@@ -18492,8 +18740,15 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       buildGuestbookContextQuery(guestbookAccessState)
   );
 
+  if (
+    normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID &&
+    Number(character.user_id) === Number(req.session.user.id)
+  ) {
+    trackLarpCharacterActivity(character.id, req.originalUrl, guestbookTitle);
+  }
+
   return res.render("characters/guestbook/guestbook-view", {
-    title: `Gästebuch: ${character.name}`,
+    title: guestbookTitle,
     character,
     characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
     publicBirthdayRows: publicBirthdayDisplay.rows,
@@ -19784,8 +20039,14 @@ function buildStaffUserLocationLabel(rawPath, rawTitle) {
   if (normalizedPathname === "/dashboard") {
     return "Dashboard";
   }
+  if (normalizedPathname === "/dashboard/larp") {
+    return "LARP-Bereich";
+  }
   if (normalizedPathname === "/account") {
     return "Account";
+  }
+  if (normalizedPathname === "/account/larp") {
+    return "LARP-Account";
   }
   if (normalizedPathname === "/admin") {
     return "Adminbereich";

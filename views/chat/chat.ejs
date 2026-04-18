@@ -265,11 +265,17 @@
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
           <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
+            <% const chatCharacterEditHref = activeCharacter.server_id === "larp"
+              ? `/characters/${activeCharacter.id}/edit?mode=edit`
+              : `/characters/${activeCharacter.id}/edit`; %>
+            <% const chatCharacterEditHrefTemplate = activeCharacter.server_id === "larp"
+              ? "/characters/__CHARACTER_ID__/edit?mode=edit"
+              : "/characters/__CHARACTER_ID__/edit"; %>
             <a
-              href="/characters/<%= activeCharacter.id %>/edit"
+              href="<%= chatCharacterEditHref %>"
               target="_blank"
               rel="noopener noreferrer"
-              data-chat-character-href-template="/characters/__CHARACTER_ID__/edit"
+              data-chat-character-href-template="<%= chatCharacterEditHrefTemplate %>"
             >Charakter editieren</a>
           <% } %>
           <% if (activeCharacter) { %>

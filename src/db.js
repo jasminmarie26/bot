@@ -1229,6 +1229,22 @@ if (!characterColumns.includes("chat_online_list_background_color")) {
   db.exec("ALTER TABLE characters ADD COLUMN chat_online_list_background_color TEXT NOT NULL DEFAULT '#EFEFEF'");
 }
 
+if (!characterColumns.includes("larp_profile_title_image_url")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_title_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!characterColumns.includes("last_larp_activity_at")) {
+  db.exec("ALTER TABLE characters ADD COLUMN last_larp_activity_at TEXT NOT NULL DEFAULT ''");
+}
+
+if (!characterColumns.includes("last_larp_activity_path")) {
+  db.exec("ALTER TABLE characters ADD COLUMN last_larp_activity_path TEXT NOT NULL DEFAULT ''");
+}
+
+if (!characterColumns.includes("last_larp_activity_title")) {
+  db.exec("ALTER TABLE characters ADD COLUMN last_larp_activity_title TEXT NOT NULL DEFAULT ''");
+}
+
 if (!festplayPermissionColumns.includes("source")) {
   db.exec("ALTER TABLE festplay_permissions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
   db.prepare(
@@ -1686,6 +1702,10 @@ db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS 
 db.prepare("UPDATE characters SET chat_background_url = '' WHERE chat_background_url IS NULL").run();
 db.prepare("UPDATE characters SET chat_background_color = '#EFEFEF' WHERE chat_background_color IS NULL OR trim(chat_background_color) = ''").run();
 db.prepare("UPDATE characters SET chat_background_image_opacity = 100 WHERE chat_background_image_opacity IS NULL").run();
+db.prepare("UPDATE characters SET larp_profile_title_image_url = '' WHERE larp_profile_title_image_url IS NULL").run();
+db.prepare("UPDATE characters SET last_larp_activity_at = '' WHERE last_larp_activity_at IS NULL").run();
+db.prepare("UPDATE characters SET last_larp_activity_path = '' WHERE last_larp_activity_path IS NULL").run();
+db.prepare("UPDATE characters SET last_larp_activity_title = '' WHERE last_larp_activity_title IS NULL").run();
 db.prepare(
   "UPDATE festplays SET server_id = lower(trim(server_id)) WHERE lower(trim(COALESCE(server_id, ''))) IN ('free-rp', 'erp', 'larp')"
 ).run();

@@ -164,6 +164,25 @@
         <input type="hidden" name="faceclaim" value="<%= character.faceclaim || "" %>" />
         <input type="hidden" name="avatar_url" value="<%= character.avatar_url || "" %>" />
 
+        <% if (isLarpProfile) { %>
+          <label class="character-form-basic-wide" id="larp-profile-banner-url">
+            Titelbild-URL
+            <span class="gb-editor-helptext">
+              Dieses Bild erscheint oben auf deiner LARP-Profilseite.
+            </span>
+            <input
+              name="larp_profile_title_image_url"
+              type="url"
+              inputmode="url"
+              maxlength="500"
+              placeholder="https://..."
+              value="<%= character.larp_profile_title_image_url || "" %>"
+            />
+          </label>
+        <% } else { %>
+          <input type="hidden" name="larp_profile_title_image_url" value="<%= character.larp_profile_title_image_url || "" %>" />
+        <% } %>
+
         <fieldset class="character-form-basic-wide character-birthday-visibility-fieldset">
           <legend>Geburtstag auf diesem Charakter anzeigen</legend>
           <div class="account-birthday-visibility-options">
@@ -541,6 +560,23 @@
             value="<%= character.avatar_url || "" %>"
           />
         </label>
+
+        <% if (isLarpProfile) { %>
+          <label id="larp-profile-banner-url">
+            Titelbild-URL
+            <span class="gb-editor-helptext">Dieses Bild erscheint oben auf deiner LARP-Profilseite.</span>
+            <input
+              name="larp_profile_title_image_url"
+              type="url"
+              inputmode="url"
+              maxlength="500"
+              placeholder="https://..."
+              value="<%= character.larp_profile_title_image_url || "" %>"
+            />
+          </label>
+        <% } else { %>
+          <input type="hidden" name="larp_profile_title_image_url" value="<%= character.larp_profile_title_image_url || "" %>" />
+        <% } %>
 
         <fieldset class="character-birthday-visibility-fieldset">
           <legend>Geburtstag auf diesem Charakter anzeigen</legend>
