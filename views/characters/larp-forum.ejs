@@ -2,17 +2,102 @@
 
 <%
   const menuItems = [
-    { label: "Home", icon: "🏠", active: true },
-    { label: "Forum", icon: "🧩", caret: true },
-    { label: "Projekte & Gilden", icon: "🛡️", caret: true },
-    { label: "Mitglieder", icon: "👥", caret: true },
-    { label: "Kalender", icon: "🗓️", caret: true },
-    { label: "Datenbank", icon: "🗄️", caret: true },
-    { label: "Galerie", icon: "🖼️", caret: true },
-    { label: "Storys", icon: "📖", caret: true },
-    { label: "Artikel", icon: "📄", caret: false },
-    { label: "Tickets", icon: "🎫", caret: true }
+    { label: "Home", icon: "home", active: true },
+    { label: "Forum", icon: "forum", caret: true },
+    { label: "Projekte & Gilden", icon: "shield", caret: true },
+    { label: "Mitglieder", icon: "group", caret: true },
+    { label: "Kalender", icon: "calendar", caret: true },
+    { label: "Datenbank", icon: "database", caret: true },
+    { label: "Galerie", icon: "gallery", caret: true },
+    { label: "Storys", icon: "stories", caret: true },
+    { label: "Artikel", icon: "article", caret: false },
+    { label: "Tickets", icon: "ticket", caret: true }
   ];
+
+  const renderMenuIcon = (icon) => {
+    switch (String(icon || "").trim()) {
+      case "home":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.2 7.1 8 2.5l5.8 4.6"></path>
+            <path d="M3.3 6.3v6.2h3.1V8.8h3.2v3.7h3.1V6.3"></path>
+          </svg>
+        `;
+      case "forum":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="1.7" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="6.2" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="10.7" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="1.7" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="6.2" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="10.7" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+          </svg>
+        `;
+      case "shield":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 1.8 13 3.2v4.2c0 3.1-1.9 5.4-5 6.8-3.1-1.4-5-3.7-5-6.8V3.2Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+            <path d="M8 3v9.5" fill="none" stroke="currentColor" stroke-width="1.2"></path>
+          </svg>
+        `;
+      case "group":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="5.2" r="1.9"></circle>
+            <circle cx="3.9" cy="6.1" r="1.5"></circle>
+            <circle cx="12.1" cy="6.1" r="1.5"></circle>
+            <path d="M5.2 12.2c.4-1.5 1.5-2.4 2.8-2.4 1.3 0 2.4.9 2.8 2.4"></path>
+            <path d="M1.9 11.9c.3-1.2 1.1-1.9 2.2-2.2M14.1 11.9c-.3-1.2-1.1-1.9-2.2-2.2"></path>
+          </svg>
+        `;
+      case "calendar":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="2" y="3" width="12" height="11" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"></rect>
+            <path d="M5 1.8v2.5M11 1.8v2.5M2 6h12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "database":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <ellipse cx="8" cy="3.3" rx="5" ry="2.1" fill="none" stroke="currentColor" stroke-width="1.3"></ellipse>
+            <path d="M3 3.3v3.1c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V3.3M3 6.7v3.1c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V6.7M3 10v2.7c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "gallery":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="2" y="2.4" width="12" height="10.6" rx="1"></rect>
+            <circle cx="5.1" cy="5.3" r="1"></circle>
+            <path d="m3.8 11 2.8-2.8 2.2 1.9 1.9-1.8 1.5 2.7"></path>
+          </svg>
+        `;
+      case "stories":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4.2 2.2h7.6a1 1 0 0 1 1 1v9.6a1 1 0 0 1-1 1H4.2a1.2 1.2 0 0 0-1 .4V3.4a1.2 1.2 0 0 1 1-1.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M5.3 5.1h5.2M5.3 7.5h5.2M5.3 9.9h3.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "article":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4 2.2h6l2 2v9.6H4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M10 2.2v2h2M5.4 6.3h5.2M5.4 8.6h5.2M5.4 10.9h3.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        `;
+      case "ticket":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.1 5.2h11.8v2a1.4 1.4 0 0 0 0 2.8v2H2.1v-2a1.4 1.4 0 0 0 0-2.8Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M6 5.3v6.6" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.2 1.2"></path>
+          </svg>
+        `;
+      default:
+        return "";
+    }
+  };
 %>
 
 <style>
@@ -31,7 +116,7 @@
     overflow: hidden;
     border: 1px solid var(--panel-edge);
     border-radius: 8px;
-    background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
+    background: color-mix(in srgb, var(--panel-bg) 36%, white 64%);
     box-shadow: 0 18px 38px -30px var(--panel-shadow);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -82,7 +167,7 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: var(--text);
+    color: color-mix(in srgb, var(--muted) 84%, var(--text) 16%);
     opacity: 0;
     transform: translateY(-50%);
     pointer-events: none;
@@ -118,7 +203,7 @@
     min-height: 40px;
     padding: 0 12px;
     border-radius: 6px;
-    color: var(--text);
+    color: color-mix(in srgb, var(--muted) 80%, var(--text) 20%);
     font-size: 0.93rem;
     font-weight: 700;
     line-height: 1;
@@ -130,14 +215,14 @@
   }
 
   .larp-list-link.is-active {
-    background: color-mix(in srgb, var(--field-bg) 52%, white 48%);
-    color: var(--text);
+    background: color-mix(in srgb, var(--field-bg) 18%, white 82%);
+    color: color-mix(in srgb, var(--muted) 68%, var(--text) 32%);
   }
 
   .larp-list-link:hover,
   .larp-list-link:focus-visible {
-    background: color-mix(in srgb, var(--field-bg) 44%, white 30%);
-    color: var(--text);
+    background: color-mix(in srgb, var(--field-bg) 14%, white 86%);
+    color: color-mix(in srgb, var(--muted) 70%, var(--text) 30%);
     opacity: 1;
   }
 
@@ -151,8 +236,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    line-height: 1;
+    width: 15px;
+    height: 15px;
+    color: currentColor;
+    flex: 0 0 15px;
+  }
+
+  .larp-list-icon svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .larp-list-caret {
@@ -210,7 +308,7 @@
                 class="larp-list-link<%= item.active ? " is-active" : "" %>"
               >
                 <span class="larp-list-text">
-                  <span class="larp-list-icon" aria-hidden="true"><%= item.icon %></span>
+                  <span class="larp-list-icon" aria-hidden="true"><%- renderMenuIcon(item.icon) %></span>
                   <span><%= item.label %></span>
                   <% if (item.caret) { %>
                     <span class="larp-list-caret" aria-hidden="true"></span>
