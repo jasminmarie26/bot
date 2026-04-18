@@ -1,0 +1,413 @@
+<%
+  const activeLarpNav = String(typeof activeLarpNavLabel !== "undefined" ? activeLarpNavLabel : "Home").trim();
+  const larpNavItems = [
+    { label: "Home", icon: "home", active: activeLarpNav === "Home" },
+    { label: "Forum", icon: "forum", caret: true, active: activeLarpNav === "Forum" },
+    { label: "Projekte & Gilden", icon: "shield", caret: true, active: activeLarpNav === "Projekte & Gilden" },
+    { label: "Mitglieder", icon: "group", caret: true, active: activeLarpNav === "Mitglieder" },
+    { label: "Kalender", icon: "calendar", caret: true, active: activeLarpNav === "Kalender" },
+    { label: "Datenbank", icon: "database", caret: true, active: activeLarpNav === "Datenbank" },
+    { label: "Galerie", icon: "gallery", caret: true, active: activeLarpNav === "Galerie" },
+    { label: "Storys", icon: "stories", caret: true, active: activeLarpNav === "Storys" },
+    { label: "Artikel", icon: "article", caret: false, active: activeLarpNav === "Artikel" },
+    { label: "Tickets", icon: "ticket", caret: true, active: activeLarpNav === "Tickets" }
+  ];
+
+  const renderLarpNavIcon = (icon) => {
+    switch (String(icon || "").trim()) {
+      case "home":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.2 7.1 8 2.5l5.8 4.6"></path>
+            <path d="M3.3 6.3v6.2h3.1V8.8h3.2v3.7h3.1V6.3"></path>
+          </svg>
+        `;
+      case "forum":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="1.7" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="6.2" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="10.7" y="2.3" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="1.7" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="6.2" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+            <rect x="10.7" y="6.9" width="3.6" height="3.1" rx="0.45"></rect>
+          </svg>
+        `;
+      case "shield":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 1.8 13 3.2v4.2c0 3.1-1.9 5.4-5 6.8-3.1-1.4-5-3.7-5-6.8V3.2Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+            <path d="M8 3v9.5" fill="none" stroke="currentColor" stroke-width="1.2"></path>
+          </svg>
+        `;
+      case "group":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="5.2" r="1.9"></circle>
+            <circle cx="3.9" cy="6.1" r="1.5"></circle>
+            <circle cx="12.1" cy="6.1" r="1.5"></circle>
+            <path d="M5.2 12.2c.4-1.5 1.5-2.4 2.8-2.4 1.3 0 2.4.9 2.8 2.4"></path>
+            <path d="M1.9 11.9c.3-1.2 1.1-1.9 2.2-2.2M14.1 11.9c-.3-1.2-1.1-1.9-2.2-2.2"></path>
+          </svg>
+        `;
+      case "calendar":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="2" y="3" width="12" height="11" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"></rect>
+            <path d="M5 1.8v2.5M11 1.8v2.5M2 6h12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "database":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <ellipse cx="8" cy="3.3" rx="5" ry="2.1" fill="none" stroke="currentColor" stroke-width="1.3"></ellipse>
+            <path d="M3 3.3v3.1c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V3.3M3 6.7v3.1c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V6.7M3 10v2.7c0 1.2 2.2 2.1 5 2.1s5-.9 5-2.1V10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "gallery":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <rect x="2" y="2.4" width="12" height="10.6" rx="1"></rect>
+            <circle cx="5.1" cy="5.3" r="1"></circle>
+            <path d="m3.8 11 2.8-2.8 2.2 1.9 1.9-1.8 1.5 2.7"></path>
+          </svg>
+        `;
+      case "stories":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4.2 2.2h7.6a1 1 0 0 1 1 1v9.6a1 1 0 0 1-1 1H4.2a1.2 1.2 0 0 0-1 .4V3.4a1.2 1.2 0 0 1 1-1.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M5.3 5.1h5.2M5.3 7.5h5.2M5.3 9.9h3.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path>
+          </svg>
+        `;
+      case "article":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4 2.2h6l2 2v9.6H4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M10 2.2v2h2M5.4 6.3h5.2M5.4 8.6h5.2M5.4 10.9h3.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        `;
+      case "ticket":
+        return `
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.1 5.2h11.8v2a1.4 1.4 0 0 0 0 2.8v2H2.1v-2a1.4 1.4 0 0 0 0-2.8Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+            <path d="M6 5.3v6.6" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.2 1.2"></path>
+          </svg>
+        `;
+      default:
+        return "";
+    }
+  };
+%>
+
+<style>
+  .larp-list-shell {
+    min-height: 160px;
+    padding: 18px 0 6px;
+  }
+
+  .larp-list-stage {
+    position: relative;
+    padding: 10px 0;
+    --larp-nav-border: color-mix(in srgb, var(--panel-edge) 58%, var(--text) 42%);
+    --larp-nav-bg: color-mix(in srgb, var(--panel-bg) 78%, white 22%);
+    --larp-nav-bg-solid: color-mix(in srgb, var(--larp-nav-bg) 92%, var(--bg-base) 8%);
+    --larp-nav-text: color-mix(in srgb, var(--text) 88%, var(--muted) 12%);
+    --larp-nav-active-bg: color-mix(in srgb, var(--field-bg) 58%, white 42%);
+    --larp-nav-hover-bg: color-mix(in srgb, var(--field-bg) 46%, white 34%);
+    --larp-nav-shadow: color-mix(in srgb, var(--panel-shadow) 76%, black 24%);
+    --larp-nav-arrow-bg: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+    --larp-nav-arrow-border: color-mix(in srgb, var(--panel-edge) 62%, var(--text) 38%);
+  }
+
+  .larp-list-frame {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .larp-list-nav {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--larp-nav-border);
+    border-radius: 8px;
+    background: var(--larp-nav-bg-solid);
+    box-shadow:
+      0 14px 30px -24px var(--larp-nav-shadow),
+      inset 0 1px 0 color-mix(in srgb, var(--text) 20%, transparent 80%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .larp-list-nav::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 160ms ease;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--larp-nav-bg-solid) 0%, transparent 100%) 0%,
+      color-mix(in srgb, var(--larp-nav-bg-solid) 96%, white 4%) 100%
+    );
+  }
+
+  .larp-list-nav.is-overflowing:not(.is-end)::after {
+    opacity: 1;
+  }
+
+  .larp-list-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .larp-list-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .larp-list-shift {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--larp-nav-arrow-border);
+    border-radius: 8px;
+    padding: 0;
+    background: var(--larp-nav-arrow-bg);
+    color: var(--larp-nav-text);
+    box-shadow: 0 10px 22px -18px var(--larp-nav-shadow);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 160ms ease,
+      background 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .larp-list-shift.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .larp-list-shift:hover,
+  .larp-list-shift:focus-visible {
+    background: var(--larp-nav-hover-bg);
+    color: color-mix(in srgb, var(--larp-nav-text) 90%, var(--text) 10%);
+    border-color: color-mix(in srgb, var(--larp-nav-arrow-border) 72%, var(--text) 28%);
+  }
+
+  .larp-list-menu {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .larp-list-item {
+    display: flex;
+    flex: 0 0 auto;
+  }
+
+  .larp-list-link {
+    appearance: none;
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 6px;
+    color: var(--larp-nav-text);
+    font-size: 0.93rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    opacity: 0.92;
+    cursor: default;
+    background: transparent;
+    text-shadow: 0 1px 0 color-mix(in srgb, var(--bg-base) 18%, transparent 82%);
+  }
+
+  .larp-list-link.is-active {
+    background: var(--larp-nav-active-bg);
+    color: color-mix(in srgb, var(--larp-nav-text) 94%, var(--text) 6%);
+  }
+
+  .larp-list-link:hover,
+  .larp-list-link:focus-visible {
+    background: var(--larp-nav-hover-bg);
+    color: color-mix(in srgb, var(--larp-nav-text) 90%, var(--text) 10%);
+    opacity: 1;
+  }
+
+  .larp-list-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .larp-list-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    color: currentColor;
+    flex: 0 0 15px;
+  }
+
+  .larp-list-icon svg {
+    width: 15px;
+    height: 15px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .larp-list-caret {
+    width: 7px;
+    height: 7px;
+    border-right: 1.4px solid currentColor;
+    border-bottom: 1.4px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    opacity: 0.8;
+    flex: 0 0 auto;
+  }
+
+  .larp-list-shift::before {
+    content: "";
+    display: block;
+    width: 9px;
+    height: 9px;
+    border-top: 1.8px solid currentColor;
+    border-right: 1.8px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .larp-list-shift.is-left::before {
+    transform: rotate(-135deg);
+  }
+
+  @media (max-width: 920px) {
+    .larp-list-shell {
+      padding-top: 14px;
+    }
+
+    .larp-list-link {
+      min-height: 38px;
+      padding: 0 10px;
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .larp-list-shell {
+      padding-top: 10px;
+    }
+
+    .larp-list-frame {
+      gap: 6px;
+    }
+
+    .larp-list-shift {
+      width: 30px;
+      height: 30px;
+    }
+
+    .larp-list-menu {
+      padding-right: 10px;
+    }
+  }
+</style>
+
+<section class="larp-list-shell">
+  <div class="larp-list-stage">
+    <div class="larp-list-frame">
+      <button type="button" class="larp-list-shift is-left" data-larp-list-shift-left aria-label="Navigation nach links verschieben"></button>
+      <nav class="larp-list-nav" aria-label="LARP Navigation" data-larp-list-nav>
+        <div class="larp-list-scroll" data-larp-list-scroll>
+          <ul class="larp-list-menu">
+            <% larpNavItems.forEach((item) => { %>
+              <li class="larp-list-item">
+                <button
+                  type="button"
+                  class="larp-list-link<%= item.active ? " is-active" : "" %>"
+                >
+                  <span class="larp-list-text">
+                    <span class="larp-list-icon" aria-hidden="true"><%- renderLarpNavIcon(item.icon) %></span>
+                    <span><%= item.label %></span>
+                    <% if (item.caret) { %>
+                      <span class="larp-list-caret" aria-hidden="true"></span>
+                    <% } %>
+                  </span>
+                </button>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </nav>
+      <button type="button" class="larp-list-shift is-right" data-larp-list-shift-right aria-label="Navigation nach rechts verschieben"></button>
+    </div>
+  </div>
+</section>
+
+<script>
+  (() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const nav = document.querySelector("[data-larp-list-nav]");
+      const scrollArea = document.querySelector("[data-larp-list-scroll]");
+      const leftButton = document.querySelector("[data-larp-list-shift-left]");
+      const rightButton = document.querySelector("[data-larp-list-shift-right]");
+      if (!nav || !scrollArea || !leftButton || !rightButton) return;
+
+      const syncOverflowState = () => {
+        const maxScrollLeft = Math.max(0, scrollArea.scrollWidth - scrollArea.clientWidth);
+        const isOverflowing = maxScrollLeft > 6;
+        const isStart = scrollArea.scrollLeft <= 6;
+        const isEnd = scrollArea.scrollLeft >= maxScrollLeft - 6;
+
+        nav.classList.toggle("is-overflowing", isOverflowing);
+        nav.classList.toggle("is-start", !isOverflowing || isStart);
+        nav.classList.toggle("is-end", !isOverflowing || isEnd);
+        leftButton.classList.toggle("is-visible", isOverflowing && !isStart);
+        rightButton.classList.toggle("is-visible", isOverflowing && !isEnd);
+      };
+
+      const shiftBy = (direction) => {
+        const amount = Math.max(160, Math.round(scrollArea.clientWidth * 0.42));
+        scrollArea.scrollBy({
+          left: amount * direction,
+          behavior: "smooth"
+        });
+      };
+
+      syncOverflowState();
+      scrollArea.addEventListener("scroll", syncOverflowState, { passive: true });
+      window.addEventListener("resize", syncOverflowState);
+      leftButton.addEventListener("click", () => shiftBy(-1));
+      rightButton.addEventListener("click", () => shiftBy(1));
+
+      if ("ResizeObserver" in window) {
+        const observer = new ResizeObserver(syncOverflowState);
+        observer.observe(scrollArea);
+      }
+    });
+  })();
+</script>

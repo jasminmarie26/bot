@@ -1,4 +1,4 @@
-<%- include("../partials/start", { pageClass: "page-larp-profile", topbarCharacter, hideTopbar: true }) %>
+<%- include("../partials/start", { pageClass: "page-larp-profile", topbarCharacter }) %>
 
 <%
   const hasAvatar = Boolean(String(character.avatar_url || "").trim());
@@ -633,6 +633,8 @@
     }
   }
 </style>
+
+<%- include("../partials/larp-navigation", { activeLarpNavLabel: "Home" }) %>
 
 <section class="larp-profile-page">
   <section class="panel larp-profile-hero">
