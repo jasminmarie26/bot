@@ -628,9 +628,26 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const dataDir = path.join(__dirname, "..", "data");
+const publicDir = path.join(__dirname, "..", "public");
+const LARP_PROFILE_COVER_UPLOAD_RELATIVE_DIR = path.posix.join("uploads", "larp-profile-covers");
+const LARP_PROFILE_COVER_UPLOAD_WEB_ROOT = `/${LARP_PROFILE_COVER_UPLOAD_RELATIVE_DIR}`;
+const LARP_PROFILE_COVER_UPLOAD_ROOT = path.join(publicDir, "uploads", "larp-profile-covers");
+const LARP_PROFILE_COVER_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+const LARP_PROFILE_COVER_UPLOAD_JSON_LIMIT = "6mb";
+const LARP_PROFILE_COVER_MIN_WIDTH = 500;
+const LARP_PROFILE_COVER_MIN_HEIGHT = 200;
+const LARP_PROFILE_COVER_MAX_WIDTH = 2000;
+const LARP_PROFILE_COVER_MAX_HEIGHT = 800;
+const LARP_PROFILE_COVER_ALLOWED_MIME_TYPES = new Map([
+  ["image/gif", ".gif"],
+  ["image/jpeg", ".jpg"],
+  ["image/png", ".png"],
+  ["image/webp", ".webp"]
+]);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+fs.mkdirSync(LARP_PROFILE_COVER_UPLOAD_ROOT, { recursive: true });
 const sessionsDbPath = path.join(dataDir, "sessions.sqlite");
 
 function getAcmeChallengeRoots() {
@@ -747,7 +764,7 @@ for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
     })
   );
 }
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(publicDir));
 app.use("/bbcode-font-cache", express.static(BBCODE_1001FREEFONTS_CACHE_ROOT));
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
@@ -4939,7 +4956,68 @@ function findCharacterNameConflictForMove(name, options = {}) {
 
 function isAvatarUrlValid(url) {
   if (!url) return true;
-  return /^https?:\/\/.+/i.test(url);
+  const normalizedUrl = String(url || "").trim();
+  return /^https?:\/\/.+/i.test(normalizedUrl) || (/^\/(?!\/).+/).test(normalizedUrl);
+}
+
+function parseBase64ImageDataUrl(dataUrl) {
+  const normalizedDataUrl = String(dataUrl || "").trim();
+  const match = normalizedDataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    mimeType: String(match[1] || "").trim().toLowerCase(),
+    base64Payload: String(match[2] || "").replace(/\s+/g, "")
+  };
+}
+
+function buildLarpProfileCoverUploadDestination(characterId, fileExtension) {
+  const normalizedCharacterId = Number(characterId);
+  const safeExtension = String(fileExtension || "")
+    .trim()
+    .replace(/[^.a-z0-9]/gi, "")
+    .toLowerCase();
+  const fileName = `character-${normalizedCharacterId}-${Date.now()}-${crypto.randomUUID()}${safeExtension}`;
+
+  return {
+    absolutePath: path.join(LARP_PROFILE_COVER_UPLOAD_ROOT, fileName),
+    publicUrl: `${LARP_PROFILE_COVER_UPLOAD_WEB_ROOT}/${fileName}`
+  };
+}
+
+function resolveManagedLarpProfileCoverPath(imageUrl) {
+  const normalizedImageUrl = String(imageUrl || "").trim();
+  if (!normalizedImageUrl.startsWith(`${LARP_PROFILE_COVER_UPLOAD_WEB_ROOT}/`)) {
+    return null;
+  }
+
+  const fileName = normalizedImageUrl.slice(LARP_PROFILE_COVER_UPLOAD_WEB_ROOT.length + 1);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(fileName)) {
+    return null;
+  }
+
+  const resolvedPath = path.resolve(LARP_PROFILE_COVER_UPLOAD_ROOT, fileName);
+  const uploadRootPath = path.resolve(LARP_PROFILE_COVER_UPLOAD_ROOT);
+  if (!resolvedPath.startsWith(`${uploadRootPath}${path.sep}`)) {
+    return null;
+  }
+
+  return resolvedPath;
+}
+
+function removeManagedLarpProfileCoverFile(imageUrl) {
+  const managedFilePath = resolveManagedLarpProfileCoverPath(imageUrl);
+  if (!managedFilePath || !fs.existsSync(managedFilePath)) {
+    return;
+  }
+
+  try {
+    fs.unlinkSync(managedFilePath);
+  } catch (error) {
+    console.warn("LARP-Profil-Titelbild konnte nicht entfernt werden:", error);
+  }
 }
 
 function getCharacterById(id) {
@@ -16572,15 +16650,15 @@ app.post("/characters", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return renderCharacterCreateFormError("Avatar-URL muss mit http:// oder https:// starten.");
+    return renderCharacterCreateFormError("Avatar-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isAvatarUrlValid(payload.larp_profile_title_image_url)) {
-    return renderCharacterCreateFormError("Titelbild-URL muss mit http:// oder https:// starten.");
+    return renderCharacterCreateFormError("Titelbild-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
-    return renderCharacterCreateFormError("Chat-Hintergrund-URL muss mit http:// oder https:// starten.");
+    return renderCharacterCreateFormError("Chat-Hintergrund-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {
@@ -16649,6 +16727,111 @@ app.post("/characters", requireAuth, (req, res) => {
   setFlash(req, "success", "Charakter gespeichert.");
   return res.redirect(returnTarget);
 });
+
+app.post(
+  "/characters/:id/larp-profile/cover-upload",
+  requireAuth,
+  express.json({ limit: LARP_PROFILE_COVER_UPLOAD_JSON_LIMIT }),
+  (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
+    }
+
+    const character = getCharacterById(id);
+    if (!character) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
+    }
+
+    if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
+      return res.status(400).json({ ok: false, error: "Titelbilder gibt es nur im LARP-Bereich." });
+    }
+
+    if (Number(req.session.user?.id) !== Number(character.user_id)) {
+      return res.status(403).json({ ok: false, error: "Kein Zugriff auf dieses Profil." });
+    }
+
+    const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
+    if (!parsedImageData) {
+      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
+    }
+
+    const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
+    const fileExtension = LARP_PROFILE_COVER_ALLOWED_MIME_TYPES.get(mimeType);
+    if (!fileExtension || mimeType !== parsedImageData.mimeType) {
+      return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
+    }
+
+    const width = Number(req.body?.width);
+    const height = Number(req.body?.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height)) {
+      return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
+    }
+
+    if (width < LARP_PROFILE_COVER_MIN_WIDTH || height < LARP_PROFILE_COVER_MIN_HEIGHT) {
+      return res.status(400).json({
+        ok: false,
+        error: `Das Titelbild muss mindestens ${LARP_PROFILE_COVER_MIN_WIDTH}x${LARP_PROFILE_COVER_MIN_HEIGHT} Pixel groß sein.`
+      });
+    }
+
+    if (width > LARP_PROFILE_COVER_MAX_WIDTH || height > LARP_PROFILE_COVER_MAX_HEIGHT) {
+      return res.status(400).json({
+        ok: false,
+        error: `Das Titelbild darf höchstens ${LARP_PROFILE_COVER_MAX_WIDTH}x${LARP_PROFILE_COVER_MAX_HEIGHT} Pixel haben.`
+      });
+    }
+
+    let fileBuffer = null;
+    try {
+      fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
+    } catch (error) {
+      fileBuffer = null;
+    }
+
+    if (!fileBuffer || !fileBuffer.length) {
+      return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
+    }
+
+    if (fileBuffer.length > LARP_PROFILE_COVER_UPLOAD_MAX_BYTES) {
+      return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
+    }
+
+    const previousCoverUrl = String(character.larp_profile_title_image_url || "").trim();
+    const uploadDestination = buildLarpProfileCoverUploadDestination(character.id, fileExtension);
+
+    try {
+      fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
+    } catch (error) {
+      console.error("LARP-Profil-Titelbild konnte nicht gespeichert werden:", error);
+      return res.status(500).json({ ok: false, error: "Das Titelbild konnte nicht gespeichert werden." });
+    }
+
+    try {
+      db
+        .prepare(
+          `UPDATE characters
+              SET larp_profile_title_image_url = ?,
+                  updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?`
+        )
+        .run(uploadDestination.publicUrl, character.id);
+    } catch (error) {
+      removeManagedLarpProfileCoverFile(uploadDestination.publicUrl);
+      console.error("LARP-Profil-Titelbild konnte nicht im Profil gespeichert werden:", error);
+      return res.status(500).json({ ok: false, error: "Das Titelbild konnte nicht dem Profil zugeordnet werden." });
+    }
+
+    if (previousCoverUrl && previousCoverUrl !== uploadDestination.publicUrl) {
+      removeManagedLarpProfileCoverFile(previousCoverUrl);
+    }
+
+    return res.json({
+      ok: true,
+      imageUrl: uploadDestination.publicUrl
+    });
+  }
+);
 
 app.get("/characters/:id", requireAuth, (req, res) => {
   const id = Number(req.params.id);
@@ -18324,15 +18507,15 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   }
 
   if (!isAvatarUrlValid(payload.avatar_url)) {
-    return renderCharacterFormError("Avatar-URL muss mit http:// oder https:// starten.");
+    return renderCharacterFormError("Avatar-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isAvatarUrlValid(payload.larp_profile_title_image_url)) {
-    return renderCharacterFormError("Titelbild-URL muss mit http:// oder https:// starten.");
+    return renderCharacterFormError("Titelbild-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isAvatarUrlValid(payload.chat_background_url)) {
-    return renderCharacterFormError("Chat-Hintergrund-URL muss mit http:// oder https:// starten.");
+    return renderCharacterFormError("Chat-Hintergrund-URL muss mit http://, https:// oder / starten.");
   }
 
   if (!isOptionalHexColorInputValid(req.body?.chat_background_color)) {

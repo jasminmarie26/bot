@@ -12,10 +12,18 @@
   ].filter((entry) => String(entry.value || "").trim());
   const showStats = Number(guestbookStats?.entryCount || 0) > 0 || Number(larpGuildCount || 0) > 0;
   const lastActivityLabel = lastActivity?.relativeLabel || lastActivity?.absoluteLabel || "";
+  const larpCoverUploadHref = `/characters/${character.id}/larp-profile/cover-upload`;
 %>
 
 <style>
+  body.larp-cover-modal-open {
+    overflow: hidden;
+  }
+
   .larp-profile-page {
+    --larp-cover-shell: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+    --larp-cover-shell-edge: color-mix(in srgb, var(--panel-edge) 66%, white 34%);
+    --larp-cover-ink-soft: color-mix(in srgb, var(--muted) 74%, white 26%);
     display: grid;
     gap: 1.15rem;
   }
@@ -24,6 +32,11 @@
     position: relative;
     overflow: hidden;
     padding: 0;
+  }
+
+  .larp-profile-cover-stage {
+    position: relative;
+    border-radius: inherit;
   }
 
   .larp-profile-cover-art {
@@ -35,6 +48,32 @@
     background-size: cover;
     background-position: center;
     border-radius: inherit;
+  }
+
+  .larp-profile-cover-art.is-editable {
+    cursor: pointer;
+    transition: filter 180ms ease, transform 180ms ease;
+  }
+
+  .larp-profile-cover-art.is-editable:hover,
+  .larp-profile-cover-art.is-editable:focus-visible {
+    filter: brightness(1.05);
+  }
+
+  .larp-profile-cover-hit-area {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: inherit;
+    cursor: pointer;
+  }
+
+  .larp-profile-cover-hit-area:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: -8px;
   }
 
   .larp-profile-cover-edit {
@@ -62,6 +101,58 @@
   .larp-profile-cover-edit:focus-visible {
     background: color-mix(in srgb, var(--panel-bg) 58%, white 42%);
     text-decoration: none;
+  }
+
+  .larp-profile-cover-prompt {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 2;
+    width: min(360px, calc(100% - 2rem));
+    padding: 1rem 1.05rem 1.05rem;
+    border-radius: 24px;
+    border: 1px solid color-mix(in srgb, #9cc8b5 42%, white 58%);
+    background:
+      linear-gradient(135deg, rgba(248, 239, 219, 0.92), rgba(176, 214, 188, 0.85) 56%, rgba(119, 177, 191, 0.76)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0));
+    color: #1f2f30;
+    box-shadow: 0 24px 44px -28px rgba(3, 22, 29, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .larp-profile-cover-prompt-title {
+    display: inline-block;
+    margin-bottom: 0.35rem;
+    color: rgba(31, 47, 48, 0.68);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .larp-profile-cover-prompt p {
+    margin: 0 0 0.9rem;
+    line-height: 1.55;
+  }
+
+  .larp-profile-cover-prompt-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 1.05rem;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(45, 107, 143, 0.96), rgba(22, 63, 110, 0.96));
+    color: #f7fbff;
+    font-weight: 700;
+    box-shadow: 0 18px 32px -26px rgba(12, 37, 54, 0.9);
+  }
+
+  .larp-profile-cover-prompt-action:hover,
+  .larp-profile-cover-prompt-action:focus-visible {
+    filter: brightness(1.06);
   }
 
   .larp-profile-identity {
@@ -201,14 +292,16 @@
   }
 
   .larp-profile-detail-grid,
-  .larp-profile-note-list {
+  .larp-profile-note-list,
+  .larp-profile-cover-rule-grid {
     display: grid;
     gap: 0.8rem;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .larp-profile-detail-item,
-  .larp-profile-note {
+  .larp-profile-note,
+  .larp-profile-cover-rule {
     padding: 0.95rem 1rem;
     border-radius: 16px;
     border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent 22%);
@@ -216,7 +309,8 @@
   }
 
   .larp-profile-detail-item span,
-  .larp-profile-note strong {
+  .larp-profile-note strong,
+  .larp-profile-cover-rule strong {
     display: block;
     margin-bottom: 0.25rem;
   }
@@ -229,18 +323,244 @@
   }
 
   .larp-profile-detail-item strong,
-  .larp-profile-note p {
+  .larp-profile-note p,
+  .larp-profile-cover-rule p {
     margin: 0;
   }
 
-  .larp-profile-note p {
+  .larp-profile-note p,
+  .larp-profile-cover-rule p {
     color: var(--muted);
     line-height: 1.55;
   }
 
+  .larp-profile-cover-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1.2rem;
+  }
+
+  .larp-profile-cover-modal[hidden] {
+    display: none;
+  }
+
+  .larp-profile-cover-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(7, 17, 22, 0.58);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .larp-profile-cover-modal-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(940px, 100%);
+    border-radius: 30px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--panel-edge) 54%, white 46%);
+    background:
+      linear-gradient(155deg, rgba(238, 228, 208, 0.96), rgba(186, 220, 215, 0.88) 42%, rgba(153, 206, 224, 0.86) 100%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+    box-shadow: 0 40px 90px -52px rgba(0, 0, 0, 0.72);
+  }
+
+  .larp-profile-cover-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem 1.4rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.32);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+  }
+
+  .larp-profile-cover-modal-kicker {
+    margin: 0 0 0.28rem;
+    color: rgba(33, 49, 54, 0.62);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .larp-profile-cover-modal-header h2 {
+    margin: 0;
+    font-size: clamp(1.55rem, 2.8vw, 2.15rem);
+    line-height: 1.1;
+  }
+
+  .larp-profile-cover-modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.34);
+    color: #2b4651;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .larp-profile-cover-modal-close:hover,
+  .larp-profile-cover-modal-close:focus-visible {
+    background: rgba(255, 255, 255, 0.48);
+  }
+
+  .larp-profile-cover-modal-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(300px, 0.96fr);
+    gap: 1rem;
+    padding: 1.25rem 1.4rem 1.4rem;
+  }
+
+  .larp-profile-cover-preview-panel,
+  .larp-profile-cover-upload-panel {
+    display: grid;
+    gap: 0.95rem;
+    align-content: start;
+    padding: 1rem;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .larp-profile-cover-preview-panel {
+    background:
+      linear-gradient(160deg, rgba(22, 45, 59, 0.14), rgba(255, 255, 255, 0.12)),
+      rgba(255, 255, 255, 0.18);
+  }
+
+  .larp-profile-cover-preview-frame {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 260px;
+    padding: 1rem;
+    border-radius: 22px;
+    background:
+      linear-gradient(145deg, rgba(57, 122, 152, 0.9), rgba(144, 201, 213, 0.82) 54%, rgba(244, 222, 184, 0.76)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .larp-profile-cover-preview-frame.has-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(6, 18, 25, 0.12), rgba(6, 18, 25, 0.54));
+  }
+
+  .larp-profile-cover-preview-tag,
+  .larp-profile-cover-preview-empty {
+    position: relative;
+    z-index: 1;
+  }
+
+  .larp-profile-cover-preview-tag {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0.1rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #21404b;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .larp-profile-cover-preview-empty {
+    margin-top: auto;
+    color: rgba(248, 252, 255, 0.96);
+    font-size: 1.04rem;
+    font-weight: 700;
+    line-height: 1.4;
+    text-shadow: 0 6px 18px rgba(7, 17, 24, 0.42);
+  }
+
+  .larp-profile-cover-file-meta {
+    margin: 0;
+    color: var(--larp-cover-ink-soft);
+    line-height: 1.55;
+  }
+
+  .larp-profile-cover-upload-panel p {
+    margin: 0;
+  }
+
+  .larp-profile-cover-upload-copy {
+    line-height: 1.62;
+    color: rgba(31, 47, 48, 0.84);
+  }
+
+  .larp-profile-cover-upload-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .larp-profile-cover-upload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 999px;
+    font-weight: 700;
+    box-shadow: 0 16px 28px -24px rgba(13, 27, 34, 0.78);
+  }
+
+  .larp-profile-cover-upload-button.is-primary {
+    background: linear-gradient(135deg, rgba(54, 113, 180, 0.96), rgba(25, 68, 125, 0.96));
+    color: #f8fbff;
+  }
+
+  .larp-profile-cover-upload-button.is-accent {
+    background: linear-gradient(135deg, rgba(182, 216, 123, 0.96), rgba(242, 208, 163, 0.94));
+    color: #213126;
+  }
+
+  .larp-profile-cover-upload-button:hover,
+  .larp-profile-cover-upload-button:focus-visible {
+    filter: brightness(1.04);
+  }
+
+  .larp-profile-cover-upload-button[disabled] {
+    opacity: 0.56;
+    cursor: not-allowed;
+    filter: saturate(0.45);
+    box-shadow: none;
+  }
+
+  .larp-profile-cover-status {
+    min-height: 1.4rem;
+    font-weight: 600;
+  }
+
+  .larp-profile-cover-status[data-state="error"] {
+    color: #b6453b;
+  }
+
+  .larp-profile-cover-status[data-state="success"] {
+    color: #247f58;
+  }
+
   @media (max-width: 980px) {
     .larp-profile-identity,
-    .larp-profile-content {
+    .larp-profile-content,
+    .larp-profile-cover-modal-body {
       grid-template-columns: 1fr;
     }
   }
@@ -273,23 +593,53 @@
       padding: 0 0.85rem;
       font-size: 0.92rem;
     }
+
+    .larp-profile-cover-prompt {
+      left: 0.8rem;
+      right: 0.8rem;
+      bottom: 0.8rem;
+      width: auto;
+    }
+
+    .larp-profile-cover-modal {
+      padding: 0.8rem;
+    }
+
+    .larp-profile-cover-modal-header,
+    .larp-profile-cover-modal-body {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
   }
 </style>
 
 <section class="larp-profile-page">
   <section class="panel larp-profile-hero">
-    <div
-      class="larp-profile-cover-art"
-      <% if (hasCoverImage) { %>
-        style="background-image: linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.58) 48%, rgba(192, 224, 232, 0.35)), url('<%= profileCoverUrl %>');"
-      <% } %>
-    ></div>
+    <div class="larp-profile-cover-stage">
+      <div
+        class="larp-profile-cover-art<%= isOwner ? " is-editable" : "" %>"
+        data-larp-cover-art
+        <% if (hasCoverImage) { %>
+          style="background-image: linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.58) 48%, rgba(192, 224, 232, 0.35)), url('<%= profileCoverUrl %>');"
+        <% } %>
+      ></div>
 
-    <% if (isOwner) { %>
-      <a class="larp-profile-cover-edit" href="<%= profileEditHref %>#larp-profile-banner-url">
-        Titelbild bearbeiten
-      </a>
-    <% } %>
+      <% if (isOwner) { %>
+        <button type="button" class="larp-profile-cover-hit-area" data-larp-cover-trigger aria-label="Titelbild bearbeiten"></button>
+
+        <button type="button" class="larp-profile-cover-edit" data-larp-open-upload>
+          Titelbild bearbeiten
+        </button>
+
+        <div class="larp-profile-cover-prompt" hidden data-larp-cover-prompt>
+          <span class="larp-profile-cover-prompt-title">Titelbild</span>
+          <p>Klick hier, um dein Titelbild direkt vom PC auszuwählen und oben im Profil zu speichern.</p>
+          <button type="button" class="larp-profile-cover-prompt-action" data-larp-open-upload>
+            Titelbild bearbeiten
+          </button>
+        </div>
+      <% } %>
+    </div>
 
     <div class="larp-profile-identity">
       <div class="larp-profile-avatar-wrap" aria-hidden="true">
@@ -311,7 +661,7 @@
         </p>
 
         <p class="larp-profile-meta">
-          Letzte Aktivit&auml;t:
+          Letzte Aktivität:
           <% if (lastActivity?.hasValue) { %>
             <strong><%= lastActivityLabel %></strong>
             <% if (lastActivity?.absoluteLabel && lastActivity?.relativeLabel && lastActivity.absoluteLabel !== lastActivity.relativeLabel) { %>
@@ -324,14 +674,14 @@
               </span>
             <% } %>
           <% } else { %>
-            <span>Noch keine LARP-Aktivit&auml;t gespeichert.</span>
+            <span>Noch keine LARP-Aktivität gespeichert.</span>
           <% } %>
         </p>
 
         <% if (showStats) { %>
           <div class="larp-profile-stats" aria-label="Profilstatistik">
             <% if (Number(guestbookStats?.entryCount || 0) > 0) { %>
-              <span class="larp-profile-stat">Eintr&auml;ge <strong><%= guestbookStats.entryCount %></strong></span>
+              <span class="larp-profile-stat">Einträge <strong><%= guestbookStats.entryCount %></strong></span>
             <% } %>
             <% if (Number(larpGuildCount || 0) > 0) { %>
               <span class="larp-profile-stat">Gilden <strong><%= larpGuildCount %></strong></span>
@@ -346,8 +696,8 @@
     <section class="panel larp-profile-card">
       <div class="header-line">
         <div>
-          <h2>&Uuml;ber mich</h2>
-          <p class="muted">Hier landen die Angaben, die direkt zu deinem LARP-Profil geh&ouml;ren.</p>
+          <h2>Über mich</h2>
+          <p class="muted">Hier landen die Angaben, die direkt zu deinem LARP-Profil gehören.</p>
         </div>
       </div>
 
@@ -386,19 +736,452 @@
       <div class="larp-profile-note-list">
         <div class="larp-profile-note">
           <strong>Titelbild</strong>
-          <p>Das Titelbild l&auml;sst sich direkt &uuml;ber die Profilbearbeitung setzen oder austauschen.</p>
+          <p>Das Titelbild lässt sich direkt auf der Profilseite vom PC hochladen und sofort austauschen.</p>
         </div>
         <div class="larp-profile-note">
-          <strong>Letzte Aktivit&auml;t</strong>
+          <strong>Letzte Aktivität</strong>
           <p>Hier siehst du, wann zuletzt etwas im LARP-Bereich passiert ist und wo du zuletzt unterwegs warst.</p>
         </div>
         <div class="larp-profile-note">
-          <strong>Beitr&auml;ge, Termine und mehr</strong>
+          <strong>Beiträge, Termine und mehr</strong>
           <p>Diese Bereiche blenden wir erst ein, sobald sie im LARP wirklich aktiv sind. So bleibt die Seite ohne graue Platzhalter.</p>
         </div>
       </div>
     </section>
   </div>
 </section>
+
+<% if (isOwner) { %>
+  <div
+    class="larp-profile-cover-modal"
+    hidden
+    data-larp-cover-modal
+    data-upload-url="<%= larpCoverUploadHref %>"
+    data-current-cover-url="<%= profileCoverUrl || "" %>"
+  >
+    <button type="button" class="larp-profile-cover-modal-backdrop" data-larp-cover-close aria-label="Fenster schließen"></button>
+
+    <div class="larp-profile-cover-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="larp-cover-upload-title">
+      <div class="larp-profile-cover-modal-header">
+        <div>
+          <p class="larp-profile-cover-modal-kicker">LARP Profil</p>
+          <h2 id="larp-cover-upload-title">Titelbild hochladen</h2>
+        </div>
+
+        <button type="button" class="larp-profile-cover-modal-close" data-larp-cover-close aria-label="Fenster schließen">
+          &times;
+        </button>
+      </div>
+
+      <div class="larp-profile-cover-modal-body">
+        <section class="larp-profile-cover-preview-panel">
+          <div class="larp-profile-cover-preview-frame" data-larp-cover-preview>
+            <span class="larp-profile-cover-preview-tag" data-larp-cover-preview-tag>Aktuelles Titelbild</span>
+            <strong class="larp-profile-cover-preview-empty" data-larp-cover-preview-empty>
+              Wähle ein Bild vom PC aus, damit es hier direkt als Vorschau erscheint.
+            </strong>
+          </div>
+
+          <p class="larp-profile-cover-file-meta" data-larp-cover-file-meta>
+            Der obere Profilbereich übernimmt dein Titelbild sofort nach dem Speichern.
+          </p>
+        </section>
+
+        <section class="larp-profile-cover-upload-panel">
+          <p class="larp-profile-cover-upload-copy">
+            Lade dein Titelbild direkt vom PC hoch. Das Bild wird im Profil gespeichert und erscheint danach sofort oben auf deiner LARP-Seite.
+          </p>
+
+          <div class="larp-profile-cover-rule-grid">
+            <div class="larp-profile-cover-rule">
+              <strong>Bildgröße</strong>
+              <p>Mindestens 500 x 200 Pixel</p>
+            </div>
+            <div class="larp-profile-cover-rule">
+              <strong>Maximal</strong>
+              <p>2000 x 800 Pixel</p>
+            </div>
+            <div class="larp-profile-cover-rule">
+              <strong>Dateien</strong>
+              <p>gif, jpg, jpeg, png, webp</p>
+            </div>
+            <div class="larp-profile-cover-rule">
+              <strong>Dateigröße</strong>
+              <p>Maximal 2 MB</p>
+            </div>
+          </div>
+
+          <input
+            type="file"
+            hidden
+            accept=".gif,.jpg,.jpeg,.png,.webp,image/gif,image/jpeg,image/png,image/webp"
+            data-larp-cover-file-input
+          />
+
+          <div class="larp-profile-cover-upload-actions">
+            <button type="button" class="larp-profile-cover-upload-button is-primary" data-larp-cover-select>
+              Bild vom PC wählen
+            </button>
+            <button type="button" class="larp-profile-cover-upload-button is-accent" data-larp-cover-upload disabled>
+              Jetzt hochladen
+            </button>
+          </div>
+
+          <p class="larp-profile-cover-status" data-larp-cover-status role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const coverArt = document.querySelector("[data-larp-cover-art]");
+      const coverTrigger = document.querySelector("[data-larp-cover-trigger]");
+      const coverPrompt = document.querySelector("[data-larp-cover-prompt]");
+      const modal = document.querySelector("[data-larp-cover-modal]");
+      const fileInput = modal?.querySelector("[data-larp-cover-file-input]");
+      const selectButton = modal?.querySelector("[data-larp-cover-select]");
+      const uploadButton = modal?.querySelector("[data-larp-cover-upload]");
+      const previewFrame = modal?.querySelector("[data-larp-cover-preview]");
+      const previewTag = modal?.querySelector("[data-larp-cover-preview-tag]");
+      const previewEmpty = modal?.querySelector("[data-larp-cover-preview-empty]");
+      const fileMeta = modal?.querySelector("[data-larp-cover-file-meta]");
+      const statusField = modal?.querySelector("[data-larp-cover-status]");
+      const openUploadButtons = Array.from(document.querySelectorAll("[data-larp-open-upload]"));
+      const closeButtons = Array.from(document.querySelectorAll("[data-larp-cover-close]"));
+
+      if (
+        !(coverArt instanceof HTMLElement) ||
+        !(coverTrigger instanceof HTMLButtonElement) ||
+        !(coverPrompt instanceof HTMLElement) ||
+        !(modal instanceof HTMLElement) ||
+        !(fileInput instanceof HTMLInputElement) ||
+        !(selectButton instanceof HTMLButtonElement) ||
+        !(uploadButton instanceof HTMLButtonElement) ||
+        !(previewFrame instanceof HTMLElement) ||
+        !(previewTag instanceof HTMLElement) ||
+        !(previewEmpty instanceof HTMLElement) ||
+        !(fileMeta instanceof HTMLElement) ||
+        !(statusField instanceof HTMLElement)
+      ) {
+        return;
+      }
+
+      const allowedMimeTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
+      const maxBytes = 2 * 1024 * 1024;
+      const minWidth = 500;
+      const minHeight = 200;
+      const maxWidth = 2000;
+      const maxHeight = 800;
+      const uploadUrl = String(modal.getAttribute("data-upload-url") || "").trim();
+      const defaultCoverBackground = "linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.72) 48%, rgba(192, 224, 232, 0.52)), radial-gradient(circle at top right, rgba(255, 255, 255, 0.26), transparent 42%), linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18))";
+      const activeCoverOverlay = "linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.58) 48%, rgba(192, 224, 232, 0.35))";
+      const defaultPreviewBackground = "linear-gradient(145deg, rgba(57, 122, 152, 0.9), rgba(144, 201, 213, 0.82) 54%, rgba(244, 222, 184, 0.76)), linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0))";
+      const previewOverlay = "linear-gradient(145deg, rgba(12, 31, 42, 0.22), rgba(255, 255, 255, 0.06))";
+      let currentCoverUrl = String(modal.getAttribute("data-current-cover-url") || "").trim();
+      let selectedFile = null;
+      let selectedPreviewUrl = "";
+      let selectedWidth = 0;
+      let selectedHeight = 0;
+      let isUploading = false;
+      let lastFocusedElement = null;
+
+      const escapeCssUrl = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+
+      const buildCoverBackground = (imageUrl) =>
+        imageUrl ? `${activeCoverOverlay}, url("${escapeCssUrl(imageUrl)}")` : defaultCoverBackground;
+
+      const buildPreviewBackground = (imageUrl) =>
+        imageUrl ? `${previewOverlay}, url("${escapeCssUrl(imageUrl)}")` : defaultPreviewBackground;
+
+      const updateMainCover = (imageUrl) => {
+        coverArt.style.backgroundImage = buildCoverBackground(imageUrl);
+      };
+
+      const setStatus = (message, state = "") => {
+        statusField.textContent = String(message || "");
+        if (state) {
+          statusField.setAttribute("data-state", state);
+        } else {
+          statusField.removeAttribute("data-state");
+        }
+      };
+
+      const syncPreview = () => {
+        const previewUrl = selectedPreviewUrl || currentCoverUrl;
+        const hasPreviewImage = Boolean(previewUrl);
+
+        previewFrame.style.backgroundImage = buildPreviewBackground(previewUrl);
+        previewFrame.classList.toggle("has-image", hasPreviewImage);
+
+        if (selectedPreviewUrl && selectedFile) {
+          previewTag.textContent = "Neues Titelbild";
+          previewEmpty.textContent = "Deine Auswahl ist bereit und kann jetzt hochgeladen werden.";
+          fileMeta.textContent = `${selectedFile.name} • ${selectedWidth} x ${selectedHeight} Pixel`;
+          uploadButton.disabled = false;
+          return;
+        }
+
+        uploadButton.disabled = true;
+        previewTag.textContent = hasPreviewImage ? "Aktuelles Titelbild" : "Vorschau";
+        previewEmpty.textContent = hasPreviewImage
+          ? "So sieht dein aktuelles Titelbild im Profil gerade aus."
+          : "Wähle ein Bild vom PC aus, damit es hier direkt als Vorschau erscheint.";
+        fileMeta.textContent = hasPreviewImage
+          ? "Der obere Profilbereich übernimmt dein Titelbild sofort nach dem Speichern."
+          : "Noch kein Titelbild gespeichert. Du kannst hier direkt eins hochladen.";
+      };
+
+      const closePrompt = () => {
+        coverPrompt.hidden = true;
+      };
+
+      const openPrompt = () => {
+        if (modal.hidden === false) {
+          return;
+        }
+        coverPrompt.hidden = false;
+      };
+
+      const resetSelection = () => {
+        if (selectedPreviewUrl) {
+          URL.revokeObjectURL(selectedPreviewUrl);
+        }
+        selectedFile = null;
+        selectedPreviewUrl = "";
+        selectedWidth = 0;
+        selectedHeight = 0;
+        fileInput.value = "";
+        syncPreview();
+      };
+
+      const openModal = (originElement) => {
+        lastFocusedElement = originElement instanceof HTMLElement ? originElement : document.activeElement;
+        closePrompt();
+        modal.hidden = false;
+        document.body.classList.add("larp-cover-modal-open");
+        syncPreview();
+        setStatus("");
+        selectButton.focus();
+      };
+
+      const closeModal = () => {
+        modal.hidden = true;
+        document.body.classList.remove("larp-cover-modal-open");
+        setStatus("");
+        if (lastFocusedElement instanceof HTMLElement) {
+          lastFocusedElement.focus();
+        }
+      };
+
+      const readFileAsDataUrl = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Die Datei konnte nicht gelesen werden."));
+          reader.readAsDataURL(file);
+        });
+
+      const readImageDimensions = (file) =>
+        new Promise((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const image = new Image();
+
+          image.onload = () => {
+            resolve({
+              objectUrl,
+              width: image.naturalWidth,
+              height: image.naturalHeight
+            });
+          };
+
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Das Bild konnte nicht geöffnet werden."));
+          };
+
+          image.src = objectUrl;
+        });
+
+      const applySelectedFile = async (file) => {
+        if (!file) {
+          return;
+        }
+
+        if (!allowedMimeTypes.has(String(file.type || "").toLowerCase())) {
+          resetSelection();
+          setStatus("Erlaubt sind gif, jpg, jpeg, png und webp.", "error");
+          return;
+        }
+
+        if (Number(file.size || 0) > maxBytes) {
+          resetSelection();
+          setStatus("Die Datei darf maximal 2 MB groß sein.", "error");
+          return;
+        }
+
+        let previewData = null;
+        try {
+          previewData = await readImageDimensions(file);
+        } catch (error) {
+          resetSelection();
+          setStatus(error.message || "Das Bild konnte nicht gelesen werden.", "error");
+          return;
+        }
+
+        if (previewData.width < minWidth || previewData.height < minHeight) {
+          URL.revokeObjectURL(previewData.objectUrl);
+          resetSelection();
+          setStatus(`Das Titelbild muss mindestens ${minWidth} x ${minHeight} Pixel haben.`, "error");
+          return;
+        }
+
+        if (previewData.width > maxWidth || previewData.height > maxHeight) {
+          URL.revokeObjectURL(previewData.objectUrl);
+          resetSelection();
+          setStatus(`Das Titelbild darf höchstens ${maxWidth} x ${maxHeight} Pixel haben.`, "error");
+          return;
+        }
+
+        if (selectedPreviewUrl) {
+          URL.revokeObjectURL(selectedPreviewUrl);
+        }
+
+        selectedFile = file;
+        selectedPreviewUrl = previewData.objectUrl;
+        selectedWidth = previewData.width;
+        selectedHeight = previewData.height;
+        syncPreview();
+        setStatus(`${file.name} ist ausgewählt und bereit zum Hochladen.`, "success");
+      };
+
+      const uploadSelectedFile = async () => {
+        if (isUploading || !selectedFile || !uploadUrl) {
+          return;
+        }
+
+        isUploading = true;
+        selectButton.disabled = true;
+        uploadButton.disabled = true;
+        setStatus("Titelbild wird hochgeladen...", "success");
+
+        try {
+          const dataUrl = await readFileAsDataUrl(selectedFile);
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+              filename: selectedFile.name,
+              mimeType: selectedFile.type,
+              dataUrl,
+              width: selectedWidth,
+              height: selectedHeight
+            })
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.ok || !payload.imageUrl) {
+            throw new Error(payload?.error || "Das Titelbild konnte nicht hochgeladen werden.");
+          }
+
+          currentCoverUrl = String(payload.imageUrl || "").trim();
+          modal.setAttribute("data-current-cover-url", currentCoverUrl);
+          updateMainCover(currentCoverUrl);
+          resetSelection();
+          syncPreview();
+          setStatus("Titelbild gespeichert.", "success");
+          window.setTimeout(() => {
+            closeModal();
+          }, 220);
+        } catch (error) {
+          setStatus(error?.message || "Das Titelbild konnte nicht hochgeladen werden.", "error");
+        } finally {
+          isUploading = false;
+          selectButton.disabled = false;
+          syncPreview();
+        }
+      };
+
+      coverTrigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (coverPrompt.hidden) {
+          openPrompt();
+        } else {
+          closePrompt();
+        }
+      });
+
+      openUploadButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          openModal(button);
+        });
+      });
+
+      closeButtons.forEach((button) => {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          closeModal();
+        });
+      });
+
+      selectButton.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", () => {
+        const nextFile = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        void applySelectedFile(nextFile);
+      });
+
+      uploadButton.addEventListener("click", () => {
+        void uploadSelectedFile();
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        const target = event.target;
+        if (!(target instanceof Node)) {
+          return;
+        }
+
+        if (!coverPrompt.hidden && !coverPrompt.contains(target) && !coverTrigger.contains(target)) {
+          closePrompt();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") {
+          return;
+        }
+
+        if (modal.hidden === false) {
+          event.preventDefault();
+          closeModal();
+          return;
+        }
+
+        if (!coverPrompt.hidden) {
+          event.preventDefault();
+          closePrompt();
+        }
+      });
+
+      updateMainCover(currentCoverUrl);
+      syncPreview();
+    })();
+  </script>
+<% } %>
 
 <%- include("../partials/end") %>

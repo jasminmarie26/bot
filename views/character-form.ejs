@@ -168,14 +168,14 @@
           <label class="character-form-basic-wide" id="larp-profile-banner-url">
             Titelbild-URL
             <span class="gb-editor-helptext">
-              Dieses Bild erscheint oben auf deiner LARP-Profilseite.
+              Dieses Bild erscheint oben auf deiner LARP-Profilseite. Uploads vom Profil werden hier ebenfalls eingetragen.
             </span>
             <input
               name="larp_profile_title_image_url"
-              type="url"
+              type="text"
               inputmode="url"
               maxlength="500"
-              placeholder="https://..."
+              placeholder="https://... oder /uploads/..."
               value="<%= character.larp_profile_title_image_url || "" %>"
             />
           </label>
@@ -564,13 +564,13 @@
         <% if (isLarpProfile) { %>
           <label id="larp-profile-banner-url">
             Titelbild-URL
-            <span class="gb-editor-helptext">Dieses Bild erscheint oben auf deiner LARP-Profilseite.</span>
+            <span class="gb-editor-helptext">Dieses Bild erscheint oben auf deiner LARP-Profilseite. Uploads vom Profil werden hier ebenfalls eingetragen.</span>
             <input
               name="larp_profile_title_image_url"
-              type="url"
+              type="text"
               inputmode="url"
               maxlength="500"
-              placeholder="https://..."
+              placeholder="https://... oder /uploads/..."
               value="<%= character.larp_profile_title_image_url || "" %>"
             />
           </label>
