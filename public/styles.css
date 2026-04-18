@@ -2728,22 +2728,37 @@ a:hover {
   border-color: var(--field-edge);
 }
 
-.topbar-user-menu-inline-links {
+.topbar-user-menu-inline-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.2rem;
+  padding: 0.42rem 0.56rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--text);
+  background: color-mix(in srgb, var(--field-bg) 82%, transparent);
+  font-size: 0.84rem;
+  font-weight: 400;
 }
 
-.topbar-user-menu-inline-links a {
+.topbar-user-menu-inline-item:hover,
+.topbar-user-menu-inline-item:focus-within {
+  background: color-mix(in srgb, var(--field-bg) 68%, white 32%);
+  border-color: var(--field-edge);
+}
+
+.topbar-user-menu-inline-item a {
   display: inline;
   padding: 0;
   border: 0;
   border-radius: 0;
+  color: inherit;
   background: transparent;
 }
 
-.topbar-user-menu-inline-links a:hover {
+.topbar-user-menu-inline-item a:hover,
+.topbar-user-menu-inline-item a:focus-visible {
   background: transparent;
   border-color: transparent;
   text-decoration: underline;
