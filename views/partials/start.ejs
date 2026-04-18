@@ -309,7 +309,11 @@
       menuCharacter &&
       (
         (typeof isOwner !== "undefined" && isOwner) ||
-        menuCharacter.is_owner
+        menuCharacter.is_owner ||
+        (
+          currentUser &&
+          Number(menuCharacter.user_id) === Number(currentUser.id)
+        )
       )
     ); %>
     <% const displayIdentityName =
