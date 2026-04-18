@@ -2,6 +2,7 @@
 
 <%
   const larpHomeProfileName = String(character?.name || currentUserDisplayName || currentUser?.username || "Profil").trim();
+  const larpHomeProfileHref = Number(character?.id || 0) > 0 ? `/characters/${Number(character.id)}` : "";
   const larpHomeInitial = larpHomeProfileName.charAt(0).toUpperCase() || "L";
   const larpHomeAvatarUrl = String(character?.avatar_url || "").trim();
   const larpHomeGuestbookStats = typeof guestbookStats !== "undefined" && guestbookStats ? guestbookStats : {};
@@ -125,11 +126,22 @@
     gap: 0.26rem;
   }
 
-  .larp-home-name strong {
+  .larp-home-name strong,
+  .larp-home-name-link {
     color: color-mix(in srgb, var(--accent) 62%, var(--text) 38%);
     font-size: 1.03rem;
+    font-weight: 700;
     line-height: 1.2;
     overflow-wrap: anywhere;
+  }
+
+  .larp-home-name-link {
+    text-decoration: none;
+  }
+
+  .larp-home-name-link:hover,
+  .larp-home-name-link:focus-visible {
+    text-decoration: underline;
   }
 
   .larp-home-role {
@@ -283,7 +295,11 @@
 
       <div class="larp-home-user-details">
         <div class="larp-home-name">
-          <strong><%= larpHomeProfileName %></strong>
+          <% if (larpHomeProfileHref) { %>
+            <a class="larp-home-name-link" href="<%= larpHomeProfileHref %>"><%= larpHomeProfileName %></a>
+          <% } else { %>
+            <strong><%= larpHomeProfileName %></strong>
+          <% } %>
           <span class="larp-home-role"><%= larpHomeRoleLabel %></span>
         </div>
 
