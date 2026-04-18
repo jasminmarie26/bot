@@ -17959,6 +17959,20 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
     });
   }
 
+  const requestedMode = String(req.query.mode || "").trim().toLowerCase();
+  if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID && requestedMode !== "edit") {
+    const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+    return res.render("characters/larp-forum", {
+      title: `LARP Forum: ${character.name}`,
+      metaDescription: `${character.name} landet im modernen LARP-Forum von Heldenhafte Reisen.`,
+      character,
+      topbarCharacter: character,
+      larpGuilds: getDashboardLarpGuilds(req.session.user.id),
+      characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
+      publicBirthdayRows: publicBirthdayDisplay.rows
+    });
+  }
+
   const renameAvailability = getCharacterRenameAvailability(character, req.session.user);
   const requestedGuestbookPageId = normalizeCharacterEditGuestbookPageId(
     req.query.guestbook_page_id || req.query.page_id
