@@ -68,7 +68,7 @@
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 1.2rem;
     align-items: end;
     margin-top: -76px;
@@ -141,25 +141,6 @@
     line-height: 1.02;
   }
 
-  .larp-profile-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    padding: 0.1rem 0.7rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
-    border: 1px solid color-mix(in srgb, var(--panel-edge) 68%, white 32%);
-    color: var(--text);
-    font-size: 0.86rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-  }
-
-  .larp-profile-pill.is-online {
-    background: color-mix(in srgb, #51cf66 18%, var(--panel-bg) 82%);
-  }
-
   .larp-profile-meta {
     margin: 0;
     color: var(--muted);
@@ -196,15 +177,6 @@
 
   .larp-profile-stat strong {
     color: var(--text);
-  }
-
-  .larp-profile-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    min-width: 220px;
-    align-self: center;
-    padding-top: 1rem;
   }
 
   .larp-profile-content {
@@ -271,11 +243,6 @@
     .larp-profile-content {
       grid-template-columns: 1fr;
     }
-
-    .larp-profile-actions {
-      min-width: 0;
-      align-self: stretch;
-    }
   }
 
   @media (max-width: 700px) {
@@ -337,10 +304,6 @@
       <div class="larp-profile-copy">
         <div class="larp-profile-name-row">
           <h1><%= character.name %></h1>
-          <span class="larp-profile-pill">LARP</span>
-          <% if (isCharacterOnline) { %>
-            <span class="larp-profile-pill is-online">Online</span>
-          <% } %>
         </div>
 
         <p class="larp-profile-meta">
@@ -375,14 +338,6 @@
             <% } %>
           </div>
         <% } %>
-      </div>
-
-      <div class="larp-profile-actions">
-        <% if (isOwner) { %>
-          <a class="btn" href="<%= profileEditHref %>">Profil bearbeiten</a>
-        <% } %>
-        <a class="btn btn-secondary" href="<%= profileGuestbookHref %>">G&auml;stebuch</a>
-        <a class="btn btn-secondary" href="/dashboard/larp">Zum LARP-Bereich</a>
       </div>
     </div>
   </section>
