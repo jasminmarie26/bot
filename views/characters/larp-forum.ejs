@@ -2,16 +2,16 @@
 
 <%
   const menuItems = [
-    { label: "Home", href: "/", active: true },
-    { label: "Forum", href: `/characters/${character.id}/edit`, caret: true },
-    { label: "Projekte & Gilden", href: "#", caret: true },
-    { label: "Mitglieder", href: "/members", caret: true },
-    { label: "Kalender", href: "#", caret: true },
-    { label: "Datenbank", href: `/characters/${character.id}/guestbook`, caret: true },
-    { label: "Galerie", href: "#", caret: true },
-    { label: "Storys", href: "#", caret: true },
-    { label: "Artikel", href: "#", caret: false },
-    { label: "Tickets", href: "#", caret: true }
+    { label: "Home", icon: "🏠", active: true },
+    { label: "Forum", icon: "🧩", caret: true },
+    { label: "Projekte & Gilden", icon: "🛡️", caret: true },
+    { label: "Mitglieder", icon: "👥", caret: true },
+    { label: "Kalender", icon: "🗓️", caret: true },
+    { label: "Datenbank", icon: "🗄️", caret: true },
+    { label: "Galerie", icon: "🖼️", caret: true },
+    { label: "Storys", icon: "📖", caret: true },
+    { label: "Artikel", icon: "📄", caret: false },
+    { label: "Tickets", icon: "🎫", caret: true }
   ];
 %>
 
@@ -110,6 +110,8 @@
   }
 
   .larp-list-link {
+    appearance: none;
+    border: 0;
     display: inline-flex;
     align-items: center;
     gap: 0;
@@ -123,6 +125,8 @@
     text-decoration: none;
     white-space: nowrap;
     opacity: 0.92;
+    cursor: default;
+    background: transparent;
   }
 
   .larp-list-link.is-active {
@@ -141,6 +145,14 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .larp-list-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .larp-list-caret {
@@ -193,17 +205,18 @@
         <ul class="larp-list-menu">
           <% menuItems.forEach((item) => { %>
             <li class="larp-list-item">
-              <a
+              <button
+                type="button"
                 class="larp-list-link<%= item.active ? " is-active" : "" %>"
-                href="<%= item.href %>"
               >
                 <span class="larp-list-text">
+                  <span class="larp-list-icon" aria-hidden="true"><%= item.icon %></span>
                   <span><%= item.label %></span>
                   <% if (item.caret) { %>
                     <span class="larp-list-caret" aria-hidden="true"></span>
                   <% } %>
                 </span>
-              </a>
+              </button>
             </li>
           <% }) %>
         </ul>
