@@ -2728,6 +2728,32 @@ a:hover {
   border-color: var(--field-edge);
 }
 
+.topbar-user-menu-inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.topbar-user-menu-inline-links a {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.topbar-user-menu-inline-links a:hover {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.topbar-user-menu-inline-separator {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .topbar-user-menu-form,
 .rp-user-menu-form {
   display: block;

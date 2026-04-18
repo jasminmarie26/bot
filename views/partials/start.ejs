@@ -723,15 +723,18 @@
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="<%= accountMenuHref %>" target="_blank" rel="noopener noreferrer">Account</a>
                     <% if (menuCharacter) { %>
-                      <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Mein Profil</a>
-                      <% if (canEditMenuCharacter) { %>
-                        <a
-                          href="/characters/<%= menuCharacter.id %>/edit"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
-                        >Mein Profil bearbeiten</a>
-                      <% } %>
+                      <div class="topbar-user-menu-inline-links">
+                        <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Mein Profil</a>
+                        <% if (canEditMenuCharacter) { %>
+                          <span class="topbar-user-menu-inline-separator" aria-hidden="true">&middot;</span>
+                          <a
+                            href="/characters/<%= menuCharacter.id %>/edit"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-live-character-href-template="/characters/__CHARACTER_ID__/edit"
+                          >Profil bearbeiten</a>
+                        <% } %>
+                      </div>
                       <a
                         href="/characters/<%= menuCharacter.id %>/guestbook"
                         target="_blank"
