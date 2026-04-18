@@ -226,11 +226,12 @@
         </fieldset>
       </div>
 
-      <label>
-        Chat-Farbe
-        <span class="gb-editor-helptext">
-          Diese Farbe wird f&uuml;r Namen und Schrift deines Charakters im Chat und in Bereichen verwendet.
-        </span>
+      <% if (!isLarpProfile) { %>
+        <label>
+          Chat-Farbe
+          <span class="gb-editor-helptext">
+            Diese Farbe wird f&uuml;r Namen und Schrift deines Charakters im Chat und in Bereichen verwendet.
+          </span>
 
         <div class="character-color-row" data-character-color-root>
           <div class="character-color-input-wrap">
@@ -501,7 +502,15 @@
             </small>
           </div>
         </div>
-      </label>
+        </label>
+      <% } else { %>
+        <input type="hidden" name="chat_text_color" value="<%= character.chat_text_color || "#AEE7B7" %>" />
+        <input type="hidden" name="chat_background_color" value="<%= character.chat_background_color || "#EFEFEF" %>" />
+        <input type="hidden" name="chat_background_url" value="<%= character.chat_background_url || "" %>" />
+        <input type="hidden" name="chat_background_image_opacity" value="<%= Number(character.chat_background_image_opacity ?? 100) %>" />
+        <input type="hidden" name="chat_input_background_color" value="<%= character.chat_input_background_color || "#EFEFEF" %>" />
+        <input type="hidden" name="chat_online_list_background_color" value="<%= character.chat_online_list_background_color || "#EFEFEF" %>" />
+      <% } %>
     <% } else { %>
       <input type="hidden" name="character_public_birthday_visibility_present" value="1" />
 
@@ -621,54 +630,61 @@
         </fieldset>
       <% } %>
 
-      <label>
-        Chat-Farbe
-        <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
-        <input
-          name="chat_text_color"
-          maxlength="7"
-          spellcheck="false"
-          autocomplete="off"
-          value="<%= character.chat_text_color || "#AEE7B7" %>"
-        />
-      </label>
+      <% if (!isLarpProfile) { %>
+        <label>
+          Chat-Farbe
+          <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
+          <input
+            name="chat_text_color"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+            value="<%= character.chat_text_color || "#AEE7B7" %>"
+          />
+        </label>
 
-      <label>
-        Chat-Hintergrundfarbe
-        <span class="gb-editor-helptext">Optional, als Hex-Farbe wie <code>#EFEFEF</code>.</span>
-        <input
-          name="chat_background_color"
-          maxlength="7"
-          spellcheck="false"
-          autocomplete="off"
-          value="<%= character.chat_background_color || "#EFEFEF" %>"
-        />
-      </label>
+        <label>
+          Chat-Hintergrundfarbe
+          <span class="gb-editor-helptext">Optional, als Hex-Farbe wie <code>#EFEFEF</code>.</span>
+          <input
+            name="chat_background_color"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+            value="<%= character.chat_background_color || "#EFEFEF" %>"
+          />
+        </label>
 
-      <label>
-        Chat-Hintergrundbild
-        <input
-          name="chat_background_url"
-          type="url"
-          inputmode="url"
-          maxlength="500"
-          placeholder="https://..."
-          value="<%= character.chat_background_url || "" %>"
-        />
-      </label>
+        <label>
+          Chat-Hintergrundbild
+          <input
+            name="chat_background_url"
+            type="url"
+            inputmode="url"
+            maxlength="500"
+            placeholder="https://..."
+            value="<%= character.chat_background_url || "" %>"
+          />
+        </label>
 
-      <label>
-        Bild-Deckkraft
-        <input
-          name="chat_background_image_opacity"
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
-        />
-        <span class="gb-editor-helptext"><%= Number(character.chat_background_image_opacity ?? 100) %>%</span>
-      </label>
+        <label>
+          Bild-Deckkraft
+          <input
+            name="chat_background_image_opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="<%= Number(character.chat_background_image_opacity ?? 100) %>"
+          />
+          <span class="gb-editor-helptext"><%= Number(character.chat_background_image_opacity ?? 100) %>%</span>
+        </label>
+      <% } else { %>
+        <input type="hidden" name="chat_text_color" value="<%= character.chat_text_color || "#AEE7B7" %>" />
+        <input type="hidden" name="chat_background_color" value="<%= character.chat_background_color || "#EFEFEF" %>" />
+        <input type="hidden" name="chat_background_url" value="<%= character.chat_background_url || "" %>" />
+        <input type="hidden" name="chat_background_image_opacity" value="<%= Number(character.chat_background_image_opacity ?? 100) %>" />
+      <% } %>
     <% } %>
 
     <div class="character-form-actions">
