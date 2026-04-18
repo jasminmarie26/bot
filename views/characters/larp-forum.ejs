@@ -1,3 +1,240 @@
-<%- include("../partials/start") %>
-<%- include("../partials/larp-navigation", { activeLarpNavLabel: "Home" }) %>
+<%- include("../partials/start", { topbarCharacter }) %>
+
+<%
+  const larpHomeProfileName = String(character?.name || currentUserDisplayName || currentUser?.username || "Profil").trim();
+  const larpHomeInitial = larpHomeProfileName.charAt(0).toUpperCase() || "L";
+  const larpHomeAvatarUrl = String(character?.avatar_url || "").trim();
+  const larpHomeGuestbookStats = typeof guestbookStats !== "undefined" && guestbookStats ? guestbookStats : {};
+  const larpHomeEntryCount = Number(larpHomeGuestbookStats.entryCount || 0);
+  const larpHomeRoleLabel = currentUser && (currentUser.is_admin || currentUser.is_moderator)
+    ? "Staff-Zugang"
+    : "LARP-Profil";
+  const larpHomeStats = [
+    { label: "Beitr&auml;ge:", value: 0 },
+    { label: "Termine:", value: 0 },
+    { label: "Eintr&auml;ge:", value: larpHomeEntryCount },
+    { label: "Erhaltene Reaktionen:", value: 0 },
+    { label: "Punkte:", value: larpHomeEntryCount }
+  ];
+%>
+
+<style>
+  .larp-home-page {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .larp-home-welcome {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.34fr);
+    gap: 2rem;
+    min-height: 275px;
+    padding: 2rem;
+    border-radius: 8px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--panel-bg) 88%, white 12%),
+      color-mix(in srgb, var(--accent) 20%, var(--panel-bg) 80%)
+    );
+  }
+
+  .larp-home-welcome-copy,
+  .larp-home-user {
+    position: relative;
+    z-index: 1;
+  }
+
+  .larp-home-welcome-copy {
+    display: grid;
+    align-content: start;
+    gap: 3.6rem;
+    min-width: 0;
+  }
+
+  .larp-home-heading {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .larp-home-heading h1 {
+    margin: 0;
+    color: var(--readable-heading);
+    font-size: 2.6rem;
+    line-height: 1.05;
+  }
+
+  .larp-home-heading p,
+  .larp-home-greeting p {
+    margin: 0;
+    color: color-mix(in srgb, var(--text) 78%, var(--muted) 22%);
+    font-size: 1.08rem;
+    line-height: 1.55;
+  }
+
+  .larp-home-greeting {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .larp-home-user {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.25rem;
+    align-content: start;
+    justify-content: end;
+  }
+
+  .larp-home-avatar {
+    display: grid;
+    place-items: center;
+    width: 138px;
+    height: 138px;
+    overflow: hidden;
+    border: 3px solid color-mix(in srgb, white 72%, var(--panel-edge) 28%);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--field-bg) 72%, white 28%);
+    color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
+    font-size: 3.7rem;
+    font-weight: 800;
+    box-shadow: 0 18px 34px -28px color-mix(in srgb, var(--panel-shadow) 84%, black 16%);
+  }
+
+  .larp-home-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .larp-home-user-details {
+    display: grid;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .larp-home-name {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .larp-home-name strong {
+    color: color-mix(in srgb, var(--accent) 62%, var(--text) 38%);
+    font-size: 1.2rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .larp-home-role {
+    justify-self: start;
+    padding: 0.18rem 0.55rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--field-bg) 76%, white 24%);
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .larp-home-stat-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .larp-home-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    color: var(--text);
+  }
+
+  .larp-home-stat span {
+    color: color-mix(in srgb, var(--accent) 62%, var(--text) 38%);
+  }
+
+  .larp-home-stat strong {
+    font-weight: 600;
+  }
+
+  @media (max-width: 860px) {
+    .larp-home-welcome {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding: 1.35rem;
+    }
+
+    .larp-home-welcome-copy {
+      gap: 2rem;
+    }
+
+    .larp-home-user {
+      justify-content: start;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .larp-home-heading h1 {
+      font-size: 2rem;
+    }
+
+    .larp-home-user {
+      grid-template-columns: 1fr;
+    }
+
+    .larp-home-avatar {
+      width: 112px;
+      height: 112px;
+      font-size: 3rem;
+    }
+  }
+</style>
+
+<%- include("../partials/larp-navigation", {
+  activeLarpNavLabel: "Home",
+  larpNavCompact: true,
+  larpNavCharacter: character
+}) %>
+
+<section class="larp-home-page">
+  <section class="panel larp-home-welcome" aria-label="LARP Home">
+    <div class="larp-home-welcome-copy">
+      <div class="larp-home-heading">
+        <h1>Heldenhafte Reisen LARP Forum</h1>
+        <p>Community Portal f&uuml;r die Rollenspieler im Heldenhafte Reisen LARP Bereich</p>
+      </div>
+
+      <div class="larp-home-greeting">
+        <p>Hallo <%= larpHomeProfileName %>!</p>
+        <p>Es freut uns, dich wieder bei uns begr&uuml;&szlig;en zu d&uuml;rfen.</p>
+      </div>
+    </div>
+
+    <aside class="larp-home-user" aria-label="LARP Profil">
+      <div class="larp-home-avatar" aria-hidden="true">
+        <% if (larpHomeAvatarUrl) { %>
+          <img src="<%= larpHomeAvatarUrl %>" alt="" />
+        <% } else { %>
+          <span><%= larpHomeInitial %></span>
+        <% } %>
+      </div>
+
+      <div class="larp-home-user-details">
+        <div class="larp-home-name">
+          <strong><%= larpHomeProfileName %></strong>
+          <span class="larp-home-role"><%= larpHomeRoleLabel %></span>
+        </div>
+
+        <div class="larp-home-stat-list">
+          <% larpHomeStats.forEach((stat) => { %>
+            <div class="larp-home-stat">
+              <span><%- stat.label %></span>
+              <strong><%= stat.value %></strong>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </aside>
+  </section>
+</section>
+
 <%- include("../partials/end") %>

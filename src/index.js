@@ -15476,6 +15476,32 @@ function getCharacterGuestbookStats(characterId, options = {}) {
   };
 }
 
+function renderLarpHomePage(req, res, character) {
+  const isOwner = Number(req.session.user?.id) === Number(character.user_id);
+  const isAdmin = req.session.user?.is_admin === true;
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+  const larpHomeTitle = `LARP Home: ${character.name}`;
+
+  if (isOwner) {
+    rememberPreferredCharacter(req, character);
+    trackLarpCharacterActivity(character.id, req.originalUrl, larpHomeTitle);
+  }
+
+  return res.render("characters/larp-forum", {
+    title: larpHomeTitle,
+    metaDescription: `${character.name} landet im modernen LARP-Forum von Heldenhafte Reisen.`,
+    character,
+    topbarCharacter: isOwner ? character : getPreferredMenuCharacterForUser(req),
+    isOwner,
+    larpGuilds: getDashboardLarpGuilds(character.user_id),
+    characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
+    publicBirthdayRows: publicBirthdayDisplay.rows,
+    guestbookStats: getCharacterGuestbookStats(character.id, {
+      includePrivate: isOwner || isAdmin
+    })
+  });
+}
+
 function isLarpActivityLocation(rawPath, rawTitle = "") {
   const normalizedTitle = normalizeSessionTrackedPageTitle(rawTitle);
   if (/^larp\b/i.test(normalizedTitle)) {
@@ -16836,6 +16862,32 @@ app.post(
     });
   }
 );
+
+app.get("/characters/:id/home", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  const isAdmin = req.session.user.is_admin === true;
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
+    return res.redirect(`/characters/${character.id}`);
+  }
+
+  return renderLarpHomePage(req, res, character);
+});
 
 app.get("/characters/:id", requireAuth, (req, res) => {
   const id = Number(req.params.id);
@@ -18393,18 +18445,7 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
   const requestedMode = String(req.query.mode || "").trim().toLowerCase();
   const requestedReturnTo = getSafeExplicitReturnTarget(req.query.return_to, "");
   if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID && requestedMode !== "edit") {
-    const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
-    const larpForumTitle = `LARP Forum: ${character.name}`;
-    trackLarpCharacterActivity(character.id, req.originalUrl, larpForumTitle);
-    return res.render("characters/larp-forum", {
-      title: larpForumTitle,
-      metaDescription: `${character.name} landet im modernen LARP-Forum von Heldenhafte Reisen.`,
-      character,
-      topbarCharacter: character,
-      larpGuilds: getDashboardLarpGuilds(req.session.user.id),
-      characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
-      publicBirthdayRows: publicBirthdayDisplay.rows
-    });
+    return renderLarpHomePage(req, res, character);
   }
 
   const renameAvailability = getCharacterRenameAvailability(character, req.session.user);

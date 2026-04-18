@@ -1,8 +1,13 @@
 <%
   const activeLarpNav = String(typeof activeLarpNavLabel !== "undefined" ? activeLarpNavLabel : "Home").trim();
   const isLarpNavCompact = Boolean(typeof larpNavCompact !== "undefined" && larpNavCompact);
+  const providedLarpNavCharacter = typeof larpNavCharacter !== "undefined" ? larpNavCharacter : null;
+  const ambientLarpNavCharacter = typeof character !== "undefined" ? character : null;
+  const resolvedLarpNavCharacter = providedLarpNavCharacter || ambientLarpNavCharacter;
+  const resolvedLarpNavCharacterId = Number(resolvedLarpNavCharacter?.id || 0);
+  const larpHomeHref = resolvedLarpNavCharacterId > 0 ? `/characters/${resolvedLarpNavCharacterId}/home` : "";
   const larpNavItems = [
-    { label: "Home", icon: "home", active: activeLarpNav === "Home" },
+    { label: "Home", icon: "home", href: larpHomeHref, active: activeLarpNav === "Home" },
     { label: "Forum", icon: "forum", caret: true, active: activeLarpNav === "Forum" },
     { label: "Projekte & Gilden", icon: "shield", caret: true, active: activeLarpNav === "Projekte & Gilden" },
     { label: "Mitglieder", icon: "group", caret: true, active: activeLarpNav === "Mitglieder" },
@@ -252,6 +257,10 @@
     text-shadow: 0 1px 0 color-mix(in srgb, var(--bg-base) 18%, transparent 82%);
   }
 
+  a.larp-list-link {
+    cursor: pointer;
+  }
+
   .larp-list-link.is-active {
     background: var(--larp-nav-active-bg);
     color: color-mix(in srgb, var(--larp-nav-text) 94%, var(--text) 6%);
@@ -356,10 +365,17 @@
           <ul class="larp-list-menu">
             <% larpNavItems.forEach((item) => { %>
               <li class="larp-list-item">
-                <button
-                  type="button"
-                  class="larp-list-link<%= item.active ? " is-active" : "" %>"
-                >
+                <% if (item.href) { %>
+                  <a
+                    href="<%= item.href %>"
+                    class="larp-list-link<%= item.active ? " is-active" : "" %>"
+                  >
+                <% } else { %>
+                  <button
+                    type="button"
+                    class="larp-list-link<%= item.active ? " is-active" : "" %>"
+                  >
+                <% } %>
                   <span class="larp-list-text">
                     <span class="larp-list-icon" aria-hidden="true"><%- renderLarpNavIcon(item.icon) %></span>
                     <span><%= item.label %></span>
@@ -367,7 +383,11 @@
                       <span class="larp-list-caret" aria-hidden="true"></span>
                     <% } %>
                   </span>
-                </button>
+                <% if (item.href) { %>
+                  </a>
+                <% } else { %>
+                  </button>
+                <% } %>
               </li>
             <% }) %>
           </ul>
