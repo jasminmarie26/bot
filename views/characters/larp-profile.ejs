@@ -274,6 +274,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.92fr);
     gap: 1rem;
+    align-items: start;
   }
 
   .larp-profile-card {
@@ -283,6 +284,35 @@
 
   .larp-profile-card h2 {
     margin: 0;
+  }
+
+  .larp-profile-tab-card {
+    align-content: start;
+  }
+
+  .larp-profile-tab-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .larp-profile-tab-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--panel-edge) 74%, white 26%);
+    background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .larp-profile-tab-item.is-active {
+    background: color-mix(in srgb, var(--field-bg) 58%, white 42%);
   }
 
   .larp-profile-description {
@@ -748,27 +778,12 @@
       <% } %>
     </section>
 
-    <section class="panel larp-profile-card">
-      <div class="header-line">
-        <div>
-          <h2>Bereich</h2>
-          <p class="muted">Die Profilseite bleibt bewusst sauber, bis weitere LARP-Module fertig sind.</p>
-        </div>
-      </div>
-
-      <div class="larp-profile-note-list">
-        <div class="larp-profile-note">
-          <strong>Titelbild</strong>
-          <p>Das Titelbild lässt sich direkt auf der Profilseite vom PC hochladen und sofort austauschen.</p>
-        </div>
-        <div class="larp-profile-note">
-          <strong>Letzte Aktivität</strong>
-          <p>Hier siehst du, wann zuletzt etwas im LARP-Bereich passiert ist und wo du zuletzt unterwegs warst.</p>
-        </div>
-        <div class="larp-profile-note">
-          <strong>Beiträge, Termine und mehr</strong>
-          <p>Diese Bereiche blenden wir erst ein, sobald sie im LARP wirklich aktiv sind. So bleibt die Seite ohne graue Platzhalter.</p>
-        </div>
+    <section class="panel larp-profile-card larp-profile-tab-card" aria-label="Profilbereiche">
+      <div class="larp-profile-tab-row">
+        <span class="larp-profile-tab-item is-active">Über mich</span>
+        <span class="larp-profile-tab-item">Letzte Aktivitäten</span>
+        <span class="larp-profile-tab-item">Pinnwand</span>
+        <span class="larp-profile-tab-item">Reaktionen</span>
       </div>
     </section>
   </div>
