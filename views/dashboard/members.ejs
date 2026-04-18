@@ -32,7 +32,7 @@
       <% } else { %>
         <div class="members-section-list">
           <% staffMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member }) %>
+            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
           <% }) %>
         </div>
       <% } %>
@@ -47,7 +47,7 @@
       <% } else { %>
         <div class="members-section-list">
           <% rpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member }) %>
+            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
           <% }) %>
         </div>
       <% } %>
@@ -62,7 +62,7 @@
       <% } else { %>
         <div class="members-section-list">
           <% erpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member }) %>
+            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
           <% }) %>
         </div>
       <% } %>
@@ -77,7 +77,7 @@
       <% } else { %>
         <div class="members-section-list">
           <% larpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member }) %>
+            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
           <% }) %>
         </div>
       <% } %>

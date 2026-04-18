@@ -10275,6 +10275,65 @@ function getGuestbookPostingCharacters(req, targetCharacter) {
   };
 }
 
+function isGuestbookStaffViewRequested(req) {
+  return String(req?.query?.staff_view || req?.body?.staff_view || "").trim() === "1";
+}
+
+function getGuestbookStaffRoleCharacters(req, targetCharacter) {
+  const currentUser = req?.session?.user;
+  const targetServerId = normalizeCharacterServerId(targetCharacter?.server_id);
+  const characters = [];
+  const seenCharacterIds = new Set();
+
+  ["admin", "moderator"].forEach((role) => {
+    const roleCharacter = getUserRoleCharacter(currentUser, role);
+    const parsedCharacterId = Number(roleCharacter?.id);
+    if (
+      !roleCharacter ||
+      !Number.isInteger(parsedCharacterId) ||
+      parsedCharacterId < 1 ||
+      seenCharacterIds.has(parsedCharacterId) ||
+      normalizeCharacterServerId(roleCharacter.server_id) !== targetServerId
+    ) {
+      return;
+    }
+
+    seenCharacterIds.add(parsedCharacterId);
+    characters.push(roleCharacter);
+  });
+
+  return characters;
+}
+
+function getGuestbookPostingCharactersForAccess(req, targetCharacter, accessState = null) {
+  const normalizedAccessState = accessState || {};
+  if (
+    normalizedAccessState.staffViewRequested &&
+    (normalizedAccessState.isAdmin || normalizedAccessState.isModerator) &&
+    !normalizedAccessState.isOwner
+  ) {
+    const eligibleCharacters = Array.isArray(normalizedAccessState.staffRoleCharacters)
+      ? normalizedAccessState.staffRoleCharacters
+      : getGuestbookStaffRoleCharacters(req, targetCharacter);
+    const preferredCharacterId = getPreferredCharacterIdFromSession(
+      req,
+      normalizeCharacterServerId(targetCharacter?.server_id)
+    );
+    const selectedCharacterId =
+      Number.isInteger(preferredCharacterId) &&
+      eligibleCharacters.some((entry) => Number(entry.id) === preferredCharacterId)
+        ? preferredCharacterId
+        : (Number(eligibleCharacters[0]?.id || 0) || null);
+
+    return {
+      characters: eligibleCharacters,
+      selectedCharacterId
+    };
+  }
+
+  return getGuestbookPostingCharacters(req, targetCharacter);
+}
+
 function isGuestbookReplyAccessAllowed(userId, targetCharacterId, sourceEntryId, replyToCharacterId) {
   const parsedUserId = Number(userId);
   const parsedTargetCharacterId = Number(targetCharacterId);
@@ -10314,6 +10373,14 @@ function getGuestbookAccessState(req, targetCharacter) {
   const currentUserId = Number(req.session?.user?.id);
   const isOwner = currentUserId === Number(targetCharacter?.user_id);
   const isAdmin = req.session?.user?.is_admin === true;
+  const isModerator = req.session?.user?.is_moderator === true;
+  const staffViewRequested = isGuestbookStaffViewRequested(req);
+  const staffRoleCharacters = staffViewRequested ? getGuestbookStaffRoleCharacters(req, targetCharacter) : [];
+  const canAccessAsStaff =
+    staffViewRequested &&
+    (isAdmin || isModerator) &&
+    !isOwner &&
+    staffRoleCharacters.length > 0;
   const canAccessDirectly = canAccessCharacter(
     currentUserId,
     targetCharacter?.user_id,
@@ -10328,7 +10395,7 @@ function getGuestbookAccessState(req, targetCharacter) {
     replyContextEntryId,
     replyContextCharacterId
   );
-  const canAccessBase = canAccessDirectly || viaReplyAccess;
+  const canAccessBase = canAccessDirectly || viaReplyAccess || canAccessAsStaff;
   const guestbookSettings = canAccessBase ? getOrCreateGuestbookSettings(targetCharacter?.id) : null;
   const censorLevel = canAccessBase
     ? normalizeGuestbookOption(guestbookSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none")
@@ -10338,20 +10405,30 @@ function getGuestbookAccessState(req, targetCharacter) {
   let missingBirthDate = false;
   let passesAgeGate = true;
 
-  if (canAccessBase && isAgeRestricted && !isOwner && !isAdmin) {
+  if (canAccessBase && isAgeRestricted && !isOwner && !isAdmin && !canAccessAsStaff) {
     const viewerAccount = getAccountUserById(currentUserId);
     viewerAge = getAgeFromBirthDate(viewerAccount?.birth_date);
     missingBirthDate = viewerAge === null;
     passesAgeGate = viewerAge !== null && viewerAge >= 18;
   }
 
-  const denialReason = !canAccessBase
-    ? "private"
-    : (!passesAgeGate ? "age-restricted" : null);
+  let denialReason = null;
+  if (!canAccessBase) {
+    denialReason =
+      staffViewRequested && (isAdmin || isModerator) && !staffRoleCharacters.length
+        ? "staff-character-required"
+        : "private";
+  } else if (!passesAgeGate) {
+    denialReason = "age-restricted";
+  }
 
   return {
     isOwner,
     isAdmin,
+    isModerator,
+    isStaffView: canAccessAsStaff,
+    staffViewRequested,
+    staffRoleCharacters,
     canAccess: canAccessBase && passesAgeGate,
     viaReplyAccess,
     denialReason,
@@ -10366,6 +10443,14 @@ function getGuestbookAccessState(req, targetCharacter) {
 }
 
 function buildGuestbookAccessDeniedPayload(accessState = {}) {
+  if (accessState?.denialReason === "staff-character-required") {
+    return {
+      title: "Staff-Charakter fehlt",
+      message:
+        "Bitte markiere zuerst einen Charakter als Admin- oder Moderator-Charakter, damit du das Gästebuch im Staff-Modus öffnen kannst."
+    };
+  }
+
   if (accessState?.denialReason === "age-restricted") {
     if (accessState?.censorLevel === "sexual") {
       return {
@@ -10395,11 +10480,18 @@ function renderGuestbookAccessDenied(res, accessState) {
 }
 
 function buildGuestbookContextQuery(accessState = {}) {
-  if (!accessState?.viaReplyAccess || !accessState.replyContextEntryId || !accessState.replyContextCharacterId) {
-    return "";
+  const queryParts = [];
+
+  if (accessState?.staffViewRequested) {
+    queryParts.push("staff_view=1");
   }
 
-  return `&reply_from_entry=${accessState.replyContextEntryId}&reply_to_character=${accessState.replyContextCharacterId}`;
+  if (accessState?.viaReplyAccess && accessState.replyContextEntryId && accessState.replyContextCharacterId) {
+    queryParts.push(`reply_from_entry=${accessState.replyContextEntryId}`);
+    queryParts.push(`reply_to_character=${accessState.replyContextCharacterId}`);
+  }
+
+  return queryParts.length ? `&${queryParts.join("&")}` : "";
 }
 
 function normalizeGuestbookEntriesPageNumber(value) {
@@ -10422,6 +10514,7 @@ function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, access
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
   const viewerIsOwner = Boolean(accessState?.isOwner);
+  const viewerIsStaff = Boolean(accessState?.isStaffView);
 
   const row = db
     .prepare(
@@ -10436,7 +10529,13 @@ function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, access
            OR ? = 1
          )`
     )
-    .get(character.id, pageId, viewerUserId, viewerIsOwner ? 1 : 0, viewerIsAdmin ? 1 : 0);
+    .get(
+      character.id,
+      pageId,
+      viewerUserId,
+      viewerIsOwner ? 1 : 0,
+      viewerIsAdmin || viewerIsStaff ? 1 : 0
+    );
 
   return Number(row?.total || 0);
 }
@@ -10445,6 +10544,7 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
   const viewerIsOwner = Boolean(accessState?.isOwner);
+  const viewerIsStaff = Boolean(accessState?.isStaffView);
   const normalizedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(entriesPageNumber);
   const offset = (normalizedEntriesPageNumber - 1) * GUESTBOOK_PAGE_SIZE;
 
@@ -10479,7 +10579,7 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
       pageId,
       viewerUserId,
       viewerIsOwner ? 1 : 0,
-      viewerIsAdmin ? 1 : 0,
+      viewerIsAdmin || viewerIsStaff ? 1 : 0,
       GUESTBOOK_PAGE_SIZE,
       offset
     )
@@ -10495,7 +10595,9 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
         can_delete: entryAuthorId === viewerUserId || viewerIsOwner || viewerIsAdmin,
         author_guestbook_url:
           Number.isInteger(authorCharacterId) && authorCharacterId > 0
-            ? `/characters/${authorCharacterId}/guestbook?reply_from_entry=${entry.id}&reply_to_character=${character.id}`
+            ? `/characters/${authorCharacterId}/guestbook?${
+                accessState?.staffViewRequested ? "staff_view=1&" : ""
+              }reply_from_entry=${entry.id}&reply_to_character=${character.id}`
             : "",
         updated_label:
           entry.updated_at && String(entry.updated_at) !== String(entry.created_at)
@@ -16021,7 +16123,11 @@ app.get("/members", requireAuth, (req, res) => {
     rpMembers,
     erpMembers,
     larpMembers,
-    memberCount: staffMembers.length + rpMembers.length + erpMembers.length + larpMembers.length
+    memberCount: staffMembers.length + rpMembers.length + erpMembers.length + larpMembers.length,
+    staffGuestbookQuery:
+      req.session.user?.is_admin === true || req.session.user?.is_moderator === true
+        ? "?staff_view=1"
+        : ""
   });
 });
 
@@ -18296,7 +18402,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     guestbookAccessState,
     activeGuestbookEntriesPageNumber
   );
-  const postingCharactersState = getGuestbookPostingCharacters(req, character);
+  const postingCharactersState = getGuestbookPostingCharactersForAccess(req, character, guestbookAccessState);
   const replyCharacterId = Number(guestbookAccessState.replyContextCharacterId);
   if (
     Number.isInteger(replyCharacterId) &&
@@ -18334,7 +18440,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       id: Number(entry.id),
       name: String(entry.name || "").trim(),
       server_label: getServerLabel(entry.server_id),
-      url: `/characters/${Number(entry.id)}/guestbook`
+      url: `/characters/${Number(entry.id)}/guestbook${guestbookAccessState.staffViewRequested ? "?staff_view=1" : ""}`
     }));
   const guestbookMusicEnabled = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled);
   const guestbookMusicVideoId = guestbookMusicEnabled
@@ -18419,9 +18525,15 @@ app.post("/characters/:id/guestbook", requireAuth, (req, res) => {
     return res.redirect(guestbookRedirectBase);
   }
 
-  const postingCharactersState = getGuestbookPostingCharacters(req, character);
+  const postingCharactersState = getGuestbookPostingCharactersForAccess(req, character, guestbookAccessState);
   if (!postingCharactersState.characters.length) {
-    setFlash(req, "error", "Du brauchst erst einen eigenen Charakter, um ins Gästebuch zu schreiben.");
+    setFlash(
+      req,
+      "error",
+      guestbookAccessState.staffViewRequested
+        ? "Im Staff-Modus brauchst du einen angehakten Admin- oder Moderator-Charakter auf diesem Server."
+        : "Du brauchst erst einen eigenen Charakter, um ins Gästebuch zu schreiben."
+    );
     return res.redirect(guestbookRedirectBase);
   }
 
