@@ -27,17 +27,17 @@
 <style>
   .larp-home-page {
     display: grid;
-    gap: 1rem;
+    gap: 0.8rem;
   }
 
   .larp-home-welcome {
     position: relative;
     overflow: hidden;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.34fr);
-    gap: 2rem;
-    min-height: 275px;
-    padding: 2rem;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 0.3fr);
+    gap: 1.4rem;
+    min-height: 220px;
+    padding: 1.35rem 1.55rem;
     border-radius: 8px;
     background: linear-gradient(
       90deg,
@@ -55,28 +55,28 @@
   .larp-home-welcome-copy {
     display: grid;
     align-content: start;
-    gap: 3.6rem;
+    gap: 2.2rem;
     min-width: 0;
   }
 
   .larp-home-heading {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.32rem;
   }
 
   .larp-home-heading h1 {
     margin: 0;
     color: var(--readable-heading);
-    font-size: 2.6rem;
-    line-height: 1.05;
+    font-size: 2.05rem;
+    line-height: 1.08;
   }
 
   .larp-home-heading p,
   .larp-home-greeting p {
     margin: 0;
     color: color-mix(in srgb, var(--text) 78%, var(--muted) 22%);
-    font-size: 1.08rem;
-    line-height: 1.55;
+    font-size: 0.96rem;
+    line-height: 1.45;
   }
 
   .larp-home-greeting {
@@ -87,7 +87,7 @@
   .larp-home-user {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 1.25rem;
+    gap: 0.9rem;
     align-content: start;
     justify-content: end;
   }
@@ -95,14 +95,14 @@
   .larp-home-avatar {
     display: grid;
     place-items: center;
-    width: 138px;
-    height: 138px;
+    width: 104px;
+    height: 104px;
     overflow: hidden;
-    border: 3px solid color-mix(in srgb, white 72%, var(--panel-edge) 28%);
+    border: 2px solid color-mix(in srgb, white 72%, var(--panel-edge) 28%);
     border-radius: 50%;
     background: color-mix(in srgb, var(--field-bg) 72%, white 28%);
     color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
-    font-size: 3.7rem;
+    font-size: 2.85rem;
     font-weight: 800;
     box-shadow: 0 18px 34px -28px color-mix(in srgb, var(--panel-shadow) 84%, black 16%);
   }
@@ -116,18 +116,18 @@
 
   .larp-home-user-details {
     display: grid;
-    gap: 0.8rem;
+    gap: 0.55rem;
     min-width: 0;
   }
 
   .larp-home-name {
     display: grid;
-    gap: 0.35rem;
+    gap: 0.26rem;
   }
 
   .larp-home-name strong {
     color: color-mix(in srgb, var(--accent) 62%, var(--text) 38%);
-    font-size: 1.2rem;
+    font-size: 1.03rem;
     line-height: 1.2;
     overflow-wrap: anywhere;
   }
@@ -138,20 +138,22 @@
     border-radius: 8px;
     background: color-mix(in srgb, var(--field-bg) 76%, white 24%);
     color: var(--text);
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     font-weight: 700;
   }
 
   .larp-home-stat-list {
     display: grid;
-    gap: 0.55rem;
+    gap: 0.32rem;
   }
 
   .larp-home-stat {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1rem;
+    gap: 0.8rem;
     color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.35;
   }
 
   .larp-home-stat span {
@@ -164,8 +166,8 @@
 
   .larp-home-online {
     display: grid;
-    gap: 1rem;
-    padding: 1.45rem 1.8rem 1.55rem;
+    gap: 0.65rem;
+    padding: 1rem 1.25rem 1.1rem;
     border-radius: 8px;
     background: linear-gradient(
       90deg,
@@ -177,31 +179,32 @@
   .larp-home-online h2 {
     margin: 0;
     color: color-mix(in srgb, var(--accent) 64%, var(--text) 36%);
-    font-size: 1.28rem;
+    font-size: 1.08rem;
     line-height: 1.25;
   }
 
   .larp-home-online-meta {
     display: grid;
-    gap: 0.24rem;
+    gap: 0.18rem;
   }
 
   .larp-home-online-meta p {
     margin: 0;
     color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
-    font-size: 1.04rem;
-    line-height: 1.45;
+    font-size: 0.94rem;
+    line-height: 1.38;
   }
 
   .larp-home-online-members {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.22rem 0.45rem;
+    gap: 0.16rem 0.36rem;
     align-items: center;
   }
 
   .larp-home-online-member {
     color: color-mix(in srgb, var(--accent) 68%, var(--text) 32%);
+    font-size: 0.94rem;
     font-weight: 700;
     text-decoration: none;
   }
@@ -219,12 +222,12 @@
   @media (max-width: 860px) {
     .larp-home-welcome {
       grid-template-columns: 1fr;
-      gap: 1.5rem;
-      padding: 1.35rem;
+      gap: 1.1rem;
+      padding: 1.1rem;
     }
 
     .larp-home-welcome-copy {
-      gap: 2rem;
+      gap: 1.5rem;
     }
 
     .larp-home-user {
@@ -234,7 +237,7 @@
 
   @media (max-width: 540px) {
     .larp-home-heading h1 {
-      font-size: 2rem;
+      font-size: 1.55rem;
     }
 
     .larp-home-user {
@@ -242,9 +245,9 @@
     }
 
     .larp-home-avatar {
-      width: 112px;
-      height: 112px;
-      font-size: 3rem;
+      width: 86px;
+      height: 86px;
+      font-size: 2.35rem;
     }
   }
 </style>
