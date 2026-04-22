@@ -18,9 +18,6 @@
   const larpHomeAvatarObjectPosition = `${larpHomeAvatarFocusX}% ${larpHomeAvatarFocusY}%`;
   const larpHomeGuestbookStats = typeof guestbookStats !== "undefined" && guestbookStats ? guestbookStats : {};
   const larpHomeEntryCount = Number(larpHomeGuestbookStats.entryCount || 0);
-  const larpHomeRoleLabel = currentUser && (currentUser.is_admin || currentUser.is_moderator)
-    ? "Staff-Zugang"
-    : "LARP-Profil";
   const larpHomeStats = [
     { label: "Beitr&auml;ge:", value: 0 },
     { label: "Termine:", value: 0 },
@@ -153,16 +150,6 @@
   .larp-home-name-link:hover,
   .larp-home-name-link:focus-visible {
     text-decoration: underline;
-  }
-
-  .larp-home-role {
-    justify-self: start;
-    padding: 0.18rem 0.55rem;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--field-bg) 76%, white 24%);
-    color: var(--text);
-    font-size: 0.82rem;
-    font-weight: 700;
   }
 
   .larp-home-stat-list {
@@ -311,7 +298,6 @@
           <% } else { %>
             <strong><%= larpHomeProfileName %></strong>
           <% } %>
-          <span class="larp-home-role"><%= larpHomeRoleLabel %></span>
         </div>
 
         <div class="larp-home-stat-list">

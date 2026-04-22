@@ -3,7 +3,6 @@
 <% const dashboardLarpReturnTarget = "/dashboard/larp"; %>
 <% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
 <% const canCreateLarpProfile = larpCharacters.length < 1; %>
-<% const larpStatusLabel = "Verf&uuml;gbar f&uuml;r alle"; %>
 <% const larpAccessTitle = "Ein LARP-Profil pro Account"; %>
 <% const larpAccessDescription = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere." %>
 
@@ -46,7 +45,6 @@
   <section class="panel serverlist-panel serverlist-subpanel">
     <div class="header-line">
       <div class="serverlist-larp-access-copy">
-        <span class="serverlist-status-pill"><%- larpStatusLabel %></span>
         <div class="serverlist-larp-access-main">
           <h3><%= larpAccessTitle %></h3>
           <p class="muted"><%= larpAccessDescription %></p>

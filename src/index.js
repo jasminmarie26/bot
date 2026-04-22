@@ -636,10 +636,6 @@ const LARP_PROFILE_COVER_UPLOAD_WEB_ROOT = `/${LARP_PROFILE_COVER_UPLOAD_RELATIV
 const LARP_PROFILE_COVER_UPLOAD_ROOT = path.join(publicDir, "uploads", "larp-profile-covers");
 const LARP_PROFILE_COVER_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
 const LARP_PROFILE_COVER_UPLOAD_JSON_LIMIT = "6mb";
-const LARP_PROFILE_COVER_MIN_WIDTH = 500;
-const LARP_PROFILE_COVER_MIN_HEIGHT = 200;
-const LARP_PROFILE_COVER_MAX_WIDTH = 2000;
-const LARP_PROFILE_COVER_MAX_HEIGHT = 800;
 const LARP_PROFILE_COVER_ALLOWED_MIME_TYPES = new Map([
   ["image/gif", ".gif"],
   ["image/jpeg", ".jpg"],
@@ -17232,17 +17228,10 @@ app.post(
         return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
       }
 
-      if (width < LARP_PROFILE_COVER_MIN_WIDTH || height < LARP_PROFILE_COVER_MIN_HEIGHT) {
+      if (width <= 0 || height <= 0) {
         return res.status(400).json({
           ok: false,
-          error: `Das Titelbild muss mindestens ${LARP_PROFILE_COVER_MIN_WIDTH}x${LARP_PROFILE_COVER_MIN_HEIGHT} Pixel groß sein.`
-        });
-      }
-
-      if (width > LARP_PROFILE_COVER_MAX_WIDTH || height > LARP_PROFILE_COVER_MAX_HEIGHT) {
-        return res.status(400).json({
-          ok: false,
-          error: `Das Titelbild darf höchstens ${LARP_PROFILE_COVER_MAX_WIDTH}x${LARP_PROFILE_COVER_MAX_HEIGHT} Pixel haben.`
+          error: "Die Bildgröße ist ungültig."
         });
       }
 

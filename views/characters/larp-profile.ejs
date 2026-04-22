@@ -1458,7 +1458,7 @@
           </div>
 
           <p class="larp-profile-cover-upload-copy">
-            Zieh dein Titelbild im Ausschnitt so hin, wie es oben im Profil sitzen soll.
+            Die Bildgröße wird automatisch passend eingepasst. Zieh dein Titelbild danach im Ausschnitt so hin, wie es oben im Profil sitzen soll.
           </p>
 
           <p class="larp-profile-cover-file-meta" data-larp-cover-file-meta-visible>
@@ -1468,11 +1468,11 @@
           <div class="larp-profile-cover-rule-grid">
             <div class="larp-profile-cover-rule">
               <strong>Bildgröße</strong>
-              <p>Mindestens 500 x 200 Pixel</p>
+              <p>Wird automatisch passend eingepasst</p>
             </div>
             <div class="larp-profile-cover-rule">
-              <strong>Maximal</strong>
-              <p>2000 x 800 Pixel</p>
+              <strong>Dateigröße</strong>
+              <p>Maximal 2 MB</p>
             </div>
             <div class="larp-profile-cover-rule">
               <strong>Dateien</strong>
@@ -1542,10 +1542,6 @@
 
       const allowedMimeTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
       const maxBytes = 2 * 1024 * 1024;
-      const minWidth = 500;
-      const minHeight = 200;
-      const maxWidth = 2000;
-      const maxHeight = 800;
       const uploadUrl = String(modal.getAttribute("data-upload-url") || "").trim();
       const defaultCoverBackground = "linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.72) 48%, rgba(192, 224, 232, 0.52)), radial-gradient(circle at top right, rgba(255, 255, 255, 0.26), transparent 42%), linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18))";
       const defaultPreviewBackground = "linear-gradient(145deg, rgba(57, 122, 152, 0.9), rgba(144, 201, 213, 0.82) 54%, rgba(244, 222, 184, 0.76)), linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0))";
@@ -1698,20 +1694,6 @@
         } catch (error) {
           resetSelection();
           setStatus(error.message || "Das Bild konnte nicht gelesen werden.", "error");
-          return;
-        }
-
-        if (previewData.width < minWidth || previewData.height < minHeight) {
-          URL.revokeObjectURL(previewData.objectUrl);
-          resetSelection();
-          setStatus(`Das Titelbild muss mindestens ${minWidth} x ${minHeight} Pixel haben.`, "error");
-          return;
-        }
-
-        if (previewData.width > maxWidth || previewData.height > maxHeight) {
-          URL.revokeObjectURL(previewData.objectUrl);
-          resetSelection();
-          setStatus(`Das Titelbild darf höchstens ${maxWidth} x ${maxHeight} Pixel haben.`, "error");
           return;
         }
 
@@ -1905,10 +1887,6 @@
 
       const allowedMimeTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
       const maxBytes = 2 * 1024 * 1024;
-      const minWidth = 500;
-      const minHeight = 200;
-      const maxWidth = 2000;
-      const maxHeight = 800;
       const uploadUrl = String(modal.getAttribute("data-upload-url") || "").trim();
       const defaultCoverBackground = "linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.72) 48%, rgba(192, 224, 232, 0.52)), radial-gradient(circle at top right, rgba(255, 255, 255, 0.26), transparent 42%), linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18))";
       const clampPercent = (value, fallback = 50) => {
@@ -2176,20 +2154,6 @@
         } catch (error) {
           resetDraftState();
           setStatus(error?.message || "Das Bild konnte nicht gelesen werden.", "error");
-          return;
-        }
-
-        if (previewData.width < minWidth || previewData.height < minHeight) {
-          URL.revokeObjectURL(previewData.objectUrl);
-          resetDraftState();
-          setStatus(`Das Titelbild muss mindestens ${minWidth} x ${minHeight} Pixel haben.`, "error");
-          return;
-        }
-
-        if (previewData.width > maxWidth || previewData.height > maxHeight) {
-          URL.revokeObjectURL(previewData.objectUrl);
-          resetDraftState();
-          setStatus(`Das Titelbild darf hoechstens ${maxWidth} x ${maxHeight} Pixel haben.`, "error");
           return;
         }
 

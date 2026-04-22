@@ -1,11 +1,7 @@
 <%- include("../partials/start") %>
 
-<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
-<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
-<% const larpActionLabel = hasLarpStaffAccess ? "LARP-Bereich öffnen" : "LARP-Testzugang öffnen"; %>
-<% const larpAccessNote = hasLarpStaffAccess
-  ? "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere."
-  : "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere. Bis zur Freigabe betrittst du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht."; %>
+<% const larpActionLabel = "LARP-Bereich öffnen"; %>
+<% const larpAccessNote = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere."; %>
 
 <section class="header-line dashboard-page-header">
   <div>
@@ -51,7 +47,6 @@
       <section class="panel dashboard-larp-panel dashboard-subpanel">
         <div class="dashboard-larp-orb" aria-hidden="true"></div>
         <div class="dashboard-larp-copy">
-          <span class="dashboard-status-pill"><%= larpStatusLabel %></span>
           <p class="muted"><%= larpAccessNote %></p>
 
           <div class="dashboard-larp-actions">

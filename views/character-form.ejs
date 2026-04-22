@@ -1,8 +1,6 @@
 <%- include("partials/start", { enableRealtime: false }) %>
 
-<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
 <% const isLarpProfile = character.server_id === "larp"; %>
-<% const isLarpTestCharacter = isLarpProfile && !hasLarpStaffAccess; %>
 <% const characterFormHeading = isLarpProfile
   ? (mode === "create" ? "Neues LARP-Profil" : "LARP-Profil bearbeiten")
   : (mode === "create" ? "Neuer Charakter" : "Charakter bearbeiten"); %>
@@ -112,16 +110,10 @@
     <section class="panel dashboard-server-panel dashboard-subpanel">
       <div class="header-line">
         <div>
-          <span class="dashboard-status-pill"><%= hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang" %></span>
           <h3>LARP-Profil</h3>
           <p class="muted">
             Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere.
           </p>
-          <% if (isLarpTestCharacter) { %>
-            <p class="muted">
-              Wichtig: Wenn du den Bereich wieder verl&auml;sst, wird dein Testprofil gel&ouml;scht.
-            </p>
-          <% } %>
         </div>
       </div>
     </section>
