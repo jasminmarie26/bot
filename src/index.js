@@ -17207,59 +17207,73 @@ app.post(
     }
 
     const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
-    if (!parsedImageData) {
-      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
-    }
-
-    const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
-    const fileExtension = LARP_PROFILE_COVER_ALLOWED_MIME_TYPES.get(mimeType);
-    if (!fileExtension || mimeType !== parsedImageData.mimeType) {
-      return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
-    }
-
-    const width = Number(req.body?.width);
-    const height = Number(req.body?.height);
-    if (!Number.isFinite(width) || !Number.isFinite(height)) {
-      return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
-    }
-
-    if (width < LARP_PROFILE_COVER_MIN_WIDTH || height < LARP_PROFILE_COVER_MIN_HEIGHT) {
-      return res.status(400).json({
-        ok: false,
-        error: `Das Titelbild muss mindestens ${LARP_PROFILE_COVER_MIN_WIDTH}x${LARP_PROFILE_COVER_MIN_HEIGHT} Pixel groß sein.`
-      });
-    }
-
-    if (width > LARP_PROFILE_COVER_MAX_WIDTH || height > LARP_PROFILE_COVER_MAX_HEIGHT) {
-      return res.status(400).json({
-        ok: false,
-        error: `Das Titelbild darf höchstens ${LARP_PROFILE_COVER_MAX_WIDTH}x${LARP_PROFILE_COVER_MAX_HEIGHT} Pixel haben.`
-      });
-    }
-
-    let fileBuffer = null;
-    try {
-      fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
-    } catch (error) {
-      fileBuffer = null;
-    }
-
-    if (!fileBuffer || !fileBuffer.length) {
-      return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
-    }
-
-    if (fileBuffer.length > LARP_PROFILE_COVER_UPLOAD_MAX_BYTES) {
-      return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
-    }
-
     const previousCoverUrl = String(character.larp_profile_title_image_url || "").trim();
-    const uploadDestination = buildLarpProfileCoverUploadDestination(character.id, fileExtension);
+    const focusX = normalizeAvatarFocusInput(
+      req.body?.focusX,
+      character.larp_profile_title_image_focus_x
+    );
+    const focusY = normalizeAvatarFocusInput(
+      req.body?.focusY,
+      character.larp_profile_title_image_focus_y
+    );
+    let nextCoverUrl = previousCoverUrl;
+    let uploadedCoverUrl = "";
 
-    try {
-      fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
-    } catch (error) {
-      console.error("LARP-Profil-Titelbild konnte nicht gespeichert werden:", error);
-      return res.status(500).json({ ok: false, error: "Das Titelbild konnte nicht gespeichert werden." });
+    if (parsedImageData) {
+      const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
+      const fileExtension = LARP_PROFILE_COVER_ALLOWED_MIME_TYPES.get(mimeType);
+      if (!fileExtension || mimeType !== parsedImageData.mimeType) {
+        return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
+      }
+
+      const width = Number(req.body?.width);
+      const height = Number(req.body?.height);
+      if (!Number.isFinite(width) || !Number.isFinite(height)) {
+        return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
+      }
+
+      if (width < LARP_PROFILE_COVER_MIN_WIDTH || height < LARP_PROFILE_COVER_MIN_HEIGHT) {
+        return res.status(400).json({
+          ok: false,
+          error: `Das Titelbild muss mindestens ${LARP_PROFILE_COVER_MIN_WIDTH}x${LARP_PROFILE_COVER_MIN_HEIGHT} Pixel groß sein.`
+        });
+      }
+
+      if (width > LARP_PROFILE_COVER_MAX_WIDTH || height > LARP_PROFILE_COVER_MAX_HEIGHT) {
+        return res.status(400).json({
+          ok: false,
+          error: `Das Titelbild darf höchstens ${LARP_PROFILE_COVER_MAX_WIDTH}x${LARP_PROFILE_COVER_MAX_HEIGHT} Pixel haben.`
+        });
+      }
+
+      let fileBuffer = null;
+      try {
+        fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
+      } catch (error) {
+        fileBuffer = null;
+      }
+
+      if (!fileBuffer || !fileBuffer.length) {
+        return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
+      }
+
+      if (fileBuffer.length > LARP_PROFILE_COVER_UPLOAD_MAX_BYTES) {
+        return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
+      }
+
+      const uploadDestination = buildLarpProfileCoverUploadDestination(character.id, fileExtension);
+
+      try {
+        fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
+      } catch (error) {
+        console.error("LARP-Profil-Titelbild konnte nicht gespeichert werden:", error);
+        return res.status(500).json({ ok: false, error: "Das Titelbild konnte nicht gespeichert werden." });
+      }
+
+      nextCoverUrl = uploadDestination.publicUrl;
+      uploadedCoverUrl = uploadDestination.publicUrl;
+    } else if (!previousCoverUrl) {
+      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
     }
 
     try {
@@ -17267,23 +17281,29 @@ app.post(
         .prepare(
           `UPDATE characters
               SET larp_profile_title_image_url = ?,
+                  larp_profile_title_image_focus_x = ?,
+                  larp_profile_title_image_focus_y = ?,
                   updated_at = CURRENT_TIMESTAMP
             WHERE id = ?`
         )
-        .run(uploadDestination.publicUrl, character.id);
+        .run(nextCoverUrl, focusX, focusY, character.id);
     } catch (error) {
-      removeManagedLarpProfileCoverFile(uploadDestination.publicUrl);
+      if (uploadedCoverUrl) {
+        removeManagedLarpProfileCoverFile(uploadedCoverUrl);
+      }
       console.error("LARP-Profil-Titelbild konnte nicht im Profil gespeichert werden:", error);
       return res.status(500).json({ ok: false, error: "Das Titelbild konnte nicht dem Profil zugeordnet werden." });
     }
 
-    if (previousCoverUrl && previousCoverUrl !== uploadDestination.publicUrl) {
+    if (previousCoverUrl && previousCoverUrl !== nextCoverUrl) {
       removeManagedLarpProfileCoverFile(previousCoverUrl);
     }
 
     return res.json({
       ok: true,
-      imageUrl: uploadDestination.publicUrl
+      imageUrl: nextCoverUrl,
+      focusX,
+      focusY
     });
   }
 );
