@@ -694,8 +694,9 @@
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.34);
     color: #2b4651;
-    font-size: 1.5rem;
+    font-size: 1rem;
     font-weight: 700;
+    line-height: 1;
   }
 
   .larp-profile-cover-modal-close:hover,
@@ -808,6 +809,12 @@
   .larp-profile-cover-upload-button.is-accent {
     background: linear-gradient(135deg, rgba(182, 216, 123, 0.96), rgba(242, 208, 163, 0.94));
     color: #213126;
+  }
+
+  .larp-profile-cover-upload-button.is-secondary {
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    background: rgba(255, 255, 255, 0.38);
+    color: #27414b;
   }
 
   .larp-profile-cover-upload-button:hover,
@@ -1363,7 +1370,7 @@
         </div>
 
         <button type="button" class="larp-profile-cover-modal-close" data-larp-avatar-close aria-label="Fenster schließen">
-          &times;
+          X
         </button>
       </div>
 
@@ -1388,6 +1395,7 @@
         <div class="larp-profile-avatar-upload-actions">
           <button type="button" class="larp-profile-cover-upload-button is-primary" data-larp-avatar-select>Bild vom PC wählen</button>
           <button type="button" class="larp-profile-cover-upload-button is-accent" data-larp-avatar-save>Speichern</button>
+          <button type="button" class="larp-profile-cover-upload-button is-secondary" data-larp-avatar-close>Abbrechen</button>
         </div>
 
         <p class="larp-profile-avatar-status" data-larp-avatar-status role="status" aria-live="polite"></p>
@@ -1414,7 +1422,7 @@
         </div>
 
         <button type="button" class="larp-profile-cover-modal-close" data-larp-cover-close aria-label="Fenster schließen">
-          &times;
+          X
         </button>
       </div>
 
