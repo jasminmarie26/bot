@@ -4759,7 +4759,7 @@ function normalizeCharacterInput(body) {
     species: (body.species || "").trim().slice(0, 80),
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
-    description: "",
+    description: normalizeBbcodeInput(body.description, 12000),
     public_birth_show_age: 0,
     public_birth_show_day_month: 0,
     public_birth_show_year: 0,
@@ -17199,6 +17199,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
       larpGuildCount: getDashboardLarpGuilds(character.user_id).length,
       lastActivity,
       isCharacterOnline: onlineAccountUserIds.has(Number(character.user_id)),
+      profileDescriptionHtml: String(character.description || "").trim()
+        ? renderGuestbookBbcode(character.description)
+        : "",
       profileCoverUrl: String(character.larp_profile_title_image_url || character.chat_background_url || "").trim(),
       profileEditHref: `/characters/${character.id}/edit?mode=edit&return_to=${encodeURIComponent(`/characters/${character.id}`)}`,
       profileGuestbookHref: `/characters/${character.id}/guestbook`
@@ -18744,6 +18747,9 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   }
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "avatar_url")) {
     payload.avatar_url = String(character.avatar_url || "").trim().slice(0, 500);
+  }
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, "description")) {
+    payload.description = normalizeBbcodeInput(character.description, 12000);
   }
   if (!Object.prototype.hasOwnProperty.call(req.body || {}, "larp_profile_title_image_url")) {
     payload.larp_profile_title_image_url = String(character.larp_profile_title_image_url || "").trim().slice(0, 500);

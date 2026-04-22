@@ -10,6 +10,7 @@
     { label: "Alter", value: character.age },
     { label: "Faceclaim", value: character.faceclaim }
   ].filter((entry) => String(entry.value || "").trim());
+  const renderedProfileDescription = String(profileDescriptionHtml || "").trim();
   const showStats = Number(guestbookStats?.entryCount || 0) > 0 || Number(larpGuildCount || 0) > 0;
   const lastActivityLabel = lastActivity?.relativeLabel || lastActivity?.absoluteLabel || "";
   const larpCoverUploadHref = `/characters/${character.id}/larp-profile/cover-upload`;
@@ -324,6 +325,14 @@
     margin: 0;
     line-height: 1.65;
     font-size: 1rem;
+  }
+
+  .larp-profile-description > :first-child {
+    margin-top: 0;
+  }
+
+  .larp-profile-description > :last-child {
+    margin-bottom: 0;
   }
 
   .larp-profile-detail-grid,
@@ -763,8 +772,8 @@
         </div>
       </div>
 
-      <% if (String(character.description || "").trim()) { %>
-        <p class="larp-profile-description pre-line"><%= character.description %></p>
+      <% if (renderedProfileDescription) { %>
+        <div class="larp-profile-description"><%- renderedProfileDescription %></div>
       <% } else { %>
         <p class="muted">Noch keine Beschreibung hinterlegt.</p>
       <% } %>

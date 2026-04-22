@@ -183,6 +183,18 @@
           <input type="hidden" name="larp_profile_title_image_url" value="<%= character.larp_profile_title_image_url || "" %>" />
         <% } %>
 
+        <% if (isLarpProfile) { %>
+          <%- include("partials/bbcode-editor", {
+            bbcodeEditorWrapperClass: "character-form-basic-wide gb-editor-row-content",
+            bbcodeEditorFieldId: "larp-profile-description",
+            bbcodeEditorFieldName: "description",
+            bbcodeEditorFieldValue: character.description || "",
+            bbcodeEditorFieldLabel: "&Uuml;ber mich",
+            bbcodeEditorRows: 12,
+            bbcodeEditorMaxLength: 12000
+          }) %>
+        <% } %>
+
         <fieldset class="character-form-basic-wide character-birthday-visibility-fieldset">
           <legend>Geburtstag auf diesem Charakter anzeigen</legend>
           <div class="account-birthday-visibility-options">
