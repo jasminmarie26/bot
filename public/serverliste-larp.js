@@ -1,26 +1,44 @@
 (() => {
   document.addEventListener("DOMContentLoaded", () => {
-    const modal = document.getElementById("serverlist-larp-move-modal");
-    const note = document.getElementById("serverlist-larp-move-note");
+    const moveModal = document.getElementById("serverlist-larp-move-modal");
+    const moveNote = document.getElementById("serverlist-larp-move-note");
     const freeButton = document.getElementById("serverlist-larp-move-free");
     const erpButton = document.getElementById("serverlist-larp-move-erp");
-    const closeElements = modal ? modal.querySelectorAll("[data-serverlist-larp-close]") : [];
+    const moveCloseElements = moveModal ? moveModal.querySelectorAll("[data-serverlist-larp-close]") : [];
     const moveForms = document.querySelectorAll("[data-serverlist-larp-move]");
-    const erpMoveAllowed = modal?.dataset.erpMoveAllowed === "true";
+    const erpMoveAllowed = moveModal?.dataset.erpMoveAllowed === "true";
+    const forumNoticeModal = document.getElementById("serverlist-larp-forum-notice-modal");
+    const forumNoticeCopy = document.getElementById("serverlist-larp-forum-notice-copy");
+    const forumNoticeOpenLink = document.getElementById("serverlist-larp-forum-notice-open");
+    const forumNoticeCloseElements = forumNoticeModal
+      ? forumNoticeModal.querySelectorAll("[data-serverlist-larp-forum-close]")
+      : [];
+    const forumEntryLinks = document.querySelectorAll('[data-serverlist-larp-forum-entry="true"]');
 
-    if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
-      return;
-    }
+    const syncBodyModalState = () => {
+      const hasOpenModal =
+        Boolean(moveModal && !moveModal.hidden) ||
+        Boolean(forumNoticeModal && !forumNoticeModal.hidden);
+      document.body.classList.toggle("modal-open", hasOpenModal);
+    };
 
     let pendingForm = null;
 
-    const closeModal = () => {
-      modal.hidden = true;
-      document.body.classList.remove("modal-open");
+    const closeMoveModal = () => {
+      if (!moveModal) {
+        return;
+      }
+
+      moveModal.hidden = true;
       pendingForm = null;
+      syncBodyModalState();
     };
 
-    const openModalForForm = (form) => {
+    const openMoveModalForForm = (form) => {
+      if (!moveModal || !moveNote || !freeButton || !erpButton) {
+        return;
+      }
+
       pendingForm = form;
       const targetInput = form.querySelector('input[name="target_server_id"]');
 
@@ -28,62 +46,133 @@
         targetInput.value = "";
       }
 
-      note.textContent = "Du kannst das Profil nach Free RP oder ERP verschieben.";
-
+      moveNote.textContent = "Du kannst das Profil nach Free RP oder ERP verschieben.";
       freeButton.disabled = false;
       erpButton.disabled = !erpMoveAllowed;
 
       if (!erpMoveAllowed) {
-        note.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist für Accounts unter 18 nicht verfügbar.";
+        moveNote.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist fuer Accounts unter 18 nicht verfuegbar.";
       }
 
-      modal.hidden = false;
-      document.body.classList.add("modal-open");
+      moveModal.hidden = false;
+      syncBodyModalState();
     };
 
-    moveForms.forEach((form) => {
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        openModalForForm(form);
+    if (moveModal && moveNote && freeButton && erpButton && moveForms.length) {
+      moveForms.forEach((form) => {
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          openMoveModalForForm(form);
+        });
       });
-    });
 
-    closeElements.forEach((element) => {
-      element.addEventListener("click", closeModal);
-    });
+      moveCloseElements.forEach((element) => {
+        element.addEventListener("click", closeMoveModal);
+      });
 
-    const submitMoveTo = (targetServerId) => {
-      if (!pendingForm) {
+      const submitMoveTo = (targetServerId) => {
+        if (!pendingForm) {
+          return;
+        }
+
+        const formToSubmit = pendingForm;
+        const targetInput = formToSubmit.querySelector('input[name="target_server_id"]');
+
+        if (!targetInput) {
+          return;
+        }
+
+        targetInput.value = targetServerId;
+        closeMoveModal();
+        formToSubmit.submit();
+      };
+
+      freeButton.addEventListener("click", () => {
+        if (!freeButton.disabled) {
+          submitMoveTo("free-rp");
+        }
+      });
+
+      erpButton.addEventListener("click", () => {
+        if (!erpButton.disabled) {
+          submitMoveTo("erp");
+        }
+      });
+    }
+
+    let pendingForumHref = "";
+
+    const closeForumNoticeModal = () => {
+      if (!forumNoticeModal) {
         return;
       }
 
-      const formToSubmit = pendingForm;
-      const targetInput = formToSubmit.querySelector('input[name="target_server_id"]');
+      forumNoticeModal.hidden = true;
+      pendingForumHref = "";
 
-      if (!targetInput) {
-        return;
+      if (forumNoticeOpenLink) {
+        forumNoticeOpenLink.setAttribute("href", "#");
       }
 
-      targetInput.value = targetServerId;
-      closeModal();
-      formToSubmit.submit();
+      syncBodyModalState();
     };
 
-    freeButton.addEventListener("click", () => {
-      if (!freeButton.disabled) {
-        submitMoveTo("free-rp");
+    const openForumNoticeModalForLink = (link) => {
+      if (!forumNoticeModal || !forumNoticeCopy || !forumNoticeOpenLink) {
+        return;
       }
-    });
 
-    erpButton.addEventListener("click", () => {
-      if (!erpButton.disabled) {
-        submitMoveTo("erp");
+      const nextHref = String(link.getAttribute("href") || "").trim();
+      if (!nextHref) {
+        return;
       }
-    });
+
+      const characterName = String(link.dataset.serverlistCharacterName || "").trim() || "Dieses Profil";
+      pendingForumHref = nextHref;
+      forumNoticeCopy.textContent = `${characterName} oeffnet jetzt das LARP-Forum.`;
+      forumNoticeOpenLink.setAttribute("href", nextHref);
+      forumNoticeModal.hidden = false;
+      syncBodyModalState();
+    };
+
+    if (forumNoticeModal && forumNoticeCopy && forumNoticeOpenLink && forumEntryLinks.length) {
+      forumEntryLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          openForumNoticeModalForLink(link);
+        });
+      });
+
+      forumNoticeCloseElements.forEach((element) => {
+        element.addEventListener("click", closeForumNoticeModal);
+      });
+
+      forumNoticeOpenLink.addEventListener("click", (event) => {
+        if (!pendingForumHref) {
+          event.preventDefault();
+          closeForumNoticeModal();
+          return;
+        }
+
+        const nextHref = pendingForumHref;
+        event.preventDefault();
+        closeForumNoticeModal();
+        window.location.href = nextHref;
+      });
+    }
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !modal.hidden) {
-        closeModal();
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (forumNoticeModal && !forumNoticeModal.hidden) {
+        closeForumNoticeModal();
+        return;
+      }
+
+      if (moveModal && !moveModal.hidden) {
+        closeMoveModal();
       }
     });
   });

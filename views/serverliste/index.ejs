@@ -1,16 +1,13 @@
 <%- include("../partials/start") %>
 
-<% const hasLarpStaffAccess = Boolean(currentUser && (currentUser.is_admin || currentUser.is_moderator)); %>
-<% const larpStatusLabel = hasLarpStaffAccess ? "Staff-Zugang" : "Testzugang"; %>
-<% const larpActionLabel = hasLarpStaffAccess ? "LARP-Bereich öffnen" : "LARP-Testzugang öffnen"; %>
-<% const larpAccessNote = hasLarpStaffAccess
-  ? "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere."
-  : "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere. Bis zur Freigabe betrittst du ihn als Testzugang. Wenn du den Bereich wieder verlässt, wird dein Testprofil gelöscht."; %>
+<% const larpStatusLabel = "Verfuegbar fuer alle"; %>
+<% const larpActionLabel = "LARP-Bereich oeffnen"; %>
+<% const larpAccessNote = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere. Das LARP-Forum ist fuer alle verfuegbar."; %>
 
 <section class="header-line serverlist-page-header">
   <div>
     <h1>Serverliste</h1>
-    <p class="muted">Hier öffnest du Free RP oder Erotik direkt im selben Fenster.</p>
+    <p class="muted">Hier oeffnest du Free RP oder Erotik direkt im selben Fenster.</p>
   </div>
 </section>
 
@@ -19,7 +16,7 @@
     <summary class="serverlist-accordion-summary">
       <div class="serverlist-accordion-copy">
         <h2>Rollenspiel</h2>
-        <p class="muted">Wähle Free RP oder Erotik. Die jeweilige Übersicht öffnet sich direkt im selben Fenster.</p>
+        <p class="muted">Waehle Free RP oder Erotik. Die jeweilige Uebersicht oeffnet sich direkt im selben Fenster.</p>
       </div>
       <span class="serverlist-accordion-icon" aria-hidden="true"></span>
     </summary>
