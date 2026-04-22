@@ -646,10 +646,19 @@ const LARP_PROFILE_COVER_ALLOWED_MIME_TYPES = new Map([
   ["image/png", ".png"],
   ["image/webp", ".webp"]
 ]);
+const CHARACTER_AVATAR_UPLOAD_RELATIVE_DIR = path.posix.join("uploads", "character-avatars");
+const CHARACTER_AVATAR_UPLOAD_WEB_ROOT = `/${CHARACTER_AVATAR_UPLOAD_RELATIVE_DIR}`;
+const CHARACTER_AVATAR_UPLOAD_ROOT = path.join(publicDir, "uploads", "character-avatars");
+const CHARACTER_AVATAR_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+const CHARACTER_AVATAR_UPLOAD_JSON_LIMIT = "6mb";
+const CHARACTER_AVATAR_MIN_SIDE = 120;
+const CHARACTER_AVATAR_MAX_SIDE = 2000;
+const CHARACTER_AVATAR_ALLOWED_MIME_TYPES = LARP_PROFILE_COVER_ALLOWED_MIME_TYPES;
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 fs.mkdirSync(LARP_PROFILE_COVER_UPLOAD_ROOT, { recursive: true });
+fs.mkdirSync(CHARACTER_AVATAR_UPLOAD_ROOT, { recursive: true });
 const sessionsDbPath = path.join(dataDir, "sessions.sqlite");
 
 function getAcmeChallengeRoots() {
@@ -5017,6 +5026,20 @@ function buildLarpProfileCoverUploadDestination(characterId, fileExtension) {
   };
 }
 
+function buildCharacterAvatarUploadDestination(characterId, fileExtension) {
+  const normalizedCharacterId = Number(characterId);
+  const safeExtension = String(fileExtension || "")
+    .trim()
+    .replace(/[^.a-z0-9]/gi, "")
+    .toLowerCase();
+  const fileName = `character-${normalizedCharacterId}-${Date.now()}-${crypto.randomUUID()}${safeExtension}`;
+
+  return {
+    absolutePath: path.join(CHARACTER_AVATAR_UPLOAD_ROOT, fileName),
+    publicUrl: `${CHARACTER_AVATAR_UPLOAD_WEB_ROOT}/${fileName}`
+  };
+}
+
 function resolveManagedLarpProfileCoverPath(imageUrl) {
   const normalizedImageUrl = String(imageUrl || "").trim();
   if (!normalizedImageUrl.startsWith(`${LARP_PROFILE_COVER_UPLOAD_WEB_ROOT}/`)) {
@@ -5047,6 +5070,39 @@ function removeManagedLarpProfileCoverFile(imageUrl) {
     fs.unlinkSync(managedFilePath);
   } catch (error) {
     console.warn("LARP-Profil-Titelbild konnte nicht entfernt werden:", error);
+  }
+}
+
+function resolveManagedCharacterAvatarPath(imageUrl) {
+  const normalizedImageUrl = String(imageUrl || "").trim();
+  if (!normalizedImageUrl.startsWith(`${CHARACTER_AVATAR_UPLOAD_WEB_ROOT}/`)) {
+    return null;
+  }
+
+  const fileName = normalizedImageUrl.slice(CHARACTER_AVATAR_UPLOAD_WEB_ROOT.length + 1);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(fileName)) {
+    return null;
+  }
+
+  const resolvedPath = path.resolve(CHARACTER_AVATAR_UPLOAD_ROOT, fileName);
+  const uploadRootPath = path.resolve(CHARACTER_AVATAR_UPLOAD_ROOT);
+  if (!resolvedPath.startsWith(`${uploadRootPath}${path.sep}`)) {
+    return null;
+  }
+
+  return resolvedPath;
+}
+
+function removeManagedCharacterAvatarFile(imageUrl) {
+  const managedFilePath = resolveManagedCharacterAvatarPath(imageUrl);
+  if (!managedFilePath || !fs.existsSync(managedFilePath)) {
+    return;
+  }
+
+  try {
+    fs.unlinkSync(managedFilePath);
+  } catch (error) {
+    console.warn("Charakter-Avatar konnte nicht entfernt werden:", error);
   }
 }
 
@@ -17003,6 +17059,105 @@ app.post("/characters", requireAuth, (req, res) => {
   }
   return res.redirect(returnTarget);
 });
+
+app.post(
+  "/characters/:id/avatar-upload",
+  requireAuth,
+  express.json({ limit: CHARACTER_AVATAR_UPLOAD_JSON_LIMIT }),
+  (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
+    }
+
+    const character = getCharacterById(id);
+    if (!character) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
+    }
+
+    if (Number(req.session.user?.id) !== Number(character.user_id)) {
+      return res.status(403).json({ ok: false, error: "Kein Zugriff auf diesen Charakter." });
+    }
+
+    const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
+    if (!parsedImageData) {
+      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
+    }
+
+    const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
+    const fileExtension = CHARACTER_AVATAR_ALLOWED_MIME_TYPES.get(mimeType);
+    if (!fileExtension || mimeType !== parsedImageData.mimeType) {
+      return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
+    }
+
+    const width = Number(req.body?.width);
+    const height = Number(req.body?.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height)) {
+      return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
+    }
+
+    if (width < CHARACTER_AVATAR_MIN_SIDE || height < CHARACTER_AVATAR_MIN_SIDE) {
+      return res.status(400).json({
+        ok: false,
+        error: `Das Bild muss mindestens ${CHARACTER_AVATAR_MIN_SIDE}x${CHARACTER_AVATAR_MIN_SIDE} Pixel groß sein.`
+      });
+    }
+
+    if (width > CHARACTER_AVATAR_MAX_SIDE || height > CHARACTER_AVATAR_MAX_SIDE) {
+      return res.status(400).json({
+        ok: false,
+        error: `Das Bild darf höchstens ${CHARACTER_AVATAR_MAX_SIDE}x${CHARACTER_AVATAR_MAX_SIDE} Pixel haben.`
+      });
+    }
+
+    let fileBuffer = null;
+    try {
+      fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
+    } catch (error) {
+      fileBuffer = null;
+    }
+
+    if (!fileBuffer || !fileBuffer.length) {
+      return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
+    }
+
+    if (fileBuffer.length > CHARACTER_AVATAR_UPLOAD_MAX_BYTES) {
+      return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
+    }
+
+    const previousAvatarUrl = String(character.avatar_url || "").trim();
+    const uploadDestination = buildCharacterAvatarUploadDestination(character.id, fileExtension);
+
+    try {
+      fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
+    } catch (error) {
+      console.error("Charakter-Avatar konnte nicht gespeichert werden:", error);
+      return res.status(500).json({ ok: false, error: "Das Bild konnte nicht gespeichert werden." });
+    }
+
+    try {
+      db.prepare(
+        `UPDATE characters
+            SET avatar_url = ?,
+                updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`
+      ).run(uploadDestination.publicUrl, character.id);
+    } catch (error) {
+      removeManagedCharacterAvatarFile(uploadDestination.publicUrl);
+      console.error("Charakter-Avatar konnte nicht dem Charakter zugeordnet werden:", error);
+      return res.status(500).json({ ok: false, error: "Das Bild konnte nicht dem Charakter zugeordnet werden." });
+    }
+
+    if (previousAvatarUrl && previousAvatarUrl !== uploadDestination.publicUrl) {
+      removeManagedCharacterAvatarFile(previousAvatarUrl);
+    }
+
+    return res.json({
+      ok: true,
+      imageUrl: uploadDestination.publicUrl
+    });
+  }
+);
 
 app.post(
   "/characters/:id/larp-profile/cover-upload",
