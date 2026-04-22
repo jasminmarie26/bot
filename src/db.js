@@ -66,6 +66,18 @@ db.exec(`
     age TEXT DEFAULT '',
     faceclaim TEXT DEFAULT '',
     description TEXT DEFAULT '',
+    larp_profile_gender TEXT DEFAULT '',
+    larp_profile_location TEXT DEFAULT '',
+    larp_profile_occupation TEXT DEFAULT '',
+    larp_profile_hobbies TEXT DEFAULT '',
+    larp_profile_discord TEXT DEFAULT '',
+    larp_profile_youtube TEXT DEFAULT '',
+    larp_profile_website TEXT DEFAULT '',
+    larp_profile_instagram TEXT DEFAULT '',
+    larp_profile_characters TEXT DEFAULT '',
+    larp_profile_star_wars_larp TEXT DEFAULT '',
+    larp_profile_guild TEXT DEFAULT '',
+    larp_profile_guild_website TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
     public_birth_show_age INTEGER NOT NULL DEFAULT 0,
     public_birth_show_day_month INTEGER NOT NULL DEFAULT 0,
@@ -1233,6 +1245,54 @@ if (!characterColumns.includes("chat_online_list_background_color")) {
 
 if (!characterColumns.includes("larp_profile_title_image_url")) {
   db.exec("ALTER TABLE characters ADD COLUMN larp_profile_title_image_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_gender")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_gender TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_location")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_location TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_occupation")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_occupation TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_hobbies")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_hobbies TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_discord")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_discord TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_youtube")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_youtube TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_website")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_website TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_instagram")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_instagram TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_characters")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_characters TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_star_wars_larp")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_star_wars_larp TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_guild")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_guild TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("larp_profile_guild_website")) {
+  db.exec("ALTER TABLE characters ADD COLUMN larp_profile_guild_website TEXT DEFAULT ''");
 }
 
 if (!characterColumns.includes("last_larp_activity_at")) {

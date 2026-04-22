@@ -11,6 +11,29 @@
     { label: "Faceclaim", value: character.faceclaim }
   ].filter((entry) => String(entry.value || "").trim());
   const renderedProfileDescription = String(profileDescriptionHtml || "").trim();
+  const selectedStarWarsLarpValues = String(character.larp_profile_star_wars_larp || "")
+    .split(",")
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const personalInfoRows = [
+    ...(Array.isArray(visibleBirthdayRows) ? visibleBirthdayRows : []),
+    { label: "Geschlecht", value: character.larp_profile_gender },
+    { label: "Wohnort", value: character.larp_profile_location },
+    { label: "Beruf", value: character.larp_profile_occupation },
+    { label: "Hobbys", value: character.larp_profile_hobbies }
+  ].filter((entry) => String(entry?.label || "").trim() && String(entry?.value || "").trim());
+  const contactRows = [
+    { label: "Discord", value: character.larp_profile_discord },
+    { label: "YouTube", value: character.larp_profile_youtube },
+    { label: "Website", value: character.larp_profile_website },
+    { label: "Instagram", value: character.larp_profile_instagram }
+  ].filter((entry) => String(entry.value || "").trim());
+  const larpSectionRows = [
+    { label: "Charaktere", value: character.larp_profile_characters },
+    { label: "Star Wars LARP", value: selectedStarWarsLarpValues.join(", ") },
+    { label: "Gilde", value: character.larp_profile_guild },
+    { label: "Gildenwebsite", value: character.larp_profile_guild_website }
+  ].filter((entry) => String(entry.value || "").trim());
   const showStats = Number(guestbookStats?.entryCount || 0) > 0 || Number(larpGuildCount || 0) > 0;
   const lastActivityLabel = lastActivity?.relativeLabel || lastActivity?.absoluteLabel || "";
   const larpCoverUploadHref = `/characters/${character.id}/larp-profile/cover-upload`;
@@ -370,12 +393,55 @@
   .larp-profile-note p,
   .larp-profile-cover-rule p {
     margin: 0;
+    overflow-wrap: anywhere;
   }
 
   .larp-profile-note p,
   .larp-profile-cover-rule p {
     color: var(--muted);
     line-height: 1.55;
+  }
+
+  .larp-profile-section-stack,
+  .larp-profile-edit-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .larp-profile-section-block,
+  .larp-profile-edit-section {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent 22%);
+    background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
+  }
+
+  .larp-profile-section-block h3,
+  .larp-profile-edit-section h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .larp-profile-edit-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .larp-profile-edit-field {
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+  }
+
+  .larp-profile-edit-wide {
+    grid-column: 1 / -1;
+  }
+
+  .larp-profile-edit-grid select[multiple] {
+    min-height: 5.5rem;
   }
 
   .larp-profile-cover-modal {
@@ -742,7 +808,7 @@
         class="larp-profile-cover-art<%= isOwner ? " is-editable" : "" %>"
         data-larp-cover-art
         <% if (hasCoverImage) { %>
-          style="background-image: linear-gradient(135deg, rgba(15, 60, 79, 0.9), rgba(42, 131, 170, 0.58) 48%, rgba(192, 224, 232, 0.35)), url('<%= profileCoverUrl %>');"
+          style="background-image: url('<%= profileCoverUrl %>');"
         <% } %>
       ></div>
 
@@ -825,15 +891,176 @@
 
       <% if (isOwner && isEditingProfileAbout) { %>
         <form method="POST" action="<%= profileAboutSaveHref %>" class="form">
-          <%- include("../partials/bbcode-editor", {
-            bbcodeEditorWrapperClass: "gb-editor-row-content",
-            bbcodeEditorFieldId: "larp-profile-description-editor",
-            bbcodeEditorFieldName: "description",
-            bbcodeEditorFieldValue: character.description || "",
-            bbcodeEditorFieldLabel: "&Uuml;ber mich",
-            bbcodeEditorRows: 12,
-            bbcodeEditorMaxLength: 12000
-          }) %>
+          <div class="larp-profile-edit-stack">
+            <%- include("../partials/bbcode-editor", {
+              bbcodeEditorWrapperClass: "gb-editor-row-content",
+              bbcodeEditorFieldId: "larp-profile-description-editor",
+              bbcodeEditorFieldName: "description",
+              bbcodeEditorFieldValue: character.description || "",
+              bbcodeEditorFieldLabel: "&Uuml;ber mich",
+              bbcodeEditorRows: 12,
+              bbcodeEditorMaxLength: 12000
+            }) %>
+
+            <section class="larp-profile-edit-section" aria-labelledby="larp-profile-personal-heading">
+              <h3 id="larp-profile-personal-heading">Pers&ouml;nliche Informationen</h3>
+
+              <div class="larp-profile-edit-grid">
+                <label class="larp-profile-edit-field">
+                  <span>Geburtstag</span>
+                  <input
+                    name="birth_date"
+                    type="date"
+                    value="<%= accountBirthDate || "" %>"
+                  />
+                </label>
+
+                <div class="larp-profile-edit-field">
+                  <span>Geburtsjahr im Profil anzeigen</span>
+                  <input type="hidden" name="public_birth_show_day_month" value="1" />
+                  <input type="hidden" name="public_birth_show_age" value="<%= Number(character.public_birth_show_age) === 1 ? "1" : "0" %>" />
+                  <label class="checkbox account-table-checkbox">
+                    <input
+                      name="public_birth_show_year"
+                      type="checkbox"
+                      value="1"
+                      <%= Number(character.public_birth_show_year) === 1 ? "checked" : "" %>
+                    />
+                    <span>Ja</span>
+                  </label>
+                </div>
+
+                <label class="larp-profile-edit-field">
+                  <span>Geschlecht</span>
+                  <select name="larp_profile_gender">
+                    <option value="">Keine Angabe</option>
+                    <% (larpProfileGenderOptions || []).forEach((option) => { %>
+                      <option value="<%= option %>" <%= String(character.larp_profile_gender || "") === option ? "selected" : "" %>><%= option %></option>
+                    <% }) %>
+                  </select>
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Wohnort</span>
+                  <input
+                    name="larp_profile_location"
+                    maxlength="120"
+                    value="<%= character.larp_profile_location || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Beruf</span>
+                  <input
+                    name="larp_profile_occupation"
+                    maxlength="120"
+                    value="<%= character.larp_profile_occupation || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Hobbys</span>
+                  <input
+                    name="larp_profile_hobbies"
+                    maxlength="240"
+                    value="<%= character.larp_profile_hobbies || "" %>"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section class="larp-profile-edit-section" aria-labelledby="larp-profile-contact-heading">
+              <h3 id="larp-profile-contact-heading">Kontaktm&ouml;glichkeiten</h3>
+
+              <div class="larp-profile-edit-grid">
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Discord</span>
+                  <input
+                    name="larp_profile_discord"
+                    maxlength="120"
+                    value="<%= character.larp_profile_discord || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>YouTube</span>
+                  <input
+                    name="larp_profile_youtube"
+                    type="text"
+                    inputmode="url"
+                    maxlength="500"
+                    value="<%= character.larp_profile_youtube || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Website</span>
+                  <input
+                    name="larp_profile_website"
+                    type="text"
+                    inputmode="url"
+                    maxlength="500"
+                    value="<%= character.larp_profile_website || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Instagram</span>
+                  <input
+                    name="larp_profile_instagram"
+                    maxlength="120"
+                    value="<%= character.larp_profile_instagram || "" %>"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section class="larp-profile-edit-section" aria-labelledby="larp-profile-own-larp-heading">
+              <h3 id="larp-profile-own-larp-heading">DEIN LARP</h3>
+
+              <div class="larp-profile-edit-grid">
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Charaktere</span>
+                  <input
+                    name="larp_profile_characters"
+                    maxlength="500"
+                    value="<%= character.larp_profile_characters || "" %>"
+                  />
+                  <span class="gb-editor-helptext">Eine Liste der Charaktere. Charakterdatenbl&auml;tter bitte in der Datenbank speichern.</span>
+                </label>
+
+                <label class="larp-profile-edit-field">
+                  <span>Star Wars LARP</span>
+                  <select name="larp_profile_star_wars_larp" multiple>
+                    <% (larpProfileStarWarsLarpOptions || []).forEach((option) => { %>
+                      <option value="<%= option %>" <%= selectedStarWarsLarpValues.includes(option) ? "selected" : "" %>><%= option %></option>
+                    <% }) %>
+                  </select>
+                  <span class="gb-editor-helptext">Deine ingame Fraktion. W&auml;hle mit STRG+Klick mehr als eine aus.</span>
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Gilde</span>
+                  <input
+                    name="larp_profile_guild"
+                    maxlength="120"
+                    value="<%= character.larp_profile_guild || "" %>"
+                  />
+                </label>
+
+                <label class="larp-profile-edit-field larp-profile-edit-wide">
+                  <span>Gildenwebsite</span>
+                  <input
+                    name="larp_profile_guild_website"
+                    type="text"
+                    inputmode="url"
+                    maxlength="500"
+                    value="<%= character.larp_profile_guild_website || "" %>"
+                  />
+                </label>
+              </div>
+            </section>
+          </div>
 
           <div class="character-form-actions">
             <button type="submit" class="btn">Speichern</button>
@@ -846,7 +1073,7 @@
         <p class="muted">Noch keine Beschreibung hinterlegt.</p>
       <% } %>
 
-      <% if (infoRows.length || visibleBirthdayRows.length) { %>
+      <% if (infoRows.length) { %>
         <div class="larp-profile-detail-grid">
           <% infoRows.forEach((entry) => { %>
             <div class="larp-profile-detail-item">
@@ -854,12 +1081,52 @@
               <strong><%= entry.value %></strong>
             </div>
           <% }) %>
-          <% visibleBirthdayRows.forEach((entry) => { %>
-            <div class="larp-profile-detail-item">
-              <span><%= entry.label %></span>
-              <strong><%= entry.value %></strong>
-            </div>
-          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (personalInfoRows.length || contactRows.length || larpSectionRows.length) { %>
+        <div class="larp-profile-section-stack">
+          <% if (personalInfoRows.length) { %>
+            <section class="larp-profile-section-block" aria-labelledby="larp-profile-personal-view-heading">
+              <h3 id="larp-profile-personal-view-heading">Pers&ouml;nliche Informationen</h3>
+              <div class="larp-profile-detail-grid">
+                <% personalInfoRows.forEach((entry) => { %>
+                  <div class="larp-profile-detail-item">
+                    <span><%= entry.label %></span>
+                    <strong><%= entry.value %></strong>
+                  </div>
+                <% }) %>
+              </div>
+            </section>
+          <% } %>
+
+          <% if (contactRows.length) { %>
+            <section class="larp-profile-section-block" aria-labelledby="larp-profile-contact-view-heading">
+              <h3 id="larp-profile-contact-view-heading">Kontaktm&ouml;glichkeiten</h3>
+              <div class="larp-profile-detail-grid">
+                <% contactRows.forEach((entry) => { %>
+                  <div class="larp-profile-detail-item">
+                    <span><%= entry.label %></span>
+                    <strong><%= entry.value %></strong>
+                  </div>
+                <% }) %>
+              </div>
+            </section>
+          <% } %>
+
+          <% if (larpSectionRows.length) { %>
+            <section class="larp-profile-section-block" aria-labelledby="larp-profile-own-larp-view-heading">
+              <h3 id="larp-profile-own-larp-view-heading">DEIN LARP</h3>
+              <div class="larp-profile-detail-grid">
+                <% larpSectionRows.forEach((entry) => { %>
+                  <div class="larp-profile-detail-item">
+                    <span><%= entry.label %></span>
+                    <strong><%= entry.value %></strong>
+                  </div>
+                <% }) %>
+              </div>
+            </section>
+          <% } %>
         </div>
       <% } %>
     </section>

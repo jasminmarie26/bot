@@ -194,6 +194,8 @@ const PERSONAL_STAFF_PM_NOTIFICATION_TYPE = "staff_pm";
 const STAFF_MAIL_NOTIFICATION_TYPE = "staff_mail";
 const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
+const LARP_PROFILE_GENDER_OPTION_VALUES = Object.freeze(["Weiblich", "Männlich", "Divers"]);
+const LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES = Object.freeze(["Republik", "Imperium"]);
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
   easter: "holiday_easter",
   christmas: "holiday_christmas",
@@ -4773,6 +4775,34 @@ function normalizeCharacterInput(body) {
     chat_online_list_background_color: normalizeChatBackgroundColor(body.chat_online_list_background_color),
     is_public: 1
   };
+}
+
+function normalizeShortTextInput(value, maxLength = 120) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function normalizeAllowedOptionInput(value, allowedValues) {
+  const normalizedValue = normalizeShortTextInput(value, 120);
+  return allowedValues.includes(normalizedValue) ? normalizedValue : "";
+}
+
+function normalizeAllowedMultiSelectInput(value, allowedValues) {
+  const allowedSet = new Set(allowedValues);
+  const seenValues = new Set();
+  const values = Array.isArray(value) ? value : [value];
+  const normalizedValues = [];
+
+  for (const entry of values) {
+    const normalizedEntry = normalizeShortTextInput(entry, 120);
+    if (!normalizedEntry || !allowedSet.has(normalizedEntry) || seenValues.has(normalizedEntry)) {
+      continue;
+    }
+
+    seenValues.add(normalizedEntry);
+    normalizedValues.push(normalizedEntry);
+  }
+
+  return normalizedValues.join(", ");
 }
 
 const RESERVED_CHARACTER_NAME_ERROR =
@@ -16968,11 +16998,9 @@ app.post("/characters", requireAuth, (req, res) => {
   });
 
   emitHomeStatsUpdate();
-  setFlash(
-    req,
-    "success",
-    payload.server_id === LARP_SERVER_ID ? "Profil gespeichert." : "Charakter gespeichert."
-  );
+  if (payload.server_id !== LARP_SERVER_ID) {
+    setFlash(req, "success", "Charakter gespeichert.");
+  }
   return res.redirect(returnTarget);
 });
 
@@ -17155,7 +17183,9 @@ app.get("/characters/:id", requireAuth, (req, res) => {
 
   if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID) {
     const larpProfileTitle = `LARP-Profil: ${character.name}`;
-    const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+    const accountUser = getAccountUserById(character.user_id);
+    const accountBirthDate = accountUser?.birth_date || "";
+    const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character, accountUser);
     const isEditingProfileAbout = isOwner && String(req.query.edit || "").trim().toLowerCase() === "about";
     const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
     const liveSessionLocation = sessionLocationsByUserId[Number(character.user_id)] || null;
@@ -17200,7 +17230,10 @@ app.get("/characters/:id", requireAuth, (req, res) => {
       larpGuildCount: getDashboardLarpGuilds(character.user_id).length,
       lastActivity,
       isEditingProfileAbout,
+      accountBirthDate,
       isCharacterOnline: onlineAccountUserIds.has(Number(character.user_id)),
+      larpProfileGenderOptions: LARP_PROFILE_GENDER_OPTION_VALUES,
+      larpProfileStarWarsLarpOptions: LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES,
       profileDescriptionHtml: String(character.description || "").trim()
         ? renderGuestbookBbcode(character.description)
         : "",
@@ -18739,16 +18772,80 @@ app.post("/characters/:id/larp-profile/about", requireAuth, (req, res) => {
     return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
+  const rawBirthDate = String(req.body.birth_date || "").trim();
+  const birthDate = normalizeBirthDate(rawBirthDate);
+  if (rawBirthDate && !birthDate) {
+    setFlash(req, "error", "Geburtstag muss ein gültiges Datum sein.");
+    return res.redirect(`/characters/${id}?edit=about#larp-profile-about`);
+  }
+
   const description = normalizeBbcodeInput(req.body.description, 12000);
+  const birthdaySelection = normalizePublicBirthdaySelection(req.body, birthDate);
+  const larpProfileGender = normalizeAllowedOptionInput(
+    req.body.larp_profile_gender,
+    LARP_PROFILE_GENDER_OPTION_VALUES
+  );
+  const larpProfileLocation = normalizeShortTextInput(req.body.larp_profile_location, 120);
+  const larpProfileOccupation = normalizeShortTextInput(req.body.larp_profile_occupation, 120);
+  const larpProfileHobbies = normalizeShortTextInput(req.body.larp_profile_hobbies, 240);
+  const larpProfileDiscord = normalizeShortTextInput(req.body.larp_profile_discord, 120);
+  const larpProfileYoutube = normalizeShortTextInput(req.body.larp_profile_youtube, 500);
+  const larpProfileWebsite = normalizeShortTextInput(req.body.larp_profile_website, 500);
+  const larpProfileInstagram = normalizeShortTextInput(req.body.larp_profile_instagram, 120);
+  const larpProfileCharacters = normalizeShortTextInput(req.body.larp_profile_characters, 500);
+  const larpProfileStarWarsLarp = normalizeAllowedMultiSelectInput(
+    req.body.larp_profile_star_wars_larp,
+    LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES
+  );
+  const larpProfileGuild = normalizeShortTextInput(req.body.larp_profile_guild, 120);
+  const larpProfileGuildWebsite = normalizeShortTextInput(req.body.larp_profile_guild_website, 500);
+
+  db.prepare(
+    `UPDATE users
+     SET birth_date = ?
+     WHERE id = ?`
+  ).run(birthDate, character.user_id);
 
   db.prepare(
     `UPDATE characters
      SET description = ?,
+         larp_profile_gender = ?,
+         larp_profile_location = ?,
+         larp_profile_occupation = ?,
+         larp_profile_hobbies = ?,
+         larp_profile_discord = ?,
+         larp_profile_youtube = ?,
+         larp_profile_website = ?,
+         larp_profile_instagram = ?,
+         larp_profile_characters = ?,
+         larp_profile_star_wars_larp = ?,
+         larp_profile_guild = ?,
+         larp_profile_guild_website = ?,
+         public_birth_show_age = ?,
+         public_birth_show_day_month = ?,
+         public_birth_show_year = ?,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
-  ).run(description, id);
+  ).run(
+    description,
+    larpProfileGender,
+    larpProfileLocation,
+    larpProfileOccupation,
+    larpProfileHobbies,
+    larpProfileDiscord,
+    larpProfileYoutube,
+    larpProfileWebsite,
+    larpProfileInstagram,
+    larpProfileCharacters,
+    larpProfileStarWarsLarp,
+    larpProfileGuild,
+    larpProfileGuildWebsite,
+    birthdaySelection.showAge ? 1 : 0,
+    birthdaySelection.showDayMonth ? 1 : 0,
+    birthdaySelection.showYear ? 1 : 0,
+    id
+  );
 
-  setFlash(req, "success", "Profil gespeichert.");
   return res.redirect(`/characters/${id}#larp-profile-about`);
 });
 
