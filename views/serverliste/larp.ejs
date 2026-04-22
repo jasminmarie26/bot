@@ -6,7 +6,6 @@
 <% const larpStatusLabel = "Verf&uuml;gbar f&uuml;r alle"; %>
 <% const larpAccessTitle = "Ein LARP-Profil pro Account"; %>
 <% const larpAccessDescription = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere." %>
-<% const larpAccessWarning = "Das LARP-Forum ist f&uuml;r alle verf&uuml;gbar. Normale Nutzer erhalten beim &Ouml;ffnen des Profils einen kurzen Hinweis, weil der Bereich noch im Aufbau ist." %>
 
 <section class="header-line serverlist-page-header">
   <div>
@@ -50,7 +49,6 @@
         <span class="serverlist-status-pill"><%- larpStatusLabel %></span>
         <h3><%= larpAccessTitle %></h3>
         <p class="muted"><%= larpAccessDescription %></p>
-        <p class="muted"><%- larpAccessWarning %></p>
       </div>
     </div>
   </section>
@@ -207,9 +205,6 @@
     aria-labelledby="serverlist-larp-forum-notice-title"
   >
     <h2 id="serverlist-larp-forum-notice-title">Hinweis zum LARP-Forum</h2>
-    <p class="muted" id="serverlist-larp-forum-notice-copy">
-      Du &ouml;ffnest jetzt das LARP-Forum.
-    </p>
     <p class="muted serverlist-confirm-note">
       Das LARP-Forum ist noch im Aufbau. Etwaige Eintr&auml;ge k&ouml;nnen wieder gel&ouml;scht werden. Bitte behalte die Updates im Auge, bis der Bereich fertig ist. Du kannst dich aber schon umschauen.
     </p>

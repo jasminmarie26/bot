@@ -8,7 +8,6 @@
     const moveForms = document.querySelectorAll("[data-serverlist-larp-move]");
     const erpMoveAllowed = moveModal?.dataset.erpMoveAllowed === "true";
     const forumNoticeModal = document.getElementById("serverlist-larp-forum-notice-modal");
-    const forumNoticeCopy = document.getElementById("serverlist-larp-forum-notice-copy");
     const forumNoticeOpenLink = document.getElementById("serverlist-larp-forum-notice-open");
     const forumNoticeCloseElements = forumNoticeModal
       ? forumNoticeModal.querySelectorAll("[data-serverlist-larp-forum-close]")
@@ -118,7 +117,7 @@
     };
 
     const openForumNoticeModalForLink = (link) => {
-      if (!forumNoticeModal || !forumNoticeCopy || !forumNoticeOpenLink) {
+      if (!forumNoticeModal || !forumNoticeOpenLink) {
         return;
       }
 
@@ -127,15 +126,13 @@
         return;
       }
 
-      const characterName = String(link.dataset.serverlistCharacterName || "").trim() || "Dieses Profil";
       pendingForumHref = nextHref;
-      forumNoticeCopy.textContent = `${characterName} \u00f6ffnet jetzt das LARP-Forum.`;
       forumNoticeOpenLink.setAttribute("href", nextHref);
       forumNoticeModal.hidden = false;
       syncBodyModalState();
     };
 
-    if (forumNoticeModal && forumNoticeCopy && forumNoticeOpenLink && forumEntryLinks.length) {
+    if (forumNoticeModal && forumNoticeOpenLink && forumEntryLinks.length) {
       forumEntryLinks.forEach((link) => {
         link.addEventListener("click", (event) => {
           event.preventDefault();
