@@ -520,30 +520,30 @@
   }
 
   .larp-profile-avatar-modal-dialog {
-    width: min(520px, 100%);
+    width: min(480px, calc(100vw - 1.6rem));
   }
 
   .larp-profile-avatar-modal-body {
     display: grid;
-    gap: 0.95rem;
-    padding: 1rem;
+    gap: 0.8rem;
+    padding: 0.9rem;
   }
 
   .larp-profile-avatar-preview-panel {
     display: grid;
-    gap: 0.8rem;
+    gap: 0.7rem;
     justify-items: center;
-    padding: 1rem 1rem 0.95rem;
+    padding: 0.85rem 0.85rem 0.9rem;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.34);
     background:
-      linear-gradient(160deg, rgba(22, 45, 59, 0.14), rgba(255, 255, 255, 0.12)),
-      rgba(255, 255, 255, 0.18);
+      linear-gradient(160deg, rgba(22, 45, 59, 0.16), rgba(255, 255, 255, 0.18)),
+      rgba(255, 255, 255, 0.28);
   }
 
   .larp-profile-avatar-preview-stage {
     position: relative;
-    width: min(268px, 72vw);
+    width: min(220px, 58vw);
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 50%;
@@ -593,8 +593,10 @@
 
   .larp-profile-avatar-preview-help,
   .larp-profile-avatar-file-meta {
-    color: var(--muted);
+    color: #31474f;
+    font-weight: 600;
     line-height: 1.55;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
   }
 
   .larp-profile-avatar-upload-actions {
@@ -619,11 +621,12 @@
   .larp-profile-cover-modal {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: 10050;
     display: grid;
-    place-items: center;
+    justify-items: center;
+    align-items: start;
     height: 100dvh;
-    padding: 0.8rem;
+    padding: calc(var(--topbar-bottom-offset, 72px) + 0.8rem) 0.8rem 0.8rem;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -643,8 +646,8 @@
   .larp-profile-cover-modal-dialog {
     position: relative;
     z-index: 1;
-    width: min(760px, 100%);
-    max-height: min(680px, calc(100dvh - 1.6rem));
+    width: min(680px, calc(100vw - 1.6rem));
+    max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 1.6rem);
     border-radius: 24px;
     overflow: auto;
     overscroll-behavior: contain;
@@ -662,7 +665,7 @@
     align-items: flex-start;
     padding: 0.9rem 1rem 0.7rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.32);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12));
     position: sticky;
     top: 0;
     z-index: 2;
@@ -670,7 +673,7 @@
 
   .larp-profile-cover-modal-kicker {
     margin: 0 0 0.28rem;
-    color: rgba(33, 49, 54, 0.62);
+    color: rgba(33, 49, 54, 0.82);
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.16em;
@@ -679,6 +682,7 @@
 
   .larp-profile-cover-modal-header h2 {
     margin: 0;
+    color: #213136;
     font-size: clamp(1.25rem, 2.2vw, 1.7rem);
     line-height: 1.1;
   }
@@ -712,14 +716,14 @@
 
   .larp-profile-cover-upload-panel {
     display: grid;
-    gap: 0.8rem;
+    gap: 0.7rem;
     align-content: start;
-    padding: 0.9rem;
+    padding: 0.8rem;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.34);
     background:
-      linear-gradient(160deg, rgba(22, 45, 59, 0.14), rgba(255, 255, 255, 0.12)),
-      rgba(255, 255, 255, 0.18);
+      linear-gradient(160deg, rgba(22, 45, 59, 0.16), rgba(255, 255, 255, 0.18)),
+      rgba(255, 255, 255, 0.28);
   }
 
   .larp-profile-cover-preview-panel,
@@ -758,6 +762,7 @@
     max-height: none;
     pointer-events: none;
     user-select: none;
+    will-change: transform;
   }
 
   .larp-profile-cover-editor-fallback {
@@ -780,7 +785,9 @@
 
   .larp-profile-cover-upload-copy {
     line-height: 1.45;
-    color: rgba(31, 47, 48, 0.84);
+    color: #31474f;
+    font-weight: 600;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
   }
 
   .larp-profile-cover-upload-actions {
@@ -844,8 +851,10 @@
 
   .larp-profile-cover-file-meta {
     margin: 0;
-    color: var(--larp-cover-ink-soft);
+    color: #31474f;
+    font-weight: 600;
     line-height: 1.4;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
   }
 
   .larp-profile-back-to-top {
@@ -944,7 +953,7 @@
     }
 
     .larp-profile-cover-modal {
-      padding: 0.8rem;
+      padding: calc(var(--topbar-bottom-offset, 72px) + 0.6rem) 0.6rem 0.6rem;
     }
 
     .larp-profile-cover-modal-header,
@@ -2071,8 +2080,8 @@
           : 50
       });
 
-      const renderEditor = () => {
-        const metrics = getEditorMetrics();
+      const renderEditor = (metricsOverride = null) => {
+        const metrics = metricsOverride || getEditorMetrics();
         const hasImage = Boolean(metrics && previewSource.src);
 
         editorStage.classList.toggle("is-draggable", hasImage);
@@ -2084,8 +2093,9 @@
           editorImage.removeAttribute("src");
           editorImage.style.width = "";
           editorImage.style.height = "";
-          editorImage.style.left = "";
-          editorImage.style.top = "";
+          editorImage.style.left = "0";
+          editorImage.style.top = "0";
+          editorImage.style.transform = "";
           updateFileMeta();
           syncActionState();
           return;
@@ -2095,8 +2105,9 @@
         editorImage.src = previewSource.src;
         editorImage.style.width = `${metrics.displayWidth}px`;
         editorImage.style.height = `${metrics.displayHeight}px`;
-        editorImage.style.left = `${offsets.offsetX}px`;
-        editorImage.style.top = `${offsets.offsetY}px`;
+        editorImage.style.left = "0";
+        editorImage.style.top = "0";
+        editorImage.style.transform = `translate3d(${offsets.offsetX}px, ${offsets.offsetY}px, 0)`;
         updateFileMeta();
         syncActionState();
       };
@@ -2277,6 +2288,7 @@
 
         const offsets = getOffsetsFromFocus(draftFocusX, draftFocusY, metrics);
         dragState = {
+          metrics,
           pointerId: event.pointerId,
           startClientX: event.clientX,
           startClientY: event.clientY,
@@ -2293,7 +2305,7 @@
           return;
         }
 
-        const metrics = getEditorMetrics();
+        const metrics = dragState.metrics || getEditorMetrics();
         if (!metrics) {
           return;
         }
@@ -2311,7 +2323,7 @@
         const nextFocus = getFocusFromOffsets(nextOffsetX, nextOffsetY, metrics);
         draftFocusX = nextFocus.focusX;
         draftFocusY = nextFocus.focusY;
-        renderEditor();
+        renderEditor(metrics);
         event.preventDefault();
       });
 
