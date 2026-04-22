@@ -51,7 +51,7 @@
       erpButton.disabled = !erpMoveAllowed;
 
       if (!erpMoveAllowed) {
-        moveNote.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist fuer Accounts unter 18 nicht verfuegbar.";
+        moveNote.textContent = "Du kannst das Profil nach Free RP verschieben. ERP ist f\u00fcr Accounts unter 18 nicht verf\u00fcgbar.";
       }
 
       moveModal.hidden = false;
@@ -129,7 +129,7 @@
 
       const characterName = String(link.dataset.serverlistCharacterName || "").trim() || "Dieses Profil";
       pendingForumHref = nextHref;
-      forumNoticeCopy.textContent = `${characterName} oeffnet jetzt das LARP-Forum.`;
+      forumNoticeCopy.textContent = `${characterName} \u00f6ffnet jetzt das LARP-Forum.`;
       forumNoticeOpenLink.setAttribute("href", nextHref);
       forumNoticeModal.hidden = false;
       syncBodyModalState();
