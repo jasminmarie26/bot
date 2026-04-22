@@ -6,12 +6,13 @@
   const resolvedLarpNavCharacter = providedLarpNavCharacter || ambientLarpNavCharacter;
   const resolvedLarpNavCharacterId = Number(resolvedLarpNavCharacter?.id || 0);
   const larpHomeHref = resolvedLarpNavCharacterId > 0 ? `/characters/${resolvedLarpNavCharacterId}/home` : "";
+  const larpCalendarHref = resolvedLarpNavCharacterId > 0 ? `/characters/${resolvedLarpNavCharacterId}/kalender` : "";
   const larpNavItems = [
     { label: "Home", icon: "home", href: larpHomeHref, active: activeLarpNav === "Home" },
     { label: "Forum", icon: "forum", caret: true, active: activeLarpNav === "Forum" },
     { label: "Projekte & Gilden", icon: "shield", caret: true, active: activeLarpNav === "Projekte & Gilden" },
     { label: "Mitglieder", icon: "group", caret: true, active: activeLarpNav === "Mitglieder" },
-    { label: "Kalender", icon: "calendar", caret: true, active: activeLarpNav === "Kalender" },
+    { label: "Kalender", icon: "calendar", href: larpCalendarHref, active: activeLarpNav === "Kalender" },
     { label: "Datenbank", icon: "database", caret: true, active: activeLarpNav === "Datenbank" },
     { label: "Galerie", icon: "gallery", caret: true, active: activeLarpNav === "Galerie" },
     { label: "Storys", icon: "stories", caret: true, active: activeLarpNav === "Storys" },

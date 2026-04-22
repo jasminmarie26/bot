@@ -1,0 +1,606 @@
+<%- include("../partials/start", { pageClass: "page-larp-calendar", topbarCharacter }) %>
+
+<style>
+  .larp-calendar-page {
+    --larp-calendar-shell: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+    --larp-calendar-shell-edge: color-mix(in srgb, var(--panel-edge) 70%, white 30%);
+    --larp-calendar-soft: color-mix(in srgb, var(--field-bg) 72%, white 28%);
+    --larp-calendar-soft-edge: color-mix(in srgb, var(--field-edge) 72%, white 28%);
+    --larp-calendar-muted: color-mix(in srgb, var(--muted) 80%, white 20%);
+    display: grid;
+    gap: 1rem;
+  }
+
+  .larp-calendar-intro {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .larp-calendar-intro-copy {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .larp-calendar-kicker {
+    margin: 0;
+    color: var(--larp-calendar-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .larp-calendar-intro h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  }
+
+  .larp-calendar-intro p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .larp-calendar-add-btn {
+    min-height: 46px;
+    padding: 0 1.15rem;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 84%, white 16%), color-mix(in srgb, var(--accent-2) 90%, black 10%));
+    color: var(--accent-text);
+    font-weight: 800;
+    box-shadow: 0 18px 32px -26px rgba(0, 0, 0, 0.72);
+    cursor: pointer;
+  }
+
+  .larp-calendar-add-btn:hover,
+  .larp-calendar-add-btn:focus-visible {
+    filter: brightness(1.05);
+  }
+
+  .larp-calendar-shell {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .larp-calendar-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.9rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .larp-calendar-title {
+    display: grid;
+    gap: 0.22rem;
+  }
+
+  .larp-calendar-title h2 {
+    margin: 0;
+    font-size: clamp(1.25rem, 2vw, 1.65rem);
+  }
+
+  .larp-calendar-title p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .larp-calendar-view-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .larp-calendar-view-btn {
+    min-height: 40px;
+    padding: 0 0.95rem;
+    border: 1px solid var(--larp-calendar-soft-edge);
+    border-radius: 999px;
+    background: var(--larp-calendar-soft);
+    color: var(--text);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  .larp-calendar-view-btn:hover,
+  .larp-calendar-view-btn:focus-visible {
+    background: color-mix(in srgb, var(--larp-calendar-soft) 72%, white 28%);
+    border-color: color-mix(in srgb, var(--larp-calendar-soft-edge) 66%, white 34%);
+  }
+
+  .larp-calendar-view-btn.is-active {
+    background: color-mix(in srgb, var(--accent) 22%, var(--larp-calendar-soft) 78%);
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--larp-calendar-soft-edge) 62%);
+    transform: translateY(-1px);
+  }
+
+  .larp-calendar-view {
+    display: none;
+    gap: 0.85rem;
+  }
+
+  .larp-calendar-view.is-active {
+    display: grid;
+  }
+
+  .larp-calendar-surface {
+    border: 1px solid var(--larp-calendar-shell-edge);
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--larp-calendar-shell) 86%, white 14%), color-mix(in srgb, var(--larp-calendar-shell) 94%, transparent 6%));
+    box-shadow: 0 28px 54px -42px rgba(0, 0, 0, 0.72);
+    overflow: hidden;
+  }
+
+  .larp-calendar-month-weekdays,
+  .larp-calendar-month-grid,
+  .larp-calendar-week-grid,
+  .larp-calendar-year-grid {
+    display: grid;
+  }
+
+  .larp-calendar-month-weekdays {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-bottom: 1px solid var(--larp-calendar-shell-edge);
+    background: color-mix(in srgb, var(--larp-calendar-soft) 68%, transparent 32%);
+  }
+
+  .larp-calendar-month-weekday {
+    padding: 0.9rem 0.7rem;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--larp-calendar-muted);
+  }
+
+  .larp-calendar-month-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .larp-calendar-month-cell {
+    min-height: 126px;
+    padding: 0.7rem;
+    border-right: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+    border-bottom: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+    display: grid;
+    align-content: start;
+    gap: 0.65rem;
+    background: color-mix(in srgb, var(--larp-calendar-shell) 96%, transparent 4%);
+  }
+
+  .larp-calendar-month-cell:nth-child(7n) {
+    border-right: 0;
+  }
+
+  .larp-calendar-month-cell.is-outside {
+    background: color-mix(in srgb, var(--larp-calendar-soft) 52%, transparent 48%);
+  }
+
+  .larp-calendar-month-cell.is-today {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent 86%), transparent 65%),
+      color-mix(in srgb, var(--larp-calendar-shell) 96%, transparent 4%);
+  }
+
+  .larp-calendar-month-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    min-height: 2rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .larp-calendar-month-cell.is-outside .larp-calendar-month-number {
+    color: var(--larp-calendar-muted);
+  }
+
+  .larp-calendar-month-cell.is-today .larp-calendar-month-number {
+    background: color-mix(in srgb, var(--accent) 22%, white 78%);
+    color: #142330;
+  }
+
+  .larp-calendar-empty-slot {
+    min-height: 2.4rem;
+    border-radius: 14px;
+    border: 1px dashed color-mix(in srgb, var(--larp-calendar-soft-edge) 74%, transparent 26%);
+    background: color-mix(in srgb, var(--larp-calendar-soft) 54%, transparent 46%);
+  }
+
+  .larp-calendar-week-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .larp-calendar-week-column {
+    min-height: 360px;
+    padding: 0.85rem 0.7rem;
+    border-right: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+  }
+
+  .larp-calendar-week-column:last-child {
+    border-right: 0;
+  }
+
+  .larp-calendar-week-column.is-today {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, transparent 90%), transparent 100%);
+  }
+
+  .larp-calendar-week-heading {
+    display: grid;
+    gap: 0.18rem;
+  }
+
+  .larp-calendar-week-heading strong {
+    font-size: 0.95rem;
+  }
+
+  .larp-calendar-week-heading span {
+    color: var(--muted);
+    font-size: 0.84rem;
+  }
+
+  .larp-calendar-week-empty {
+    min-height: 270px;
+    border-radius: 18px;
+    border: 1px dashed color-mix(in srgb, var(--larp-calendar-soft-edge) 74%, transparent 26%);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--larp-calendar-soft) 44%, transparent 56%), transparent 100%);
+  }
+
+  .larp-calendar-day-layout {
+    display: grid;
+    grid-template-columns: minmax(74px, 90px) minmax(0, 1fr);
+  }
+
+  .larp-calendar-day-times,
+  .larp-calendar-day-track {
+    display: grid;
+  }
+
+  .larp-calendar-day-times {
+    border-right: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 76%, transparent 24%);
+    background: color-mix(in srgb, var(--larp-calendar-soft) 52%, transparent 48%);
+  }
+
+  .larp-calendar-day-time,
+  .larp-calendar-day-block {
+    min-height: 58px;
+    border-bottom: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+  }
+
+  .larp-calendar-day-time:last-child,
+  .larp-calendar-day-block:last-child {
+    border-bottom: 0;
+  }
+
+  .larp-calendar-day-time {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0.75rem;
+    color: var(--larp-calendar-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .larp-calendar-day-block {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--larp-calendar-shell) 94%, transparent 6%), color-mix(in srgb, var(--larp-calendar-shell) 98%, transparent 2%));
+  }
+
+  .larp-calendar-year-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .larp-calendar-year-card {
+    border: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 76%, transparent 24%);
+    border-radius: 20px;
+    padding: 0.9rem;
+    background: color-mix(in srgb, var(--larp-calendar-shell) 96%, transparent 4%);
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .larp-calendar-year-card h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .larp-calendar-mini-weekdays,
+  .larp-calendar-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.22rem;
+  }
+
+  .larp-calendar-mini-weekdays span,
+  .larp-calendar-mini-cell {
+    display: grid;
+    place-items: center;
+    min-height: 1.45rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+  }
+
+  .larp-calendar-mini-weekdays span {
+    color: var(--larp-calendar-muted);
+    font-weight: 800;
+  }
+
+  .larp-calendar-mini-cell {
+    background: color-mix(in srgb, var(--larp-calendar-soft) 54%, transparent 46%);
+    border: 1px solid color-mix(in srgb, var(--larp-calendar-soft-edge) 62%, transparent 38%);
+  }
+
+  .larp-calendar-mini-cell.is-outside {
+    opacity: 0.45;
+  }
+
+  .larp-calendar-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 1080px) {
+    .larp-calendar-year-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 920px) {
+    .larp-calendar-month-cell,
+    .larp-calendar-week-column {
+      min-height: 104px;
+    }
+
+    .larp-calendar-week-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .larp-calendar-week-column:nth-child(2n) {
+      border-right: 0;
+    }
+
+    .larp-calendar-week-column {
+      min-height: 240px;
+      border-bottom: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+    }
+  }
+
+  @media (max-width: 700px) {
+    .larp-calendar-toolbar {
+      align-items: flex-start;
+    }
+
+    .larp-calendar-month-weekdays,
+    .larp-calendar-month-grid,
+    .larp-calendar-week-grid,
+    .larp-calendar-year-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .larp-calendar-month-weekday {
+      display: none;
+    }
+
+    .larp-calendar-month-cell,
+    .larp-calendar-week-column {
+      min-height: 0;
+      border-right: 0;
+    }
+
+    .larp-calendar-day-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .larp-calendar-day-times {
+      border-right: 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 76%, transparent 24%);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .larp-calendar-day-time {
+      min-height: 42px;
+      padding-top: 0.65rem;
+      border-bottom: 0;
+      border-right: 1px solid color-mix(in srgb, var(--larp-calendar-shell-edge) 72%, transparent 28%);
+    }
+
+    .larp-calendar-day-time:last-child {
+      border-right: 0;
+    }
+  }
+</style>
+
+<%- include("../partials/larp-navigation", {
+  activeLarpNavLabel: "Kalender",
+  larpNavCompact: true,
+  larpNavCharacter: character
+}) %>
+
+<section class="larp-calendar-page">
+  <section class="panel larp-calendar-intro">
+    <div class="larp-calendar-intro-copy">
+      <p class="larp-calendar-kicker">LARP Bereich</p>
+      <h1>Kalender</h1>
+      <p>Hier ist erstmal die leere &Uuml;bersicht f&uuml;r Monats-, Wochen-, Tages- und Jahresansicht.</p>
+    </div>
+
+    <button type="button" class="larp-calendar-add-btn">+ Termin hinzuf&uuml;gen</button>
+  </section>
+
+  <section class="panel larp-calendar-shell" data-larp-calendar-root>
+    <div class="larp-calendar-toolbar">
+      <div class="larp-calendar-title">
+        <h2><%= monthLabel %></h2>
+        <p>&Uuml;bersicht f&uuml;r <strong><%= character.name %></strong> im LARP-Bereich</p>
+      </div>
+
+      <div class="larp-calendar-view-switch" role="tablist" aria-label="Kalenderansichten wechseln">
+        <button
+          type="button"
+          class="larp-calendar-view-btn is-active"
+          role="tab"
+          aria-selected="true"
+          data-calendar-view-target="month"
+        >Monatsansicht</button>
+        <button
+          type="button"
+          class="larp-calendar-view-btn"
+          role="tab"
+          aria-selected="false"
+          data-calendar-view-target="week"
+        >Wochenansicht</button>
+        <button
+          type="button"
+          class="larp-calendar-view-btn"
+          role="tab"
+          aria-selected="false"
+          data-calendar-view-target="day"
+        >Tagesansicht</button>
+        <button
+          type="button"
+          class="larp-calendar-view-btn"
+          role="tab"
+          aria-selected="false"
+          data-calendar-view-target="year"
+        >Jahresansicht</button>
+      </div>
+    </div>
+
+    <section class="larp-calendar-view is-active" data-calendar-view="month" aria-label="Monatsansicht">
+      <div class="larp-calendar-surface">
+        <div class="larp-calendar-month-weekdays" aria-hidden="true">
+          <% monthWeekdayLabels.forEach((label) => { %>
+            <div class="larp-calendar-month-weekday"><%= label %></div>
+          <% }) %>
+        </div>
+
+        <div class="larp-calendar-month-grid">
+          <% monthCells.forEach((cell) => { %>
+            <article class="larp-calendar-month-cell<%= cell.isOutside ? " is-outside" : "" %><%= cell.isToday ? " is-today" : "" %>">
+              <span class="larp-calendar-month-number"><%= cell.dayNumber %></span>
+              <div class="larp-calendar-empty-slot" aria-hidden="true"></div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <section class="larp-calendar-view" data-calendar-view="week" aria-label="Wochenansicht">
+      <div class="larp-calendar-surface">
+        <div class="larp-calendar-week-grid">
+          <% weekDays.forEach((day) => { %>
+            <article class="larp-calendar-week-column<%= day.isToday ? " is-today" : "" %>">
+              <header class="larp-calendar-week-heading">
+                <strong><%= day.weekday %></strong>
+                <span><%= day.label %></span>
+              </header>
+              <div class="larp-calendar-week-empty" aria-hidden="true"></div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+
+    <section class="larp-calendar-view" data-calendar-view="day" aria-label="Tagesansicht">
+      <div class="larp-calendar-surface">
+        <div class="larp-calendar-day-layout">
+          <div class="larp-calendar-day-times" aria-hidden="true">
+            <% dayTimeSlots.forEach((timeLabel) => { %>
+              <div class="larp-calendar-day-time"><%= timeLabel %></div>
+            <% }) %>
+          </div>
+
+          <div class="larp-calendar-day-track" aria-hidden="true">
+            <% dayTimeSlots.forEach(() => { %>
+              <div class="larp-calendar-day-block"></div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="larp-calendar-view" data-calendar-view="year" aria-label="Jahresansicht">
+      <div class="larp-calendar-year-grid">
+        <% yearMonths.forEach((month) => { %>
+          <article class="larp-calendar-year-card">
+            <h3><%= month.label %></h3>
+            <div class="larp-calendar-mini-weekdays" aria-hidden="true">
+              <% monthWeekdayShortLabels.forEach((label) => { %>
+                <span><%= label %></span>
+              <% }) %>
+            </div>
+            <div class="larp-calendar-mini-grid">
+              <% month.cells.forEach((cell) => { %>
+                <span class="larp-calendar-mini-cell<%= cell.isOutside ? " is-outside" : "" %>"><%= cell.dayNumber %></span>
+              <% }) %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <div class="larp-calendar-footer">
+      <button type="button" class="larp-calendar-add-btn">+ Termin hinzuf&uuml;gen</button>
+    </div>
+  </section>
+</section>
+
+<script>
+  (() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const root = document.querySelector("[data-larp-calendar-root]");
+      if (!(root instanceof HTMLElement)) {
+        return;
+      }
+
+      const buttons = Array.from(root.querySelectorAll("[data-calendar-view-target]"));
+      const views = Array.from(root.querySelectorAll("[data-calendar-view]"));
+      if (!buttons.length || !views.length) {
+        return;
+      }
+
+      const activateView = (viewName) => {
+        const normalizedViewName = String(viewName || "").trim().toLowerCase();
+
+        buttons.forEach((button) => {
+          const isActive =
+            String(button.getAttribute("data-calendar-view-target") || "").trim().toLowerCase() ===
+            normalizedViewName;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+
+        views.forEach((view) => {
+          const isActive =
+            String(view.getAttribute("data-calendar-view") || "").trim().toLowerCase() ===
+            normalizedViewName;
+          view.classList.toggle("is-active", isActive);
+        });
+      };
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activateView(button.getAttribute("data-calendar-view-target"));
+        });
+      });
+    });
+  })();
+</script>
+
+<%- include("../partials/end") %>

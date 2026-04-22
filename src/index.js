@@ -15607,6 +15607,119 @@ function renderLarpHomePage(req, res, character) {
   });
 }
 
+function buildLarpCalendarMonthCells(year, monthIndex, today = null) {
+  const monthStart = new Date(year, monthIndex, 1);
+  const monthEnd = new Date(year, monthIndex + 1, 0);
+  const leadingDays = (monthStart.getDay() + 6) % 7;
+  const trailingDays = (7 - ((leadingDays + monthEnd.getDate()) % 7 || 7)) % 7;
+  const previousMonthEnd = new Date(year, monthIndex, 0).getDate();
+  const totalCells = leadingDays + monthEnd.getDate() + trailingDays;
+  const cells = [];
+
+  for (let index = 0; index < totalCells; index += 1) {
+    const dayOffset = index - leadingDays + 1;
+    const currentDate = new Date(year, monthIndex, dayOffset);
+    const isOutside = currentDate.getMonth() !== monthIndex;
+    const isToday =
+      today instanceof Date &&
+      currentDate.getFullYear() === today.getFullYear() &&
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getDate() === today.getDate();
+
+    let dayNumber = currentDate.getDate();
+    if (index < leadingDays) {
+      dayNumber = previousMonthEnd - leadingDays + index + 1;
+    }
+
+    cells.push({
+      dayNumber,
+      isOutside,
+      isToday
+    });
+  }
+
+  return cells;
+}
+
+function renderLarpCalendarPage(req, res, character) {
+  const isOwner = Number(req.session.user?.id) === Number(character.user_id);
+  const now = new Date();
+  const monthNames = [
+    "Januar",
+    "Februar",
+    "März",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember"
+  ];
+  const weekdayLabels = [
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag",
+    "Sonntag"
+  ];
+  const weekdayShortLabels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const dayTimeSlots = [
+    "06:00",
+    "08:00",
+    "10:00",
+    "12:00",
+    "14:00",
+    "16:00",
+    "18:00",
+    "20:00"
+  ];
+  const referenceYear = now.getFullYear();
+  const referenceMonthIndex = now.getMonth();
+  const weekStart = new Date(now);
+  const dayOfWeek = (weekStart.getDay() + 6) % 7;
+
+  weekStart.setDate(weekStart.getDate() - dayOfWeek);
+  weekStart.setHours(0, 0, 0, 0);
+
+  if (isOwner) {
+    rememberPreferredCharacter(req, character);
+    trackLarpCharacterActivity(character.id, req.originalUrl, `LARP Kalender: ${character.name}`);
+  }
+
+  return res.render("characters/larp-calendar", {
+    title: `LARP Kalender: ${character.name}`,
+    metaDescription: `${character.name} im LARP-Kalender von Heldenhafte Reisen.`,
+    character,
+    topbarCharacter: isOwner ? character : getPreferredMenuCharacterForUser(req),
+    monthLabel: `${monthNames[referenceMonthIndex]} ${referenceYear}`,
+    monthWeekdayLabels: weekdayLabels,
+    monthWeekdayShortLabels: weekdayShortLabels,
+    monthCells: buildLarpCalendarMonthCells(referenceYear, referenceMonthIndex, now),
+    weekDays: Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + index);
+      return {
+        weekday: weekdayLabels[index],
+        label: `${day.getDate()}. ${monthNames[day.getMonth()]}`,
+        isToday:
+          day.getFullYear() === now.getFullYear() &&
+          day.getMonth() === now.getMonth() &&
+          day.getDate() === now.getDate()
+      };
+    }),
+    dayTimeSlots,
+    yearMonths: monthNames.map((label, monthIndex) => ({
+      label,
+      cells: buildLarpCalendarMonthCells(referenceYear, monthIndex)
+    }))
+  });
+}
+
 function isLarpActivityLocation(rawPath, rawTitle = "") {
   const normalizedTitle = normalizeSessionTrackedPageTitle(rawTitle);
   if (/^larp\b/i.test(normalizedTitle)) {
@@ -16992,6 +17105,32 @@ app.get("/characters/:id/home", requireAuth, (req, res) => {
   }
 
   return renderLarpHomePage(req, res, character);
+});
+
+app.get("/characters/:id/kalender", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  const character = getCharacterById(id);
+  if (!character) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  const isAdmin = req.session.user.is_admin === true;
+  if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Dieser Charakter ist privat."
+    });
+  }
+
+  if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
+    return res.redirect(`/characters/${character.id}`);
+  }
+
+  return renderLarpCalendarPage(req, res, character);
 });
 
 app.get("/characters/:id", requireAuth, (req, res) => {
