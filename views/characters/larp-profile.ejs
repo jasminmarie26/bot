@@ -772,7 +772,24 @@
         </div>
       </div>
 
-      <% if (renderedProfileDescription) { %>
+      <% if (isOwner && isEditingProfileAbout) { %>
+        <form method="POST" action="<%= profileAboutSaveHref %>" class="form">
+          <%- include("../partials/bbcode-editor", {
+            bbcodeEditorWrapperClass: "gb-editor-row-content",
+            bbcodeEditorFieldId: "larp-profile-description-editor",
+            bbcodeEditorFieldName: "description",
+            bbcodeEditorFieldValue: character.description || "",
+            bbcodeEditorFieldLabel: "&Uuml;ber mich",
+            bbcodeEditorRows: 12,
+            bbcodeEditorMaxLength: 12000
+          }) %>
+
+          <div class="character-form-actions">
+            <button type="submit" class="btn">Speichern</button>
+            <a class="btn btn-secondary" href="/characters/<%= character.id %>#larp-profile-about">Zur&uuml;ck</a>
+          </div>
+        </form>
+      <% } else if (renderedProfileDescription) { %>
         <div class="larp-profile-description"><%- renderedProfileDescription %></div>
       <% } else { %>
         <p class="muted">Noch keine Beschreibung hinterlegt.</p>

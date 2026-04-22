@@ -17156,6 +17156,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID) {
     const larpProfileTitle = `LARP-Profil: ${character.name}`;
     const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+    const isEditingProfileAbout = isOwner && String(req.query.edit || "").trim().toLowerCase() === "about";
     const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
     const liveSessionLocation = sessionLocationsByUserId[Number(character.user_id)] || null;
     const liveSeenAt = Number(liveSessionLocation?.seenAt || 0);
@@ -17198,12 +17199,14 @@ app.get("/characters/:id", requireAuth, (req, res) => {
       }),
       larpGuildCount: getDashboardLarpGuilds(character.user_id).length,
       lastActivity,
+      isEditingProfileAbout,
       isCharacterOnline: onlineAccountUserIds.has(Number(character.user_id)),
       profileDescriptionHtml: String(character.description || "").trim()
         ? renderGuestbookBbcode(character.description)
         : "",
       profileCoverUrl: String(character.larp_profile_title_image_url || character.chat_background_url || "").trim(),
-      profileEditHref: `/characters/${character.id}/edit?mode=edit&return_to=${encodeURIComponent(`/characters/${character.id}`)}`,
+      profileEditHref: `/characters/${character.id}?edit=about#larp-profile-about`,
+      profileAboutSaveHref: `/characters/${character.id}/larp-profile/about`,
       profileGuestbookHref: `/characters/${character.id}/guestbook`
     });
   }
@@ -18691,7 +18694,11 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
 
   const requestedMode = String(req.query.mode || "").trim().toLowerCase();
   const requestedReturnTo = getSafeExplicitReturnTarget(req.query.return_to, "");
-  if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID && requestedMode !== "edit") {
+  if (normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID) {
+    if (requestedMode === "edit") {
+      return res.redirect(`/characters/${character.id}?edit=about#larp-profile-about`);
+    }
+
     return renderLarpHomePage(req, res, character);
   }
 
@@ -18711,6 +18718,38 @@ app.get("/characters/:id/edit", requireAuth, (req, res) => {
       returnTo: requestedReturnTo
     })
   );
+});
+
+app.post("/characters/:id/larp-profile/about", requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const character = getCharacterById(id);
+
+  if (!character) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  if (character.user_id !== req.session.user.id) {
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf dieses LARP-Profil bearbeiten."
+    });
+  }
+
+  if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
+    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+  }
+
+  const description = normalizeBbcodeInput(req.body.description, 12000);
+
+  db.prepare(
+    `UPDATE characters
+     SET description = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(description, id);
+
+  setFlash(req, "success", "Profil gespeichert.");
+  return res.redirect(`/characters/${id}#larp-profile-about`);
 });
 
 app.post("/characters/:id/update", requireAuth, (req, res) => {

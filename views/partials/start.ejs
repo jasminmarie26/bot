@@ -322,10 +322,12 @@
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const menuCharacterEditHref = menuCharacter
-      ? `/characters/${menuCharacter.id}/edit${isLarpMenuContext ? `?mode=edit&return_to=${encodeURIComponent(`/characters/${menuCharacter.id}`)}` : ""}`
+      ? (isLarpMenuContext
+        ? `/characters/${menuCharacter.id}?edit=about#larp-profile-about`
+        : `/characters/${menuCharacter.id}/edit`)
       : ""; %>
     <% const menuCharacterEditHrefTemplate = isLarpMenuContext
-      ? "/characters/__CHARACTER_ID__/edit?mode=edit&return_to=/characters/__CHARACTER_ID__"
+      ? "/characters/__CHARACTER_ID__?edit=about#larp-profile-about"
       : "/characters/__CHARACTER_ID__/edit"; %>
     <% const accountMenuHref = isLarpMenuContext ? "/account/larp" : "/account"; %>
     <% const menuCharacterIsAdmin = Boolean(

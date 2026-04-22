@@ -266,10 +266,10 @@
           <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
           <% if (activeCharacter && activeCharacter.is_owner) { %>
             <% const chatCharacterEditHref = activeCharacter.server_id === "larp"
-              ? `/characters/${activeCharacter.id}/edit?mode=edit`
+              ? `/characters/${activeCharacter.id}?edit=about#larp-profile-about`
               : `/characters/${activeCharacter.id}/edit`; %>
             <% const chatCharacterEditHrefTemplate = activeCharacter.server_id === "larp"
-              ? "/characters/__CHARACTER_ID__/edit?mode=edit"
+              ? "/characters/__CHARACTER_ID__?edit=about#larp-profile-about"
               : "/characters/__CHARACTER_ID__/edit"; %>
             <a
               href="<%= chatCharacterEditHref %>"
