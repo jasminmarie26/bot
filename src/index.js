@@ -4790,6 +4790,16 @@ function normalizeShortTextInput(value, maxLength = 120) {
   return String(value || "").trim().slice(0, maxLength);
 }
 
+function normalizeAvatarFocusInput(value, fallback = 50) {
+  const numericValue = Number(value);
+  const normalizedFallback = Number.isFinite(Number(fallback)) ? Number(fallback) : 50;
+  if (!Number.isFinite(numericValue)) {
+    return Math.min(100, Math.max(0, normalizedFallback));
+  }
+
+  return Math.min(100, Math.max(0, numericValue));
+}
+
 function normalizeAllowedOptionInput(value, allowedValues) {
   const normalizedValue = normalizeShortTextInput(value, 120);
   return allowedValues.includes(normalizedValue) ? normalizedValue : "";
@@ -17079,82 +17089,96 @@ app.post(
       return res.status(403).json({ ok: false, error: "Kein Zugriff auf diesen Charakter." });
     }
 
-    const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
-    if (!parsedImageData) {
-      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
-    }
-
-    const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
-    const fileExtension = CHARACTER_AVATAR_ALLOWED_MIME_TYPES.get(mimeType);
-    if (!fileExtension || mimeType !== parsedImageData.mimeType) {
-      return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
-    }
-
-    const width = Number(req.body?.width);
-    const height = Number(req.body?.height);
-    if (!Number.isFinite(width) || !Number.isFinite(height)) {
-      return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
-    }
-
-    if (width < CHARACTER_AVATAR_MIN_SIDE || height < CHARACTER_AVATAR_MIN_SIDE) {
-      return res.status(400).json({
-        ok: false,
-        error: `Das Bild muss mindestens ${CHARACTER_AVATAR_MIN_SIDE}x${CHARACTER_AVATAR_MIN_SIDE} Pixel groß sein.`
-      });
-    }
-
-    if (width > CHARACTER_AVATAR_MAX_SIDE || height > CHARACTER_AVATAR_MAX_SIDE) {
-      return res.status(400).json({
-        ok: false,
-        error: `Das Bild darf höchstens ${CHARACTER_AVATAR_MAX_SIDE}x${CHARACTER_AVATAR_MAX_SIDE} Pixel haben.`
-      });
-    }
-
-    let fileBuffer = null;
-    try {
-      fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
-    } catch (error) {
-      fileBuffer = null;
-    }
-
-    if (!fileBuffer || !fileBuffer.length) {
-      return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
-    }
-
-    if (fileBuffer.length > CHARACTER_AVATAR_UPLOAD_MAX_BYTES) {
-      return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
-    }
-
     const previousAvatarUrl = String(character.avatar_url || "").trim();
-    const uploadDestination = buildCharacterAvatarUploadDestination(character.id, fileExtension);
+    const focusX = normalizeAvatarFocusInput(req.body?.focusX, character.avatar_focus_x);
+    const focusY = normalizeAvatarFocusInput(req.body?.focusY, character.avatar_focus_y);
+    const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
+    let nextAvatarUrl = previousAvatarUrl;
+    let uploadedAvatarUrl = "";
 
-    try {
-      fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
-    } catch (error) {
-      console.error("Charakter-Avatar konnte nicht gespeichert werden:", error);
-      return res.status(500).json({ ok: false, error: "Das Bild konnte nicht gespeichert werden." });
+    if (parsedImageData) {
+      const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
+      const fileExtension = CHARACTER_AVATAR_ALLOWED_MIME_TYPES.get(mimeType);
+      if (!fileExtension || mimeType !== parsedImageData.mimeType) {
+        return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
+      }
+
+      const width = Number(req.body?.width);
+      const height = Number(req.body?.height);
+      if (!Number.isFinite(width) || !Number.isFinite(height)) {
+        return res.status(400).json({ ok: false, error: "Bildgröße konnte nicht gelesen werden." });
+      }
+
+      if (width < CHARACTER_AVATAR_MIN_SIDE || height < CHARACTER_AVATAR_MIN_SIDE) {
+        return res.status(400).json({
+          ok: false,
+          error: `Das Bild muss mindestens ${CHARACTER_AVATAR_MIN_SIDE}x${CHARACTER_AVATAR_MIN_SIDE} Pixel groß sein.`
+        });
+      }
+
+      if (width > CHARACTER_AVATAR_MAX_SIDE || height > CHARACTER_AVATAR_MAX_SIDE) {
+        return res.status(400).json({
+          ok: false,
+          error: `Das Bild darf höchstens ${CHARACTER_AVATAR_MAX_SIDE}x${CHARACTER_AVATAR_MAX_SIDE} Pixel haben.`
+        });
+      }
+
+      let fileBuffer = null;
+      try {
+        fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
+      } catch (error) {
+        fileBuffer = null;
+      }
+
+      if (!fileBuffer || !fileBuffer.length) {
+        return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
+      }
+
+      if (fileBuffer.length > CHARACTER_AVATAR_UPLOAD_MAX_BYTES) {
+        return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB groß sein." });
+      }
+
+      const uploadDestination = buildCharacterAvatarUploadDestination(character.id, fileExtension);
+
+      try {
+        fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
+      } catch (error) {
+        console.error("Charakter-Avatar konnte nicht gespeichert werden:", error);
+        return res.status(500).json({ ok: false, error: "Das Bild konnte nicht gespeichert werden." });
+      }
+
+      nextAvatarUrl = uploadDestination.publicUrl;
+      uploadedAvatarUrl = uploadDestination.publicUrl;
+    } else if (!previousAvatarUrl) {
+      return res.status(400).json({ ok: false, error: "Bitte ein Bild vom PC auswählen." });
     }
 
     try {
       db.prepare(
         `UPDATE characters
             SET avatar_url = ?,
+                avatar_focus_x = ?,
+                avatar_focus_y = ?,
                 updated_at = CURRENT_TIMESTAMP
           WHERE id = ?`
-      ).run(uploadDestination.publicUrl, character.id);
+      ).run(nextAvatarUrl, focusX, focusY, character.id);
     } catch (error) {
-      removeManagedCharacterAvatarFile(uploadDestination.publicUrl);
+      if (uploadedAvatarUrl) {
+        removeManagedCharacterAvatarFile(uploadedAvatarUrl);
+      }
       console.error("Charakter-Avatar konnte nicht dem Charakter zugeordnet werden:", error);
       return res.status(500).json({ ok: false, error: "Das Bild konnte nicht dem Charakter zugeordnet werden." });
     }
 
-    if (previousAvatarUrl && previousAvatarUrl !== uploadDestination.publicUrl) {
+    if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
       removeManagedCharacterAvatarFile(previousAvatarUrl);
     }
 
     return res.json({
       ok: true,
-      imageUrl: uploadDestination.publicUrl
+      imageUrl: nextAvatarUrl,
+      focusX,
+      focusY
     });
   }
 );

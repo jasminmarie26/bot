@@ -79,6 +79,8 @@ db.exec(`
     larp_profile_guild TEXT DEFAULT '',
     larp_profile_guild_website TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
+    avatar_focus_x REAL NOT NULL DEFAULT 50,
+    avatar_focus_y REAL NOT NULL DEFAULT 50,
     public_birth_show_age INTEGER NOT NULL DEFAULT 0,
     public_birth_show_day_month INTEGER NOT NULL DEFAULT 0,
     public_birth_show_year INTEGER NOT NULL DEFAULT 0,
@@ -1293,6 +1295,14 @@ if (!characterColumns.includes("larp_profile_guild")) {
 
 if (!characterColumns.includes("larp_profile_guild_website")) {
   db.exec("ALTER TABLE characters ADD COLUMN larp_profile_guild_website TEXT DEFAULT ''");
+}
+
+if (!characterColumns.includes("avatar_focus_x")) {
+  db.exec("ALTER TABLE characters ADD COLUMN avatar_focus_x REAL NOT NULL DEFAULT 50");
+}
+
+if (!characterColumns.includes("avatar_focus_y")) {
+  db.exec("ALTER TABLE characters ADD COLUMN avatar_focus_y REAL NOT NULL DEFAULT 50");
 }
 
 if (!characterColumns.includes("last_larp_activity_at")) {

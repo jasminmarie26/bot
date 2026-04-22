@@ -5,6 +5,17 @@
   const larpHomeProfileHref = Number(character?.id || 0) > 0 ? `/characters/${Number(character.id)}` : "";
   const larpHomeInitial = larpHomeProfileName.charAt(0).toUpperCase() || "L";
   const larpHomeAvatarUrl = String(character?.avatar_url || "").trim();
+  const normalizePercentValue = (value, fallback = 50) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(100, Math.max(0, numericValue));
+  };
+  const larpHomeAvatarFocusX = normalizePercentValue(character?.avatar_focus_x, 50);
+  const larpHomeAvatarFocusY = normalizePercentValue(character?.avatar_focus_y, 50);
+  const larpHomeAvatarObjectPosition = `${larpHomeAvatarFocusX}% ${larpHomeAvatarFocusY}%`;
   const larpHomeGuestbookStats = typeof guestbookStats !== "undefined" && guestbookStats ? guestbookStats : {};
   const larpHomeEntryCount = Number(larpHomeGuestbookStats.entryCount || 0);
   const larpHomeRoleLabel = currentUser && (currentUser.is_admin || currentUser.is_moderator)
@@ -287,7 +298,7 @@
     <aside class="larp-home-user" aria-label="LARP Profil">
       <div class="larp-home-avatar" aria-hidden="true">
         <% if (larpHomeAvatarUrl) { %>
-          <img src="<%= larpHomeAvatarUrl %>" alt="" />
+          <img src="<%= larpHomeAvatarUrl %>" alt="" style="object-position: <%= larpHomeAvatarObjectPosition %>;" />
         <% } else { %>
           <span><%= larpHomeInitial %></span>
         <% } %>
