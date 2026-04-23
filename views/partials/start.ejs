@@ -624,7 +624,6 @@
                 <% if (!hideTopbarAreaLinkOnLoggedInHome) { %>
                   <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
                 <% } %>
-                <a href="/members"<%= topbarUseSameTabNavigation ? "" : ' target="_blank" rel="noopener noreferrer"' %>>Mitglieder</a>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a
                     href="/characters/<%= menuCharacter.id %>/festplays/public"
