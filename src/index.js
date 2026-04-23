@@ -7471,6 +7471,7 @@ function removeFestplayPlayer(festplayId, characterId) {
 function getFestplayPlayerOverview(festplayId, serverId) {
   const parsedFestplayId = Number(festplayId);
   const normalizedServerId = normalizeServer(serverId);
+  const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
     return {
       characters: [],
@@ -7505,6 +7506,7 @@ function getFestplayPlayerOverview(festplayId, serverId) {
            c.festplay_id = ?
            OR fp.id IS NOT NULL
          )
+         AND ${nonVioletUsersSqlCondition}
        ORDER BY lower(c.name) ASC, c.id ASC`
     )
     .all(parsedFestplayId, parsedFestplayId, normalizedServerId, parsedFestplayId);
@@ -12575,6 +12577,13 @@ function getUsersTableColumnSet() {
   }
 }
 
+function getNonVioletUsersSqlCondition(alias = "u") {
+  const normalizedAlias = String(alias || "").trim() || "u";
+  return getUsersTableColumnSet().has("moderation_status_level")
+    ? `COALESCE(${normalizedAlias}.moderation_status_level, 1) <> 4`
+    : "1 = 1";
+}
+
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     setFlash(req, "error", "Bitte melde dich zuerst an.");
@@ -15584,6 +15593,7 @@ function getLarpHomeOnlineMembers() {
   const onlineUserIds = Array.from(onlineAccountUserIds || [])
     .map((userId) => Number(userId))
     .filter((userId) => Number.isInteger(userId) && userId > 0);
+  const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
 
   if (!onlineUserIds.length) {
     return [];
@@ -15597,10 +15607,11 @@ function getLarpHomeOnlineMembers() {
               c.name,
               u.username
          FROM characters c
-         JOIN users u ON u.id = c.user_id
-        WHERE c.server_id = ?
-          AND c.user_id IN (${placeholders})
-        ORDER BY lower(c.name) ASC, c.id ASC`
+        JOIN users u ON u.id = c.user_id
+       WHERE c.server_id = ?
+         AND c.user_id IN (${placeholders})
+         AND ${nonVioletUsersSqlCondition}
+       ORDER BY lower(c.name) ASC, c.id ASC`
     )
     .all(LARP_SERVER_ID, ...onlineUserIds)
     .map((entry) => {
@@ -16540,10 +16551,7 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
-  const userColumns = getUsersTableColumnSet();
-  const nonVioletMembersSql = userColumns.has("moderation_status_level")
-    ? "AND COALESCE(u.moderation_status_level, 1) <> 4"
-    : "";
+  const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
   const connectedChatCharacterIds = new Set(getConnectedChatCharacterIds());
@@ -16585,7 +16593,7 @@ app.get("/members", requireAuth, (req, res) => {
           OR c.user_id = ?
           OR ? = 1
        )
-         ${nonVioletMembersSql}
+         AND ${nonVioletUsersSqlCondition}
        ORDER BY lower(c.name) ASC, c.id ASC`
     )
     .all(currentUserId, isAdmin ? 1 : 0)
@@ -16633,7 +16641,7 @@ app.get("/members", requireAuth, (req, res) => {
        LEFT JOIN characters admin_character ON admin_character.id = u.admin_character_id
        LEFT JOIN characters moderator_character ON moderator_character.id = u.moderator_character_id
        WHERE (u.is_admin = 1 OR u.is_moderator = 1)
-         ${nonVioletMembersSql}
+         AND ${nonVioletUsersSqlCondition}
        ORDER BY lower(u.username) ASC, u.id ASC`
     )
     .all();
