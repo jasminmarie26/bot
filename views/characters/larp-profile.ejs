@@ -973,7 +973,7 @@
 <%- include("../partials/larp-navigation", {
   activeLarpNavLabel: "Home",
   larpNavCompact: true,
-  larpNavCharacter: character
+  larpNavCharacter: typeof larpNavCharacter !== "undefined" && larpNavCharacter ? larpNavCharacter : character
 }) %>
 
 <section class="larp-profile-page" id="larp-profile-top">

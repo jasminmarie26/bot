@@ -15583,6 +15583,10 @@ function getLarpCharactersForUser(userId) {
     }));
 }
 
+function getPrimaryLarpCharacterForUser(userId) {
+  return getLarpCharactersForUser(userId)[0] || null;
+}
+
 function userHasLarpProfile(userId, excludedCharacterId = null) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -17395,16 +17399,23 @@ app.get("/characters/:id/home", requireAuth, (req, res) => {
     return res.status(404).render("errors/404", { title: "Nicht gefunden" });
   }
 
+  if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
+    return res.redirect(`/characters/${character.id}`);
+  }
+
+  if (Number(character.user_id) !== Number(req.session.user.id)) {
+    const ownLarpCharacter = getPrimaryLarpCharacterForUser(req.session.user.id);
+    return res.redirect(
+      ownLarpCharacter?.id ? `/characters/${ownLarpCharacter.id}/home` : "/dashboard/larp"
+    );
+  }
+
   const isAdmin = req.session.user.is_admin === true;
   if (!canAccessCharacter(req.session.user.id, character.user_id, character.is_public, isAdmin)) {
     return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Dieser Charakter ist privat."
     });
-  }
-
-  if (normalizeCharacterServerId(character.server_id) !== LARP_SERVER_ID) {
-    return res.redirect(`/characters/${character.id}`);
   }
 
   return renderLarpHomePage(req, res, character);
@@ -17462,6 +17473,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
     const accountBirthDate = accountUser?.birth_date || "";
     const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character, accountUser);
     const isEditingProfileAbout = isOwner && String(req.query.edit || "").trim().toLowerCase() === "about";
+    const ownLarpCharacter = isOwner ? character : getPrimaryLarpCharacterForUser(req.session.user.id);
     const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
     const liveSessionLocation = sessionLocationsByUserId[Number(character.user_id)] || null;
     const liveSeenAt = Number(liveSessionLocation?.seenAt || 0);
@@ -17496,6 +17508,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
       metaDescription: `${character.name} im LARP-Bereich von Heldenhafte Reisen.`,
       character,
       topbarCharacter: isOwner ? character : getPreferredMenuCharacterForUser(req),
+      larpNavCharacter: ownLarpCharacter || character,
       isOwner,
       memberSinceLabel: getCharacterCreatedAtLabel(character),
       publicBirthdayRows: publicBirthdayDisplay.rows,
