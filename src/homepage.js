@@ -53,6 +53,10 @@ function createHomePageService(options = {}) {
     typeof options.getOnlineUserIdsForServers === "function"
       ? options.getOnlineUserIdsForServers
       : () => new Set();
+  const getOnlineUserIdsForPreferredCharacterServer =
+    typeof options.getOnlineUserIdsForPreferredCharacterServer === "function"
+      ? options.getOnlineUserIdsForPreferredCharacterServer
+      : () => new Set();
   const getOnlineStaffStats =
     typeof options.getOnlineStaffStats === "function"
       ? options.getOnlineStaffStats
@@ -424,6 +428,14 @@ function createHomePageService(options = {}) {
       hiddenUserIds instanceof Set
         ? characters.filter((character) => !hiddenUserIds.has(Number(character.user_id)))
         : characters;
+    const larpCharacters = visibleCharacters.filter(
+      (character) => normalizeCharacterServerId(character.server_id) === larpServerId
+    );
+    const larpUserIds = new Set(
+      larpCharacters
+        .map((character) => Number(character.user_id))
+        .filter((userId) => Number.isInteger(userId) && userId > 0)
+    );
 
     return {
       characterCount: visibleCharacters.length,
@@ -433,9 +445,9 @@ function createHomePageService(options = {}) {
       erpCharacterCount: visibleCharacters.filter(
         (character) => normalizeCharacterServerId(character.server_id) === "erp"
       ).length,
-      larpCharacterCount: visibleCharacters.filter(
-        (character) => normalizeCharacterServerId(character.server_id) === larpServerId
-      ).length
+      larpCharacterCount: larpCharacters.length,
+      larpUserCount: larpUserIds.size,
+      larpUserIds
     };
   }
 
@@ -494,6 +506,9 @@ function createHomePageService(options = {}) {
     const staffStats = getOnlineStaffStats(hiddenHomeStatsUserIds);
     const freeRpCharacterCount = visibleCharacterStats.freeRpCharacterCount;
     const erpCharacterCount = visibleCharacterStats.erpCharacterCount;
+    const larpOnlineCount = Array.from(
+      getOnlineUserIdsForPreferredCharacterServer(larpServerId) || []
+    ).filter((userId) => visibleCharacterStats.larpUserIds.has(Number(userId))).length;
 
     return {
       accountCount: getVisibleAccountCountForHomeStats(visibleHomeStatsUsers),
@@ -501,14 +516,14 @@ function createHomePageService(options = {}) {
       rpServerCount: freeRpCharacterCount + erpCharacterCount,
       freeRpCharacterCount,
       erpCharacterCount,
-      larpServerCount: visibleCharacterStats.larpCharacterCount,
+      larpServerCount: visibleCharacterStats.larpUserCount,
       freeRpOnlineCount: getVisibleOnlineUserCountForServers("free-rp", hiddenHomeStatsUserIds),
       erpOnlineCount: getVisibleOnlineUserCountForServers("erp", hiddenHomeStatsUserIds),
       rpOnlineCount: getVisibleOnlineUserCountForServers(
         ["free-rp", "erp"],
         hiddenHomeStatsUserIds
       ),
-      larpOnlineCount: 0,
+      larpOnlineCount,
       discordGuildName: discordHomeStats.guildName,
       discordInviteUrl: discordHomeStats.inviteUrl,
       discordMemberCount: discordHomeStats.memberCount,

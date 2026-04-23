@@ -818,6 +818,7 @@ function collectActiveSessionUserIds(options = {}) {
 
     const uniqueUserIds = new Set();
     const latestSessionLocationsByUserId = new Map();
+    const preferredCharacterServerIdsByUserIdMap = new Map();
     let deletedSessionCount = 0;
     for (const row of rows) {
       try {
@@ -832,6 +833,17 @@ function collectActiveSessionUserIds(options = {}) {
         const userId = Number(parsed?.user?.id);
         if (Number.isInteger(userId) && userId > 0) {
           uniqueUserIds.add(userId);
+          const preferredCharacterServerId = getStoredCharacterServerId(
+            parsed?.preferred_character_server_id
+          );
+          if (preferredCharacterServerId) {
+            let preferredServerIds = preferredCharacterServerIdsByUserIdMap.get(userId);
+            if (!(preferredServerIds instanceof Set)) {
+              preferredServerIds = new Set();
+              preferredCharacterServerIdsByUserIdMap.set(userId, preferredServerIds);
+            }
+            preferredServerIds.add(preferredCharacterServerId);
+          }
           const sessionPagePath = normalizeSessionTrackedPagePath(parsed?.last_page_path);
           const sessionPageTitle = normalizeSessionTrackedPageTitle(parsed?.last_page_title);
           const sessionPageSeenAt = Number(parsed?.last_page_seen_at || 0);
@@ -865,6 +877,7 @@ function collectActiveSessionUserIds(options = {}) {
     if (!candidateUserIds.length) {
       return {
         activeUserIds: [],
+        preferredCharacterServerIdsByUserId: {},
         deletedSessionCount
       };
     }
@@ -877,21 +890,29 @@ function collectActiveSessionUserIds(options = {}) {
       .map((row) => Number(row.id))
       .filter((id) => Number.isInteger(id) && id > 0);
     const sessionLocationsByUserId = {};
+    const preferredCharacterServerIdsByUserId = {};
     existingUserIds.forEach((userId) => {
       const sessionLocation = latestSessionLocationsByUserId.get(userId);
       if (sessionLocation) {
         sessionLocationsByUserId[userId] = sessionLocation;
       }
+
+      const preferredServerIds = preferredCharacterServerIdsByUserIdMap.get(userId);
+      if (preferredServerIds instanceof Set && preferredServerIds.size > 0) {
+        preferredCharacterServerIdsByUserId[userId] = Array.from(preferredServerIds);
+      }
     });
 
     return {
       activeUserIds: existingUserIds,
+      preferredCharacterServerIdsByUserId,
       sessionLocationsByUserId,
       deletedSessionCount
     };
   } catch (error) {
     return {
       activeUserIds: [],
+      preferredCharacterServerIdsByUserId: {},
       sessionLocationsByUserId: {},
       deletedSessionCount: 0
     };
@@ -927,6 +948,55 @@ function getConnectedSocketUserIds() {
   }
 
   return Array.from(connectedUserIds);
+}
+
+function getOnlineUserIdsForPreferredCharacterServer(serverId) {
+  const normalizedServerId = getStoredCharacterServerId(serverId);
+  if (!normalizedServerId) {
+    return new Set();
+  }
+
+  const sessionSnapshot = collectActiveSessionUserIds({ deleteInactive: true });
+  const preferredCharacterServerIdsByUserId =
+    sessionSnapshot.preferredCharacterServerIdsByUserId || {};
+  const onlineUserIds = new Set();
+
+  (Array.isArray(sessionSnapshot.activeUserIds) ? sessionSnapshot.activeUserIds : []).forEach(
+    (userId) => {
+      const parsedUserId = Number(userId);
+      if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+        return;
+      }
+
+      const preferredServerIds = Array.isArray(preferredCharacterServerIdsByUserId[parsedUserId])
+        ? preferredCharacterServerIdsByUserId[parsedUserId]
+        : [];
+      if (preferredServerIds.includes(normalizedServerId)) {
+        onlineUserIds.add(parsedUserId);
+      }
+    }
+  );
+
+  const sockets = io?.of("/")?.sockets;
+  if (!sockets || typeof sockets.values !== "function") {
+    return onlineUserIds;
+  }
+
+  for (const socket of sockets.values()) {
+    const userId = Number(socket?.data?.user?.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      continue;
+    }
+
+    if (
+      getStoredCharacterServerId(socket?.request?.session?.preferred_character_server_id) ===
+      normalizedServerId
+    ) {
+      onlineUserIds.add(userId);
+    }
+  }
+
+  return onlineUserIds;
 }
 
 function getOnlineAccountUserIds() {
@@ -12528,6 +12598,7 @@ const homePageService = createHomePageService({
   normalizeCharacterServerId,
   larpServerId: LARP_SERVER_ID,
   getOnlineUserIdsForServers,
+  getOnlineUserIdsForPreferredCharacterServer,
   getOnlineStaffStats,
   getLoggedInUsersCount,
   broadcastSiteStatsUpdate(payload) {
