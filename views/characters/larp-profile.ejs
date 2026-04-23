@@ -69,6 +69,7 @@
   const larpCoverUploadHref = `/characters/${character.id}/larp-profile/cover-upload`;
   const larpAvatarUploadHref = `/characters/${character.id}/avatar-upload`;
   const aboutViewHref = `/characters/${character.id}#larp-profile-about`;
+  const showProfileAboutPreview = !(isOwner && isEditingProfileAbout);
 %>
 
 <style>
@@ -1271,7 +1272,7 @@
         <p class="muted">Noch keine Beschreibung hinterlegt.</p>
       <% } %>
 
-      <% if (infoRows.length) { %>
+      <% if (showProfileAboutPreview && infoRows.length) { %>
         <div class="larp-profile-detail-grid">
           <% infoRows.forEach((entry) => { %>
             <div class="larp-profile-detail-item">
@@ -1282,7 +1283,7 @@
         </div>
       <% } %>
 
-      <% if (personalInfoRows.length || contactRows.length || larpSectionRows.length) { %>
+      <% if (showProfileAboutPreview && (personalInfoRows.length || contactRows.length || larpSectionRows.length)) { %>
         <div class="larp-profile-section-stack">
           <% if (personalInfoRows.length) { %>
             <section class="larp-profile-section-block" aria-labelledby="larp-profile-personal-view-heading">
