@@ -9,6 +9,7 @@ const DISCORD_HOME_INVITE_API_URL =
   `https://discord.com/api/v9/invites/${DISCORD_HOME_INVITE_CODE}?with_counts=true&with_expiration=true`;
 const DISCORD_HOME_STATS_CACHE_TTL_MS = 1000 * 60 * 2;
 const DISCORD_HOME_FETCH_TIMEOUT_MS = 5000;
+const DISCORD_HOME_EXCLUDED_BOT_COUNT = 1;
 const FALLBACK_DISCORD_HOME_STATS = Object.freeze({
   guildName: "Heldenhafte Reisen Discord",
   inviteUrl: DISCORD_HOME_INVITE_URL,
@@ -190,6 +191,15 @@ function createHomePageService(options = {}) {
     return `https://cdn.discordapp.com/icons/${encodeURIComponent(normalizedGuildId)}/${encodeURIComponent(normalizedIconHash)}.png?size=128`;
   }
 
+  function normalizeDiscordHomeMemberCount(value) {
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue)) {
+      return null;
+    }
+
+    return Math.max(0, parsedValue - DISCORD_HOME_EXCLUDED_BOT_COUNT);
+  }
+
   function normalizeDiscordHomeStats(payload) {
     const guild = payload && typeof payload === "object" ? payload.guild || {} : {};
     const profile = payload && typeof payload === "object" ? payload.profile || {} : {};
@@ -203,7 +213,7 @@ function createHomePageService(options = {}) {
       profile.member_count ?? payload?.approximate_member_count ?? payload?.member_count;
     const onlineCountRaw =
       profile.online_count ?? payload?.approximate_presence_count ?? payload?.presence_count;
-    const memberCount = Number.isFinite(Number(memberCountRaw)) ? Number(memberCountRaw) : null;
+    const memberCount = normalizeDiscordHomeMemberCount(memberCountRaw);
     const onlineCount = Number.isFinite(Number(onlineCountRaw)) ? Number(onlineCountRaw) : null;
 
     return {
