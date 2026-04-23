@@ -1,0 +1,40 @@
+<%- include("../partials/start") %>
+
+<section class="seo-topic-page">
+  <section class="panel seo-topic-hero">
+    <p class="seo-topic-kicker"><%= seoTopic.kicker %></p>
+    <h1><%= seoTopic.heading %></h1>
+    <p class="seo-topic-lead"><%= seoTopic.lead %></p>
+    <div class="seo-topic-actions">
+      <a class="btn" href="/register">Kostenlos registrieren</a>
+      <a class="btn btn-secondary" href="/login">Einloggen</a>
+    </div>
+  </section>
+
+  <section class="seo-topic-grid" aria-label="Themenüberblick">
+    <% seoTopic.sections.forEach((section) => { %>
+      <article class="panel seo-topic-card">
+        <h2><%= section.title %></h2>
+        <p><%= section.body %></p>
+      </article>
+    <% }) %>
+  </section>
+
+  <section class="panel seo-topic-section">
+    <h2><%= seoTopic.detailTitle %></h2>
+    <% seoTopic.details.forEach((detail) => { %>
+      <p><%= detail %></p>
+    <% }) %>
+  </section>
+
+  <section class="panel seo-topic-section">
+    <h2>Weitere Themen</h2>
+    <nav class="seo-topic-links" aria-label="Weitere Rollenspiel-Themen">
+      <% seoTopic.relatedLinks.forEach((link) => { %>
+        <a href="<%= link.href %>"><%= link.label %></a>
+      <% }) %>
+    </nav>
+  </section>
+</section>
+
+<%- include("../partials/end") %>

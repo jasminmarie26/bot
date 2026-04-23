@@ -633,7 +633,7 @@ function createHomePageService(options = {}) {
     }
 
     return {
-      title: homeContent.hero_title || DEFAULT_HOME_HERO_TITLE,
+      title: "Rollenspiel-Community für LARP und Pen & Paper",
       metaDescription: defaultSeoDescription,
       stats: getLoginStats(),
       homeContent,

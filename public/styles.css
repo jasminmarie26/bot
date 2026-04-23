@@ -3551,6 +3551,121 @@ a:hover {
   line-height: 1.55;
 }
 
+.home-topic-links,
+.seo-topic-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.home-topic-links {
+  margin-top: 0.75rem;
+}
+
+.home-topic-links a,
+.seo-topic-links a {
+  border: 1px solid color-mix(in srgb, var(--panel-border, rgba(255, 255, 255, 0.22)) 72%, var(--accent) 28%);
+  border-radius: 999px;
+  padding: 0.42rem 0.72rem;
+  background: color-mix(in srgb, var(--panel-bg) 82%, transparent);
+  color: var(--readable-link);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-decoration: none;
+}
+
+.home-topic-links a:hover,
+.home-topic-links a:focus-visible,
+.seo-topic-links a:hover,
+.seo-topic-links a:focus-visible {
+  border-color: var(--accent);
+  color: var(--readable-link-hover);
+  text-decoration: underline;
+}
+
+.seo-topic-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.seo-topic-hero {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.seo-topic-kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.seo-topic-hero h1 {
+  margin: 0;
+  max-width: 900px;
+  font-family: var(--font-title);
+  font-size: 2.2rem;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.seo-topic-lead {
+  max-width: 860px;
+  margin: 0;
+  color: var(--readable-muted);
+  font-size: 1.02rem;
+  line-height: 1.62;
+}
+
+.seo-topic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.seo-topic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.seo-topic-card h2,
+.seo-topic-section h2 {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-title);
+  font-size: 1.16rem;
+  letter-spacing: 0;
+}
+
+.seo-topic-card p,
+.seo-topic-section p {
+  margin: 0;
+  color: var(--readable-muted);
+  line-height: 1.6;
+}
+
+.seo-topic-section {
+  text-align: center;
+}
+
+.seo-topic-section p {
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.seo-topic-section p + p {
+  margin-top: 0.65rem;
+}
+
 .home-main-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(185px, 200px);
@@ -13702,6 +13817,14 @@ html.software-renderer .guestbook-preview-shell::before {
 
   .home-main-top {
     grid-template-columns: 1fr;
+  }
+
+  .seo-topic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seo-topic-hero h1 {
+    font-size: 1.65rem;
   }
 
   .home-main-discord {

@@ -686,7 +686,7 @@ const FESTPLAY_INACTIVITY_SQL_OFFSET = `-${FESTPLAY_INACTIVITY_MONTHS} months`;
 const FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS = 1000 * 60 * 60;
 let inactiveFestplayCleanupRunning = false;
 const DEFAULT_SEO_DESCRIPTION =
-  "Heldenhafte Reisen ist eine kostenlose deutschsprachige Rollenspiel-Community mit getrennten Bereichen für Free RP, ERP und LARP, Charakterprofilen, Gästebüchern und Community-Austausch.";
+  "Heldenhafte Reisen ist eine kostenlose deutschsprachige Community für Rollenspiele, Free RP, LARP und Pen & Paper inspirierte Abenteuer mit Charakterprofilen, Gästebüchern, Chat und Community-Austausch.";
 const DEFAULT_SEO_IMAGE_PATH = "/apple-touch-icon-hr.png";
 const SEO_DESCRIPTION_BY_PATH = {
   "/": DEFAULT_SEO_DESCRIPTION,
@@ -700,12 +700,22 @@ const SEO_DESCRIPTION_BY_PATH = {
     "Impressum von Heldenhafte Reisen mit den rechtlichen Pflichtangaben und den öffentlichen Kontaktinformationen der Plattform.",
   "/kontakt":
     "Kontakt & Ticket von Heldenhafte Reisen: Sende Fragen, Hinweise oder technische Anliegen direkt über das Formular.",
+  "/larp":
+    "LARP bei Heldenhafte Reisen: eine deutschsprachige Community für LARP-Gruppen, Charakterprofile, Gilden, Termine und gemeinsame Abenteuer.",
   "/live-updates":
     "In den Live Updates von Heldenhafte Reisen siehst du aktuelle Neuerungen, Hinweise und Änderungen der Plattform.",
   "/partner":
     "Entdecke die Partner von Heldenhafte Reisen und vernetze dich mit weiteren Projekten rund um Rollenspiel und Community.",
+  "/pen-and-paper":
+    "Pen & Paper inspirierte Abenteuer bei Heldenhafte Reisen: Charaktere, Fantasy-RP, gemeinsame Geschichten und deutschsprachiger Community-Austausch.",
+  "/roleplay":
+    "Roleplay und RP auf Deutsch: Heldenhafte Reisen verbindet Charakterprofile, Rollenspiel-Chat, Gästebücher und gemeinsame Fantasy-Geschichten.",
+  "/rollenspiel":
+    "Rollenspiel-Community auf Deutsch: Heldenhafte Reisen bietet Free RP, LARP, Charakterprofile, Gästebücher und gemeinsame Abenteuer.",
+  "/rp":
+    "RP-Community für deutschsprachiges Online-Rollenspiel mit Charakterprofilen, Chat, Gästebüchern, Free RP und Fantasy-Abenteuern.",
   "/register":
-    "Registriere dich kostenlos bei Heldenhafte Reisen und starte mit deinem Account in die Rollenspiel-Community für Free RP, ERP und LARP."
+    "Registriere dich kostenlos bei Heldenhafte Reisen und starte mit deinem Account in die Rollenspiel-Community für Free RP, LARP und Pen & Paper inspirierte Abenteuer."
 };
 const SEO_SITEMAP_PATHS = [
   "/",
@@ -714,8 +724,13 @@ const SEO_SITEMAP_PATHS = [
   "/help",
   "/impressum",
   "/kontakt",
+  "/larp",
   "/live-updates",
   "/partner",
+  "/pen-and-paper",
+  "/roleplay",
+  "/rollenspiel",
+  "/rp",
   "/register"
 ];
 const NOINDEX_PATH_PREFIXES = [
@@ -13051,6 +13066,186 @@ app.get("/partner", (req, res) => {
   return res.render("public/partner", {
     title: "Unsere Partner",
     pageClass: "page-legal"
+  });
+});
+
+const SEO_TOPIC_LINKS = [
+  { href: "/rollenspiel", label: "Rollenspiel" },
+  { href: "/larp", label: "LARP" },
+  { href: "/roleplay", label: "Roleplay" },
+  { href: "/rp", label: "RP" },
+  { href: "/pen-and-paper", label: "Pen & Paper" }
+];
+
+const SEO_TOPIC_PAGES = {
+  "/larp": {
+    title: "LARP Community",
+    metaDescription:
+      "LARP bei Heldenhafte Reisen: eine deutschsprachige Community für LARP-Gruppen, Charakterprofile, Gilden, Termine und gemeinsame Abenteuer.",
+    kicker: "LARP",
+    heading: "LARP Community für Gruppen, Charaktere und Abenteuer",
+    lead:
+      "Heldenhafte Reisen bietet einen eigenen Bereich für LARP-Spielerinnen und LARP-Spieler, die Profile, Gilden, Termine und gemeinsame Ideen an einem Ort sammeln möchten.",
+    sections: [
+      {
+        title: "LARP-Profile",
+        body:
+          "Erstelle ein öffentliches LARP-Profil mit Name, Hintergrund, Kontakten und Verweisen auf Figuren, Lager oder Gruppen."
+      },
+      {
+        title: "Gilden und Gruppen",
+        body:
+          "Der LARP-Bereich ist für Gilden, Lagergruppen und feste Zusammenschlüsse gedacht, die sich online besser organisieren möchten."
+      },
+      {
+        title: "Termine und Austausch",
+        body:
+          "Gemeinsame Abenteuer, Termine, Ideen und Kontakte bekommen eine feste Anlaufstelle außerhalb schneller Chatverläufe."
+      }
+    ],
+    detailTitle: "Warum LARP auf Heldenhafte Reisen?",
+    details: [
+      "LARP lebt von Menschen, Figuren, Gruppen und wiederkehrenden Geschichten. Die Plattform verbindet diesen Austausch mit Profilen, Gästebüchern und Community-Funktionen.",
+      "Wer nach LARP, LARP Community oder LARP Gruppen sucht, soll hier eine deutschsprachige Anlaufstelle für Vernetzung und Vorbereitung finden."
+    ]
+  },
+  "/pen-and-paper": {
+    title: "Pen & Paper Abenteuer",
+    metaDescription:
+      "Pen & Paper inspirierte Abenteuer bei Heldenhafte Reisen: Charaktere, Fantasy-RP, gemeinsame Geschichten und deutschsprachiger Community-Austausch.",
+    kicker: "Pen & Paper",
+    heading: "Pen & Paper inspirierte Geschichten und Charaktere",
+    lead:
+      "Heldenhafte Reisen ist kein klassisches Regelwerk-Tool, aber ein guter Ort für Charaktere, Fantasy-RP und Abenteuerideen, die aus Pen & Paper Runden entstehen.",
+    sections: [
+      {
+        title: "Charaktere festhalten",
+        body:
+          "Profile, Hintergründe, Beziehungen und Notizen helfen dabei, Figuren aus Pen-and-Paper inspirierten Geschichten weiterzuspielen."
+      },
+      {
+        title: "Gemeinsame Szenen",
+        body:
+          "Im RP-Chat können Abenteuer, Begegnungen und ruhige Zwischenspiele fortgeführt werden, wenn die Runde gerade nicht am Tisch sitzt."
+      },
+      {
+        title: "Fantasy-RP",
+        body:
+          "Fantasy, Magie, Tavernen, Reisen und eigene Welten passen gut zu einer Community, die Geschichten und Charakterspiel in den Mittelpunkt stellt."
+      }
+    ],
+    detailTitle: "Für Pen-and-Paper Fans",
+    details: [
+      "Viele Pen-and-Paper Runden leben auch zwischen den Spielabenden weiter. Heldenhafte Reisen gibt diesen Figuren und Ideen einen Platz für Austausch, Profile und kleine Szenen.",
+      "Wer nach Pen and Paper, Pen & Paper Rollenspiel oder Fantasy RP sucht, findet hier eine deutschsprachige Plattform für erzählerisches Rollenspiel."
+    ]
+  },
+  "/roleplay": {
+    title: "Roleplay Community",
+    metaDescription:
+      "Roleplay und RP auf Deutsch: Heldenhafte Reisen verbindet Charakterprofile, Rollenspiel-Chat, Gästebücher und gemeinsame Fantasy-Geschichten.",
+    kicker: "Roleplay",
+    heading: "Roleplay Community für deutschsprachiges RP",
+    lead:
+      "Roleplay, RP und Rollenspiel gehören auf Heldenhafte Reisen zusammen: Figuren erstellen, Szenen schreiben, Kontakte finden und Geschichten gemeinsam entwickeln.",
+    sections: [
+      {
+        title: "Charakterbasiertes Roleplay",
+        body:
+          "Die Plattform dreht sich um Charaktere mit Profilen, Beschreibungen, Gästebüchern und sichtbarer Identität im Chat."
+      },
+      {
+        title: "RP-Chat",
+        body:
+          "Räume, Flüstern, Würfelbefehle und gemeinsame Treffpunkte unterstützen spontane Szenen ebenso wie geplante Geschichten."
+      },
+      {
+        title: "Community",
+        body:
+          "Roleplay funktioniert am besten mit Menschen, die zuverlässig erreichbar sind und Figuren langfristig weiterentwickeln möchten."
+      }
+    ],
+    detailTitle: "Deutschsprachiges Roleplay",
+    details: [
+      "Der englische Begriff Roleplay wird oft für Online-RP, Schreibrollenspiel und Charakterspiel genutzt. Heldenhafte Reisen verbindet diese Suchrichtung mit einer deutschsprachigen Community.",
+      "Wer nach Roleplay, RP Chat oder Roleplay Community sucht, soll eine Plattform finden, die nicht nur ein Login ist, sondern echte öffentliche Themen und klare Orientierung bietet."
+    ]
+  },
+  "/rollenspiel": {
+    title: "Rollenspiel Community",
+    metaDescription:
+      "Rollenspiel-Community auf Deutsch: Heldenhafte Reisen bietet Free RP, LARP, Charakterprofile, Gästebücher und gemeinsame Abenteuer.",
+    kicker: "Rollenspiel",
+    heading: "Rollenspiel-Community für gemeinsame Geschichten",
+    lead:
+      "Heldenhafte Reisen ist eine kostenlose deutschsprachige Rollenspiel-Community für Free RP, LARP, Fantasy-RP und charakterbasierte Abenteuer.",
+    sections: [
+      {
+        title: "Free RP",
+        body:
+          "Freies Rollenspiel gibt dir Raum für eigene Figuren, offene Szenen und Geschichten ohne enges Regelkorsett."
+      },
+      {
+        title: "Charakterprofile",
+        body:
+          "Jede Figur kann mit Profil, Beschreibung, Bild, Gästebuch und eigenen Farben gestaltet werden."
+      },
+      {
+        title: "Rollenspiel mit Anschluss",
+        body:
+          "Community, Chat, Mitglieder und Gästebücher helfen dabei, andere Spielerinnen und Spieler zu finden."
+      }
+    ],
+    detailTitle: "Was du hier findest",
+    details: [
+      "Die Seite verbindet klassisches Online-Rollenspiel mit moderner Community-Struktur. Statt nur einen Chatraum zu öffnen, kannst du Figuren pflegen und Geschichten längerfristig weiterführen.",
+      "Suchbegriffe wie Rollenspiel, Rollenspiel Community, Fantasy RP und Online-Rollenspiel passen deshalb direkt zu den öffentlichen Inhalten von Heldenhafte Reisen."
+    ]
+  },
+  "/rp": {
+    title: "RP Chat und Community",
+    metaDescription:
+      "RP-Community für deutschsprachiges Online-Rollenspiel mit Charakterprofilen, Chat, Gästebüchern, Free RP und Fantasy-Abenteuern.",
+    kicker: "RP",
+    heading: "RP Chat für Charaktere, Szenen und Community",
+    lead:
+      "RP steht hier für gemeinsames Schreiben, Charakterspiel und lebendige Szenen. Heldenhafte Reisen verbindet RP-Chat mit Profilen, Räumen und Gästebüchern.",
+    sections: [
+      {
+        title: "RP-Räume",
+        body:
+          "Erstelle Räume, wechsle Szenen, lade andere ein und halte gemeinsame Spielorte übersichtlich zusammen."
+      },
+      {
+        title: "Charakterspiel",
+        body:
+          "Im RP trittst du mit deiner Figur auf, nicht nur mit einem Accountnamen. Profile und Gästebücher machen Figuren wiedererkennbar."
+      },
+      {
+        title: "Schneller Einstieg",
+        body:
+          "Registrieren, Charakter anlegen, Bereich wählen und mit anderen in Free RP oder passenden Projekten ins Spiel kommen."
+      }
+    ],
+    detailTitle: "Für wen ist der RP-Bereich gedacht?",
+    details: [
+      "Der RP-Bereich ist für Menschen gedacht, die online schreiben, Szenen ausspielen, Figuren entwickeln und langfristige Kontakte in einer Rollenspiel-Community suchen.",
+      "Wer nach RP, RP Chat, Free RP oder RP Community sucht, findet hier einen öffentlichen Einstieg in die Plattform."
+    ]
+  }
+};
+
+Object.entries(SEO_TOPIC_PAGES).forEach(([routePath, seoTopic]) => {
+  app.get(routePath, (req, res) => {
+    return res.render("public/seo-topic", {
+      title: seoTopic.title,
+      metaDescription: seoTopic.metaDescription,
+      seoTopic: {
+        ...seoTopic,
+        relatedLinks: SEO_TOPIC_LINKS.filter((link) => link.href !== routePath)
+      },
+      pageClass: "page-seo-topic"
+    });
   });
 });
 
