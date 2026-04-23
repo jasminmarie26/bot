@@ -2762,6 +2762,69 @@ a:hover {
   font-size: 0.84rem;
 }
 
+.topbar-user-menu-panel.has-profile-settings-menu {
+  width: min(27rem, calc(100vw - 1rem));
+}
+
+.topbar-profile-settings-menu {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 74%, transparent 26%);
+  background: color-mix(in srgb, var(--field-bg) 48%, transparent);
+}
+
+.topbar-profile-settings-row {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.78rem 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 68%, transparent 32%);
+}
+
+.topbar-profile-settings-row:first-child {
+  border-top: 0;
+}
+
+.topbar-profile-settings-icon {
+  display: inline-flex;
+  justify-content: center;
+  padding-top: 0.1rem;
+  color: color-mix(in srgb, var(--text) 74%, var(--muted) 26%);
+}
+
+.topbar-profile-settings-icon svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: currentColor;
+}
+
+.topbar-profile-settings-title {
+  margin: 0 0 0.2rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.topbar-profile-settings-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.08rem 0.32rem;
+  color: color-mix(in srgb, #3fa7e2 84%, var(--text) 16%);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.topbar-profile-settings-link {
+  color: inherit;
+}
+
+.topbar-profile-settings-separator {
+  color: color-mix(in srgb, var(--muted) 74%, transparent 26%);
+}
+
 .topbar-user-menu-form,
 .rp-user-menu-form {
   display: block;
@@ -3463,6 +3526,29 @@ a:hover {
   min-width: 0;
   display: grid;
   gap: 0.9rem;
+}
+
+.home-search-summary {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  text-align: center;
+  color: var(--readable-text);
+}
+
+.home-search-summary h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.home-search-summary p {
+  max-width: 860px;
+  margin: 0 auto;
+  color: var(--readable-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .home-main-top {
@@ -14176,6 +14262,10 @@ body.page-home-screen .home-hero-actions {
     width: auto;
     max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.75rem);
     transform-origin: top center;
+  }
+
+  .topbar-user-menu-panel.has-profile-settings-menu {
+    width: auto;
   }
 
   .container {

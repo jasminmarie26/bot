@@ -373,71 +373,6 @@
     align-content: start;
   }
 
-  .larp-profile-settings-card {
-    display: block;
-    grid-column: 2;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .larp-profile-settings-row {
-    display: grid;
-    grid-template-columns: 2.2rem minmax(0, 1fr);
-    gap: 0.85rem;
-    padding: 0.85rem 1rem;
-    border-top: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent 28%);
-  }
-
-  .larp-profile-settings-row:first-child {
-    border-top: 0;
-  }
-
-  .larp-profile-settings-icon {
-    display: inline-flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 0.1rem;
-    color: color-mix(in srgb, var(--text) 70%, var(--muted) 30%);
-  }
-
-  .larp-profile-settings-icon svg {
-    width: 1.45rem;
-    height: 1.45rem;
-    fill: currentColor;
-  }
-
-  .larp-profile-settings-title {
-    margin: 0 0 0.2rem;
-    color: var(--text);
-    font-size: 1rem;
-    font-weight: 650;
-    line-height: 1.25;
-  }
-
-  .larp-profile-settings-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.1rem 0.35rem;
-    color: color-mix(in srgb, #3fa7e2 82%, var(--text) 18%);
-    font-size: 0.9rem;
-    line-height: 1.35;
-  }
-
-  .larp-profile-settings-link {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .larp-profile-settings-link:hover,
-  .larp-profile-settings-link:focus-visible {
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-  }
-
-  .larp-profile-settings-separator {
-    color: color-mix(in srgb, var(--muted) 72%, transparent 28%);
-  }
-
   .larp-profile-tab-row {
     display: flex;
     flex-wrap: wrap;
@@ -986,9 +921,6 @@
       grid-template-columns: 1fr;
     }
 
-    .larp-profile-settings-card {
-      grid-column: auto;
-    }
   }
 
   @media (max-width: 700px) {
@@ -1427,79 +1359,6 @@
       </div>
     </section>
 
-    <% if (isOwner) { %>
-      <section class="panel larp-profile-settings-card" aria-label="Kontobereiche">
-        <div class="larp-profile-settings-row">
-          <span class="larp-profile-settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M12 12c2.45 0 4.4-1.95 4.4-4.4S14.45 3.2 12 3.2 7.6 5.15 7.6 7.6 9.55 12 12 12Zm0 2.1c-3.55 0-7 1.8-7 4.1v1.6h14v-1.6c0-2.3-3.45-4.1-7-4.1Z"></path>
-            </svg>
-          </span>
-          <div>
-            <p class="larp-profile-settings-title">Benutzerkonto</p>
-            <div class="larp-profile-settings-links">
-              <span class="larp-profile-settings-link">Verwaltung</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Sicherheit</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Avatar</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Signatur</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="larp-profile-settings-row">
-          <span class="larp-profile-settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="m20.2 13.1.05-1.1-.05-1.1-2.35-.55a6.4 6.4 0 0 0-.75-1.8l1.25-2.05a9.73 9.73 0 0 0-1.55-1.55L14.75 6.2a6.4 6.4 0 0 0-1.8-.75L12.4 3.1 11.3 3l-1.1.1-.55 2.35c-.65.18-1.25.43-1.8.75L5.8 4.95A9.73 9.73 0 0 0 4.25 6.5L5.5 8.55a6.4 6.4 0 0 0-.75 1.8l-2.35.55L2.35 12l.05 1.1 2.35.55c.18.65.43 1.25.75 1.8L4.25 17.5a9.73 9.73 0 0 0 1.55 1.55l2.05-1.25c.55.32 1.15.57 1.8.75l.55 2.35 1.1.1 1.1-.1.55-2.35a6.4 6.4 0 0 0 1.8-.75l2.05 1.25a9.73 9.73 0 0 0 1.55-1.55l-1.25-2.05c.32-.55.57-1.15.75-1.8l2.35-.55ZM11.3 15.4a3.4 3.4 0 1 1 0-6.8 3.4 3.4 0 0 1 0 6.8Z"></path>
-            </svg>
-          </span>
-          <div>
-            <p class="larp-profile-settings-title">Einstellungen</p>
-            <div class="larp-profile-settings-links">
-              <span class="larp-profile-settings-link">Allgemein</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Privatsph&auml;re</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Benachrichtigungen</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="larp-profile-settings-row">
-          <span class="larp-profile-settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M12 21.2c5.05 0 9.2-4.15 9.2-9.2S17.05 2.8 12 2.8 2.8 6.95 2.8 12s4.15 9.2 9.2 9.2Zm0-2.05c-.55-.8-1.05-1.9-1.35-3.15h2.7c-.3 1.25-.8 2.35-1.35 3.15ZM10.25 14a15.4 15.4 0 0 1 0-4h3.5a15.4 15.4 0 0 1 0 4h-3.5Zm-5.3-2c0-.68.12-1.35.35-1.95h2.9a17.62 17.62 0 0 0 0 3.9H5.3A6.95 6.95 0 0 1 4.95 12Zm14.1 0c0 .68-.12 1.35-.35 1.95h-2.9a17.62 17.62 0 0 0 0-3.9h2.9c.23.6.35 1.27.35 1.95ZM12 4.85c.55.8 1.05 1.9 1.35 3.15h-2.7c.3-1.25.8-2.35 1.35-3.15Zm4 11.15h1.65a7.25 7.25 0 0 1-2.65 2.35c.38-.7.72-1.5 1-2.35Zm1.65-8H16a12.46 12.46 0 0 0-1-2.35A7.25 7.25 0 0 1 17.65 8ZM8 8H6.35A7.25 7.25 0 0 1 9 5.65c-.38.7-.72 1.5-1 2.35Zm-1.65 8H8c.28.85.62 1.65 1 2.35A7.25 7.25 0 0 1 6.35 16Z"></path>
-            </svg>
-          </span>
-          <div>
-            <p class="larp-profile-settings-title">Community</p>
-            <div class="larp-profile-settings-links">
-              <span class="larp-profile-settings-link">Benachrichtigungen</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Benutzer, denen ich folge</span>
-              <span class="larp-profile-settings-separator" aria-hidden="true">&middot;</span>
-              <span class="larp-profile-settings-link">Blockierte Benutzer</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="larp-profile-settings-row">
-          <span class="larp-profile-settings-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M8.2 11.3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.6 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.2 13.1c-2.45 0-4.8 1.2-4.8 2.95v2.15H13v-2.15c0-1.75-2.35-2.95-4.8-2.95Zm7.6 0c-.5 0-.98.05-1.45.16.82.7 1.35 1.62 1.35 2.79v2.15h4.9v-2.15c0-1.75-2.35-2.95-4.8-2.95Z"></path>
-            </svg>
-          </span>
-          <div>
-            <p class="larp-profile-settings-title">Benutzergruppen</p>
-            <div class="larp-profile-settings-links">
-              <span class="larp-profile-settings-link">Benutzergruppen</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    <% } %>
   </div>
 </section>
 
