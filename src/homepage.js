@@ -89,6 +89,7 @@ function createHomePageService(options = {}) {
   let cachedDiscordHomeStats = { ...FALLBACK_DISCORD_HOME_STATS };
   let cachedDiscordHomeStatsExpiresAt = 0;
   let discordHomeStatsRefreshPromise = null;
+  let cachedUsersTableColumns = null;
 
   function logHomePageError(scope, error, extra = {}) {
     try {
@@ -109,6 +110,33 @@ function createHomePageService(options = {}) {
 
   function renderPlainTextAsHtml(value) {
     return escapeHtml(value).replace(/\r?\n/g, "<br>");
+  }
+
+  function getUsersTableColumnSet() {
+    if (cachedUsersTableColumns instanceof Set) {
+      return cachedUsersTableColumns;
+    }
+
+    try {
+      const rows = db.prepare("PRAGMA table_info(users)").all();
+      cachedUsersTableColumns = new Set(rows.map((row) => String(row?.name || "").trim()));
+    } catch (_error) {
+      cachedUsersTableColumns = new Set();
+    }
+
+    return cachedUsersTableColumns;
+  }
+
+  function normalizeHomeModerationStatusLevel(value) {
+    const parsedValue = Number.parseInt(String(value || "").trim(), 10);
+    if (!Number.isInteger(parsedValue) || parsedValue < 1 || parsedValue > 4) {
+      return 1;
+    }
+    return parsedValue;
+  }
+
+  function isExcludedSiteMemberModerationStatus(value) {
+    return normalizeHomeModerationStatusLevel(value) === 4;
   }
 
   function buildFallbackLoginStats() {
@@ -287,11 +315,17 @@ function createHomePageService(options = {}) {
   }
 
   function getHomeStatsUsers() {
+    const userColumns = getUsersTableColumnSet();
+    const moderationStatusLevelExpr = userColumns.has("moderation_status_level")
+      ? "u.moderation_status_level"
+      : "1";
+
     return db
       .prepare(`
         SELECT u.id,
                u.username,
                u.is_admin,
+               ${moderationStatusLevelExpr} AS moderation_status_level,
                u.registration_ip,
                u.last_login_ip,
                COALESCE(admin_character.name, '') AS admin_character_name
@@ -328,17 +362,25 @@ function createHomePageService(options = {}) {
     });
 
     users.forEach((user) => {
+      const parsedUserId = Number(user?.id);
+      if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+        return;
+      }
+      if (isExcludedSiteMemberModerationStatus(user?.moderation_status_level)) {
+        hiddenUserIds.add(parsedUserId);
+        return;
+      }
       if (primaryAdminUser && Number(user?.id) === Number(primaryAdminUser.id)) {
         return;
       }
       if (Number(user?.is_admin) === 1) {
-        hiddenUserIds.add(Number(user.id));
+        hiddenUserIds.add(parsedUserId);
         return;
       }
 
       const trackedIp = getHomeStatsTrackedIp(user);
       if (trackedIp && adminIps.has(trackedIp)) {
-        hiddenUserIds.add(Number(user.id));
+        hiddenUserIds.add(parsedUserId);
       }
     });
 

@@ -16540,6 +16540,10 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
+  const userColumns = getUsersTableColumnSet();
+  const nonVioletMembersSql = userColumns.has("moderation_status_level")
+    ? "AND COALESCE(u.moderation_status_level, 1) <> 4"
+    : "";
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
   const connectedChatCharacterIds = new Set(getConnectedChatCharacterIds());
@@ -16576,9 +16580,12 @@ app.get("/members", requireAuth, (req, res) => {
               u.username AS owner_name
        FROM characters c
        JOIN users u ON u.id = c.user_id
-       WHERE c.is_public = 1
+       WHERE (
+             c.is_public = 1
           OR c.user_id = ?
           OR ? = 1
+       )
+         ${nonVioletMembersSql}
        ORDER BY lower(c.name) ASC, c.id ASC`
     )
     .all(currentUserId, isAdmin ? 1 : 0)
@@ -16625,7 +16632,8 @@ app.get("/members", requireAuth, (req, res) => {
        FROM users u
        LEFT JOIN characters admin_character ON admin_character.id = u.admin_character_id
        LEFT JOIN characters moderator_character ON moderator_character.id = u.moderator_character_id
-       WHERE u.is_admin = 1 OR u.is_moderator = 1
+       WHERE (u.is_admin = 1 OR u.is_moderator = 1)
+         ${nonVioletMembersSql}
        ORDER BY lower(u.username) ASC, u.id ASC`
     )
     .all();
