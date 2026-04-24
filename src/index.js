@@ -119,6 +119,42 @@ const GUESTBOOK_FONT_OPTIONS = [
   { id: "magie", label: "Magie Script" },
   { id: "vintage-fantasy", label: "Vintage Fantasy" }
 ];
+
+function normalizeGuestbookDiscoveryTagKey(rawValue) {
+  return String(rawValue || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const GUESTBOOK_DISCOVERY_TAG_OPTIONS = Object.freeze([
+  { id: "fantasy", label: "Fantasy" },
+  { id: "horror", label: "Horror" },
+  { id: "abenteuer", label: "Abenteuer" },
+  { id: "mystery", label: "Mystery" },
+  { id: "modern", label: "Modern" },
+  { id: "sci-fi", label: "Sci-Fi" },
+  { id: "romantik", label: "Romantik" },
+  { id: "duster", label: "Düster" },
+  { id: "fsk-18", label: "FSK 18" },
+  { id: "latex", label: "Latex" },
+  { id: "bdsm", label: "BDSM" },
+  { id: "gore", label: "Gore" }
+]);
+const GUESTBOOK_DISCOVERY_TAG_LABEL_BY_KEY = Object.freeze(
+  GUESTBOOK_DISCOVERY_TAG_OPTIONS.reduce((lookup, option) => {
+    const optionId = String(option?.id || "").trim().toLowerCase();
+    const optionLabel = String(option?.label || "").trim();
+    if (optionId && optionLabel) {
+      lookup[optionId] = optionLabel;
+      lookup[normalizeGuestbookDiscoveryTagKey(optionLabel)] = optionLabel;
+    }
+    return lookup;
+  }, {})
+);
 const GUESTBOOK_BBCODE_FONT_STYLES = Object.freeze({
   default: "font-family:var(--font-ui);",
   serif: "font-family:\"Cardo\", \"Times New Roman\", serif;",
@@ -10160,6 +10196,78 @@ function resolveGuestbookPageTextColor(rawColor, themeStyle) {
   return GUESTBOOK_THEME_TEXT_COLORS[normalizedThemeStyle] || DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR;
 }
 
+function normalizeGuestbookDiscoveryTagLabel(rawValue) {
+  let prepared = String(rawValue || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[;,|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!prepared) {
+    return "";
+  }
+
+  const normalizedKey = normalizeGuestbookDiscoveryTagKey(prepared);
+  if (normalizedKey && GUESTBOOK_DISCOVERY_TAG_LABEL_BY_KEY[normalizedKey]) {
+    return GUESTBOOK_DISCOVERY_TAG_LABEL_BY_KEY[normalizedKey];
+  }
+
+  prepared = prepared.slice(0, 28).trim();
+  return prepared;
+}
+
+function parseGuestbookDiscoveryTags(rawValue) {
+  const values = [];
+  const queue = Array.isArray(rawValue) ? [...rawValue] : [rawValue];
+
+  while (queue.length) {
+    const nextValue = queue.shift();
+    if (Array.isArray(nextValue)) {
+      queue.unshift(...nextValue);
+      continue;
+    }
+
+    const prepared = String(nextValue || "").replace(/\r\n?/g, "\n").trim();
+    if (!prepared) {
+      continue;
+    }
+
+    if (prepared.startsWith("[") && prepared.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(prepared);
+        if (Array.isArray(parsed)) {
+          queue.unshift(...parsed);
+          continue;
+        }
+      } catch (_error) {
+        // Fallback to plain-text splitting below.
+      }
+    }
+
+    prepared
+      .split(/[\n,;|]+/)
+      .forEach((entry) => {
+        const normalizedTag = normalizeGuestbookDiscoveryTagLabel(entry);
+        if (normalizedTag) {
+          values.push(normalizedTag);
+        }
+      });
+  }
+
+  const seen = new Set();
+  return values.filter((entry) => {
+    const entryKey = normalizeGuestbookDiscoveryTagKey(entry);
+    if (!entryKey || seen.has(entryKey)) {
+      return false;
+    }
+    seen.add(entryKey);
+    return true;
+  }).slice(0, 12);
+}
+
+function serializeGuestbookDiscoveryTags(rawValue) {
+  return parseGuestbookDiscoveryTags(rawValue).join("\n");
+}
+
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeGuestbookPageContentInput(body.page_content, 12000);
   const safeBody = body || {};
@@ -10182,6 +10290,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingFrameColor = normalizeOptionalGuestbookPageColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.background_color);
   const existingSurroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.surround_color);
+  const existingTags = serializeGuestbookDiscoveryTags(existingSettings?.tags);
   const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
   const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
   const existingInnerImageRepeat = 0;
@@ -10202,6 +10311,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const hasBackgroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "background_color");
   const hasSurroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "surround_color");
   const hasPageStyleField = Object.prototype.hasOwnProperty.call(safeBody, "page_style");
+  const hasGuestbookTagsField = Object.prototype.hasOwnProperty.call(safeBody, "guestbook_tags");
+  const hasGuestbookTagsCustomField = Object.prototype.hasOwnProperty.call(safeBody, "guestbook_tags_custom");
   const imageUrl = hasImageUrlField
     ? String(safeBody.image_url || "").trim().slice(0, 500)
     : existingImageUrl;
@@ -10254,6 +10365,12 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageStyle = hasPageStyleField
     ? normalizeGuestbookOption(safeBody.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, existingPageStyle)
     : existingPageStyle;
+  const tags = hasGuestbookTagsField || hasGuestbookTagsCustomField
+    ? serializeGuestbookDiscoveryTags([
+        safeBody.guestbook_tags,
+        safeBody.guestbook_tags_custom
+      ])
+    : existingTags;
   const themeStyle = normalizeGuestbookOption(
     safeBody.theme_style,
     GUESTBOOK_THEME_STYLE_OPTIONS,
@@ -10284,12 +10401,13 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       theme_style: themeStyle,
       font_style: fontStyle,
       music_url: sanitizedMusicUrl,
-      tags: ""
+      tags
     }
   };
 }
 
 function buildGuestbookPageSettings(baseSettings = null, page = null) {
+  const normalizedTags = parseGuestbookDiscoveryTags(baseSettings?.tags);
   return {
     image_url: /^https?:\/\/.+/i.test(String(page?.image_url || "").trim())
       ? String(page.image_url || "").trim().slice(0, 500)
@@ -10314,7 +10432,8 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     theme_style: normalizeGuestbookOption(page?.theme_style, GUESTBOOK_THEME_STYLE_OPTIONS, "pergament-gold"),
     font_style: normalizeGuestbookOption(baseSettings?.font_style, GUESTBOOK_FONT_STYLE_OPTIONS, "default"),
     music_url: normalizeGuestbookMusicUrl(baseSettings?.music_url),
-    tags: ""
+    tags: serializeGuestbookDiscoveryTags(normalizedTags),
+    tag_list: normalizedTags
   };
 }
 
@@ -12972,6 +13091,7 @@ app.use((req, res, next) => {
   res.locals.availableThemes = THEME_OPTIONS;
   res.locals.serverOptions = SERVER_OPTIONS;
   res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
+  res.locals.guestbookDiscoveryTagOptions = GUESTBOOK_DISCOVERY_TAG_OPTIONS;
   const publicBaseUrl = getPublicBaseUrl(req) || getLegalMeta().appBaseUrl;
   res.locals.siteName = getLegalMeta().siteName;
   res.locals.metaDescription = getSeoDescriptionForPath(req.path);
@@ -19917,8 +20037,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     .prepare(
       `SELECT c.id,
               c.name,
-              c.server_id
+              c.server_id,
+              COALESCE(gs.tags, '') AS guestbook_tags
        FROM characters c
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
        WHERE (c.is_public = 1 OR c.user_id = ? OR ? = 1)
          AND c.id != ?
        ORDER BY lower(c.name) ASC, c.id ASC`
@@ -19931,7 +20053,9 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     .map((entry) => ({
       id: Number(entry.id),
       name: String(entry.name || "").trim(),
+      server_id: normalizeCharacterServerId(entry.server_id),
       server_label: getServerLabel(entry.server_id),
+      tags: parseGuestbookDiscoveryTags(entry.guestbook_tags),
       url: `/characters/${Number(entry.id)}/guestbook${guestbookAccessState.staffViewRequested ? "?staff_view=1" : ""}`
     }));
   const guestbookMusicEnabled = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled);

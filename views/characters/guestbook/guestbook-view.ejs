@@ -137,6 +137,19 @@
           <p class="muted">Diese Seite ist noch leer.</p>
         <% } %>
       </article>
+
+      <% if (Array.isArray(guestbookSettings?.tag_list) && guestbookSettings.tag_list.length) { %>
+        <section class="guestbook-discovery-tags guestbook-utility-card" aria-label="G&auml;stebuch Themen">
+          <div class="guestbook-search-header">
+            <strong>Themen</strong>
+          </div>
+          <div class="guestbook-search-result-tags">
+            <% guestbookSettings.tag_list.forEach((tag) => { %>
+              <span class="guestbook-search-tag"><%= tag %></span>
+            <% }) %>
+          </div>
+        </section>
+      <% } %>
     </div>
   </section>
 
@@ -337,7 +350,10 @@
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
 <% if (Array.isArray(guestbookSearchCharacters) && guestbookSearchCharacters.length) { %>
-  <script id="guestbook-search-data" type="application/json"><%- JSON.stringify(guestbookSearchCharacters) %></script>
+  <script id="guestbook-search-data" type="application/json"><%- JSON.stringify({
+    current_server_id: character.server_id,
+    characters: guestbookSearchCharacters
+  }) %></script>
   <script src="/guestbook-search.js?v=<%= staticAssetVersion %>"></script>
 <% } %>
 <% if (guestbookMusicVideoId) { %>

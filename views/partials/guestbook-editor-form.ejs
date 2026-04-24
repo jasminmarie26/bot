@@ -1,4 +1,12 @@
-<% const usesOuterNavigation = typeof guestbookEditorUseOuterNavigation !== "undefined" && guestbookEditorUseOuterNavigation; %>
+<%
+  const usesOuterNavigation = typeof guestbookEditorUseOuterNavigation !== "undefined" && guestbookEditorUseOuterNavigation;
+  const guestbookTagOptions = Array.isArray(guestbookDiscoveryTagOptions) ? guestbookDiscoveryTagOptions : [];
+  const selectedGuestbookTags = Array.isArray(settings?.tag_list) ? settings.tag_list : [];
+  const selectedGuestbookTagLookup = new Set(selectedGuestbookTags.map((entry) => String(entry || "").trim().toLowerCase()));
+  const customGuestbookTags = selectedGuestbookTags.filter((entry) => (
+    !guestbookTagOptions.some((option) => String(option?.label || "").trim().toLowerCase() === String(entry || "").trim().toLowerCase())
+  ));
+%>
 
 <form
   id="guestbook-editor-form"
@@ -119,6 +127,43 @@
           <% }) %>
         </select>
       </label>
+
+      <div class="gb-editor-card gb-editor-card-full gb-editor-section">
+        <span class="gb-editor-subheading">Themen-Tags</span>
+        <span class="gb-editor-helptext">
+          Damit andere G&auml;steb&uuml;cher sp&auml;ter nach Themen, Buchstaben und Server besser gefunden werden.
+        </span>
+
+        <% if (guestbookTagOptions.length) { %>
+          <div class="gb-tag-chip-list">
+            <% guestbookTagOptions.forEach((tagOption) => { %>
+              <% const optionLabel = String(tagOption?.label || "").trim(); %>
+              <label class="gb-tag-chip">
+                <input
+                  type="checkbox"
+                  name="guestbook_tags"
+                  value="<%= tagOption.id %>"
+                  <%= selectedGuestbookTagLookup.has(optionLabel.toLowerCase()) ? "checked" : "" %>
+                />
+                <span><%= optionLabel %></span>
+              </label>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <label class="gb-editor-tag-custom-field">
+          <span class="gb-editor-subheading">Weitere Tags</span>
+          <input
+            type="text"
+            name="guestbook_tags_custom"
+            value="<%= customGuestbookTags.join(', ') %>"
+            maxlength="180"
+            placeholder="z. B. Slow Burn, Urban Fantasy, Enemies to Lovers"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </label>
+      </div>
     </div>
 
     <div class="gb-editor-grid">
