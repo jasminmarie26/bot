@@ -17325,22 +17325,27 @@ app.get("/members", requireAuth, (req, res) => {
     }
   });
 
-  const regularMembers = visibleMembers.filter((member) => !staffCharacterIds.has(Number(member.id)));
-  const rpMembers = regularMembers.filter(
+  const rpMembers = visibleMembers.filter(
     (member) => normalizeCharacterServerId(member.server_id) === "free-rp"
   );
-  const erpMembers = regularMembers.filter(
+  const erpMembers = visibleMembers.filter(
     (member) => normalizeCharacterServerId(member.server_id) === "erp"
   );
   const rpTagState = buildMemberDiscoveryTagGroups(rpMembers);
   const erpTagState = buildMemberDiscoveryTagGroups(erpMembers);
+  const displayedMemberIds = new Set(
+    [
+      ...visibleMembers.map((member) => Number(member.id)),
+      ...staffMembers.map((member) => Number(member.id))
+    ].filter((memberId) => Number.isInteger(memberId) && memberId > 0)
+  );
 
   return res.render("members/index", {
     title: "Mitgliederliste",
     staffMembers,
     rpTagGroups: rpTagState.groups,
     erpTagGroups: erpTagState.groups,
-    memberCount: staffMembers.length + rpTagState.memberCount + erpTagState.memberCount,
+    memberCount: displayedMemberIds.size,
     staffGuestbookQuery:
       req.session.user?.is_admin === true || req.session.user?.is_moderator === true
         ? "?staff_view=1"
