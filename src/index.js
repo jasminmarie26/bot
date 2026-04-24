@@ -196,7 +196,6 @@ const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
 const SERVER_WORK_NOTICE_WEEKDAYS = new Set(["Mon", "Wed", "Fri"]);
 const SERVER_WORK_NOTICE_START_MINUTES = 16 * 60 + 45;
-const SERVER_WORK_ACTIVE_START_MINUTES = 17 * 60;
 const SERVER_WORK_NOTICE_END_MINUTES = 20 * 60 + 30;
 const LARP_PROFILE_GENDER_OPTION_VALUES = Object.freeze(["Weiblich", "Männlich", "Divers"]);
 const LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES = Object.freeze(["Republik", "Imperium"]);
@@ -1866,18 +1865,10 @@ function getServerWorkNotice(referenceDate = new Date()) {
     };
   }
 
-  if (currentMinutes < SERVER_WORK_ACTIVE_START_MINUTES) {
-    return {
-      visible: true,
-      title: "Heute Serverarbeit",
-      message: "17:00 bis 20:30 Uhr."
-    };
-  }
-
   return {
     visible: true,
-    title: "Serverarbeiten",
-    message: "Laufen gerade bis 20:30 Uhr."
+    title: "Heute Serverarbeit",
+    message: "17:00 bis 20:30 Uhr."
   };
 }
 

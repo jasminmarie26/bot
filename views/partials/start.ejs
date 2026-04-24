@@ -476,7 +476,7 @@
       ? serverWorkNotice
       : showNoctraServerWorkPreview
         ? { visible: true, title: "Heute Serverarbeit", message: "17:00 bis 20:30 Uhr." }
-        : null; %>
+      : null; %>
     <% const showServerWorkNotice = Boolean(activeServerWorkNotice && activeServerWorkNotice.visible); %>
     <% const serverWorkNoticeTitle = showServerWorkNotice
       ? String(activeServerWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
