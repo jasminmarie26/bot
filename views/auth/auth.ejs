@@ -284,18 +284,23 @@
       return;
     }
 
-    button.addEventListener("click", () => {
-      const shouldShowPassword = targetInput.type === "password";
-      targetInput.type = shouldShowPassword ? "text" : "password";
-      button.setAttribute("aria-pressed", shouldShowPassword ? "true" : "false");
+    const updatePasswordToggleState = (isVisible) => {
+      targetInput.type = isVisible ? "text" : "password";
+      button.setAttribute("aria-pressed", isVisible ? "true" : "false");
       button.setAttribute(
         "aria-label",
-        shouldShowPassword ? "Passwort verbergen" : "Passwort anzeigen"
+        isVisible ? "Passwort verbergen" : "Passwort anzeigen"
       );
       button.setAttribute(
         "title",
-        shouldShowPassword ? "Passwort verbergen" : "Passwort anzeigen"
+        isVisible ? "Passwort verbergen" : "Passwort anzeigen"
       );
+    };
+
+    updatePasswordToggleState(false);
+
+    button.addEventListener("click", () => {
+      updatePasswordToggleState(targetInput.type === "password");
     });
   });
 </script>

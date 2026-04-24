@@ -4672,30 +4672,34 @@ body.theme-future.page-home-screen .home-copyright {
 
 .auth-password-wrap {
   position: relative;
-  display: block;
+  display: grid;
+  width: 100%;
 }
 
 .auth-password-wrap input {
+  width: 100%;
+  box-sizing: border-box;
   padding-right: 2.9rem;
 }
 
 .auth-password-toggle {
   position: absolute;
   top: 50%;
-  right: 0.45rem;
+  right: 0.7rem;
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.55rem;
+  height: 1.55rem;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
+  z-index: 2;
 }
 
 .auth-password-toggle:hover,
