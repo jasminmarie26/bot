@@ -1250,6 +1250,14 @@
       return;
     }
 
+    chatFeed.querySelectorAll(".chat-own-message-time").forEach((node) => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      const fallbackColor = String(node.dataset.chatTimeSourceColor || "").trim();
+      applyChatTextColor(node, fallbackColor, { allowGradient: false });
+    });
+
     chatFeed.querySelectorAll("article.chat-message strong").forEach((node) => {
       applyChatTextColor(node, node.style.color || "");
     });
@@ -2352,6 +2360,9 @@
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
+    const messageTimeColor = isSystemMessage
+      ? normalizeChatTextColor(msg?.presence_actor_chat_text_color || msg?.chat_text_color)
+      : chatTextColor;
     const shouldShowMessageTime = showChatMessageTimestamps
       && (!isSystemMessage || systemKind === "presence");
     const messageTimeLabel = shouldShowMessageTime
@@ -2360,7 +2371,9 @@
     if (messageTimeLabel) {
       const timePrefix = document.createElement("span");
       timePrefix.className = "chat-own-message-time";
+      timePrefix.dataset.chatTimeSourceColor = messageTimeColor;
       timePrefix.textContent = `[${messageTimeLabel}] `;
+      applyChatTextColor(timePrefix, messageTimeColor, { allowGradient: false });
       line.appendChild(timePrefix);
     }
     if (isSystemMessage) {
