@@ -9963,7 +9963,13 @@ function normalizeBbcodeInput(rawContent, maxLength) {
 }
 
 function normalizeGuestbookPageContentInput(rawContent, maxLength) {
-  return normalizeBbcodeMarkup(String(rawContent || "").slice(0, maxLength)).replace(/\r\n?/g, "\n");
+  const normalizedRawContent = String(rawContent || "");
+  const safeMaxLength = Number(maxLength);
+  const trimmedContent =
+    Number.isInteger(safeMaxLength) && safeMaxLength > 0
+      ? normalizedRawContent.slice(0, safeMaxLength)
+      : normalizedRawContent;
+  return normalizeBbcodeMarkup(trimmedContent).replace(/\r\n?/g, "\n");
 }
 
 function getCharacterByExactName(name) {
@@ -9997,7 +10003,13 @@ function getCharacterByExactNameForServer(name, serverId) {
 }
 
 function renderGuestbookBbcode(rawContent, options = {}) {
-  const normalizedContent = normalizeBbcodeMarkup(String(rawContent || "").slice(0, 12000));
+  const rawValue = String(rawContent || "");
+  const safeMaxLength = Number(options?.maxLength);
+  const preparedContent =
+    Number.isInteger(safeMaxLength) && safeMaxLength > 0
+      ? rawValue.slice(0, safeMaxLength)
+      : rawValue;
+  const normalizedContent = normalizeBbcodeMarkup(preparedContent);
   const compactImageLineBreaks = options?.compactImageLineBreaks !== false;
   const compactBlockLineBreaks = options?.compactBlockLineBreaks !== false;
   let html = escapeHtml(normalizedContent).replace(/\r\n?/g, "\n");
@@ -10366,7 +10378,7 @@ function getGuestbookDiscoveryTagSuggestions(viewer = null) {
 }
 
 function getGuestbookEditorPayload(body, existingSettings = null) {
-  const pageContent = normalizeGuestbookPageContentInput(body.page_content, 12000);
+  const pageContent = normalizeGuestbookPageContentInput(body.page_content);
   const safeBody = body || {};
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
   const existingInnerImageUrl = String(existingSettings?.inner_image_url || "").trim().slice(0, 500);
@@ -20362,6 +20374,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     activeGuestbookPage: {
       ...activeGuestbookPage,
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
+        maxLength: 0,
         compactImageLineBreaks: false,
         compactBlockLineBreaks: false
       })
@@ -20622,9 +20635,10 @@ app.post("/characters/:id/guestbook/edit/render-html", requireAuth, (req, res) =
     return res.status(403).json({ html: "" });
   }
 
-  const pageContent = normalizeGuestbookPageContentInput(req.body.page_content, 12000);
+  const pageContent = normalizeGuestbookPageContentInput(req.body.page_content);
   return res.json({
     html: renderGuestbookBbcode(pageContent, {
+      maxLength: 0,
       compactImageLineBreaks: false,
       compactBlockLineBreaks: false
     })
@@ -20712,6 +20726,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     topbarCharacter,
     previewMode,
     previewHtml: renderGuestbookBbcode(previewContent, {
+      maxLength: 0,
       compactImageLineBreaks: false,
       compactBlockLineBreaks: false
     }),

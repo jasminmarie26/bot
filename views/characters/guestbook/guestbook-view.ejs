@@ -138,18 +138,6 @@
         <% } %>
       </article>
 
-      <% if (Array.isArray(guestbookSettings?.tag_list) && guestbookSettings.tag_list.length) { %>
-        <section class="guestbook-discovery-tags guestbook-utility-card" aria-label="G&auml;stebuch Themen">
-          <div class="guestbook-search-header">
-            <strong>Themen</strong>
-          </div>
-          <div class="guestbook-search-result-tags">
-            <% guestbookSettings.tag_list.forEach((tag) => { %>
-              <span class="guestbook-search-tag"><%= tag %></span>
-            <% }) %>
-          </div>
-        </section>
-      <% } %>
     </div>
   </section>
 
