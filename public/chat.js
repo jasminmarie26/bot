@@ -105,7 +105,6 @@
 
   let autoAfkEnabled = chatBox?.dataset?.autoAfkEnabled !== "0";
   let afkTimeoutMinutes = parseClientAfkTimeoutMinutes(chatBox?.dataset?.afkTimeoutMinutes || "");
-  const showChatMessageTimestamps = chatBox?.dataset?.showChatTimestamps === "1";
   let afkTimeoutMs = afkTimeoutMinutes * 60 * 1000;
   const hasRoom = Number.isInteger(roomId) && roomId > 0;
   const chatChannelStorageKey = hasRoom
@@ -2457,8 +2456,10 @@
       currentUserId > 0 &&
       Number(msg?.user_id) === currentUserId;
     const messageTimeColor = isOwnChatMessage ? chatTextColor : "";
-    const shouldShowMessageTime = showChatMessageTimestamps
-      && (!isSystemMessage || systemKind === "presence");
+    const shouldShowMessageTime =
+      !isSystemMessage &&
+      isOwnChatMessage &&
+      Boolean(msg?.show_name_time);
     const messageTimeLabel = shouldShowMessageTime
       ? getMessageTimeLabel(msg)
       : "";
