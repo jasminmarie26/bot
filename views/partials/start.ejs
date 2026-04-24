@@ -839,12 +839,14 @@
                           <% } %>
                         </div>
                       <% } %>
-                      <a
-                        href="/characters/<%= menuCharacter.id %>/guestbook"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-live-character-href-template="/characters/__CHARACTER_ID__/guestbook"
-                      >G&auml;stebuch</a>
+                      <% if (!isLarpMenuContext) { %>
+                        <a
+                          href="/characters/<%= menuCharacter.id %>/guestbook"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-live-character-href-template="/characters/__CHARACTER_ID__/guestbook"
+                        >G&auml;stebuch</a>
+                      <% } %>
                       <% if (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp") { %>
                         <a
                           href="/characters/<%= menuCharacter.id %>/festplays"
@@ -854,7 +856,9 @@
                         >Meine Festplays</a>
                       <% } %>
                     <% } %>
-                    <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+                    <% if (!isLarpMenuContext) { %>
+                      <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>
+                    <% } %>
                   </nav>
 
                   <form method="POST" action="/logout" class="inline-form topbar-user-menu-form">
