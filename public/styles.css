@@ -4152,15 +4152,15 @@ body.page-home-screen .home-hero-actions {
 
 .home-daily-quote-kicker {
   color: color-mix(in srgb, var(--readable-link) 68%, var(--text) 32%);
-  font-size: 0.63rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .home-daily-quote-text {
   color: var(--text);
-  font-size: 0.76rem;
+  font-size: 0.71rem;
   line-height: 1.48;
   font-style: italic;
 }
