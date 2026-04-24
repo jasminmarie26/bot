@@ -467,31 +467,12 @@
     <% const topbarLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
       ? recentSiteUpdateRevisions
       : []; %>
-    <% const showNoctraServerWorkPreview =
-      /^noctra(?:\b|\s|\[|\()/i.test(String(topbarBrandText || "").trim()) ||
-      /^noctra(?:\b|\s|\[|\()/i.test(String(activeMenuIdentityName || "").trim()) ||
-      /^noctra(?:\b|\s|\[|\()/i.test(String(accountDisplayName || "").trim()) ||
-      /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.admin_display_name || "").trim()) ||
-      /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.moderator_display_name || "").trim()) ||
-      Boolean(
-        currentUser &&
-        (
-          Number(currentUser.admin_character_id) === 65 ||
-          Number(currentUser.moderator_character_id) === 65
-        )
-      ) ||
-      Boolean(menuCharacter && Number(menuCharacter.id) === 65); %>
-    <% const activeServerWorkNotice = serverWorkNotice && serverWorkNotice.visible
-      ? serverWorkNotice
-      : showNoctraServerWorkPreview
-        ? { visible: true, title: "Heute Serverarbeit", message: "17:00 bis 20:30 Uhr." }
-      : null; %>
-    <% const showServerWorkNotice = Boolean(activeServerWorkNotice && activeServerWorkNotice.visible); %>
+    <% const showServerWorkNotice = Boolean(serverWorkNotice && serverWorkNotice.visible); %>
     <% const serverWorkNoticeTitle = showServerWorkNotice
-      ? String(activeServerWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
+      ? String(serverWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
       : ""; %>
     <% const serverWorkNoticeMessage = showServerWorkNotice
-      ? String(activeServerWorkNotice.message || "").trim()
+      ? String(serverWorkNotice.message || "").trim()
       : ""; %>
     <% if (showServerWorkNotice) { %>
       <section class="server-work-notice" data-server-work-notice role="status" aria-live="polite">
