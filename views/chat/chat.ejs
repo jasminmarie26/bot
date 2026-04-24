@@ -2,6 +2,31 @@
 
 <% const chatDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
 <% const chatAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : "User"); %>
+<% const showNoctraChatServerWorkPreview =
+  /^noctra(?:\b|\s|\[|\()/i.test(String(chatDisplayName || "").trim()) ||
+  /^noctra(?:\b|\s|\[|\()/i.test(String(chatAccountDisplayName || "").trim()) ||
+  /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.admin_display_name || "").trim()) ||
+  /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.moderator_display_name || "").trim()) ||
+  Boolean(
+    currentUser &&
+    (
+      Number(currentUser.admin_character_id) === 65 ||
+      Number(currentUser.moderator_character_id) === 65
+    )
+  ) ||
+  Boolean(activeCharacter && Number(activeCharacter.id) === 65); %>
+<% const activeChatServerWorkNotice = serverWorkNotice && serverWorkNotice.visible
+  ? serverWorkNotice
+  : showNoctraChatServerWorkPreview
+    ? { visible: true, title: "Heute Serverarbeit", message: "17:00 bis 20:30 Uhr." }
+    : null; %>
+<% const showChatServerWorkNotice = Boolean(activeChatServerWorkNotice && activeChatServerWorkNotice.visible); %>
+<% const chatServerWorkNoticeTitle = showChatServerWorkNotice
+  ? String(activeChatServerWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
+  : ""; %>
+<% const chatServerWorkNoticeMessage = showChatServerWorkNotice
+  ? String(activeChatServerWorkNotice.message || "").trim()
+  : ""; %>
 <% const formatChatRoleName = (value, roleStyle = "") => {
   const label = String(value || "").trim();
   return label.replace(/\s*\(M\)\s*$/i, "").trim();
@@ -100,6 +125,14 @@
 
 <section id="chat-shell" class="rp-shell" style="<%= chatShellStyle %>">
   <header class="rp-topline">
+    <% if (showChatServerWorkNotice) { %>
+      <div class="rp-topline-server-work" role="status" aria-live="polite">
+        <strong><%= chatServerWorkNoticeTitle %></strong>
+        <% if (chatServerWorkNoticeMessage) { %>
+          <span><%= chatServerWorkNoticeMessage %></span>
+        <% } %>
+      </div>
+    <% } %>
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
       <a
