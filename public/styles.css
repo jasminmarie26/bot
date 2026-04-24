@@ -10186,6 +10186,16 @@ body.page-guestbook-preview::after {
   background: color-mix(in srgb, var(--accent) 24%, var(--field-bg));
 }
 
+.gb-tag-chip-static span {
+  cursor: default;
+}
+
+.gb-tag-chip-static:hover span,
+.gb-tag-chip-static:focus-within span {
+  transform: none;
+  border-color: color-mix(in srgb, var(--field-edge) 76%, transparent);
+}
+
 .gb-editor-tag-custom-field {
   display: grid;
   gap: 0.35rem;
