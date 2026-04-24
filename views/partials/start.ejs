@@ -667,9 +667,9 @@
                 class="live-updates-nav-link"
                 href="/live-updates"
                 data-live-updates-link-root
-                data-live-updates-open-mode="<%= topbarUseSameTabNavigation ? "same-tab" : "named-tab" %>"
-                <% if (!topbarUseSameTabNavigation) { %>target="site-live-updates"<% } %>
-                <% if (!topbarUseSameTabNavigation) { %>data-live-updates-target="site-live-updates"<% } %>
+                data-live-updates-open-mode="named-tab"
+                target="site-live-updates"
+                data-live-updates-target="site-live-updates"
                 data-live-updates-initial-revision="<%= topbarLiveUpdatesInitialRevision %>"
                 data-live-updates-initial-revisions="<%= topbarLiveUpdatesInitialRevisions.join('|') %>"
               >

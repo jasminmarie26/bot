@@ -72,7 +72,19 @@
             <span class="rp-board-nav-badge" data-rp-board-badge hidden>1</span>
           </a>
         <% } %>
-        <a href="/live-updates">Live Updates</a>
+        <a
+          class="live-updates-nav-link"
+          href="/live-updates"
+          target="site-live-updates"
+          data-live-updates-link-root
+          data-live-updates-open-mode="named-tab"
+          data-live-updates-target="site-live-updates"
+          data-live-updates-initial-revision="<%= roomlistLiveUpdatesInitialRevision %>"
+          data-live-updates-initial-revisions="<%= roomlistLiveUpdatesInitialRevisions.join('|') %>"
+        >
+          <span>Live Updates</span>
+          <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+        </a>
     </nav>
     <div class="rp-topline-actions">
       <% if (showRoomlistHeaderIdentity) { %>
