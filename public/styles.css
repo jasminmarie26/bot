@@ -4904,6 +4904,36 @@ body.theme-future.page-home-screen .home-copyright {
   border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 80%, transparent);
 }
 
+.members-section-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.members-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.members-section-summary::marker {
+  display: none;
+}
+
+.members-section-summary::after {
+  content: "▾";
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.members-section-collapsible:not([open]) .members-section-summary::after {
+  transform: rotate(-90deg);
+}
+
 .members-section-header h2 {
   margin: 0;
   font-size: 0.9rem;

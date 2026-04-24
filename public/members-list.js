@@ -8,15 +8,36 @@
   function updateStatus(visibleCount, query) {
     const trimmedQuery = String(query || "").trim();
     status.textContent = trimmedQuery
-      ? `${visibleCount} Treffer für "${trimmedQuery}".`
+      ? `${visibleCount} Treffer f\u00FCr "${trimmedQuery}".`
       : `${visibleCount} Charaktere gefunden.`;
+  }
+
+  function syncCollapsibleSection(section, hasVisibleCards, hasQuery) {
+    if (!(section instanceof HTMLDetailsElement)) return;
+
+    if (hasQuery) {
+      if (!Object.prototype.hasOwnProperty.call(section.dataset, "membersOpenBeforeSearch")) {
+        section.dataset.membersOpenBeforeSearch = section.open ? "true" : "false";
+      }
+
+      if (hasVisibleCards) {
+        section.open = true;
+      }
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section.dataset, "membersOpenBeforeSearch")) {
+      section.open = section.dataset.membersOpenBeforeSearch === "true";
+      delete section.dataset.membersOpenBeforeSearch;
+    }
   }
 
   function applyFilter() {
     const query = searchInput.value.trim().toLowerCase();
+    const hasQuery = query.length > 0;
     let visibleCount = 0;
     const hasNameMatch =
-      query.length > 0 &&
+      hasQuery &&
       cards.some((card) => (card.dataset.memberName || "").includes(query));
 
     cards.forEach((card) => {
@@ -40,12 +61,14 @@
     sections.forEach((section) => {
       const sectionCards = Array.from(section.querySelectorAll("[data-member-card]"));
       if (!sectionCards.length) {
-        section.hidden = query.length > 0;
+        section.hidden = hasQuery;
         return;
       }
 
       const visibleSectionCards = sectionCards.filter((card) => !card.hidden);
-      section.hidden = visibleSectionCards.length === 0;
+      const hasVisibleCards = visibleSectionCards.length > 0;
+      syncCollapsibleSection(section, hasVisibleCards, hasQuery);
+      section.hidden = !hasVisibleCards;
     });
 
     updateStatus(visibleCount, searchInput.value);

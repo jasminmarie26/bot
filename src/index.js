@@ -17008,8 +17008,7 @@ app.get("/members", requireAuth, (req, res) => {
     staffMembers,
     rpMembers,
     erpMembers,
-    larpMembers,
-    memberCount: staffMembers.length + rpMembers.length + erpMembers.length + larpMembers.length,
+    memberCount: staffMembers.length + rpMembers.length + erpMembers.length,
     staffGuestbookQuery:
       req.session.user?.is_admin === true || req.session.user?.is_moderator === true
         ? "?staff_view=1"

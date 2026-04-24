@@ -38,12 +38,12 @@
       <% } %>
     </section>
 
-    <section class="members-section" data-members-section>
-      <header class="members-section-header">
-        <h2>RP SERVER</h2>
-      </header>
+    <details class="members-section members-section-collapsible" data-members-section open>
+      <summary class="members-section-header members-section-summary">
+        <h2>FREE RP</h2>
+      </summary>
       <% if (!rpMembers || !rpMembers.length) { %>
-        <p class="muted">Keine sichtbaren Charaktere im RP-Bereich.</p>
+        <p class="muted">Keine sichtbaren Charaktere im Free-RP-Bereich.</p>
       <% } else { %>
         <div class="members-section-list">
           <% rpMembers.forEach((member) => { %>
@@ -51,12 +51,12 @@
           <% }) %>
         </div>
       <% } %>
-    </section>
+    </details>
 
-    <section class="members-section" data-members-section>
-      <header class="members-section-header">
+    <details class="members-section members-section-collapsible" data-members-section open>
+      <summary class="members-section-header members-section-summary">
         <h2>ERP SERVER</h2>
-      </header>
+      </summary>
       <% if (!erpMembers || !erpMembers.length) { %>
         <p class="muted">Keine sichtbaren Charaktere im ERP-Bereich.</p>
       <% } else { %>
@@ -66,22 +66,7 @@
           <% }) %>
         </div>
       <% } %>
-    </section>
-
-    <section class="members-section" data-members-section>
-      <header class="members-section-header">
-        <h2>LARP BEREICH</h2>
-      </header>
-      <% if (!larpMembers || !larpMembers.length) { %>
-        <p class="muted">Keine sichtbaren Charaktere im LARP-Bereich.</p>
-      <% } else { %>
-        <div class="members-section-list">
-          <% larpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
-          <% }) %>
-        </div>
-      <% } %>
-    </section>
+    </details>
   </div>
 </section>
 
