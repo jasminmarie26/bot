@@ -1,6 +1,9 @@
 <%
   const usesOuterNavigation = typeof guestbookEditorUseOuterNavigation !== "undefined" && guestbookEditorUseOuterNavigation;
   const selectedGuestbookTags = Array.isArray(settings?.tag_list) ? settings.tag_list : [];
+  const guestbookTagSuggestions = Array.isArray(guestbookDiscoveryTagSuggestions)
+    ? guestbookDiscoveryTagSuggestions
+    : [];
 %>
 
 <form
@@ -149,7 +152,17 @@
             placeholder="z. B. Slow Burn, Urban Fantasy, Enemies to Lovers"
             spellcheck="false"
             autocomplete="off"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="guestbook-tag-suggestions-<%= character.id %>"
           />
+          <div
+            id="guestbook-tag-suggestions-<%= character.id %>"
+            class="gb-tag-suggestion-list"
+            data-gb-tag-suggestions
+            role="listbox"
+            hidden
+          ></div>
         </label>
       </div>
     </div>
@@ -898,6 +911,10 @@
       .replace(/<\//g, "<\\/")
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029") %>;
+    const initialGuestbookTagSuggestions = <%- JSON.stringify(guestbookTagSuggestions)
+      .replace(/<\//g, "<\\/")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029") %>;
     const editorForm = document.getElementById("guestbook-editor-form");
     const previewReturnToField = editorForm?.querySelector('input[name="preview_return_to"]') || null;
     const previewSourceWindowNameField =
@@ -926,6 +943,8 @@
     const bbcodeColorDismissButtons = Array.from(
       bbcodeColorPopover?.querySelectorAll("[data-gb-bbcode-color-cancel], [data-gb-bbcode-color-close]") || []
     );
+    const guestbookTagsInput = editorForm?.querySelector('input[name="guestbook_tags_custom"]') || null;
+    const guestbookTagSuggestionList = editorForm?.querySelector("[data-gb-tag-suggestions]") || null;
     const previewSyncUrl = String(editorForm?.dataset?.previewSyncUrl || "").trim();
     const htmlSourceUrl = String(editorForm?.dataset?.htmlSourceUrl || "").trim();
     let previewSyncTimeout = null;
@@ -936,6 +955,169 @@
     let activeBbcodeColorTrigger = null;
     let bbcodeSelectionSnapshot = null;
     let editorWindowName = "";
+    let guestbookTagSuggestionResults = [];
+    let activeGuestbookTagSuggestionIndex = -1;
+
+    const normalizeGuestbookTagLabel = (value) =>
+      String(value || "")
+        .replace(/\r\n?/g, "\n")
+        .replace(/[;,|]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 28);
+
+    const normalizeGuestbookTagKey = (value) =>
+      normalizeGuestbookTagLabel(value).toLocaleLowerCase("de-DE");
+
+    const availableGuestbookTagSuggestions = Array.from(
+      new Map(
+        (Array.isArray(initialGuestbookTagSuggestions) ? initialGuestbookTagSuggestions : [])
+          .map((tagLabel) => normalizeGuestbookTagLabel(tagLabel))
+          .filter(Boolean)
+          .map((tagLabel) => [normalizeGuestbookTagKey(tagLabel), tagLabel])
+      ).values()
+    );
+
+    const readGuestbookTagInputState = () => {
+      const rawParts = String(guestbookTagsInput?.value || "").split(",");
+      const committedParts = rawParts.slice(0, -1);
+      const activeFragment = normalizeGuestbookTagLabel(rawParts[rawParts.length - 1] || "");
+      const committedKeys = new Set(
+        committedParts
+          .map((entry) => normalizeGuestbookTagKey(entry))
+          .filter(Boolean)
+      );
+
+      return {
+        rawParts,
+        activeFragment,
+        committedKeys
+      };
+    };
+
+    const closeGuestbookTagSuggestions = () => {
+      guestbookTagSuggestionResults = [];
+      activeGuestbookTagSuggestionIndex = -1;
+
+      if (!guestbookTagSuggestionList) {
+        return;
+      }
+
+      guestbookTagSuggestionList.hidden = true;
+      guestbookTagSuggestionList.innerHTML = "";
+      guestbookTagsInput?.setAttribute("aria-expanded", "false");
+    };
+
+    const setActiveGuestbookTagSuggestion = (nextIndex) => {
+      if (!guestbookTagSuggestionList) {
+        return;
+      }
+
+      const buttons = Array.from(guestbookTagSuggestionList.querySelectorAll("[data-gb-tag-suggestion-index]"));
+      if (!buttons.length) {
+        activeGuestbookTagSuggestionIndex = -1;
+        return;
+      }
+
+      const maxIndex = buttons.length - 1;
+      const clampedIndex = Math.min(maxIndex, Math.max(0, nextIndex));
+      activeGuestbookTagSuggestionIndex = clampedIndex;
+
+      buttons.forEach((button, buttonIndex) => {
+        const isActive = buttonIndex === clampedIndex;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+
+      buttons[clampedIndex]?.scrollIntoView?.({ block: "nearest" });
+    };
+
+    const applyGuestbookTagSuggestion = (tagLabel) => {
+      if (!guestbookTagsInput) {
+        return;
+      }
+
+      const rawParts = String(guestbookTagsInput.value || "").split(",");
+      const nextLabels = rawParts
+        .slice(0, -1)
+        .map((entry) => normalizeGuestbookTagLabel(entry))
+        .filter(Boolean);
+      nextLabels.push(normalizeGuestbookTagLabel(tagLabel));
+
+      const seen = new Set();
+      const uniqueLabels = nextLabels.filter((entry) => {
+        const entryKey = normalizeGuestbookTagKey(entry);
+        if (!entryKey || seen.has(entryKey)) {
+          return false;
+        }
+
+        seen.add(entryKey);
+        return true;
+      });
+
+      guestbookTagsInput.value = uniqueLabels.length ? `${uniqueLabels.join(", ")}, ` : "";
+      closeGuestbookTagSuggestions();
+      guestbookTagsInput.focus();
+      guestbookTagsInput.setSelectionRange(guestbookTagsInput.value.length, guestbookTagsInput.value.length);
+      guestbookTagsInput.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    const renderGuestbookTagSuggestions = () => {
+      if (!guestbookTagsInput || !guestbookTagSuggestionList) {
+        return;
+      }
+
+      const { activeFragment, committedKeys } = readGuestbookTagInputState();
+      const fragmentKey = normalizeGuestbookTagKey(activeFragment);
+
+      if (!fragmentKey) {
+        closeGuestbookTagSuggestions();
+        return;
+      }
+
+      guestbookTagSuggestionResults = availableGuestbookTagSuggestions
+        .filter((tagLabel) => {
+          const tagKey = normalizeGuestbookTagKey(tagLabel);
+          return tagKey && !committedKeys.has(tagKey) && tagKey.includes(fragmentKey);
+        })
+        .sort((left, right) => {
+          const leftKey = normalizeGuestbookTagKey(left);
+          const rightKey = normalizeGuestbookTagKey(right);
+          const leftStartsWith = leftKey.startsWith(fragmentKey) ? 0 : 1;
+          const rightStartsWith = rightKey.startsWith(fragmentKey) ? 0 : 1;
+          if (leftStartsWith !== rightStartsWith) {
+            return leftStartsWith - rightStartsWith;
+          }
+          return left.localeCompare(right, "de", { sensitivity: "base" });
+        })
+        .slice(0, 8);
+
+      if (!guestbookTagSuggestionResults.length) {
+        closeGuestbookTagSuggestions();
+        return;
+      }
+
+      guestbookTagSuggestionList.innerHTML = "";
+      guestbookTagSuggestionResults.forEach((tagLabel, suggestionIndex) => {
+        const suggestionButton = document.createElement("button");
+        suggestionButton.type = "button";
+        suggestionButton.className = "gb-tag-suggestion-btn";
+        suggestionButton.dataset.gbTagSuggestionIndex = String(suggestionIndex);
+        suggestionButton.setAttribute("role", "option");
+        suggestionButton.textContent = tagLabel;
+        suggestionButton.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+        });
+        suggestionButton.addEventListener("click", () => {
+          applyGuestbookTagSuggestion(tagLabel);
+        });
+        guestbookTagSuggestionList.appendChild(suggestionButton);
+      });
+
+      guestbookTagSuggestionList.hidden = false;
+      guestbookTagsInput.setAttribute("aria-expanded", "true");
+      setActiveGuestbookTagSuggestion(0);
+    };
 
     const ensureEditorWindowName = () => {
       if (editorWindowName) {
@@ -2018,6 +2200,62 @@
 
       editorForm.addEventListener("change", () => {
         schedulePreviewSync(80);
+      });
+    }
+
+    if (guestbookTagsInput && guestbookTagSuggestionList) {
+      guestbookTagsInput.addEventListener("focus", () => {
+        renderGuestbookTagSuggestions();
+      });
+
+      guestbookTagsInput.addEventListener("input", () => {
+        renderGuestbookTagSuggestions();
+      });
+
+      guestbookTagsInput.addEventListener("keydown", (event) => {
+        if (!guestbookTagSuggestionResults.length || guestbookTagSuggestionList.hidden) {
+          return;
+        }
+
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActiveGuestbookTagSuggestion(activeGuestbookTagSuggestionIndex + 1);
+          return;
+        }
+
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveGuestbookTagSuggestion(activeGuestbookTagSuggestionIndex - 1);
+          return;
+        }
+
+        if ((event.key === "Enter" || event.key === "Tab") && activeGuestbookTagSuggestionIndex >= 0) {
+          event.preventDefault();
+          applyGuestbookTagSuggestion(guestbookTagSuggestionResults[activeGuestbookTagSuggestionIndex]);
+          return;
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeGuestbookTagSuggestions();
+        }
+      });
+
+      guestbookTagsInput.addEventListener("blur", () => {
+        window.setTimeout(() => {
+          closeGuestbookTagSuggestions();
+        }, 120);
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (
+          guestbookTagSuggestionList.contains(event.target) ||
+          event.target === guestbookTagsInput
+        ) {
+          return;
+        }
+
+        closeGuestbookTagSuggestions();
       });
     }
 

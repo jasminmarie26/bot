@@ -10268,6 +10268,39 @@ function serializeGuestbookDiscoveryTags(rawValue) {
   return parseGuestbookDiscoveryTags(rawValue).join("\n");
 }
 
+function getGuestbookDiscoveryTagSuggestions(viewer = null) {
+  const viewerId = Number(viewer?.id) || 0;
+  const hasAdminAccess = viewer?.is_admin === true ? 1 : 0;
+  const rows = db
+    .prepare(
+      `SELECT COALESCE(gs.tags, '') AS guestbook_tags
+       FROM guestbook_settings gs
+       INNER JOIN characters c ON c.id = gs.character_id
+       WHERE trim(COALESCE(gs.tags, '')) != ''
+         AND (c.is_public = 1 OR c.user_id = ? OR ? = 1)
+       ORDER BY lower(c.name) ASC, c.id ASC`
+    )
+    .all(viewerId, hasAdminAccess);
+  const suggestions = [];
+  const seen = new Set();
+
+  rows.forEach((row) => {
+    parseGuestbookDiscoveryTags(row?.guestbook_tags).forEach((tagLabel) => {
+      const tagKey = normalizeGuestbookDiscoveryTagKey(tagLabel);
+      if (!tagKey || seen.has(tagKey)) {
+        return;
+      }
+
+      seen.add(tagKey);
+      suggestions.push(tagLabel);
+    });
+  });
+
+  return suggestions.sort((left, right) =>
+    String(left || "").localeCompare(String(right || ""), "de", { sensitivity: "base" })
+  );
+}
+
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeGuestbookPageContentInput(body.page_content, 12000);
   const safeBody = body || {};
@@ -13155,6 +13188,11 @@ app.use((req, res, next) => {
   res.locals.serverOptions = SERVER_OPTIONS;
   res.locals.guestbookFontOptions = GUESTBOOK_FONT_OPTIONS;
   res.locals.guestbookDiscoveryTagOptions = GUESTBOOK_DISCOVERY_TAG_OPTIONS;
+  const requestPath = String(req.path || "").trim();
+  res.locals.guestbookDiscoveryTagSuggestions =
+    /^\/characters\/\d+\/(?:edit|guestbook\/edit)$/.test(requestPath)
+      ? getGuestbookDiscoveryTagSuggestions(req.session.user || null)
+      : [];
   const publicBaseUrl = getPublicBaseUrl(req) || getLegalMeta().appBaseUrl;
   res.locals.siteName = getLegalMeta().siteName;
   res.locals.metaDescription = getSeoDescriptionForPath(req.path);

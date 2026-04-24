@@ -10233,8 +10233,49 @@ body.page-guestbook-preview::after {
 }
 
 .gb-editor-tag-custom-field {
+  position: relative;
   display: grid;
   gap: 0.35rem;
+}
+
+.gb-tag-suggestion-list {
+  position: absolute;
+  top: calc(100% + 0.28rem);
+  left: 0;
+  right: 0;
+  z-index: 18;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--field-edge));
+  background: color-mix(in srgb, var(--field-bg) 94%, black 6%);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.gb-tag-suggestion-btn {
+  width: 100%;
+  min-height: 2.2rem;
+  padding: 0.55rem 0.85rem;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.gb-tag-suggestion-btn:hover,
+.gb-tag-suggestion-btn:focus-visible,
+.gb-tag-suggestion-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: color-mix(in srgb, var(--text) 88%, white 12%);
+  transform: translateY(-1px);
+  outline: none;
 }
 
 .gb-radio-card:has(input[type="radio"]:checked) {
