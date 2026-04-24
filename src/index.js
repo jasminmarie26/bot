@@ -9862,6 +9862,17 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   });
   html = replaceInnermostBbcodeWrap(html, "list", "<ul class=\"bb-list\">$1</ul>");
   html = replaceInnermostBbcodeWrap(html, "li", "<li>$1</li>");
+  html = html.replace(createBbcodeOptionRegex("table"), (full, rawOption, inner) => {
+    const normalizedOption = String(rawOption || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/_/g, "-");
+    const hideTableBorders = /^(?:0|off|none|false|noborder|no-border|borderless|hide-?borders?|no-?lines?)$/.test(
+      normalizedOption
+    );
+    return `<table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</table>`;
+  });
   html = replaceInnermostBbcodeWrap(html, "table", "<table class=\"bb-table\">$1</table>");
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrap(html, "td", "<td>$1</td>");

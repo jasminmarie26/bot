@@ -8895,6 +8895,10 @@ body.theme-atari .guestbook-entry-panel {
   vertical-align: top;
 }
 
+.bb-table.bb-table-borderless td {
+  border: 0;
+}
+
 .bb-image {
   max-width: 100%;
   height: auto;
@@ -10523,6 +10527,23 @@ body.gb-editor-fullscreen-open {
   border-color: rgba(92, 145, 172, 0.28);
   background: rgba(190, 220, 231, 0.66);
   outline: none;
+}
+
+.gb-bbcode-menu-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.62rem;
+  color: #236293;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gb-bbcode-menu-check input {
+  margin: 0;
+  accent-color: #236293;
 }
 
 .gb-bbcode-color-popover {
