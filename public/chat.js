@@ -2455,10 +2455,9 @@
       Number.isInteger(currentUserId) &&
       currentUserId > 0 &&
       Number(msg?.user_id) === currentUserId;
-    const messageTimeColor = isOwnChatMessage ? chatTextColor : "";
+    const messageTimeColor = !isSystemMessage && Boolean(msg?.show_name_time) ? chatTextColor : "";
     const shouldShowMessageTime =
       !isSystemMessage &&
-      isOwnChatMessage &&
       Boolean(msg?.show_name_time);
     const messageTimeLabel = shouldShowMessageTime
       ? getMessageTimeLabel(msg)
