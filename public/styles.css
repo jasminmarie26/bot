@@ -9508,6 +9508,15 @@ body.page-guestbook-preview::after {
 
 .guestbook-search-panel {
   width: min(22rem, calc(100vw - 1rem));
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  padding: 0.62rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 74%, transparent);
+  background: #202920;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
+  backdrop-filter: none;
 }
 
 .guestbook-music-controls {
@@ -9603,8 +9612,7 @@ body.page-guestbook-preview::after {
 }
 
 .guestbook-search-result {
-  display: grid;
-  gap: 0.05rem;
+  display: block;
   padding: 0.34rem 0.44rem;
   border: 1px solid color-mix(in srgb, var(--field-edge) 78%, transparent);
   border-radius: 12px;
@@ -9622,11 +9630,6 @@ body.page-guestbook-preview::after {
 .guestbook-search-result strong {
   font-size: 0.74rem;
   line-height: 1.18;
-}
-
-.guestbook-search-result small {
-  color: var(--muted);
-  font-size: 0.64rem;
 }
 
 .guestbook-search-result-tags {
