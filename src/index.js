@@ -11030,16 +11030,30 @@ function buildGuestbookViewUrl(characterId, guestbookPageId, accessState, entrie
 function buildMemberDiscoveryTagGroups(members = []) {
   const groupsByKey = new Map();
   const uniqueMemberIds = new Set();
+  const untaggedGroupKey = "ohne-tags";
+  const untaggedGroupLabel = "Ohne Tags";
 
   (Array.isArray(members) ? members : []).forEach((member) => {
     const tagList = parseGuestbookDiscoveryTags(member?.guestbook_tags || member?.tag_list || []);
-    if (!tagList.length) {
-      return;
-    }
-
     const memberId = Number(member?.id);
     if (Number.isInteger(memberId) && memberId > 0) {
       uniqueMemberIds.add(memberId);
+    }
+
+    if (!tagList.length) {
+      if (!groupsByKey.has(untaggedGroupKey)) {
+        groupsByKey.set(untaggedGroupKey, {
+          key: untaggedGroupKey,
+          label: untaggedGroupLabel,
+          members: []
+        });
+      }
+
+      groupsByKey.get(untaggedGroupKey).members.push({
+        ...member,
+        tag_list: [untaggedGroupLabel]
+      });
+      return;
     }
 
     tagList.forEach((tagLabel) => {
@@ -17283,7 +17297,7 @@ app.get("/members", requireAuth, (req, res) => {
   const rpTagState = buildMemberDiscoveryTagGroups(rpMembers);
   const erpTagState = buildMemberDiscoveryTagGroups(erpMembers);
 
-  return res.render("dashboard/members", {
+  return res.render("members/index", {
     title: "Mitgliederliste",
     staffMembers,
     rpTagGroups: rpTagState.groups,
