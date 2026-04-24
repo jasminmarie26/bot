@@ -1289,6 +1289,38 @@ a:hover {
   flex-wrap: nowrap;
 }
 
+.topbar-server-work-preview {
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--field-bg) 88%, #10131b 12%), color-mix(in srgb, var(--field-bg) 76%, #4a2f18 24%));
+}
+
+.topbar-server-work-preview-inner {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 0.56rem 0.9rem 0.64rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.topbar-server-work-preview strong {
+  color: color-mix(in srgb, var(--text) 78%, #f2d49b 22%);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topbar-server-work-preview span {
+  color: color-mix(in srgb, var(--muted) 60%, var(--text) 40%);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
 .brand {
   font-family: var(--font-display);
   font-size: clamp(1.08rem, 1.7vw, 1.48rem);
