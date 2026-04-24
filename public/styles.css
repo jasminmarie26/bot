@@ -1300,6 +1300,13 @@ a:hover {
   box-shadow: 0 12px 28px -24px var(--panel-shadow);
 }
 
+.server-work-notice[hidden],
+.rp-topline-server-work[hidden],
+.server-work-notice [hidden],
+.rp-topline-server-work [hidden] {
+  display: none !important;
+}
+
 .server-work-notice-inner {
   width: 100%;
   margin: 0;
