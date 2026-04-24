@@ -15430,6 +15430,7 @@ app.get("/guestbook/notifications/recipient-suggestions", requireAuth, (req, res
   }
 
   const currentUserId = Number(req.session.user?.id);
+  const canViewOwnerAccount = canSendGuestbookStaffMail(req.session.user);
   const query = normalizeSocialLookupValue(req.query.q || "");
   if (!query) {
     return res.json({
@@ -15449,7 +15450,7 @@ app.get("/guestbook/notifications/recipient-suggestions", requireAuth, (req, res
         metaParts.push(serverLabel);
       }
       if (ownerUsername) {
-        metaParts.push(`@${ownerUsername}`);
+        metaParts.push(canViewOwnerAccount ? `Account: ${ownerUsername}` : `@${ownerUsername}`);
       }
       return {
         value: characterName,
@@ -20294,8 +20295,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       `SELECT c.id,
               c.name,
               c.server_id,
+              u.username AS owner_username,
               COALESCE(gs.tags, '') AS guestbook_tags
        FROM characters c
+       JOIN users u ON u.id = c.user_id
        LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
        WHERE (c.is_public = 1 OR c.user_id = ? OR ? = 1)
          AND c.id != ?
@@ -20311,6 +20314,10 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       name: String(entry.name || "").trim(),
       server_id: normalizeCharacterServerId(entry.server_id),
       server_label: getServerLabel(entry.server_id),
+      owner_username:
+        req.session.user?.is_admin === true || req.session.user?.is_moderator === true
+          ? String(entry.owner_username || "").trim()
+          : "",
       tags: parseGuestbookDiscoveryTags(entry.guestbook_tags),
       url: `/characters/${Number(entry.id)}/guestbook${guestbookAccessState.staffViewRequested ? "?staff_view=1" : ""}`
     }));

@@ -82,6 +82,7 @@
               url,
               serverId,
               serverLabel: String(entry?.server_label || "").trim(),
+              ownerUsername: String(entry?.owner_username || "").trim(),
               tags,
               normalizedName: normalize(name),
               normalizedTags: tags.map((tag) => normalize(tag)),
@@ -309,7 +310,14 @@
       strong.textContent = entry.name;
 
       const small = document.createElement("small");
-      small.textContent = entry.serverLabel || "Gästebuch";
+      const metaParts = [];
+      if (entry.serverLabel) {
+        metaParts.push(entry.serverLabel);
+      }
+      if (entry.ownerUsername) {
+        metaParts.push(`Account: ${entry.ownerUsername}`);
+      }
+      small.textContent = metaParts.join(" · ") || "Gästebuch";
 
       link.append(strong, small);
 
