@@ -128,7 +128,25 @@
       <% if (isLogin || isRegister || isResetPassword) { %>
         <label>
           Passwort
-          <input type="password" name="password" required minlength="6" />
+          <span class="auth-password-wrap">
+            <input
+              id="auth-password-input"
+              type="password"
+              name="password"
+              required
+              minlength="6"
+            />
+            <button
+              type="button"
+              class="auth-password-toggle"
+              data-password-toggle="auth-password-input"
+              aria-label="Passwort anzeigen"
+              aria-pressed="false"
+              title="Passwort anzeigen"
+            >
+              &#128065;
+            </button>
+          </span>
         </label>
       <% } %>
 
@@ -177,7 +195,25 @@
       <% if (isResetPassword) { %>
         <label>
           Passwort wiederholen
-          <input type="password" name="password_confirm" required minlength="6" />
+          <span class="auth-password-wrap">
+            <input
+              id="auth-password-confirm-input"
+              type="password"
+              name="password_confirm"
+              required
+              minlength="6"
+            />
+            <button
+              type="button"
+              class="auth-password-toggle"
+              data-password-toggle="auth-password-confirm-input"
+              aria-label="Passwort anzeigen"
+              aria-pressed="false"
+              title="Passwort anzeigen"
+            >
+              &#128065;
+            </button>
+          </span>
         </label>
       <% } %>
 
@@ -239,5 +275,29 @@
 <% if (isRegister && registrationCaptchaMode === "turnstile") { %>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <% } %>
+
+<script>
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    const targetId = button.getAttribute("data-password-toggle");
+    const targetInput = targetId ? document.getElementById(targetId) : null;
+    if (!targetInput) {
+      return;
+    }
+
+    button.addEventListener("click", () => {
+      const shouldShowPassword = targetInput.type === "password";
+      targetInput.type = shouldShowPassword ? "text" : "password";
+      button.setAttribute("aria-pressed", shouldShowPassword ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        shouldShowPassword ? "Passwort verbergen" : "Passwort anzeigen"
+      );
+      button.setAttribute(
+        "title",
+        shouldShowPassword ? "Passwort verbergen" : "Passwort anzeigen"
+      );
+    });
+  });
+</script>
 
 <%- include("../partials/end") %>
