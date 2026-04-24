@@ -16,23 +16,20 @@
   const browsers = Array.from(document.querySelectorAll("[data-members-browser]")).map((element) => {
     const buttons = Array.from(element.querySelectorAll("[data-members-group-button]"));
     const panels = Array.from(element.querySelectorAll("[data-members-group-panel]"));
-    const activeButton = buttons.find((button) => button.classList.contains("is-active"));
 
     return {
       element,
       buttons,
       panels,
       emptyNode: element.querySelector("[data-members-empty]"),
-      activeTarget:
-        activeButton?.dataset.membersGroupTarget ||
-        buttons[0]?.dataset.membersGroupTarget ||
-        ""
+      idleNode: element.querySelector("[data-members-idle]"),
+      activeTarget: ""
     };
   });
 
   function formatMemberCount(count) {
     const safeCount = Math.max(0, Number(count) || 0);
-    return `${safeCount} Charakter${safeCount === 1 ? "" : "e"}`;
+    return `${safeCount}`;
   }
 
   function updateStatus(visibleCount, query) {
@@ -147,21 +144,25 @@
         }
       });
 
+      const hasAnyVisibleGroups = Boolean(firstVisibleTarget);
       const hasRequestedVisible = browser.buttons.some(
         (button) =>
           button.dataset.membersGroupTarget === browser.activeTarget &&
           !button.hidden
       );
-      const nextTarget = hasRequestedVisible ? browser.activeTarget : firstVisibleTarget;
+      const nextTarget = hasRequestedVisible ? browser.activeTarget : "";
       const hasVisibleGroups = Boolean(nextTarget);
 
       setActiveTarget(browser, nextTarget);
 
       if (browser.emptyNode) {
-        browser.emptyNode.hidden = hasVisibleGroups;
+        browser.emptyNode.hidden = hasAnyVisibleGroups || query.length === 0;
       }
 
-      browser.element.hidden = !hasVisibleGroups && query.length > 0;
+      if (browser.idleNode) {
+        browser.idleNode.hidden = !hasAnyVisibleGroups || hasVisibleGroups;
+      }
+
       if (!hasVisibleGroups) {
         return;
       }
@@ -189,7 +190,8 @@
   browsers.forEach((browser) => {
     browser.buttons.forEach((button) => {
       button.addEventListener("click", () => {
-        browser.activeTarget = button.dataset.membersGroupTarget || "";
+        const nextTarget = button.dataset.membersGroupTarget || "";
+        browser.activeTarget = browser.activeTarget === nextTarget ? "" : nextTarget;
         applyFilter();
       });
     });

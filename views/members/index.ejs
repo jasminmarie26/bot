@@ -37,7 +37,7 @@
               <p class="muted members-results-label">Rollencharaktere</p>
             </div>
             <span class="members-results-count" data-members-static-count>
-              <%= staffMembers.length %> Charakter<%= staffMembers.length === 1 ? "" : "e" %>
+              <%= staffMembers.length %>
             </span>
           </div>
           <div class="members-section-list members-results-list">
@@ -61,30 +61,30 @@
             <% const groupTarget = `free-rp-${String(group.key || "").trim()}`; %>
             <button
               type="button"
-              class="members-tag-tile <%= index === 0 ? 'is-active' : '' %>"
+              class="members-tag-tile"
               data-members-group-button
               data-members-group-target="<%= groupTarget %>"
               data-members-group-total="<%= group.count %>"
               aria-controls="members-panel-<%= groupTarget %>"
-              aria-pressed="<%= index === 0 ? 'true' : 'false' %>"
+              aria-pressed="false"
             >
               <span class="members-tag-tile-name"><%= group.label %></span>
               <span class="members-tag-tile-count" data-members-group-button-count>
-                <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                <%= group.count %>
               </span>
             </button>
           <% }) %>
         </div>
 
         <div class="members-results-stack">
-          <% rpTagGroups.forEach((group, index) => { %>
+          <% rpTagGroups.forEach((group) => { %>
             <% const groupTarget = `free-rp-${String(group.key || "").trim()}`; %>
             <section
               id="members-panel-<%= groupTarget %>"
               class="members-results-group"
               data-members-group-panel="<%= groupTarget %>"
               data-members-group-label="<%= String(group.label || '').toLowerCase() %>"
-              <%= index === 0 ? "" : "hidden" %>
+              hidden
             >
               <div class="members-results-heading">
                 <div>
@@ -92,7 +92,7 @@
                   <p class="muted members-results-label"><%= group.label %></p>
                 </div>
                 <span class="members-results-count" data-members-panel-count>
-                  <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                  <%= group.count %>
                 </span>
               </div>
               <div class="members-section-list members-results-list">
@@ -104,6 +104,9 @@
           <% }) %>
           <p class="muted members-results-empty" data-members-empty hidden>
             Keine passenden Charaktere in diesem Bereich.
+          </p>
+          <p class="muted members-results-idle" data-members-idle>
+            Tag anklicken, um die Charaktere anzuzeigen.
           </p>
         </div>
       <% } %>
@@ -117,34 +120,34 @@
         <p class="muted">Keine sichtbaren G&auml;stebuch-Tags im ERP-Bereich.</p>
       <% } else { %>
         <div class="members-tag-tile-grid">
-          <% erpTagGroups.forEach((group, index) => { %>
+          <% erpTagGroups.forEach((group) => { %>
             <% const groupTarget = `erp-${String(group.key || "").trim()}`; %>
             <button
               type="button"
-              class="members-tag-tile <%= index === 0 ? 'is-active' : '' %>"
+              class="members-tag-tile"
               data-members-group-button
               data-members-group-target="<%= groupTarget %>"
               data-members-group-total="<%= group.count %>"
               aria-controls="members-panel-<%= groupTarget %>"
-              aria-pressed="<%= index === 0 ? 'true' : 'false' %>"
+              aria-pressed="false"
             >
               <span class="members-tag-tile-name"><%= group.label %></span>
               <span class="members-tag-tile-count" data-members-group-button-count>
-                <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                <%= group.count %>
               </span>
             </button>
           <% }) %>
         </div>
 
         <div class="members-results-stack">
-          <% erpTagGroups.forEach((group, index) => { %>
+          <% erpTagGroups.forEach((group) => { %>
             <% const groupTarget = `erp-${String(group.key || "").trim()}`; %>
             <section
               id="members-panel-<%= groupTarget %>"
               class="members-results-group"
               data-members-group-panel="<%= groupTarget %>"
               data-members-group-label="<%= String(group.label || '').toLowerCase() %>"
-              <%= index === 0 ? "" : "hidden" %>
+              hidden
             >
               <div class="members-results-heading">
                 <div>
@@ -152,7 +155,7 @@
                   <p class="muted members-results-label"><%= group.label %></p>
                 </div>
                 <span class="members-results-count" data-members-panel-count>
-                  <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                  <%= group.count %>
                 </span>
               </div>
               <div class="members-section-list members-results-list">
@@ -164,6 +167,9 @@
           <% }) %>
           <p class="muted members-results-empty" data-members-empty hidden>
             Keine passenden Charaktere in diesem Bereich.
+          </p>
+          <p class="muted members-results-idle" data-members-idle>
+            Tag anklicken, um die Charaktere anzuzeigen.
           </p>
         </div>
       <% } %>
