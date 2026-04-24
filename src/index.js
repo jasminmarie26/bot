@@ -13003,7 +13003,10 @@ app.get("/media/guestbook-image", async (req, res) => {
 });
 
 app.get("/", async (req, res) => {
-  await homePageService.ensureDiscordHomeStats();
+  await Promise.all([
+    homePageService.ensureDiscordHomeStats(),
+    homePageService.ensureDailyQuote()
+  ]);
   return res.render("public/home", homePageService.buildHomePageViewModel());
 });
 

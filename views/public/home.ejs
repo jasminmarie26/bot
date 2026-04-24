@@ -234,6 +234,25 @@
           Kontakt &amp; Ticket
         </a>
 
+        <% if (dailyQuote && dailyQuote.text) { %>
+          <article class="home-daily-quote-card" aria-label="Tagesspruch">
+            <p class="home-daily-quote-kicker">Tagesspruch</p>
+            <blockquote class="home-daily-quote-text">&bdquo;<%= dailyQuote.text %>&ldquo;</blockquote>
+            <p class="home-daily-quote-author">- <%= dailyQuote.author || "Unbekannt" %></p>
+            <% if (dailyQuote.sourceUrl && dailyQuote.sourceLabel) { %>
+              <p class="home-daily-quote-source">
+                <a
+                  href="<%= dailyQuote.sourceUrl %>"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  via <%= dailyQuote.sourceLabel %>
+                </a>
+              </p>
+            <% } %>
+          </article>
+        <% } %>
+
       </section>
     </div>
   </div>

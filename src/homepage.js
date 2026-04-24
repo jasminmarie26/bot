@@ -3,6 +3,10 @@ const DEFAULT_HOME_HERO_BODY =
   "Aktuelle Neuigkeiten findest du oben \u00fcber den Live-Updates-Tab im Header. Dort k\u00f6nnen Admins und Moderatoren neue Meldungen direkt ver\u00f6ffentlichen und bearbeiten.";
 const DEFAULT_UPDATES_TITLE = "Live Updates";
 const LOGIN_STATS_CACHE_TTL_MS = 1000 * 10;
+const HOME_DAILY_QUOTE_SOURCE_LABEL = "ZenQuotes";
+const HOME_DAILY_QUOTE_SOURCE_URL = "https://zenquotes.io/";
+const HOME_DAILY_QUOTE_API_URL = "https://zenquotes.io/api/today";
+const HOME_DAILY_QUOTE_FETCH_TIMEOUT_MS = 5000;
 const DISCORD_HOME_INVITE_URL = "https://discord.gg/CWWxbZenwS";
 const DISCORD_HOME_INVITE_CODE = "CWWxbZenwS";
 const DISCORD_HOME_INVITE_API_URL =
@@ -94,6 +98,9 @@ function createHomePageService(options = {}) {
   let cachedDiscordHomeStats = { ...FALLBACK_DISCORD_HOME_STATS };
   let cachedDiscordHomeStatsExpiresAt = 0;
   let discordHomeStatsRefreshPromise = null;
+  let cachedDailyQuote = null;
+  let cachedDailyQuoteKey = "";
+  let dailyQuoteRefreshPromise = null;
   let cachedUsersTableColumns = null;
 
   function logHomePageError(scope, error, extra = {}) {
@@ -115,6 +122,51 @@ function createHomePageService(options = {}) {
 
   function renderPlainTextAsHtml(value) {
     return escapeHtml(value).replace(/\r?\n/g, "<br>");
+  }
+
+  function buildFallbackDailyQuote(previousQuote = null) {
+    if (previousQuote?.text) {
+      return {
+        ...previousQuote,
+        isFallback: true
+      };
+    }
+
+    return {
+      text: "Manchmal beginnt der richtige Weg mit einer ruhigen Frage.",
+      author: "Heldenhafte Reisen",
+      sourceLabel: "",
+      sourceUrl: "",
+      isFallback: true
+    };
+  }
+
+  function getDailyQuoteCacheKey(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function normalizeDailyQuote(payload) {
+    const quoteEntry = Array.isArray(payload) ? payload[0] : payload;
+    const text = String(quoteEntry?.q || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 280);
+    const author = String(quoteEntry?.a || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120);
+
+    if (!text) {
+      return null;
+    }
+
+    return {
+      text,
+      author: author || "Unbekannt",
+      sourceLabel: HOME_DAILY_QUOTE_SOURCE_LABEL,
+      sourceUrl: HOME_DAILY_QUOTE_SOURCE_URL,
+      isFallback: false
+    };
   }
 
   function getUsersTableColumnSet() {
@@ -298,6 +350,84 @@ function createHomePageService(options = {}) {
     }
 
     return refreshDiscordHomeStats(true);
+  }
+
+  function getDailyQuote() {
+    const currentCacheKey = getDailyQuoteCacheKey();
+    if (cachedDailyQuote && cachedDailyQuoteKey === currentCacheKey) {
+      return cachedDailyQuote;
+    }
+
+    if (!dailyQuoteRefreshPromise) {
+      void refreshDailyQuote();
+    }
+
+    return cachedDailyQuote || buildFallbackDailyQuote();
+  }
+
+  async function refreshDailyQuote(force = false) {
+    const currentCacheKey = getDailyQuoteCacheKey();
+    if (dailyQuoteRefreshPromise) {
+      return dailyQuoteRefreshPromise;
+    }
+
+    if (!force && cachedDailyQuote && cachedDailyQuoteKey === currentCacheKey) {
+      return cachedDailyQuote;
+    }
+
+    if (!fetchImpl) {
+      cachedDailyQuote = buildFallbackDailyQuote(cachedDailyQuote);
+      cachedDailyQuoteKey = currentCacheKey;
+      return cachedDailyQuote;
+    }
+
+    dailyQuoteRefreshPromise = (async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), HOME_DAILY_QUOTE_FETCH_TIMEOUT_MS);
+
+      try {
+        const response = await fetchImpl(HOME_DAILY_QUOTE_API_URL, {
+          signal: controller.signal,
+          headers: {
+            accept: "application/json",
+            "user-agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Daily quote request failed with status ${response.status}`);
+        }
+
+        const nextDailyQuote = normalizeDailyQuote(await response.json());
+        if (!nextDailyQuote) {
+          throw new Error("Daily quote payload was empty.");
+        }
+
+        cachedDailyQuote = nextDailyQuote;
+        cachedDailyQuoteKey = currentCacheKey;
+        return cachedDailyQuote;
+      } catch (error) {
+        logHomePageError("daily-quote-refresh", error);
+        cachedDailyQuote = buildFallbackDailyQuote(cachedDailyQuote);
+        cachedDailyQuoteKey = currentCacheKey;
+        return cachedDailyQuote;
+      } finally {
+        clearTimeout(timeout);
+        dailyQuoteRefreshPromise = null;
+      }
+    })();
+
+    return dailyQuoteRefreshPromise;
+  }
+
+  async function ensureDailyQuote() {
+    const currentCacheKey = getDailyQuoteCacheKey();
+    if (cachedDailyQuote && cachedDailyQuoteKey === currentCacheKey) {
+      return cachedDailyQuote;
+    }
+
+    return refreshDailyQuote(true);
   }
 
   function getHomeStatsTrackedIp(user) {
@@ -636,6 +766,7 @@ function createHomePageService(options = {}) {
       title: "Rollenspiel-Community für LARP und Pen & Paper",
       metaDescription: defaultSeoDescription,
       stats: getLoginStats(),
+      dailyQuote: getDailyQuote(),
       homeContent,
       recentSiteUpdateRevisions: recentSiteUpdates
         .map((siteUpdate) => String(siteUpdate?.revision_token || "").trim())
@@ -716,8 +847,10 @@ function createHomePageService(options = {}) {
   return {
     buildHomePageViewModel,
     clearLoginStatsCache,
+    ensureDailyQuote,
     emitHomeStatsUpdate,
     ensureDiscordHomeStats,
+    getDailyQuote,
     getHomeContent,
     getLoginStats,
     normalizeHomeSectionBody,
