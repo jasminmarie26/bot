@@ -23,14 +23,21 @@
         +
       </a>
     <% } %>
-    <a
-      class="btn serverlist-add-character-btn serverlist-export-all-btn"
-      href="/dashboard/larp/guestbook-code-email"
-      aria-label="G&auml;steb&uuml;cher per E-Mail senden"
-      title="G&auml;steb&uuml;cher per E-Mail senden"
+    <form
+      method="POST"
+      action="/dashboard/larp/guestbook-code-email"
+      class="serverlist-export-all-form"
     >
-      &#10003;
-    </a>
+      <input type="hidden" name="return_to" value="/dashboard/larp">
+      <button
+        type="submit"
+        class="btn serverlist-add-character-btn serverlist-export-all-btn"
+        aria-label="G&auml;steb&uuml;cher per E-Mail senden"
+        title="G&auml;steb&uuml;cher per E-Mail senden"
+      >
+        &#10003;
+      </button>
+    </form>
   </div>
 </section>
 

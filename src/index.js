@@ -3972,24 +3972,6 @@ function getGuestbookExportItemsForCharacters(characters, userId) {
     .filter((item) => item && Number(item.character?.user_id) === parsedUserId);
 }
 
-function buildGuestbookExportOverviewCharacters(items) {
-  return (Array.isArray(items) ? items : []).map((item) => {
-    const characterId = Number(item.character?.id);
-    const pages = Array.isArray(item.pages) ? item.pages : [];
-    const entries = Array.isArray(item.entries) ? item.entries : [];
-
-    return {
-      id: Number.isInteger(characterId) && characterId > 0 ? characterId : 0,
-      name: String(item.character?.name || "").trim() || "Unbenannter Charakter",
-      guestbookUrl:
-        Number.isInteger(characterId) && characterId > 0 ? `/characters/${characterId}/guestbook` : "",
-      serverLabel: getServerLabel(item.character?.server_id) || "-",
-      pageCount: pages.length,
-      entryCount: entries.length
-    };
-  });
-}
-
 async function sendGuestbookCodeEmailsSeparately(payload) {
   const email = normalizeEmail(payload.email || "");
   if (!email) {
@@ -17004,38 +16986,6 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
   });
 });
 
-app.get("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, (req, res) => {
-  const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
-  if (!serverSection) {
-    return res.redirect("/dashboard");
-  }
-
-  const returnTarget = `/dashboard/areas/${serverSection.id}`;
-  const accountUser = getAccountUserById(req.session.user.id);
-  const email = normalizeEmail(accountUser?.email || "");
-  const exportItems = getGuestbookExportItemsForCharacters(
-    getDashboardGuestbookExportCharacters(serverSection),
-    req.session.user.id
-  );
-
-  return res.render("serverliste/guestbook-email", {
-    title: `Gästebücher per E-Mail: ${serverSection.dashboard_label || serverSection.label}`,
-    pageKicker: "Rollenspiel",
-    pageTitle: "Gästebücher per E-Mail",
-    pageDescription: `Für ${serverSection.dashboard_label || serverSection.label} wird pro Gästebuch eine eigene E-Mail mit dem Charakternamen verschickt.`,
-    backHref: returnTarget,
-    backLabel: "Zurück zum Bereich",
-    sendAction: `/dashboard/areas/${serverSection.id}/guestbook-code-email`,
-    returnTo: `/dashboard/areas/${serverSection.id}/guestbook-code-email`,
-    email,
-    hasEmail: Boolean(email),
-    collectionTitle: serverSection.dashboard_label || serverSection.label,
-    characters: buildGuestbookExportOverviewCharacters(exportItems),
-    emptyState: "Es sind keine eigenen Charaktere für diesen Bereich vorhanden.",
-    ...getServerListPageAssets()
-  });
-});
-
 app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
@@ -17097,7 +17047,7 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
     return res.redirect("/dashboard");
   }
 
-  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}/guestbook-code-email`);
+  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}`);
   const dashboardCharacters = getDashboardGuestbookExportCharacters(serverSection);
   if (!dashboardCharacters.length) {
     setFlash(req, "error", "Es sind keine eigenen Charaktere für diesen Bereich vorhanden.");
@@ -17160,35 +17110,8 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
   return res.redirect(returnTarget);
 });
 
-app.get("/dashboard/larp/guestbook-code-email", requireAuth, (req, res) => {
-  const returnTarget = "/dashboard/larp";
-  const accountUser = getAccountUserById(req.session.user.id);
-  const email = normalizeEmail(accountUser?.email || "");
-  const exportItems = getGuestbookExportItemsForCharacters(
-    getLarpCharactersForUser(req.session.user.id),
-    req.session.user.id
-  );
-
-  return res.render("serverliste/guestbook-email", {
-    title: "Gästebücher per E-Mail: LARP",
-    pageKicker: "LARP",
-    pageTitle: "Gästebücher per E-Mail",
-    pageDescription: "Für LARP wird pro Gästebuch eine eigene E-Mail mit dem Charakternamen verschickt.",
-    backHref: returnTarget,
-    backLabel: "Zurück zum LARP-Bereich",
-    sendAction: "/dashboard/larp/guestbook-code-email",
-    returnTo: "/dashboard/larp/guestbook-code-email",
-    email,
-    hasEmail: Boolean(email),
-    collectionTitle: "LARP",
-    characters: buildGuestbookExportOverviewCharacters(exportItems),
-    emptyState: "Es sind keine eigenen LARP-Profile vorhanden.",
-    ...getServerListPageAssets()
-  });
-});
-
 app.post("/dashboard/larp/guestbook-code-email", requireAuth, async (req, res) => {
-  const returnTarget = getSafeReturnTarget(req, "/dashboard/larp/guestbook-code-email");
+  const returnTarget = getSafeReturnTarget(req, "/dashboard/larp");
   const dashboardCharacters = getLarpCharactersForUser(req.session.user.id);
   if (!dashboardCharacters.length) {
     setFlash(req, "error", "Es sind keine eigenen LARP-Charaktere vorhanden.");

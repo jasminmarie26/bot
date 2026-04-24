@@ -17,14 +17,21 @@
     >
       +
     </a>
-    <a
-      class="btn serverlist-add-character-btn serverlist-export-all-btn"
-      href="/dashboard/areas/<%= serverSection.id %>/guestbook-code-email"
-      aria-label="Gästebücher per E-Mail senden"
-      title="Gästebücher per E-Mail senden"
+    <form
+      method="POST"
+      action="/dashboard/areas/<%= serverSection.id %>/guestbook-code-email"
+      class="serverlist-export-all-form"
     >
-      &#10003;
-    </a>
+      <input type="hidden" name="return_to" value="/dashboard/areas/<%= serverSection.id %>">
+      <button
+        type="submit"
+        class="btn serverlist-add-character-btn serverlist-export-all-btn"
+        aria-label="Gästebücher per E-Mail senden"
+        title="Gästebücher per E-Mail senden"
+      >
+        &#10003;
+      </button>
+    </form>
   </div>
 </section>
 
