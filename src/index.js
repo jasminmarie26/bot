@@ -22615,12 +22615,30 @@ function sweepAutoAfkSockets(now = Date.now()) {
   }
 }
 
-function buildChatCharacterSwitchSuffix(nextDisplayName) {
+function buildChatCharacterSwitchMessage(nextDisplayName) {
   const safeNextName = String(nextDisplayName || "").trim() || "jemand anderes";
   const template = CHAT_CHARACTER_SWITCH_SUFFIXES.length
     ? CHAT_CHARACTER_SWITCH_SUFFIXES[crypto.randomInt(CHAT_CHARACTER_SWITCH_SUFFIXES.length)]
     : "verwandelt sich mit einem kleinen Funkenschauer in %NAME%.";
-  return template.replace(/%NAME%/g, safeNextName);
+  const placeholder = "%NAME%";
+  const placeholderIndex = template.indexOf(placeholder);
+  if (placeholderIndex === -1) {
+    return {
+      content: template.replace(/%NAME%/g, safeNextName),
+      targetName: "",
+      targetPrefix: "",
+      targetSuffix: ""
+    };
+  }
+
+  const targetPrefix = template.slice(0, placeholderIndex);
+  const targetSuffix = template.slice(placeholderIndex + placeholder.length).replace(/%NAME%/g, safeNextName);
+  return {
+    content: `${targetPrefix}${safeNextName}${targetSuffix}`,
+    targetName: safeNextName,
+    targetPrefix,
+    targetSuffix
+  };
 }
 
 function getPreferredCharacterForUser(
@@ -25446,6 +25464,11 @@ function buildSystemChatPayload(content, options = {}) {
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
     presence_actor_role_style: String(options?.presence_actor_role_style || "").trim(),
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
+    actor_target_name: String(options?.actor_target_name || "").trim(),
+    actor_target_role_style: String(options?.actor_target_role_style || "").trim(),
+    actor_target_chat_text_color: String(options?.actor_target_chat_text_color || "").trim(),
+    actor_target_prefix: String(options?.actor_target_prefix || ""),
+    actor_target_suffix: String(options?.actor_target_suffix || ""),
     presence_suffix: String(options?.presence_suffix || "").trim(),
     room_switch_target_name: String(options?.room_switch_target_name || "").trim(),
     message_time_iso: messageTimeIso,
@@ -27056,15 +27079,21 @@ io.on("connection", (socket) => {
         getSocketPreferredCharacterId(socket, serverId),
         standardRoomId
       );
+      const characterSwitchMessage = buildChatCharacterSwitchMessage(nextDisplayName);
       emitSystemChatMessage(
         roomId,
         serverId,
-        buildChatCharacterSwitchSuffix(nextDisplayName),
+        characterSwitchMessage.content,
         {
           system_kind: "actor-message",
           presence_actor_name: previousDisplayName,
           presence_actor_role_style: previousDisplayProfile?.role_style || "",
-          presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || ""
+          presence_actor_chat_text_color: previousDisplayProfile?.chat_text_color || "",
+          actor_target_name: characterSwitchMessage.targetName,
+          actor_target_role_style: nextDisplayProfile?.role_style || "",
+          actor_target_chat_text_color: nextDisplayProfile?.chat_text_color || "",
+          actor_target_prefix: characterSwitchMessage.targetPrefix,
+          actor_target_suffix: characterSwitchMessage.targetSuffix
         },
         standardRoomId
       );

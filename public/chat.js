@@ -540,6 +540,11 @@
       presence_actor_name: String(message?.presence_actor_name || "").trim(),
       presence_actor_role_style: String(message?.presence_actor_role_style || "").trim(),
       presence_actor_chat_text_color: String(message?.presence_actor_chat_text_color || "").trim(),
+      actor_target_name: String(message?.actor_target_name || "").trim(),
+      actor_target_role_style: String(message?.actor_target_role_style || "").trim(),
+      actor_target_chat_text_color: String(message?.actor_target_chat_text_color || "").trim(),
+      actor_target_prefix: String(message?.actor_target_prefix || ""),
+      actor_target_suffix: String(message?.actor_target_suffix || ""),
       presence_suffix: String(message?.presence_suffix || "").trim(),
       room_switch_target_name: String(message?.room_switch_target_name || "").trim()
     };
@@ -1255,7 +1260,11 @@
         return;
       }
       const fallbackColor = String(node.dataset.chatTimeSourceColor || "").trim();
-      applyChatTextColor(node, fallbackColor, { allowGradient: false });
+      if (fallbackColor) {
+        applyChatTextColor(node, fallbackColor, { allowGradient: false });
+      } else {
+        node.style.removeProperty("color");
+      }
     });
 
     chatFeed.querySelectorAll("article.chat-message strong").forEach((node) => {
@@ -2302,6 +2311,19 @@
     });
   }
 
+  function createStyledChatNameNode(rawName, roleStyle = "", rawColor = "") {
+    const strong = document.createElement("strong");
+    const normalizedRoleStyle = String(roleStyle || "").trim().toLowerCase();
+    const displayName = formatRoleDisplayName(rawName, normalizedRoleStyle);
+    strong.textContent = displayName;
+    if (normalizedRoleStyle === "admin" || normalizedRoleStyle === "moderator") {
+      strong.classList.add(`role-name-${normalizedRoleStyle}`);
+    }
+    applySpecialNameDecor(strong, displayName);
+    applyChatTextColor(strong, rawColor);
+    return strong;
+  }
+
   function escapeRegExp(value) {
     return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
@@ -2360,9 +2382,12 @@
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
-    const messageTimeColor = isSystemMessage
-      ? normalizeChatTextColor(msg?.presence_actor_chat_text_color || msg?.chat_text_color)
-      : chatTextColor;
+    const isOwnChatMessage =
+      !isSystemMessage &&
+      Number.isInteger(currentUserId) &&
+      currentUserId > 0 &&
+      Number(msg?.user_id) === currentUserId;
+    const messageTimeColor = isOwnChatMessage ? chatTextColor : "";
     const shouldShowMessageTime = showChatMessageTimestamps
       && (!isSystemMessage || systemKind === "presence");
     const messageTimeLabel = shouldShowMessageTime
@@ -2371,9 +2396,11 @@
     if (messageTimeLabel) {
       const timePrefix = document.createElement("span");
       timePrefix.className = "chat-own-message-time";
-      timePrefix.dataset.chatTimeSourceColor = messageTimeColor;
+      timePrefix.dataset.chatTimeSourceColor = messageTimeColor || "";
       timePrefix.textContent = `[${messageTimeLabel}] `;
-      applyChatTextColor(timePrefix, messageTimeColor, { allowGradient: false });
+      if (messageTimeColor) {
+        applyChatTextColor(timePrefix, messageTimeColor, { allowGradient: false });
+      }
       line.appendChild(timePrefix);
     }
     if (isSystemMessage) {
@@ -2382,18 +2409,20 @@
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
       const presenceActorRoleStyle = String(msg?.presence_actor_role_style || "").trim().toLowerCase();
       const presenceActorChatTextColor = normalizeChatTextColor(msg?.presence_actor_chat_text_color);
+      const actorTargetName = String(msg?.actor_target_name || "").trim();
+      const actorTargetRoleStyle = String(msg?.actor_target_role_style || "").trim().toLowerCase();
+      const actorTargetChatTextColor = normalizeChatTextColor(msg?.actor_target_chat_text_color);
+      const actorTargetPrefix = String(msg?.actor_target_prefix || "");
+      const actorTargetSuffix = String(msg?.actor_target_suffix || "");
       const presenceSuffix = String(msg?.presence_suffix || "").trim();
       const roomSwitchTargetName = String(msg?.room_switch_target_name || "").trim();
       if (systemKind === "presence" && presenceActorName && presenceSuffix) {
-        const strong = document.createElement("strong");
-        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
-        strong.textContent = displayActorName;
-        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
-          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
-        }
-        applySpecialNameDecor(strong, displayActorName);
+        const strong = createStyledChatNameNode(
+          presenceActorName,
+          presenceActorRoleStyle,
+          presenceActorChatTextColor
+        );
         body.textContent = ` ${presenceSuffix}`;
-        applyChatTextColor(strong, presenceActorChatTextColor);
         line.appendChild(strong);
         if (
           presenceKind === "enter" &&
@@ -2402,38 +2431,41 @@
           playEntryTone();
         }
       } else if (systemKind === "dice-roll" && presenceActorName && content) {
-        const strong = document.createElement("strong");
-        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
-        strong.textContent = displayActorName;
-        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
-          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
-        }
-        applySpecialNameDecor(strong, displayActorName);
+        const strong = createStyledChatNameNode(
+          presenceActorName,
+          presenceActorRoleStyle,
+          presenceActorChatTextColor
+        );
         body.textContent = ` ${content}`;
-        applyChatTextColor(strong, presenceActorChatTextColor);
         line.appendChild(strong);
       } else if (systemKind === "room-switch" && presenceActorName && roomSwitchTargetName) {
-        const strong = document.createElement("strong");
-        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
-        strong.textContent = displayActorName;
-        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
-          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
-        }
-        applySpecialNameDecor(strong, displayActorName);
-        applyChatTextColor(strong, presenceActorChatTextColor);
+        const strong = createStyledChatNameNode(
+          presenceActorName,
+          presenceActorRoleStyle,
+          presenceActorChatTextColor
+        );
         body.textContent = ` hat in den Raum ${roomSwitchTargetName} gewechselt.`;
         line.appendChild(strong);
       } else if (systemKind === "actor-message" && presenceActorName && content) {
-        const strong = document.createElement("strong");
-        const displayActorName = formatRoleDisplayName(presenceActorName, presenceActorRoleStyle);
-        strong.textContent = displayActorName;
-        if (presenceActorRoleStyle === "admin" || presenceActorRoleStyle === "moderator") {
-          strong.classList.add(`role-name-${presenceActorRoleStyle}`);
-        }
-        applySpecialNameDecor(strong, displayActorName);
-        applyChatTextColor(strong, presenceActorChatTextColor);
+        const strong = createStyledChatNameNode(
+          presenceActorName,
+          presenceActorRoleStyle,
+          presenceActorChatTextColor
+        );
         line.appendChild(strong);
-        appendFormattedChatText(body, content, { leadingSpace: true });
+        if (actorTargetName && (actorTargetPrefix || actorTargetSuffix)) {
+          appendFormattedChatText(body, actorTargetPrefix, { leadingSpace: true });
+          body.appendChild(
+            createStyledChatNameNode(
+              actorTargetName,
+              actorTargetRoleStyle,
+              actorTargetChatTextColor
+            )
+          );
+          appendFormattedChatText(body, actorTargetSuffix);
+        } else {
+          appendFormattedChatText(body, content, { leadingSpace: true });
+        }
       } else {
         body.textContent = content;
       }
