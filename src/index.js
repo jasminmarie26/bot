@@ -16335,10 +16335,17 @@ function updateLarpHomeOnlineRecord(count) {
   };
 }
 
-function buildLarpHomeOnlineSummary(userId = null) {
+function buildLarpHomeOnlineSummary(userId = null, characterId = null) {
   const allMembers = getLarpHomeOnlineMembers();
-  const ignoreFilter = buildIgnoredSocialFilterForUser(userId);
-  const members = filterSociallyIgnoredMemberEntries(allMembers, ignoreFilter);
+  const ignoreFilterCache = new Map();
+  const ignoreFilter = buildIgnoredSocialFilterForUser(userId, ignoreFilterCache);
+  const members = filterSociallyIgnoredMemberEntries(
+    allMembers,
+    ignoreFilter,
+    userId,
+    characterId,
+    ignoreFilterCache
+  );
   const record = updateLarpHomeOnlineRecord(allMembers.length);
   const memberCount = members.length;
 
@@ -16355,6 +16362,7 @@ function renderLarpHomePage(req, res, character) {
   const isAdmin = req.session.user?.is_admin === true;
   const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
   const larpHomeTitle = `LARP Home: ${character.name}`;
+  const topbarCharacter = isOwner ? character : getPreferredMenuCharacterForUser(req);
 
   if (isOwner) {
     rememberPreferredCharacter(req, character);
@@ -16365,7 +16373,7 @@ function renderLarpHomePage(req, res, character) {
     title: larpHomeTitle,
     metaDescription: `${character.name} landet im modernen LARP-Forum von Heldenhafte Reisen.`,
     character,
-    topbarCharacter: isOwner ? character : getPreferredMenuCharacterForUser(req),
+    topbarCharacter,
     isOwner,
     larpGuilds: getDashboardLarpGuilds(character.user_id),
     characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
@@ -16373,7 +16381,7 @@ function renderLarpHomePage(req, res, character) {
     guestbookStats: getCharacterGuestbookStats(character.id, {
       includePrivate: isOwner || isAdmin
     }),
-    larpOnlineSummary: buildLarpHomeOnlineSummary(req.session.user?.id)
+    larpOnlineSummary: buildLarpHomeOnlineSummary(req.session.user?.id, topbarCharacter?.id)
   });
 }
 
@@ -17237,7 +17245,9 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
-  const ignoreFilter = buildIgnoredSocialFilterForUser(currentUserId);
+  const activeCharacter = getPreferredMenuCharacterForUser(req);
+  const ignoreFilterCache = new Map();
+  const ignoreFilter = buildIgnoredSocialFilterForUser(currentUserId, ignoreFilterCache);
   const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
@@ -17305,7 +17315,16 @@ app.get("/members", requireAuth, (req, res) => {
             ? "Öffentlich"
             : "Privat"
     }))
-    .filter((member) => !isSociallyIgnoredMemberEntry(member, ignoreFilter));
+    .filter(
+      (member) =>
+        !isSociallyIgnoredMemberEntry(
+          member,
+          ignoreFilter,
+          currentUserId,
+          activeCharacter?.id,
+          ignoreFilterCache
+        )
+    );
 
   const staffCharacterIds = new Set();
   const staffMembers = [];
@@ -17411,7 +17430,13 @@ app.get("/members", requireAuth, (req, res) => {
       });
     }
   });
-  const visibleStaffMembers = filterSociallyIgnoredMemberEntries(staffMembers, ignoreFilter);
+  const visibleStaffMembers = filterSociallyIgnoredMemberEntries(
+    staffMembers,
+    ignoreFilter,
+    currentUserId,
+    activeCharacter?.id,
+    ignoreFilterCache
+  );
 
   const rpMembers = visibleMembers.filter(
     (member) => normalizeCharacterServerId(member.server_id) === "free-rp"
@@ -18212,26 +18237,6 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         hide_owned_room_users: isCuratedPublicRoom(room, character.server_id)
       }))
     : [];
-  const standardRooms = getStandardRoomsForServer(character.server_id);
-  const standardRoomUsers = Object.fromEntries(
-    standardRooms.map((room) => [
-      room.id,
-      getOnlineCharactersForChannel(null, character.server_id, room.id)
-    ])
-  );
-  const publicRoomUsers = Object.fromEntries(
-    publicRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
-  );
-  const roomUsers = Object.fromEntries(
-    ownedRooms.map((room) => [room.id, getOnlineCharactersForChannel(room.id, character.server_id)])
-  );
-  const ownedFestplays = isOwner
-    ? getOwnedFestplaysForUser(req.session.user.id, character.server_id)
-    : [];
-  const guestbookPages = ensureGuestbookPages(id);
-  const requestedPageId = Number(req.query.page_id);
-  const activeGuestbookPage =
-    guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
   const preferredViewerCharacterId = getPreferredCharacterIdFromSession(req, character.server_id);
   const currentHeaderCharacter = isOwner
     ? {
@@ -18246,10 +18251,58 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         character.server_id,
         preferredViewerCharacterId
       ) || null);
+  const onlineIgnoreFilterCache = new Map();
 
   if (currentHeaderCharacter) {
     rememberPreferredCharacter(req, currentHeaderCharacter);
   }
+  const standardRooms = getStandardRoomsForServer(character.server_id);
+  const standardRoomUsers = Object.fromEntries(
+    standardRooms.map((room) => [
+      room.id,
+      getVisibleOnlineCharactersForUser(
+        req.session.user.id,
+        currentHeaderCharacter?.id,
+        null,
+        character.server_id,
+        room.id,
+        onlineIgnoreFilterCache
+      )
+    ])
+  );
+  const publicRoomUsers = Object.fromEntries(
+    publicRooms.map((room) => [
+      room.id,
+      getVisibleOnlineCharactersForUser(
+        req.session.user.id,
+        currentHeaderCharacter?.id,
+        room.id,
+        character.server_id,
+        null,
+        onlineIgnoreFilterCache
+      )
+    ])
+  );
+  const roomUsers = Object.fromEntries(
+    ownedRooms.map((room) => [
+      room.id,
+      getVisibleOnlineCharactersForUser(
+        req.session.user.id,
+        currentHeaderCharacter?.id,
+        room.id,
+        character.server_id,
+        null,
+        onlineIgnoreFilterCache
+      )
+    ])
+  );
+  const ownedFestplays = isOwner
+    ? getOwnedFestplaysForUser(req.session.user.id, character.server_id)
+    : [];
+  const guestbookPages = ensureGuestbookPages(id);
+  const requestedPageId = Number(req.query.page_id);
+  const activeGuestbookPage =
+    guestbookPages.find((page) => page.id === requestedPageId) || guestbookPages[0];
   const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
 
   return res.render("rooms/character-room-list", {
@@ -18401,6 +18454,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
 
   try {
     rememberPreferredCharacter(req, character);
+    const onlineIgnoreFilterCache = new Map();
     const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
       manualOnly: true
     }).filter((room) => {
@@ -18417,11 +18471,13 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     const festplayRoomUsers = Object.fromEntries(
       festplayRooms.map((room) => [
         room.id,
-        sanitizeOnlineCharacterEntries(
-          getOnlineCharactersForChannel(
-            room.id,
-            normalizeServer(festplay.server_id || character.server_id)
-          )
+        getVisibleOnlineCharactersForUser(
+          req.session.user.id,
+          character.id,
+          room.id,
+          normalizeServer(festplay.server_id || character.server_id),
+          null,
+          onlineIgnoreFilterCache
         )
       ])
     );
@@ -18437,8 +18493,13 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
         return true;
       })
       .map((room) => {
-        const activeUsers = sanitizeOnlineCharacterEntries(
-          getOnlineCharactersForChannel(room.id, normalizeServer(character.server_id))
+        const activeUsers = getVisibleOnlineCharactersForUser(
+          req.session.user.id,
+          character.id,
+          room.id,
+          normalizeServer(character.server_id),
+          null,
+          onlineIgnoreFilterCache
         );
         if (!activeUsers.length) {
           maybeRemoveEmptyRoom(room.id);
@@ -21049,10 +21110,13 @@ app.get("/chat", requireAuth, (req, res) => {
 
   const messages = [];
 
-  const onlineCharacters = getOnlineCharactersForChannel(
+  const onlineCharacters = getVisibleOnlineCharactersForUser(
+    req.session.user?.id,
+    activeCharacter?.id,
     activeRoom ? activeRoom.id : null,
     activeServerId,
-    standardRoom?.id || ""
+    standardRoom?.id || "",
+    new Map()
   );
   const activeCharacterBirthdayCake = shouldShowBirthdayCakeForCharacter(
     activeCharacter?.id,
@@ -23120,8 +23184,15 @@ function getSocketsInChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomI
   return sockets;
 }
 
-function getSocketsInWatchChannel(roomId, serverId = DEFAULT_SERVER_ID) {
-  const members = io.sockets.adapter.rooms.get(socketChannelForRoomWatch(roomId, serverId));
+function getSocketsInWatchChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const members = io.sockets.adapter.rooms.get(
+    socketChannelForRoomWatch(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)
+  );
   if (!members || members.size === 0) {
     return [];
   }
@@ -23640,11 +23711,13 @@ function findWhisperTargetsByDisplayName(
   serverId = DEFAULT_SERVER_ID,
   excludeUserId = null,
   roomId = null,
-  standardRoomId = null
+  standardRoomId = null,
+  viewerSocket = null
 ) {
   const normalizedLookupKey = normalizeInviteTargetLookupKey(displayName);
   const normalizedServerId = normalizeServer(serverId);
   const parsedExcludeUserId = Number(excludeUserId);
+  const ignoreFilterCache = viewerSocket ? new Map() : null;
   if (!normalizedLookupKey) {
     return [];
   }
@@ -23680,6 +23753,20 @@ function findWhisperTargetsByDisplayName(
     );
     const displayNameLabel = String(profile?.label || "").trim();
     if (!displayNameLabel || normalizeInviteTargetLookupKey(displayNameLabel) !== normalizedLookupKey) {
+      continue;
+    }
+    if (
+      viewerSocket &&
+      shouldHideSocialActorFromSocket(
+        viewerSocket,
+        userId,
+        presenceIdentity.characterId,
+        roomId,
+        normalizedServerId,
+        standardRoomId,
+        ignoreFilterCache
+      )
+    ) {
       continue;
     }
 
@@ -23777,6 +23864,22 @@ function emitWhisperBetweenUsers(
         getSocketChannelServerId(recipientSockets[0], roomId, normalizedServerId)
       )
     : null;
+  const ignoreFilterCache = new Map();
+  const recipientIgnoreFilter = buildIgnoredSocialFilterForUser(parsedTargetUserId, ignoreFilterCache);
+  if (
+    isSociallyIgnoredMemberEntry(
+      {
+        user_id: Number(senderSocket.data.user.id),
+        character_id: senderCharacterId
+      },
+      recipientIgnoreFilter,
+      parsedTargetUserId,
+      recipientCharacterId,
+      ignoreFilterCache
+    )
+  ) {
+    return { ok: false, reason: "blocked" };
+  }
   const senderName = senderProfile.label;
   const recipientName = recipientProfile
     ? recipientProfile.label
@@ -24129,7 +24232,7 @@ function getIgnoredCharacterRowsForUser(userId) {
     .all(parsedUserId);
 }
 
-function buildIgnoredSocialFilterForUser(userId) {
+function buildIgnoredSocialFilterForUser(userId, cache = null) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
     return {
@@ -24138,7 +24241,11 @@ function buildIgnoredSocialFilterForUser(userId) {
     };
   }
 
-  return {
+  if (cache instanceof Map && cache.has(parsedUserId)) {
+    return cache.get(parsedUserId);
+  }
+
+  const filter = {
     ignoredAccountUserIds: new Set(
       getIgnoredAccountRowsForUser(parsedUserId)
         .map((row) => Number(row.user_id))
@@ -24150,27 +24257,82 @@ function buildIgnoredSocialFilterForUser(userId) {
         .filter((value) => Number.isInteger(value) && value > 0)
     )
   };
+  if (cache instanceof Map) {
+    cache.set(parsedUserId, filter);
+  }
+  return filter;
 }
 
-function isSociallyIgnoredMemberEntry(entry, ignoreFilter = null) {
+function getSocialIdentityFromEntry(entry) {
+  const userId = Number(entry?.user_id ?? entry?.userId ?? entry?.owner_user_id ?? entry?.ownerUserId);
+  const characterId = Number(entry?.id ?? entry?.character_id ?? entry?.characterId);
+  return {
+    userId: Number.isInteger(userId) && userId > 0 ? userId : null,
+    characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null
+  };
+}
+
+function isTargetBlockedByIgnoreFilter(targetUserId, targetCharacterId, ignoreFilter = null) {
   const ignoredAccountUserIds = ignoreFilter?.ignoredAccountUserIds instanceof Set
     ? ignoreFilter.ignoredAccountUserIds
     : new Set();
   const ignoredCharacterIds = ignoreFilter?.ignoredCharacterIds instanceof Set
     ? ignoreFilter.ignoredCharacterIds
     : new Set();
+  const parsedTargetUserId = Number(targetUserId);
+  const parsedTargetCharacterId = Number(targetCharacterId);
 
-  const userId = Number(entry?.user_id ?? entry?.userId ?? entry?.owner_user_id ?? entry?.ownerUserId);
-  const characterId = Number(entry?.id ?? entry?.character_id ?? entry?.characterId);
   return Boolean(
-    (Number.isInteger(userId) && userId > 0 && ignoredAccountUserIds.has(userId)) ||
-      (Number.isInteger(characterId) && characterId > 0 && ignoredCharacterIds.has(characterId))
+    (Number.isInteger(parsedTargetUserId) && parsedTargetUserId > 0 && ignoredAccountUserIds.has(parsedTargetUserId)) ||
+      (Number.isInteger(parsedTargetCharacterId) && parsedTargetCharacterId > 0 && ignoredCharacterIds.has(parsedTargetCharacterId))
   );
 }
 
-function filterSociallyIgnoredMemberEntries(entries, ignoreFilter = null) {
+function isSociallyIgnoredMemberEntry(
+  entry,
+  ignoreFilter = null,
+  viewerUserId = null,
+  viewerCharacterId = null,
+  ignoreFilterCache = null
+) {
+  const { userId, characterId } = getSocialIdentityFromEntry(entry);
+  if (isTargetBlockedByIgnoreFilter(userId, characterId, ignoreFilter)) {
+    return true;
+  }
+
+  const parsedViewerUserId = Number(viewerUserId);
+  if (!Number.isInteger(parsedViewerUserId) || parsedViewerUserId < 1 || !Number.isInteger(userId) || userId < 1) {
+    return false;
+  }
+  if (parsedViewerUserId === userId) {
+    return false;
+  }
+
+  const parsedViewerCharacterId = Number(viewerCharacterId);
+  const reverseIgnoreFilter = buildIgnoredSocialFilterForUser(userId, ignoreFilterCache);
+  return isTargetBlockedByIgnoreFilter(
+    parsedViewerUserId,
+    Number.isInteger(parsedViewerCharacterId) && parsedViewerCharacterId > 0 ? parsedViewerCharacterId : null,
+    reverseIgnoreFilter
+  );
+}
+
+function filterSociallyIgnoredMemberEntries(
+  entries,
+  ignoreFilter = null,
+  viewerUserId = null,
+  viewerCharacterId = null,
+  ignoreFilterCache = null
+) {
   return (Array.isArray(entries) ? entries : []).filter(
-    (entry) => !isSociallyIgnoredMemberEntry(entry, ignoreFilter)
+    (entry) =>
+      !isSociallyIgnoredMemberEntry(
+        entry,
+        ignoreFilter,
+        viewerUserId,
+        viewerCharacterId,
+        ignoreFilterCache
+      )
   );
 }
 
@@ -25907,6 +26069,58 @@ function getSocketDisplayProfile(socket, serverId = DEFAULT_SERVER_ID) {
   );
 }
 
+function getSocketSocialVisibilityContext(
+  memberSocket,
+  roomId = null,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null
+) {
+  const normalizedServerId = normalizeServer(serverId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const socketServerId = getSocketChannelServerId(memberSocket, normalizedRoomId, normalizedServerId);
+  const presenceIdentity = getSocketPresenceIdentity(memberSocket, socketServerId);
+  const userId = Number(memberSocket?.data?.user?.id);
+  const characterId =
+    presenceIdentity?.characterId ??
+    normalizePresenceCharacterId(getSocketPreferredCharacterId(memberSocket, socketServerId));
+  return {
+    userId: Number.isInteger(userId) && userId > 0 ? userId : null,
+    characterId,
+    serverId: socketServerId,
+    standardRoomId: normalizedRoomId
+      ? ""
+      : getSocketChannelStandardRoomId(memberSocket, normalizedRoomId, normalizedServerId, standardRoomId)
+  };
+}
+
+function shouldHideSocialActorFromSocket(
+  memberSocket,
+  actorUserId,
+  actorCharacterId = null,
+  roomId = null,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  ignoreFilterCache = null
+) {
+  const visibilityContext = getSocketSocialVisibilityContext(
+    memberSocket,
+    roomId,
+    serverId,
+    standardRoomId
+  );
+  const ignoreFilter = buildIgnoredSocialFilterForUser(visibilityContext.userId, ignoreFilterCache);
+  return isSociallyIgnoredMemberEntry(
+    {
+      user_id: actorUserId,
+      character_id: actorCharacterId
+    },
+    ignoreFilter,
+    visibilityContext.userId,
+    visibilityContext.characterId,
+    ignoreFilterCache
+  );
+}
+
 function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const room =
     Number.isInteger(roomId) && roomId > 0
@@ -26025,6 +26239,51 @@ function sanitizeOnlineCharacterEntries(entries) {
     .filter((entry) => entry.user_id > 0 || entry.name);
 }
 
+function getVisibleOnlineCharactersForUser(
+  viewerUserId,
+  viewerCharacterId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  ignoreFilterCache = null
+) {
+  const onlineCharacters = sanitizeOnlineCharacterEntries(
+    getOnlineCharactersForChannel(roomId, serverId, standardRoomId)
+  );
+  const ignoreFilter = buildIgnoredSocialFilterForUser(viewerUserId, ignoreFilterCache);
+  return filterSociallyIgnoredMemberEntries(
+    onlineCharacters,
+    ignoreFilter,
+    viewerUserId,
+    viewerCharacterId,
+    ignoreFilterCache
+  );
+}
+
+function getVisibleOnlineCharactersForSocket(
+  memberSocket,
+  entries,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  ignoreFilterCache = null
+) {
+  const visibilityContext = getSocketSocialVisibilityContext(
+    memberSocket,
+    roomId,
+    serverId,
+    standardRoomId
+  );
+  const ignoreFilter = buildIgnoredSocialFilterForUser(visibilityContext.userId, ignoreFilterCache);
+  return filterSociallyIgnoredMemberEntries(
+    sanitizeOnlineCharacterEntries(entries),
+    ignoreFilter,
+    visibilityContext.userId,
+    visibilityContext.characterId,
+    ignoreFilterCache
+  );
+}
+
 function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
   const normalizedServerId = normalizeServer(serverId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
@@ -26039,34 +26298,58 @@ function emitOnlineCharacters(roomId, serverId = DEFAULT_SERVER_ID, standardRoom
     normalizedServerId,
     resolvedStandardRoomId
   );
-
-  emitToRoomChannelMembers(
-    normalizedRoomId,
-    normalizedServerId,
-    "chat:online-characters",
-    onlineCharacters,
-    resolvedStandardRoomId
-  );
+  const ignoreFilterCache = new Map();
+  getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((memberSocket) => {
+    memberSocket.emit(
+      "chat:online-characters",
+      getVisibleOnlineCharactersForSocket(
+        memberSocket,
+        onlineCharacters,
+        normalizedRoomId,
+        normalizedServerId,
+        resolvedStandardRoomId,
+        ignoreFilterCache
+      )
+    );
+  });
   if (normalizedRoomId == null) {
     const watchServerIds = standardRoom?.shared_scope
       ? Array.from(ALLOWED_SERVER_IDS)
       : [normalizedServerId];
     watchServerIds.forEach((watchServerId) => {
-      io.to(socketChannelForRoomWatch(normalizedRoomId, watchServerId, resolvedStandardRoomId)).emit("room:watch:update", {
-        roomId: normalizedRoomId,
-        serverId: watchServerId,
-        standardRoomId: resolvedStandardRoomId,
-        users: onlineCharacters
+      getSocketsInWatchChannel(normalizedRoomId, watchServerId, resolvedStandardRoomId).forEach((memberSocket) => {
+        memberSocket.emit("room:watch:update", {
+          roomId: normalizedRoomId,
+          serverId: watchServerId,
+          standardRoomId: resolvedStandardRoomId,
+          users: getVisibleOnlineCharactersForSocket(
+            memberSocket,
+            onlineCharacters,
+            normalizedRoomId,
+            watchServerId,
+            resolvedStandardRoomId,
+            ignoreFilterCache
+          )
+        });
       });
     });
     return;
   }
 
-  io.to(socketChannelForRoomWatch(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)).emit("room:watch:update", {
-    roomId: normalizedRoomId,
-    serverId: normalizedServerId,
-    standardRoomId: resolvedStandardRoomId,
-    users: onlineCharacters
+  getSocketsInWatchChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((memberSocket) => {
+    memberSocket.emit("room:watch:update", {
+      roomId: normalizedRoomId,
+      serverId: normalizedServerId,
+      standardRoomId: resolvedStandardRoomId,
+      users: getVisibleOnlineCharactersForSocket(
+        memberSocket,
+        onlineCharacters,
+        normalizedRoomId,
+        normalizedServerId,
+        resolvedStandardRoomId,
+        ignoreFilterCache
+      )
+    });
   });
 }
 
@@ -26091,8 +26374,7 @@ function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID,
   );
   const isTyping = presenceSockets.some((socketEntry) => Boolean(socketEntry?.data?.isTyping));
   const displayProfile = getSocketDisplayProfile(memberSocket, socketServerId);
-
-  io.to(socketChannelForRoom(normalizedRoomId, normalizedServerId, resolvedStandardRoomId)).emit("chat:typing", {
+  const payload = {
     presence_key: presenceIdentity.key,
     user_id: userId,
     character_id: presenceIdentity.characterId,
@@ -26100,6 +26382,24 @@ function emitChatTypingState(memberSocket, roomId, serverId = DEFAULT_SERVER_ID,
     role_style: displayProfile.role_style || "",
     chat_text_color: displayProfile.chat_text_color || "",
     is_typing: isTyping
+  };
+  const ignoreFilterCache = new Map();
+
+  getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId).forEach((viewerSocket) => {
+    if (
+      shouldHideSocialActorFromSocket(
+        viewerSocket,
+        userId,
+        presenceIdentity.characterId,
+        normalizedRoomId,
+        normalizedServerId,
+        resolvedStandardRoomId,
+        ignoreFilterCache
+      )
+    ) {
+      return;
+    }
+    viewerSocket.emit("chat:typing", payload);
   });
 }
 
@@ -26743,7 +27043,14 @@ io.on("connection", (socket) => {
       roomId: nextRoomId,
       serverId: nextServerId,
       standardRoomId: nextStandardRoomId,
-      users: getOnlineCharactersForChannel(nextRoomId, nextServerId, nextStandardRoomId)
+      users: getVisibleOnlineCharactersForSocket(
+        socket,
+        getOnlineCharactersForChannel(nextRoomId, nextServerId, nextStandardRoomId),
+        nextRoomId,
+        nextServerId,
+        nextStandardRoomId,
+        new Map()
+      )
     });
 
     const watchedRoom = nextRoomId ? getRoomWithCharacter(nextRoomId) : null;
@@ -27311,7 +27618,8 @@ io.on("connection", (socket) => {
         serverId,
         socket.data.user.id,
         roomId,
-        standardRoomId
+        standardRoomId,
+        socket
       );
       if (!whisperTargets.length) {
         socket.emit("chat:message", {
@@ -27343,9 +27651,12 @@ io.on("connection", (socket) => {
       if (!whisperResult.ok) {
         socket.emit("chat:message", {
           type: "system",
-          content: whisperResult.reason === "self"
-            ? "Du kannst dir nicht selbst flüstern."
-            : `${whisperArgs.targetName} ist gerade nicht online.`,
+          content:
+            whisperResult.reason === "self"
+              ? "Du kannst dir nicht selbst flüstern."
+              : whisperResult.reason === "blocked"
+                ? "Zwischen euch sind gerade keine Nachrichten möglich."
+                : `${whisperArgs.targetName} ist gerade nicht online.`,
           created_at: formatChatTimestamp()
         });
       }
@@ -28344,7 +28655,7 @@ io.on("connection", (socket) => {
       standardRoomId
     );
 
-    io.to(socketChannelForRoom(roomId, serverId, standardRoomId)).emit("chat:message", {
+    const payload = {
       user_id: socket.data.user.id,
       character_id: getSocketPreferredCharacterId(socket, serverId),
       username: displayProfile.label,
@@ -28354,6 +28665,23 @@ io.on("connection", (socket) => {
       created_at: createdAt,
       message_time_iso: messageTimeIso,
       show_name_time: showNameTime
+    };
+    const ignoreFilterCache = new Map();
+    getSocketsInChannel(roomId, serverId, standardRoomId).forEach((memberSocket) => {
+      if (
+        shouldHideSocialActorFromSocket(
+          memberSocket,
+          payload.user_id,
+          payload.character_id,
+          roomId,
+          serverId,
+          standardRoomId,
+          ignoreFilterCache
+        )
+      ) {
+        return;
+      }
+      memberSocket.emit("chat:message", payload);
     });
     maybeTriggerTavernInnkeeperReaction({
       room,
@@ -28403,7 +28731,7 @@ io.on("connection", (socket) => {
       getSocketPreferredCharacterId(socket, serverId),
       standardRoomId
     );
-    emitWhisperBetweenUsers(
+    const whisperResult = emitWhisperBetweenUsers(
       socket,
       targetUserId,
       content,
@@ -28412,6 +28740,9 @@ io.on("connection", (socket) => {
       standardRoomId,
       targetCharacterId
     );
+    if (!whisperResult.ok && whisperResult.reason === "blocked") {
+      emitDirectSystemMessageToSocket(socket, "Zwischen euch sind gerade keine Nachrichten möglich.");
+    }
   });
 
   socket.on("chat:room-invite-response", (payload) => {
