@@ -12621,6 +12621,7 @@ const homePageService = createHomePageService({
   },
   getRecentSiteUpdates,
   getLatestSiteUpdateRevisionToken,
+  quoteTranslationContactEmail: LEGAL_CONTACT_EMAIL,
   defaultSeoDescription: DEFAULT_SEO_DESCRIPTION,
   onError({ scope, error }) {
     console.error(`[home] ${scope}`, error);

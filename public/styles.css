@@ -4146,8 +4146,7 @@ body.page-home-screen .home-hero-actions {
 
 .home-daily-quote-kicker,
 .home-daily-quote-text,
-.home-daily-quote-author,
-.home-daily-quote-source {
+.home-daily-quote-author {
   margin: 0;
 }
 
@@ -4170,22 +4169,6 @@ body.page-home-screen .home-hero-actions {
   color: var(--readable-muted);
   font-size: 0.68rem;
   line-height: 1.3;
-}
-
-.home-daily-quote-source {
-  font-size: 0.62rem;
-  line-height: 1.25;
-}
-
-.home-daily-quote-source a {
-  color: var(--readable-link);
-  text-decoration: none;
-}
-
-.home-daily-quote-source a:hover,
-.home-daily-quote-source a:focus-visible {
-  color: var(--readable-link-hover);
-  text-decoration: underline;
 }
 
 body.theme-future.page-home-screen .home-stats-title,

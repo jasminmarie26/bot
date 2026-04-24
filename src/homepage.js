@@ -7,6 +7,8 @@ const HOME_DAILY_QUOTE_SOURCE_LABEL = "ZenQuotes";
 const HOME_DAILY_QUOTE_SOURCE_URL = "https://zenquotes.io/";
 const HOME_DAILY_QUOTE_API_URL = "https://zenquotes.io/api/today";
 const HOME_DAILY_QUOTE_FETCH_TIMEOUT_MS = 5000;
+const HOME_DAILY_QUOTE_TRANSLATION_API_URL = "https://api.mymemory.translated.net/get";
+const HOME_DAILY_QUOTE_TRANSLATION_FETCH_TIMEOUT_MS = 5000;
 const DISCORD_HOME_INVITE_URL = "https://discord.gg/CWWxbZenwS";
 const DISCORD_HOME_INVITE_CODE = "CWWxbZenwS";
 const DISCORD_HOME_INVITE_API_URL =
@@ -87,6 +89,7 @@ function createHomePageService(options = {}) {
       ? options.getLatestSiteUpdateRevisionToken
       : () => "";
   const onError = typeof options.onError === "function" ? options.onError : NOOP;
+  const quoteTranslationContactEmail = String(options.quoteTranslationContactEmail || "").trim();
   const defaultSeoDescription = String(options.defaultSeoDescription || "");
 
   if (!db) {
@@ -135,8 +138,6 @@ function createHomePageService(options = {}) {
     return {
       text: "Manchmal beginnt der richtige Weg mit einer ruhigen Frage.",
       author: "Heldenhafte Reisen",
-      sourceLabel: "",
-      sourceUrl: "",
       isFallback: true
     };
   }
@@ -162,11 +163,63 @@ function createHomePageService(options = {}) {
 
     return {
       text,
-      author: author || "Unbekannt",
+      author:
+        !author || author.toLowerCase() === "unknown"
+          ? "Unbekannt"
+          : author,
       sourceLabel: HOME_DAILY_QUOTE_SOURCE_LABEL,
       sourceUrl: HOME_DAILY_QUOTE_SOURCE_URL,
       isFallback: false
     };
+  }
+
+  async function translateDailyQuoteToGerman(text) {
+    const normalizedText = String(text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 280);
+    if (!normalizedText || !fetchImpl) {
+      return null;
+    }
+
+    const url = new URL(HOME_DAILY_QUOTE_TRANSLATION_API_URL);
+    url.searchParams.set("q", normalizedText);
+    url.searchParams.set("langpair", "en|de");
+    url.searchParams.set("mt", "1");
+    if (quoteTranslationContactEmail) {
+      url.searchParams.set("de", quoteTranslationContactEmail);
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      HOME_DAILY_QUOTE_TRANSLATION_FETCH_TIMEOUT_MS
+    );
+
+    try {
+      const response = await fetchImpl(url, {
+        signal: controller.signal,
+        headers: {
+          accept: "application/json",
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Daily quote translation request failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const translatedText = String(payload?.responseData?.translatedText || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 280);
+
+      return translatedText || null;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   function getUsersTableColumnSet() {
@@ -404,7 +457,13 @@ function createHomePageService(options = {}) {
           throw new Error("Daily quote payload was empty.");
         }
 
-        cachedDailyQuote = nextDailyQuote;
+        const translatedText = await translateDailyQuoteToGerman(nextDailyQuote.text);
+        cachedDailyQuote = translatedText
+          ? {
+              ...nextDailyQuote,
+              text: translatedText
+            }
+          : buildFallbackDailyQuote(cachedDailyQuote);
         cachedDailyQuoteKey = currentCacheKey;
         return cachedDailyQuote;
       } catch (error) {
