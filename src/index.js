@@ -11027,6 +11027,55 @@ function buildGuestbookViewUrl(characterId, guestbookPageId, accessState, entrie
   return `${url}${buildGuestbookContextQuery(accessState)}`;
 }
 
+function buildMemberDiscoveryTagGroups(members = []) {
+  const groupsByKey = new Map();
+  const uniqueMemberIds = new Set();
+
+  (Array.isArray(members) ? members : []).forEach((member) => {
+    const tagList = parseGuestbookDiscoveryTags(member?.guestbook_tags || member?.tag_list || []);
+    if (!tagList.length) {
+      return;
+    }
+
+    const memberId = Number(member?.id);
+    if (Number.isInteger(memberId) && memberId > 0) {
+      uniqueMemberIds.add(memberId);
+    }
+
+    tagList.forEach((tagLabel) => {
+      const groupKey = normalizeGuestbookDiscoveryTagKey(tagLabel).replace(/\s+/g, "-");
+      if (!groupKey) {
+        return;
+      }
+
+      if (!groupsByKey.has(groupKey)) {
+        groupsByKey.set(groupKey, {
+          key: groupKey,
+          label: tagLabel,
+          members: []
+        });
+      }
+
+      groupsByKey.get(groupKey).members.push({
+        ...member,
+        tag_list: tagList
+      });
+    });
+  });
+
+  const groups = Array.from(groupsByKey.values())
+    .map((group) => ({
+      ...group,
+      count: group.members.length
+    }))
+    .sort((left, right) => String(left.label || "").localeCompare(String(right.label || ""), "de"));
+
+  return {
+    groups,
+    memberCount: uniqueMemberIds.size
+  };
+}
+
 function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, accessState) {
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
@@ -17080,6 +17129,7 @@ app.get("/members", requireAuth, (req, res) => {
               c.user_id,
               c.name,
               c.server_id,
+              COALESCE(gs.tags, '') AS guestbook_tags,
               c.public_birth_show_age,
               c.public_birth_show_day_month,
               c.public_birth_show_year,
@@ -17088,6 +17138,7 @@ app.get("/members", requireAuth, (req, res) => {
               u.username AS owner_name
        FROM characters c
        JOIN users u ON u.id = c.user_id
+       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
        WHERE (
              c.is_public = 1
           OR c.user_id = ?
@@ -17229,16 +17280,15 @@ app.get("/members", requireAuth, (req, res) => {
   const erpMembers = regularMembers.filter(
     (member) => normalizeCharacterServerId(member.server_id) === "erp"
   );
-  const larpMembers = regularMembers.filter(
-    (member) => normalizeCharacterServerId(member.server_id) === LARP_SERVER_ID
-  );
+  const rpTagState = buildMemberDiscoveryTagGroups(rpMembers);
+  const erpTagState = buildMemberDiscoveryTagGroups(erpMembers);
 
   return res.render("dashboard/members", {
     title: "Mitgliederliste",
     staffMembers,
-    rpMembers,
-    erpMembers,
-    memberCount: staffMembers.length + rpMembers.length + erpMembers.length,
+    rpTagGroups: rpTagState.groups,
+    erpTagGroups: erpTagState.groups,
+    memberCount: staffMembers.length + rpTagState.memberCount + erpTagState.memberCount,
     staffGuestbookQuery:
       req.session.user?.is_admin === true || req.session.user?.is_moderator === true
         ? "?staff_view=1"

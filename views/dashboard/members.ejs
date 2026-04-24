@@ -42,12 +42,22 @@
       <summary class="members-section-header members-section-summary">
         <h2>FREE RP</h2>
       </summary>
-      <% if (!rpMembers || !rpMembers.length) { %>
-        <p class="muted">Keine sichtbaren Charaktere im Free-RP-Bereich.</p>
+      <% if (!rpTagGroups || !rpTagGroups.length) { %>
+        <p class="muted">Keine sichtbaren G&auml;stebuch-Tags im Free-RP-Bereich.</p>
       <% } else { %>
-        <div class="members-section-list">
-          <% rpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
+        <div class="members-tag-group-list">
+          <% rpTagGroups.forEach((group) => { %>
+            <details class="members-tag-group" data-members-group data-members-group-label="<%= String(group.label || '').toLowerCase() %>">
+              <summary class="members-tag-group-summary">
+                <span class="members-tag-group-name"><%= group.label %></span>
+                <span class="members-tag-group-count"><%= group.count %> Charakter<%= group.count === 1 ? '' : 'e' %></span>
+              </summary>
+              <div class="members-section-list">
+                <% group.members.forEach((member) => { %>
+                  <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
+                <% }) %>
+              </div>
+            </details>
           <% }) %>
         </div>
       <% } %>
@@ -57,12 +67,22 @@
       <summary class="members-section-header members-section-summary">
         <h2>ERP SERVER</h2>
       </summary>
-      <% if (!erpMembers || !erpMembers.length) { %>
-        <p class="muted">Keine sichtbaren Charaktere im ERP-Bereich.</p>
+      <% if (!erpTagGroups || !erpTagGroups.length) { %>
+        <p class="muted">Keine sichtbaren G&auml;stebuch-Tags im ERP-Bereich.</p>
       <% } else { %>
-        <div class="members-section-list">
-          <% erpMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
+        <div class="members-tag-group-list">
+          <% erpTagGroups.forEach((group) => { %>
+            <details class="members-tag-group" data-members-group data-members-group-label="<%= String(group.label || '').toLowerCase() %>">
+              <summary class="members-tag-group-summary">
+                <span class="members-tag-group-name"><%= group.label %></span>
+                <span class="members-tag-group-count"><%= group.count %> Charakter<%= group.count === 1 ? '' : 'e' %></span>
+              </summary>
+              <div class="members-section-list">
+                <% group.members.forEach((member) => { %>
+                  <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
+                <% }) %>
+              </div>
+            </details>
           <% }) %>
         </div>
       <% } %>

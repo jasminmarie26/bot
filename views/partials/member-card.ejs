@@ -1,6 +1,7 @@
 <span
   class="members-card"
   data-member-card
+  data-member-id="<%= Number(member.id) || 0 %>"
   data-member-name="<%= String(member.name || '').toLowerCase() %>"
   data-member-owner="<%= String(member.owner_name || '').toLowerCase() %>"
   data-member-server="<%= String(member.server_label || '').toLowerCase() %>"

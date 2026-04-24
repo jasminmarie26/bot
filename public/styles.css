@@ -5092,6 +5092,79 @@ body.theme-future.page-home-screen .home-copyright {
   align-items: baseline;
 }
 
+.members-tag-group-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.members-tag-group {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 76%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel-bg) 86%, white 14%);
+}
+
+.members-tag-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.members-tag-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.members-tag-group-summary::marker {
+  display: none;
+}
+
+.members-tag-group-summary::after {
+  content: "▾";
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1;
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+
+.members-tag-group[open] .members-tag-group-summary::after {
+  transform: rotate(0deg);
+}
+
+.members-tag-group-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.members-tag-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--field-bg));
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.members-tag-group > .members-section-list {
+  padding-left: 0.1rem;
+}
+
+.members-tag-group[hidden] {
+  display: none !important;
+}
+
 .members-card {
   display: inline-flex;
   align-items: baseline;
@@ -14892,6 +14965,18 @@ body.page-home-screen .home-hero-actions {
 
   .members-section-header h2 {
     font-size: 0.82rem;
+  }
+
+  .members-tag-group {
+    padding: 0.5rem 0.58rem;
+  }
+
+  .members-tag-group-name {
+    font-size: 0.74rem;
+  }
+
+  .members-tag-group-count {
+    font-size: 0.64rem;
   }
 
   .members-card-name {
