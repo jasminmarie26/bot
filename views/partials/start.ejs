@@ -734,18 +734,29 @@
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="<%= accountMenuHref %>" target="_blank" rel="noopener noreferrer">Account</a>
                     <% if (menuCharacter) { %>
-                      <div class="topbar-user-menu-inline-item">
-                        <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Mein Profil</a>
-                        <% if (canEditMenuCharacter) { %>
-                          <span class="topbar-user-menu-inline-separator" aria-hidden="true">&middot;</span>
-                          <a
-                            href="<%= menuCharacterEditHref %>"
-                            data-live-character-href-template="<%= menuCharacterEditHrefTemplate %>"
-                          >Profil bearbeiten</a>
-                        <% } %>
-                      </div>
                       <% if (isLarpMenuContext) { %>
                         <section class="topbar-profile-settings-menu" aria-label="Profilbereiche">
+                          <div class="topbar-profile-settings-row">
+                            <span class="topbar-profile-settings-icon" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M7.6 4.3h8.1L18.9 7v12.7H7.6V4.3Zm1.7 1.7V18h8V7.8h-2.5V6H9.3Zm1.7 3h4.9v1.4H11V9Zm0 3h4.9v1.4H11V12Zm0 3h3.3v1.4H11V15Z"></path>
+                              </svg>
+                            </span>
+                            <div>
+                              <p class="topbar-profile-settings-title">Profil</p>
+                              <div class="topbar-profile-settings-links">
+                                <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Mein Profil</a>
+                                <% if (canEditMenuCharacter) { %>
+                                  <span class="topbar-profile-settings-separator" aria-hidden="true">&middot;</span>
+                                  <a
+                                    href="<%= menuCharacterEditHref %>"
+                                    data-live-character-href-template="<%= menuCharacterEditHrefTemplate %>"
+                                  >Profil bearbeiten</a>
+                                <% } %>
+                              </div>
+                            </div>
+                          </div>
+
                           <div class="topbar-profile-settings-row">
                             <span class="topbar-profile-settings-icon" aria-hidden="true">
                               <svg viewBox="0 0 24 24" focusable="false">
@@ -816,6 +827,17 @@
                             </div>
                           </div>
                         </section>
+                      <% } else { %>
+                        <div class="topbar-user-menu-inline-item">
+                          <a href="/characters/<%= menuCharacter.id %>" data-live-character-href-template="/characters/__CHARACTER_ID__">Mein Profil</a>
+                          <% if (canEditMenuCharacter) { %>
+                            <span class="topbar-user-menu-inline-separator" aria-hidden="true">&middot;</span>
+                            <a
+                              href="<%= menuCharacterEditHref %>"
+                              data-live-character-href-template="<%= menuCharacterEditHrefTemplate %>"
+                            >Profil bearbeiten</a>
+                          <% } %>
+                        </div>
                       <% } %>
                       <a
                         href="/characters/<%= menuCharacter.id %>/guestbook"

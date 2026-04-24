@@ -2812,13 +2812,31 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.08rem 0.32rem;
-  color: color-mix(in srgb, #3fa7e2 84%, var(--text) 16%);
+  color: color-mix(in srgb, var(--link) 86%, var(--text) 14%);
   font-size: 0.82rem;
   line-height: 1.35;
 }
 
 .topbar-profile-settings-link {
   color: inherit;
+}
+
+.topbar-profile-settings-links a {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  text-decoration: none;
+}
+
+.topbar-profile-settings-links a:hover,
+.topbar-profile-settings-links a:focus-visible {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
 }
 
 .topbar-profile-settings-separator {
