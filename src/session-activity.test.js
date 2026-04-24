@@ -2,6 +2,11 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const session = require("express-session");
+const SQLiteStore = require("connect-sqlite3")(session);
 
 const {
   mergeSessionActivityState,
@@ -132,4 +137,158 @@ test("patchSessionStoreActivityMerge merges persisted activity before saving", a
   assert.deepEqual(calls[0].sessionData.open_tab_ids, { editorTab: now });
   assert.equal(calls[0].sessionData.last_page_path, "/characters/9/edit");
   assert.deepEqual(calls[0].sessionData.flash, { type: "success", text: "Gespeichert." });
+});
+
+test("patchSessionStoreActivityMerge serializes concurrent writes for the same session", async () => {
+  const now = Date.now();
+  let persistedSessionData = {
+    user: { id: 77 }
+  };
+  const callOrder = [];
+  const store = {
+    get(sid, callback) {
+      callOrder.push(`get:${sid}`);
+      setTimeout(() => callback(null, JSON.parse(JSON.stringify(persistedSessionData))), 10);
+    },
+    set(sid, sessionData, callback) {
+      callOrder.push(`set:${sid}:${sessionData.open_tab_ids ? "active" : "stale"}`);
+      setTimeout(() => {
+        persistedSessionData = JSON.parse(JSON.stringify(sessionData));
+        callback();
+      }, 20);
+    }
+  };
+
+  patchSessionStoreActivityMerge(store);
+
+  const staleSave = new Promise((resolve, reject) => {
+    store.set(
+      "same-session",
+      {
+        user: { id: 77 },
+        flash: { type: "success", text: "Charakter aktualisiert." }
+      },
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      }
+    );
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 1));
+
+  const activeSave = new Promise((resolve, reject) => {
+    store.set(
+      "same-session",
+      {
+        user: { id: 77 },
+        open_tab_ids: {
+          editorTab: now
+        },
+        last_tab_heartbeat_at: now,
+        last_page_path: "/characters/77/edit",
+        last_page_title: "Bearbeiten: Queue-Test"
+      },
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      }
+    );
+  });
+
+  await Promise.all([staleSave, activeSave]);
+
+  assert.deepEqual(callOrder, [
+    "get:same-session",
+    "set:same-session:stale",
+    "get:same-session",
+    "set:same-session:active"
+  ]);
+  assert.deepEqual(persistedSessionData.open_tab_ids, {
+    editorTab: now
+  });
+  assert.equal(persistedSessionData.last_page_path, "/characters/77/edit");
+});
+
+test("patchSessionStoreActivityMerge works with a real SQLite session store", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hr-session-store-"));
+  const store = patchSessionStoreActivityMerge(
+    new SQLiteStore({
+      db: "sessions.sqlite",
+      dir: tempDir
+    })
+  );
+  const sid = `sid-${Date.now()}`;
+  const now = Date.now();
+
+  t.after(async () => {
+    if (store?.db && typeof store.db.close === "function") {
+      await new Promise((resolve, reject) => {
+        store.db.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    }
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const setSession = (sessionData) =>
+    new Promise((resolve, reject) => {
+      store.set(sid, sessionData, (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+
+  const getSession = () =>
+    new Promise((resolve, reject) => {
+      store.get(sid, (error, sessionData) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(sessionData);
+      });
+    });
+
+  await setSession({
+    cookie: { maxAge: 1000 * 60 * 30 },
+    user: { id: 8 },
+    open_tab_ids: {
+      activeTab: now
+    },
+    last_tab_heartbeat_at: now,
+    last_page_path: "/characters/8/edit",
+    last_page_title: "Bearbeiten: SQLite"
+  });
+
+  await setSession({
+    cookie: { maxAge: 1000 * 60 * 30 },
+    user: { id: 8 },
+    flash: { type: "success", text: "Charakter aktualisiert." }
+  });
+
+  const savedSession = await getSession();
+
+  assert.deepEqual(savedSession.open_tab_ids, {
+    activeTab: now
+  });
+  assert.equal(savedSession.last_page_path, "/characters/8/edit");
+  assert.deepEqual(savedSession.flash, {
+    type: "success",
+    text: "Charakter aktualisiert."
+  });
 });

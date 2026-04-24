@@ -155,17 +155,48 @@ function patchSessionStoreActivityMerge(store) {
 
   const originalSet = store.set.bind(store);
   const originalGet = store.get.bind(store);
+  const pendingWritesBySid = new Map();
 
   store.set = (sid, sessionData, callback) => {
     const done = typeof callback === "function" ? callback : () => {};
+    const queueKey = String(sid || "");
+    const previousWrite = pendingWritesBySid.get(queueKey) || Promise.resolve();
 
-    originalGet(sid, (error, persistedSessionData) => {
-      if (error || !persistedSessionData) {
-        return originalSet(sid, sessionData, done);
+    const runWrite = () =>
+      new Promise((resolve) => {
+        const finish = (error) => {
+          try {
+            done(error);
+          } finally {
+            resolve();
+          }
+        };
+
+        try {
+          originalGet(queueKey, (getError, persistedSessionData) => {
+            const nextSessionData =
+              getError || !persistedSessionData
+                ? sessionData
+                : mergeSessionActivityState(sessionData, persistedSessionData);
+
+            try {
+              return originalSet(queueKey, nextSessionData, finish);
+            } catch (setError) {
+              return finish(setError);
+            }
+          });
+        } catch (error) {
+          finish(error);
+        }
+      });
+
+    const nextWrite = previousWrite.catch(() => {}).then(runWrite);
+    const trackedWrite = nextWrite.finally(() => {
+      if (pendingWritesBySid.get(queueKey) === trackedWrite) {
+        pendingWritesBySid.delete(queueKey);
       }
-
-      return originalSet(sid, mergeSessionActivityState(sessionData, persistedSessionData), done);
     });
+    pendingWritesBySid.set(queueKey, trackedWrite);
   };
 
   store.__hrActivityMergePatched = true;
