@@ -66,7 +66,9 @@
     const ignoredAccounts = Array.isArray(payload?.ignored_accounts)
       ? payload.ignored_accounts
           .map((entry) => ({
-            user_id: normalizeNumber(entry?.user_id)
+            user_id: normalizeNumber(entry?.user_id),
+            username: normalizeText(entry?.username),
+            label: normalizeText(entry?.label)
           }))
           .filter((entry) => entry.user_id)
       : [];
@@ -431,7 +433,7 @@
         () => {
           const action = accountIsIgnored
             ? unignoreAccount(friend.user_id)
-            : ignoreAccount(friend.user_id);
+            : ignoreAccount(friend.user_id, getFriendDisplayName(friend));
           action.catch(() => {});
         },
         {
@@ -560,7 +562,15 @@
         listName: "ignored-accounts",
         items: socialState.ignored_accounts
           .slice()
-          .sort((leftEntry, rightEntry) => Number(leftEntry.user_id) - Number(rightEntry.user_id)),
+          .sort((leftEntry, rightEntry) =>
+            (normalizeText(leftEntry?.label) || normalizeText(leftEntry?.username)).localeCompare(
+              normalizeText(rightEntry?.label) || normalizeText(rightEntry?.username),
+              "de",
+              {
+                sensitivity: "base"
+              }
+            )
+          ),
         emptyText: "Keine ignorierten Accounts.",
         renderEntry: renderIgnoredAccountEntry
       });

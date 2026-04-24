@@ -16335,14 +16335,16 @@ function updateLarpHomeOnlineRecord(count) {
   };
 }
 
-function buildLarpHomeOnlineSummary() {
-  const members = getLarpHomeOnlineMembers();
+function buildLarpHomeOnlineSummary(userId = null) {
+  const allMembers = getLarpHomeOnlineMembers();
+  const ignoreFilter = buildIgnoredSocialFilterForUser(userId);
+  const members = filterSociallyIgnoredMemberEntries(allMembers, ignoreFilter);
+  const record = updateLarpHomeOnlineRecord(allMembers.length);
   const memberCount = members.length;
-  const record = updateLarpHomeOnlineRecord(memberCount);
 
   return {
     memberCount,
-    recordCount: Math.max(memberCount, record.count),
+    recordCount: Math.max(allMembers.length, record.count),
     recordDateLabel: record.dateLabel,
     members
   };
@@ -16371,7 +16373,7 @@ function renderLarpHomePage(req, res, character) {
     guestbookStats: getCharacterGuestbookStats(character.id, {
       includePrivate: isOwner || isAdmin
     }),
-    larpOnlineSummary: buildLarpHomeOnlineSummary()
+    larpOnlineSummary: buildLarpHomeOnlineSummary(req.session.user?.id)
   });
 }
 
@@ -17235,6 +17237,7 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
 app.get("/members", requireAuth, (req, res) => {
   const currentUserId = Number(req.session.user?.id);
   const isAdmin = req.session.user?.is_admin === true;
+  const ignoreFilter = buildIgnoredSocialFilterForUser(currentUserId);
   const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
   const activeSessionUserIds = new Set(getActiveSessionUserIds());
   const connectedSocketUserIds = new Set(getConnectedSocketUserIds());
@@ -17301,7 +17304,8 @@ app.get("/members", requireAuth, (req, res) => {
           : Number(member.is_public) === 1
             ? "Öffentlich"
             : "Privat"
-    }));
+    }))
+    .filter((member) => !isSociallyIgnoredMemberEntry(member, ignoreFilter));
 
   const staffCharacterIds = new Set();
   const staffMembers = [];
@@ -17407,6 +17411,7 @@ app.get("/members", requireAuth, (req, res) => {
       });
     }
   });
+  const visibleStaffMembers = filterSociallyIgnoredMemberEntries(staffMembers, ignoreFilter);
 
   const rpMembers = visibleMembers.filter(
     (member) => normalizeCharacterServerId(member.server_id) === "free-rp"
@@ -17419,13 +17424,13 @@ app.get("/members", requireAuth, (req, res) => {
   const displayedMemberIds = new Set(
     [
       ...visibleMembers.map((member) => Number(member.id)),
-      ...staffMembers.map((member) => Number(member.id))
+      ...visibleStaffMembers.map((member) => Number(member.id))
     ].filter((memberId) => Number.isInteger(memberId) && memberId > 0)
   );
 
   return res.render("members/index", {
     title: "Mitgliederliste",
-    staffMembers,
+    staffMembers: visibleStaffMembers,
     rpTagGroups: rpTagState.groups,
     erpTagGroups: erpTagState.groups,
     memberCount: displayedMemberIds.size,
@@ -24122,6 +24127,51 @@ function getIgnoredCharacterRowsForUser(userId) {
         ORDER BY lower(c.name) ASC, c.id ASC`
     )
     .all(parsedUserId);
+}
+
+function buildIgnoredSocialFilterForUser(userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return {
+      ignoredAccountUserIds: new Set(),
+      ignoredCharacterIds: new Set()
+    };
+  }
+
+  return {
+    ignoredAccountUserIds: new Set(
+      getIgnoredAccountRowsForUser(parsedUserId)
+        .map((row) => Number(row.user_id))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    ),
+    ignoredCharacterIds: new Set(
+      getIgnoredCharacterRowsForUser(parsedUserId)
+        .map((row) => Number(row.character_id))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  };
+}
+
+function isSociallyIgnoredMemberEntry(entry, ignoreFilter = null) {
+  const ignoredAccountUserIds = ignoreFilter?.ignoredAccountUserIds instanceof Set
+    ? ignoreFilter.ignoredAccountUserIds
+    : new Set();
+  const ignoredCharacterIds = ignoreFilter?.ignoredCharacterIds instanceof Set
+    ? ignoreFilter.ignoredCharacterIds
+    : new Set();
+
+  const userId = Number(entry?.user_id ?? entry?.userId ?? entry?.owner_user_id ?? entry?.ownerUserId);
+  const characterId = Number(entry?.id ?? entry?.character_id ?? entry?.characterId);
+  return Boolean(
+    (Number.isInteger(userId) && userId > 0 && ignoredAccountUserIds.has(userId)) ||
+      (Number.isInteger(characterId) && characterId > 0 && ignoredCharacterIds.has(characterId))
+  );
+}
+
+function filterSociallyIgnoredMemberEntries(entries, ignoreFilter = null) {
+  return (Array.isArray(entries) ? entries : []).filter(
+    (entry) => !isSociallyIgnoredMemberEntry(entry, ignoreFilter)
+  );
 }
 
 function normalizeSocialLookupValue(value) {
