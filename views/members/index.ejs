@@ -23,70 +23,151 @@
   </p>
 
   <div id="members-list" class="members-list">
-    <section class="members-section" data-members-section>
+    <section class="members-section members-staff-section" data-members-section data-members-static-section>
       <header class="members-section-header">
         <h2>Administratoren & Moderatoren</h2>
       </header>
       <% if (!staffMembers || !staffMembers.length) { %>
         <p class="muted">Noch keine Rollencharaktere gesetzt.</p>
       <% } else { %>
-        <div class="members-section-list">
-          <% staffMembers.forEach((member) => { %>
-            <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
-          <% }) %>
+        <div class="members-results-group members-results-group-static">
+          <div class="members-results-heading">
+            <div>
+              <h3>Gefundene Charaktere</h3>
+              <p class="muted members-results-label">Rollencharaktere</p>
+            </div>
+            <span class="members-results-count" data-members-static-count>
+              <%= staffMembers.length %> Charakter<%= staffMembers.length === 1 ? "" : "e" %>
+            </span>
+          </div>
+          <div class="members-section-list members-results-list">
+            <% staffMembers.forEach((member) => { %>
+              <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
+            <% }) %>
+          </div>
         </div>
       <% } %>
     </section>
 
-    <details class="members-section members-section-collapsible" data-members-section open>
-      <summary class="members-section-header members-section-summary">
+    <section class="members-section members-browser" data-members-section data-members-browser>
+      <header class="members-section-header">
         <h2>FREE RP</h2>
-      </summary>
+      </header>
       <% if (!rpTagGroups || !rpTagGroups.length) { %>
         <p class="muted">Keine sichtbaren G&auml;stebuch-Tags im Free-RP-Bereich.</p>
       <% } else { %>
-        <div class="members-tag-group-list">
-          <% rpTagGroups.forEach((group) => { %>
-            <details class="members-tag-group" data-members-group data-members-group-label="<%= String(group.label || '').toLowerCase() %>">
-              <summary class="members-tag-group-summary">
-                <span class="members-tag-group-name"><%= group.label %></span>
-                <span class="members-tag-group-count"><%= group.count %> Charakter<%= group.count === 1 ? '' : 'e' %></span>
-              </summary>
-              <div class="members-section-list">
+        <div class="members-tag-tile-grid">
+          <% rpTagGroups.forEach((group, index) => { %>
+            <% const groupTarget = `free-rp-${String(group.key || "").trim()}`; %>
+            <button
+              type="button"
+              class="members-tag-tile <%= index === 0 ? 'is-active' : '' %>"
+              data-members-group-button
+              data-members-group-target="<%= groupTarget %>"
+              data-members-group-total="<%= group.count %>"
+              aria-controls="members-panel-<%= groupTarget %>"
+              aria-pressed="<%= index === 0 ? 'true' : 'false' %>"
+            >
+              <span class="members-tag-tile-name"><%= group.label %></span>
+              <span class="members-tag-tile-count" data-members-group-button-count>
+                <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+              </span>
+            </button>
+          <% }) %>
+        </div>
+
+        <div class="members-results-stack">
+          <% rpTagGroups.forEach((group, index) => { %>
+            <% const groupTarget = `free-rp-${String(group.key || "").trim()}`; %>
+            <section
+              id="members-panel-<%= groupTarget %>"
+              class="members-results-group"
+              data-members-group-panel="<%= groupTarget %>"
+              data-members-group-label="<%= String(group.label || '').toLowerCase() %>"
+              <%= index === 0 ? "" : "hidden" %>
+            >
+              <div class="members-results-heading">
+                <div>
+                  <h3>Gefundene Charaktere</h3>
+                  <p class="muted members-results-label"><%= group.label %></p>
+                </div>
+                <span class="members-results-count" data-members-panel-count>
+                  <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                </span>
+              </div>
+              <div class="members-section-list members-results-list">
                 <% group.members.forEach((member) => { %>
                   <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
                 <% }) %>
               </div>
-            </details>
+            </section>
           <% }) %>
+          <p class="muted members-results-empty" data-members-empty hidden>
+            Keine passenden Charaktere in diesem Bereich.
+          </p>
         </div>
       <% } %>
-    </details>
+    </section>
 
-    <details class="members-section members-section-collapsible" data-members-section open>
-      <summary class="members-section-header members-section-summary">
+    <section class="members-section members-browser" data-members-section data-members-browser>
+      <header class="members-section-header">
         <h2>ERP SERVER</h2>
-      </summary>
+      </header>
       <% if (!erpTagGroups || !erpTagGroups.length) { %>
         <p class="muted">Keine sichtbaren G&auml;stebuch-Tags im ERP-Bereich.</p>
       <% } else { %>
-        <div class="members-tag-group-list">
-          <% erpTagGroups.forEach((group) => { %>
-            <details class="members-tag-group" data-members-group data-members-group-label="<%= String(group.label || '').toLowerCase() %>">
-              <summary class="members-tag-group-summary">
-                <span class="members-tag-group-name"><%= group.label %></span>
-                <span class="members-tag-group-count"><%= group.count %> Charakter<%= group.count === 1 ? '' : 'e' %></span>
-              </summary>
-              <div class="members-section-list">
+        <div class="members-tag-tile-grid">
+          <% erpTagGroups.forEach((group, index) => { %>
+            <% const groupTarget = `erp-${String(group.key || "").trim()}`; %>
+            <button
+              type="button"
+              class="members-tag-tile <%= index === 0 ? 'is-active' : '' %>"
+              data-members-group-button
+              data-members-group-target="<%= groupTarget %>"
+              data-members-group-total="<%= group.count %>"
+              aria-controls="members-panel-<%= groupTarget %>"
+              aria-pressed="<%= index === 0 ? 'true' : 'false' %>"
+            >
+              <span class="members-tag-tile-name"><%= group.label %></span>
+              <span class="members-tag-tile-count" data-members-group-button-count>
+                <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+              </span>
+            </button>
+          <% }) %>
+        </div>
+
+        <div class="members-results-stack">
+          <% erpTagGroups.forEach((group, index) => { %>
+            <% const groupTarget = `erp-${String(group.key || "").trim()}`; %>
+            <section
+              id="members-panel-<%= groupTarget %>"
+              class="members-results-group"
+              data-members-group-panel="<%= groupTarget %>"
+              data-members-group-label="<%= String(group.label || '').toLowerCase() %>"
+              <%= index === 0 ? "" : "hidden" %>
+            >
+              <div class="members-results-heading">
+                <div>
+                  <h3>Gefundene Charaktere</h3>
+                  <p class="muted members-results-label"><%= group.label %></p>
+                </div>
+                <span class="members-results-count" data-members-panel-count>
+                  <%= group.count %> Charakter<%= group.count === 1 ? "" : "e" %>
+                </span>
+              </div>
+              <div class="members-section-list members-results-list">
                 <% group.members.forEach((member) => { %>
                   <%- include("../partials/member-card", { member, guestbookQuery: staffGuestbookQuery }) %>
                 <% }) %>
               </div>
-            </details>
+            </section>
           <% }) %>
+          <p class="muted members-results-empty" data-members-empty hidden>
+            Keine passenden Charaktere in diesem Bereich.
+          </p>
         </div>
       <% } %>
-    </details>
+    </section>
   </div>
 </section>
 
