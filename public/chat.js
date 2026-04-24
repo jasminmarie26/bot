@@ -1146,6 +1146,13 @@
     return Boolean(parsedCharacterId && socialState.ignoredCharacterIds.has(parsedCharacterId));
   }
 
+  function isIgnoredWhisperTarget(userId, characterId) {
+    return Boolean(
+      isIgnoredAccountUserId(userId) ||
+      isIgnoredCharacterId(characterId)
+    );
+  }
+
   function captureRenderedOnlineEntriesFromDom() {
     if (!onlineCharList) {
       return [];
@@ -2819,7 +2826,7 @@
 
   function sortWhisperThreads() {
     return Array.from(whisperThreadsByKey.values())
-      .filter((thread) => !isIgnoredAccountUserId(thread?.userId))
+      .filter((thread) => !isIgnoredWhisperTarget(thread?.userId, thread?.characterId))
       .sort((left, right) => {
       const rightSequence = Number(right?.lastSequence || 0);
       const leftSequence = Number(left?.lastSequence || 0);
@@ -2904,7 +2911,7 @@
     const thread = whisperThreadsByKey.get(String(activeWhisperThreadKey || "").trim());
     whisperThread.innerHTML = "";
 
-    if (!thread || isIgnoredAccountUserId(thread.userId)) {
+    if (!thread || isIgnoredWhisperTarget(thread.userId, thread.characterId)) {
       whisperThreadShell.hidden = true;
       whisperPlaceholder.hidden = false;
       whisperForm.hidden = true;
@@ -3874,8 +3881,9 @@
 
   function handleWhisperMessage(payload) {
     const partnerUserId = getWhisperPartnerUserId(payload);
+    const partnerCharacterId = getWhisperPartnerCharacterId(payload);
     const partnerThreadKey = getWhisperPartnerThreadKey(payload);
-    if (!payload?.outgoing && isIgnoredAccountUserId(partnerUserId)) {
+    if (!payload?.outgoing && isIgnoredWhisperTarget(partnerUserId, partnerCharacterId)) {
       return;
     }
 
