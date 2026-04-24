@@ -30,6 +30,7 @@ const {
   registerRaeumeErstellenBearbeitenRoutes
 } = require("./raeume-erstellen-bearbeiten");
 const { createHomePageService, DEFAULT_UPDATES_TITLE } = require("./homepage");
+const { patchSessionStoreActivityMerge } = require("./session-activity");
 const CHAT_ROOM_COLUMN_NAMES = new Set(
   db
     .prepare("PRAGMA table_info(chat_rooms)")
@@ -787,11 +788,14 @@ const NOINDEX_PATH_PREFIXES = [
   "/staff"
 ];
 
-const sessionMiddleware = session({
-  store: new SQLiteStore({
+const sessionStore = patchSessionStoreActivityMerge(
+  new SQLiteStore({
     db: "sessions.sqlite",
     dir: dataDir
-  }),
+  })
+);
+const sessionMiddleware = session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || "change-me-in-production",
   resave: false,
   rolling: true,
