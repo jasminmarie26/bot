@@ -6601,7 +6601,7 @@ body.theme-future.page-home-screen .home-copyright {
   border-bottom: 1px solid var(--panel-edge);
 }
 
-.page-chat .rp-topline {
+.page-chat .rp-topline.has-server-work-notice {
   padding-top: 0.95rem;
   padding-bottom: 0.25rem;
 }
@@ -14553,7 +14553,7 @@ body.page-home-screen .home-hero-actions {
     gap: 0.68rem;
   }
 
-  .page-chat .rp-topline {
+  .page-chat .rp-topline.has-server-work-notice {
     padding-top: 0.6rem;
     padding-bottom: 0.6rem;
   }

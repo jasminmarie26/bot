@@ -467,23 +467,57 @@
     <% const topbarLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
       ? recentSiteUpdateRevisions
       : []; %>
+    <% const resolvedServerWorkNoticeConfig =
+      typeof serverWorkNoticeConfig !== "undefined" && serverWorkNoticeConfig
+        ? serverWorkNoticeConfig
+        : null; %>
     <% const showServerWorkNotice = Boolean(serverWorkNotice && serverWorkNotice.visible); %>
+    <% const serverWorkNoticeTimeZone = resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.timeZone
+      ? String(resolvedServerWorkNoticeConfig.timeZone).trim() || "Europe/Berlin"
+      : "Europe/Berlin"; %>
+    <% const serverWorkNoticeWeekdays = Array.isArray(
+      resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.weekdays
+    ) && resolvedServerWorkNoticeConfig.weekdays.length
+      ? resolvedServerWorkNoticeConfig.weekdays
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+      : ["Mon", "Wed", "Fri"]; %>
+    <% const serverWorkNoticeStartMinutes = Number.isFinite(Number(
+      resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.startMinutes
+    ))
+      ? Number(resolvedServerWorkNoticeConfig.startMinutes)
+      : 16 * 60 + 45; %>
+    <% const serverWorkNoticeEndMinutes = Number.isFinite(Number(
+      resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.endMinutes
+    ))
+      ? Number(resolvedServerWorkNoticeConfig.endMinutes)
+      : 20 * 60 + 30; %>
     <% const serverWorkNoticeTitle = showServerWorkNotice
-      ? String(serverWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
-      : ""; %>
+      ? String(serverWorkNotice.title || "Heute Serverarbeit").trim() || "Heute Serverarbeit"
+      : (resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.title
+          ? String(resolvedServerWorkNoticeConfig.title).trim() || "Heute Serverarbeit"
+          : "Heute Serverarbeit"); %>
     <% const serverWorkNoticeMessage = showServerWorkNotice
       ? String(serverWorkNotice.message || "").trim()
-      : ""; %>
-    <% if (showServerWorkNotice) { %>
-      <section class="server-work-notice" data-server-work-notice role="status" aria-live="polite">
-        <div class="server-work-notice-inner">
-          <strong><%= serverWorkNoticeTitle %></strong>
-          <% if (serverWorkNoticeMessage) { %>
-            <span><%= serverWorkNoticeMessage %></span>
-          <% } %>
-        </div>
-      </section>
-    <% } %>
+      : (resolvedServerWorkNoticeConfig && resolvedServerWorkNoticeConfig.message
+          ? String(resolvedServerWorkNoticeConfig.message || "").trim()
+          : "17:00 bis 20:30 Uhr."); %>
+    <section
+      class="server-work-notice"
+      data-server-work-notice
+      data-server-work-time-zone="<%= serverWorkNoticeTimeZone %>"
+      data-server-work-weekdays="<%= serverWorkNoticeWeekdays.join(',') %>"
+      data-server-work-start-minutes="<%= serverWorkNoticeStartMinutes %>"
+      data-server-work-end-minutes="<%= serverWorkNoticeEndMinutes %>"
+      role="status"
+      aria-live="polite"
+      <%= showServerWorkNotice ? "" : "hidden" %>
+    >
+      <div class="server-work-notice-inner">
+        <strong data-server-work-title><%= serverWorkNoticeTitle %></strong>
+        <span data-server-work-message <%= serverWorkNoticeMessage ? "" : "hidden" %>><%= serverWorkNoticeMessage %></span>
+      </div>
+    </section>
     <% if (!topbarHidden) { %>
       <header class="topbar">
         <div class="topbar-inner<%= showTopbarGuestbookInfoBlock ? " has-guestbook-created-at" : "" %>">
@@ -895,8 +929,89 @@
       (() => {
         document.addEventListener("DOMContentLoaded", () => {
           const serverWorkNotice = document.querySelector("[data-server-work-notice]");
+          const chatServerWorkNotice = document.querySelector("[data-chat-server-work-notice]");
+          const chatTopline = chatServerWorkNotice
+            ? chatServerWorkNotice.closest(".rp-topline")
+            : null;
           const topbar = document.querySelector(".topbar");
           const userMenus = Array.from(document.querySelectorAll(".topbar-user-menu"));
+          const serverWorkNoticeConfig = serverWorkNotice
+            ? {
+                timeZone: String(serverWorkNotice.dataset.serverWorkTimeZone || "Europe/Berlin").trim() || "Europe/Berlin",
+                weekdays: String(serverWorkNotice.dataset.serverWorkWeekdays || "Mon,Wed,Fri")
+                  .split(",")
+                  .map((value) => value.trim())
+                  .filter(Boolean),
+                startMinutes: Number.parseInt(serverWorkNotice.dataset.serverWorkStartMinutes || "", 10),
+                endMinutes: Number.parseInt(serverWorkNotice.dataset.serverWorkEndMinutes || "", 10),
+                title: String(
+                  serverWorkNotice.querySelector("[data-server-work-title]")?.textContent || "Heute Serverarbeit"
+                ).trim() || "Heute Serverarbeit",
+                message: String(
+                  serverWorkNotice.querySelector("[data-server-work-message]")?.textContent || "17:00 bis 20:30 Uhr."
+                ).trim()
+              }
+            : null;
+          const serverWorkNoticeClockFormatter = serverWorkNoticeConfig
+            ? new Intl.DateTimeFormat("en-US", {
+                timeZone: serverWorkNoticeConfig.timeZone,
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23"
+              })
+            : null;
+
+          const getServerWorkNoticeState = () => {
+            if (!serverWorkNoticeConfig || !serverWorkNoticeClockFormatter) {
+              return {
+                visible: false,
+                title: "Heute Serverarbeit",
+                message: "17:00 bis 20:30 Uhr."
+              };
+            }
+
+            const formattedParts = serverWorkNoticeClockFormatter.formatToParts(new Date());
+            const partMap = {};
+            formattedParts.forEach((part) => {
+              if (part.type !== "literal") {
+                partMap[part.type] = part.value;
+              }
+            });
+
+            const weekday = String(partMap.weekday || "");
+            const hour = Number(partMap.hour) || 0;
+            const minute = Number(partMap.minute) || 0;
+            const currentMinutes = hour * 60 + minute;
+            const visible =
+              serverWorkNoticeConfig.weekdays.includes(weekday) &&
+              currentMinutes >= serverWorkNoticeConfig.startMinutes &&
+              currentMinutes < serverWorkNoticeConfig.endMinutes;
+
+            return {
+              visible,
+              title: serverWorkNoticeConfig.title,
+              message: serverWorkNoticeConfig.message
+            };
+          };
+
+          const applyServerWorkNoticeState = (element, state) => {
+            if (!element) return;
+
+            const titleNode = element.querySelector("[data-server-work-title]");
+            const messageNode = element.querySelector("[data-server-work-message]");
+
+            if (titleNode) {
+              titleNode.textContent = state.title;
+            }
+
+            if (messageNode) {
+              messageNode.textContent = state.message;
+              messageNode.hidden = !state.message;
+            }
+
+            element.hidden = !state.visible;
+          };
 
           const syncTopbarOffset = () => {
             const serverWorkNoticeOffset = serverWorkNotice
@@ -914,10 +1029,29 @@
             document.documentElement.style.setProperty("--topbar-bottom-offset", `${offset}px`);
           };
 
-          syncTopbarOffset();
+          const syncServerWorkNoticeState = () => {
+            const state = getServerWorkNoticeState();
+
+            applyServerWorkNoticeState(serverWorkNotice, state);
+            applyServerWorkNoticeState(chatServerWorkNotice, state);
+
+            if (chatTopline) {
+              chatTopline.classList.toggle("has-server-work-notice", state.visible);
+            }
+
+            syncTopbarOffset();
+          };
+
+          syncServerWorkNoticeState();
           window.addEventListener("resize", syncTopbarOffset);
           window.addEventListener("orientationchange", syncTopbarOffset);
           window.addEventListener("load", syncTopbarOffset, { once: true });
+          window.setInterval(syncServerWorkNoticeState, 5000);
+          document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+              syncServerWorkNoticeState();
+            }
+          });
 
           if (topbar && "ResizeObserver" in window) {
             const topbarObserver = new ResizeObserver(syncTopbarOffset);

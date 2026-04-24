@@ -197,6 +197,8 @@ const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
 const SERVER_WORK_NOTICE_WEEKDAYS = new Set(["Mon", "Wed", "Fri"]);
 const SERVER_WORK_NOTICE_START_MINUTES = 16 * 60 + 45;
 const SERVER_WORK_NOTICE_END_MINUTES = 20 * 60 + 30;
+const SERVER_WORK_NOTICE_TITLE = "Heute Serverarbeit";
+const SERVER_WORK_NOTICE_MESSAGE = "17:00 bis 20:30 Uhr.";
 const LARP_PROFILE_GENDER_OPTION_VALUES = Object.freeze(["Weiblich", "Männlich", "Divers"]);
 const LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES = Object.freeze(["Republik", "Imperium"]);
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
@@ -1867,8 +1869,8 @@ function getServerWorkNotice(referenceDate = new Date()) {
 
   return {
     visible: true,
-    title: "Heute Serverarbeit",
-    message: "17:00 bis 20:30 Uhr."
+    title: SERVER_WORK_NOTICE_TITLE,
+    message: SERVER_WORK_NOTICE_MESSAGE
   };
 }
 
@@ -12999,6 +13001,14 @@ app.use((req, res, next) => {
   }
 
   res.locals.serverWorkNotice = getServerWorkNotice();
+  res.locals.serverWorkNoticeConfig = {
+    timeZone: APP_PRIMARY_TIME_ZONE,
+    weekdays: Array.from(SERVER_WORK_NOTICE_WEEKDAYS),
+    startMinutes: SERVER_WORK_NOTICE_START_MINUTES,
+    endMinutes: SERVER_WORK_NOTICE_END_MINUTES,
+    title: SERVER_WORK_NOTICE_TITLE,
+    message: SERVER_WORK_NOTICE_MESSAGE
+  };
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   res.locals.pageStyles = [];

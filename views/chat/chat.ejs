@@ -2,13 +2,21 @@
 
 <% const chatDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : "User"); %>
 <% const chatAccountDisplayName = currentUserAccountName || (currentUser ? currentUser.username : "User"); %>
+<% const resolvedChatServerWorkNoticeConfig =
+  typeof serverWorkNoticeConfig !== "undefined" && serverWorkNoticeConfig
+    ? serverWorkNoticeConfig
+    : null; %>
 <% const showChatServerWorkNotice = Boolean(serverWorkNotice && serverWorkNotice.visible); %>
 <% const chatServerWorkNoticeTitle = showChatServerWorkNotice
-  ? String(serverWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
-  : ""; %>
+  ? String(serverWorkNotice.title || "Heute Serverarbeit").trim() || "Heute Serverarbeit"
+  : (resolvedChatServerWorkNoticeConfig && resolvedChatServerWorkNoticeConfig.title
+      ? String(resolvedChatServerWorkNoticeConfig.title).trim() || "Heute Serverarbeit"
+      : "Heute Serverarbeit"); %>
 <% const chatServerWorkNoticeMessage = showChatServerWorkNotice
   ? String(serverWorkNotice.message || "").trim()
-  : ""; %>
+  : (resolvedChatServerWorkNoticeConfig && resolvedChatServerWorkNoticeConfig.message
+      ? String(resolvedChatServerWorkNoticeConfig.message || "").trim()
+      : "17:00 bis 20:30 Uhr."); %>
 <% const formatChatRoleName = (value, roleStyle = "") => {
   const label = String(value || "").trim();
   return label.replace(/\s*\(M\)\s*$/i, "").trim();
@@ -106,15 +114,17 @@
 ].filter(Boolean).join(" "); %>
 
 <section id="chat-shell" class="rp-shell" style="<%= chatShellStyle %>">
-  <header class="rp-topline">
-    <% if (showChatServerWorkNotice) { %>
-      <div class="rp-topline-server-work" role="status" aria-live="polite">
-        <strong><%= chatServerWorkNoticeTitle %></strong>
-        <% if (chatServerWorkNoticeMessage) { %>
-          <span><%= chatServerWorkNoticeMessage %></span>
-        <% } %>
-      </div>
-    <% } %>
+  <header class="rp-topline<%= showChatServerWorkNotice ? " has-server-work-notice" : "" %>">
+    <div
+      class="rp-topline-server-work"
+      data-chat-server-work-notice
+      role="status"
+      aria-live="polite"
+      <%= showChatServerWorkNotice ? "" : "hidden" %>
+    >
+      <strong data-server-work-title><%= chatServerWorkNoticeTitle %></strong>
+      <span data-server-work-message <%= chatServerWorkNoticeMessage ? "" : "hidden" %>><%= chatServerWorkNoticeMessage %></span>
+    </div>
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
       <a
