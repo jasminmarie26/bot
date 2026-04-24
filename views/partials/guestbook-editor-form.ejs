@@ -19,6 +19,9 @@
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
   <input type="hidden" name="preview_return_to" value="" />
   <input type="hidden" name="preview_source_window_name" value="" />
+  <input type="hidden" name="session_tab_id" value="" />
+  <input type="hidden" name="session_page_path" value="" />
+  <input type="hidden" name="session_page_title" value="" />
 
   <div class="gb-editor-heading">
     <h2>Einstellungen</h2>
@@ -919,6 +922,9 @@
     const previewReturnToField = editorForm?.querySelector('input[name="preview_return_to"]') || null;
     const previewSourceWindowNameField =
       editorForm?.querySelector('input[name="preview_source_window_name"]') || null;
+    const sessionTabIdField = editorForm?.querySelector('input[name="session_tab_id"]') || null;
+    const sessionPagePathField = editorForm?.querySelector('input[name="session_page_path"]') || null;
+    const sessionPageTitleField = editorForm?.querySelector('input[name="session_page_title"]') || null;
     const previewTargetName = "guestbook-preview-<%= character.id %>";
     const previewSubmitButtons = Array.from(
       document.querySelectorAll(`button[form="guestbook-editor-form"][formtarget="${previewTargetName}"]`)
@@ -1144,6 +1150,24 @@
     };
 
     const preparePreviewSubmit = () => {
+      const keepaliveState = window.__hrSessionKeepalive || null;
+      if (sessionTabIdField) {
+        sessionTabIdField.value =
+          typeof keepaliveState?.getTabId === "function" ? String(keepaliveState.getTabId() || "").trim() : "";
+      }
+      if (sessionPagePathField) {
+        sessionPagePathField.value =
+          typeof keepaliveState?.getCurrentPagePath === "function"
+            ? String(keepaliveState.getCurrentPagePath() || "").trim()
+            : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      }
+      if (sessionPageTitleField) {
+        sessionPageTitleField.value =
+          typeof keepaliveState?.getCurrentPageTitle === "function"
+            ? String(keepaliveState.getCurrentPageTitle() || "").trim()
+            : String(document.title || "").trim();
+      }
+
       if (previewReturnToField) {
         previewReturnToField.value = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       }
@@ -2127,6 +2151,8 @@
       if (!editorForm || !previewSyncUrl) {
         return;
       }
+
+      preparePreviewSubmit();
 
       if (previewSyncController) {
         previewSyncController.abort();

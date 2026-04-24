@@ -13,6 +13,12 @@
 
   const getCurrentPageTitle = () => String(document.title || "").trim();
 
+  window.__hrSessionKeepalive = {
+    getTabId: () => tabId,
+    getCurrentPagePath,
+    getCurrentPageTitle
+  };
+
   const buildTouchPayload = () => {
     const payload = new URLSearchParams();
     if (tabId) {

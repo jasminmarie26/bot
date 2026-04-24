@@ -20874,6 +20874,9 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
 
   const isPreviewSyncRequest =
     String(req.get("X-Requested-With") || "").trim().toLowerCase() === "xmlhttprequest";
+  markSessionOpenTab(req.session, req.body.session_tab_id || req.body.tab_id);
+  markSessionTabHeartbeat(req.session);
+  markSessionTrackedPageLocation(req.session, req.body.session_page_path, req.body.session_page_title);
   if (isPreviewSyncRequest) {
     req.session.guestbookPreviewDraft = nextPreviewState;
   } else {
