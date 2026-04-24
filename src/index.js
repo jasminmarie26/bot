@@ -194,6 +194,10 @@ const PERSONAL_STAFF_PM_NOTIFICATION_TYPE = "staff_pm";
 const STAFF_MAIL_NOTIFICATION_TYPE = "staff_mail";
 const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
+const SERVER_WORK_NOTICE_WEEKDAYS = new Set(["Mon", "Wed", "Fri"]);
+const SERVER_WORK_NOTICE_START_MINUTES = 16 * 60 + 45;
+const SERVER_WORK_ACTIVE_START_MINUTES = 17 * 60;
+const SERVER_WORK_NOTICE_END_MINUTES = 20 * 60 + 30;
 const LARP_PROFILE_GENDER_OPTION_VALUES = Object.freeze(["Weiblich", "Männlich", "Divers"]);
 const LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES = Object.freeze(["Republik", "Imperium"]);
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
@@ -1816,6 +1820,64 @@ function getPrimaryTimeZoneDateParts(referenceDate = new Date()) {
     year: Number(partMap.year) || now.getFullYear(),
     month: Number(partMap.month) || now.getMonth() + 1,
     day: Number(partMap.day) || now.getDate()
+  };
+}
+
+function getPrimaryTimeZoneClockParts(referenceDate = new Date()) {
+  const now = referenceDate instanceof Date && !Number.isNaN(referenceDate.getTime())
+    ? referenceDate
+    : new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_PRIMARY_TIME_ZONE,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  });
+  const formattedParts = formatter.formatToParts(now);
+  const partMap = {};
+  formattedParts.forEach((part) => {
+    if (part.type !== "literal") {
+      partMap[part.type] = part.value;
+    }
+  });
+
+  return {
+    weekday: String(partMap.weekday || ""),
+    hour: Number(partMap.hour) || 0,
+    minute: Number(partMap.minute) || 0
+  };
+}
+
+function getServerWorkNotice(referenceDate = new Date()) {
+  const clockParts = getPrimaryTimeZoneClockParts(referenceDate);
+  const currentMinutes = clockParts.hour * 60 + clockParts.minute;
+  const isServerWorkDay = SERVER_WORK_NOTICE_WEEKDAYS.has(clockParts.weekday);
+
+  if (
+    !isServerWorkDay ||
+    currentMinutes < SERVER_WORK_NOTICE_START_MINUTES ||
+    currentMinutes >= SERVER_WORK_NOTICE_END_MINUTES
+  ) {
+    return {
+      visible: false,
+      title: "",
+      message: ""
+    };
+  }
+
+  if (currentMinutes < SERVER_WORK_ACTIVE_START_MINUTES) {
+    return {
+      visible: true,
+      title: "Heute Serverarbeit",
+      message: "17:00 bis 20:30 Uhr."
+    };
+  }
+
+  return {
+    visible: true,
+    title: "Serverarbeiten",
+    message: "Laufen gerade bis 20:30 Uhr."
   };
 }
 
@@ -12914,6 +12976,7 @@ app.use((req, res, next) => {
     setThemeCookie(res, res.locals.activeTheme);
   }
 
+  res.locals.serverWorkNotice = getServerWorkNotice();
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
   res.locals.pageStyles = [];

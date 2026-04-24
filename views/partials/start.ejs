@@ -364,6 +364,7 @@
         : "brand"; %>
     <% const normalizedTopbarBrandText = String(topbarBrandText || "").trim().toLowerCase(); %>
     <% const normalizedActiveMenuIdentityName = String(activeMenuIdentityName || "").trim().toLowerCase(); %>
+    <% const normalizedAccountDisplayName = String(accountDisplayName || "").trim().toLowerCase(); %>
     <% const isTopbarBrandCrescentia = /^(crescentia|cresentia)$/.test(normalizedTopbarBrandText); %>
     <% const isTopbarBrandCerberus = normalizedTopbarBrandText === "cerberus"; %>
     <% const topbarBrandSpecialClass = normalizedTopbarBrandText === "noctra"
@@ -466,9 +467,37 @@
     <% const topbarLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
       ? recentSiteUpdateRevisions
       : []; %>
-    <% const showNoctraServerWorkPreview = normalizedTopbarBrandText === "noctra" || normalizedActiveMenuIdentityName === "noctra"; %>
+    <% const showNoctraServerWorkPreview =
+      normalizedTopbarBrandText === "noctra" ||
+      normalizedActiveMenuIdentityName === "noctra" ||
+      normalizedAccountDisplayName === "noctra" ||
+      Boolean(menuCharacter && Number(menuCharacter.id) === 65); %>
+    <% const activeServerWorkNotice = serverWorkNotice && serverWorkNotice.visible
+      ? serverWorkNotice
+      : showNoctraServerWorkPreview
+        ? { visible: true, title: "Heute Serverarbeit", message: "17:00 bis 20:30 Uhr." }
+        : null; %>
+    <% const showServerWorkNotice = Boolean(activeServerWorkNotice && activeServerWorkNotice.visible); %>
+    <% const serverWorkNoticeTitle = showServerWorkNotice
+      ? String(activeServerWorkNotice.title || "Serverarbeiten").trim() || "Serverarbeiten"
+      : ""; %>
+    <% const serverWorkNoticeMessage = showServerWorkNotice
+      ? String(activeServerWorkNotice.message || "").trim()
+      : ""; %>
+    <% if (topbarHidden && showServerWorkNotice) { %>
+      <header class="topbar topbar-system-only">
+        <div class="topbar-server-work-preview" role="status" aria-live="polite">
+          <div class="topbar-server-work-preview-inner">
+            <strong><%= serverWorkNoticeTitle %></strong>
+            <% if (serverWorkNoticeMessage) { %>
+              <span><%= serverWorkNoticeMessage %></span>
+            <% } %>
+          </div>
+        </div>
+      </header>
+    <% } %>
     <% if (!topbarHidden) { %>
-      <header class="topbar<%= showNoctraServerWorkPreview ? " has-server-work-preview" : "" %>">
+      <header class="topbar<%= showServerWorkNotice ? " has-server-work-preview" : "" %>">
         <div class="topbar-inner<%= showTopbarGuestbookInfoBlock ? " has-guestbook-created-at" : "" %>">
           <% if (!topbarGuestbookModeActive) { %>
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>">
@@ -871,11 +900,13 @@
             <% } %>
           </nav>
         </div>
-        <% if (showNoctraServerWorkPreview) { %>
+        <% if (showServerWorkNotice) { %>
           <div class="topbar-server-work-preview" role="status" aria-live="polite">
             <div class="topbar-server-work-preview-inner">
-              <strong>Serverarbeiten</strong>
-              <span>Montag, Mittwoch und Freitag von 17:00 bis 20:30 Uhr.</span>
+              <strong><%= serverWorkNoticeTitle %></strong>
+              <% if (serverWorkNoticeMessage) { %>
+                <span><%= serverWorkNoticeMessage %></span>
+              <% } %>
             </div>
           </div>
         <% } %>
