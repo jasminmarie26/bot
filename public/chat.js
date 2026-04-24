@@ -1250,6 +1250,49 @@
     }
   }
 
+  function clearChatTextColor(node) {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    node.style.removeProperty("background");
+    node.style.removeProperty("background-image");
+    node.style.removeProperty("background-size");
+    node.style.removeProperty("background-repeat");
+    node.style.removeProperty("-webkit-background-clip");
+    node.style.removeProperty("background-clip");
+    node.style.removeProperty("-webkit-text-fill-color");
+    node.style.removeProperty("color");
+  }
+
+  function setChatColorSource(node, rawColor) {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    const normalizedColor = normalizeChatTextColor(rawColor);
+    if (normalizedColor) {
+      node.dataset.chatColorSource = normalizedColor;
+    } else {
+      delete node.dataset.chatColorSource;
+    }
+  }
+
+  function applyStoredChatTextColor(node, rawColor, options = {}) {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    const normalizedColor = normalizeChatTextColor(rawColor);
+    const preset = options.allowGradient === false ? null : getGradientPresetForNode(node);
+    if (!normalizedColor && !preset) {
+      clearChatTextColor(node);
+      return;
+    }
+
+    applyChatTextColor(node, normalizedColor, options);
+  }
+
   function refreshExistingChatTextAppearance() {
     if (!(chatFeed instanceof HTMLElement)) {
       return;
@@ -1260,23 +1303,41 @@
         return;
       }
       const fallbackColor = String(node.dataset.chatTimeSourceColor || "").trim();
-      if (fallbackColor) {
-        applyChatTextColor(node, fallbackColor, { allowGradient: false });
-      } else {
-        node.style.removeProperty("color");
+      applyStoredChatTextColor(node, fallbackColor, { allowGradient: false });
+    });
+
+    chatFeed.querySelectorAll("article.chat-message em").forEach((node) => {
+      if (!(node instanceof HTMLElement)) {
+        return;
       }
+      const fallbackColor = String(node.dataset.chatColorSource || "").trim();
+      applyStoredChatTextColor(node, fallbackColor, { allowGradient: false });
     });
 
     chatFeed.querySelectorAll("article.chat-message strong").forEach((node) => {
-      applyChatTextColor(node, node.style.color || "");
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      const fallbackColor = String(node.dataset.chatColorSource || "").trim();
+      applyStoredChatTextColor(node, fallbackColor);
+    });
+
+    chatFeed.querySelectorAll("article.chat-message em > span").forEach((node) => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      const fallbackColor = String(node.dataset.chatColorSource || "").trim();
+      applyStoredChatTextColor(node, fallbackColor);
     });
 
     chatFeed.querySelectorAll("article.chat-message p > span").forEach((node) => {
       if (!(node instanceof HTMLElement) || node.classList.contains("chat-own-message-time")) {
         return;
       }
-      const fallbackColor = node.closest(".chat-system") ? "#000000" : node.style.color || "";
-      applyChatTextColor(node, fallbackColor, { allowGradient: false });
+      const fallbackColor = String(
+        node.dataset.chatColorSource || (node.closest(".chat-system") ? "#000000" : "")
+      ).trim();
+      applyStoredChatTextColor(node, fallbackColor, { allowGradient: false });
     });
   }
 
@@ -2320,7 +2381,8 @@
       strong.classList.add(`role-name-${normalizedRoleStyle}`);
     }
     applySpecialNameDecor(strong, displayName);
-    applyChatTextColor(strong, rawColor);
+    setChatColorSource(strong, rawColor);
+    applyStoredChatTextColor(strong, rawColor);
     return strong;
   }
 
@@ -2398,9 +2460,7 @@
       timePrefix.className = "chat-own-message-time";
       timePrefix.dataset.chatTimeSourceColor = messageTimeColor || "";
       timePrefix.textContent = `[${messageTimeLabel}] `;
-      if (messageTimeColor) {
-        applyChatTextColor(timePrefix, messageTimeColor, { allowGradient: false });
-      }
+      applyStoredChatTextColor(timePrefix, messageTimeColor, { allowGradient: false });
       line.appendChild(timePrefix);
     }
     if (isSystemMessage) {
@@ -2469,7 +2529,8 @@
       } else {
         body.textContent = content;
       }
-      applyChatTextColor(body, "#000000", { allowGradient: false });
+      setChatColorSource(body, "#000000");
+      applyStoredChatTextColor(body, "#000000", { allowGradient: false });
     } else if (emoteActionText) {
       const emote = document.createElement("em");
       const actor = document.createElement("span");
@@ -2480,8 +2541,10 @@
       }
       actor.textContent = displayName || "Unbekannt";
       applySpecialNameDecor(actor, displayName);
-      applyChatTextColor(actor, chatTextColor);
-      applyChatTextColor(emote, chatTextColor);
+      setChatColorSource(actor, chatTextColor);
+      setChatColorSource(emote, chatTextColor);
+      applyStoredChatTextColor(actor, chatTextColor);
+      applyStoredChatTextColor(emote, chatTextColor, { allowGradient: false });
       emote.appendChild(actor);
       if (emoteActionText) {
         emote.appendChild(document.createTextNode(" "));
@@ -2500,8 +2563,10 @@
       }
       strong.textContent = `${displayName}:`;
       applySpecialNameDecor(strong, displayName);
-      applyChatTextColor(strong, chatTextColor);
-      applyChatTextColor(body, chatTextColor);
+      setChatColorSource(strong, chatTextColor);
+      setChatColorSource(body, chatTextColor);
+      applyStoredChatTextColor(strong, chatTextColor);
+      applyStoredChatTextColor(body, chatTextColor, { allowGradient: false });
       line.appendChild(strong);
       appendFormattedChatText(body, msg.content, { leadingSpace: true });
     }
