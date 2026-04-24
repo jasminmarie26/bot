@@ -479,6 +479,7 @@
                   <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Times New Roman">Times New Roman</button>
                   <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Trebuchet MS">Trebuchet MS</button>
                   <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-value="Verdana">Verdana</button>
+                  <button type="button" class="gb-bbcode-menu-item" data-bbcode-option="size">Schriftgr&ouml;&szlig;e...</button>
                   <button type="button" class="gb-bbcode-menu-item" data-bbcode-font-clear="true">Schriftart entfernen</button>
                 </div>
               </details>
@@ -1803,6 +1804,25 @@
           return;
         }
         wrapSelectionWithBbcode(`[font=${fontValue.trim()}]`, "[/font]", "Text");
+        return;
+      }
+
+      if (optionType === "size") {
+        const sizeValue = window.prompt("Schriftgröße in Pixel eingeben, z. B. 14", "14");
+        if (!sizeValue) {
+          return;
+        }
+
+        const normalizedSizeValue = String(sizeValue || "")
+          .trim()
+          .replace(",", ".")
+          .replace(/px$/i, "");
+        if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedSizeValue)) {
+          window.alert("Bitte eine gültige Zahl eingeben, z. B. 14.");
+          return;
+        }
+
+        wrapSelectionWithBbcode(`[size=${normalizedSizeValue}]`, "[/size]", "Text");
         return;
       }
 

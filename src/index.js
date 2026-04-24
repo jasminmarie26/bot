@@ -9106,6 +9106,30 @@ function sanitizeBbcodeColor(rawColor) {
   return null;
 }
 
+function sanitizeBbcodeSize(rawSize) {
+  const normalizedValue = String(rawSize || "")
+    .trim()
+    .replace(",", ".")
+    .replace(/px$/i, "");
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedValue)) {
+    return null;
+  }
+
+  const parsedSize = Number(normalizedValue);
+  if (!Number.isFinite(parsedSize) || parsedSize <= 0 || parsedSize > 200) {
+    return null;
+  }
+
+  const roundedSize = Math.round(parsedSize * 100) / 100;
+  if (!Number.isFinite(roundedSize) || roundedSize <= 0) {
+    return null;
+  }
+
+  return Number.isInteger(roundedSize)
+    ? String(roundedSize)
+    : String(roundedSize).replace(/(?:\.0+|(\.\d*?)0+)$/, "$1");
+}
+
 function parseBbcodeButtonSpec(rawSpec) {
   const normalizedSpec = String(rawSpec || "").trim();
   if (!normalizedSpec) {
@@ -9760,6 +9784,7 @@ function normalizeBbcodeMarkup(rawContent) {
     "table",
     "quote",
     "color",
+    "size",
     "font",
     "icode",
     "code",
@@ -10009,6 +10034,12 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const safeColor = sanitizeBbcodeColor(rawColor);
     if (!safeColor) return inner;
     return `<span style="color:${safeColor}">${inner}</span>`;
+  });
+
+  html = html.replace(createBbcodeOptionRegex("size"), (full, rawSize, inner) => {
+    const safeSize = sanitizeBbcodeSize(rawSize);
+    if (!safeSize) return inner;
+    return `<span style="font-size:${escapeHtml(safeSize)}px">${inner}</span>`;
   });
 
   html = html.replace(createBbcodeOptionRegex("font"), (full, rawFontStyle, inner) => {
@@ -17111,6 +17142,7 @@ const HELP_BBCODE_EXAMPLES = [
   { title: "Unterstrichen", code: "[u]Das ist unterstrichen[/u]" },
   { title: "Farbe", code: "[color=#6ec8ff]Blauer Text[/color]" },
   { title: "Schrift", code: "[font=Great Vibes]Text in Great Vibes[/font]" },
+  { title: "Größe", code: "[size=14]Text in 14px[/size]" },
   { title: "Gradient", code: "[0,0,ff7a7a,ffd36e]Leuchtender Titel[/gradient]" },
   { title: "Überschrift 1", code: "[h1]Überschrift 1[/h1]" },
   { title: "Überschrift 2", code: "[h2]Überschrift 2[/h2]" },
