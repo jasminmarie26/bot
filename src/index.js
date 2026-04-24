@@ -26418,7 +26418,7 @@ io.on("connection", (socket) => {
       )
     );
     const shouldSuppressReconnectPresence =
-      shouldMarkReconnectSuppression || shouldSuppressServerReloadReconnectPresence;
+      isReconnectJoin || shouldMarkReconnectSuppression || shouldSuppressServerReloadReconnectPresence;
     const hasOtherPresenceInNextChannel = hasOtherSocketInChannel(
       socket.data.user.id,
       nextRoomId,
@@ -26516,19 +26516,6 @@ io.on("connection", (socket) => {
           },
           nextStandardRoomId
         );
-      } else if (
-        !shouldSuppressExplicitEnterPresence &&
-        !shouldSuppressReconnectPresence &&
-        reloadReason !== "server-instance-reload"
-      ) {
-        emitDirectSystemMessageToSocket(socket, nextPresenceMessage.text, {
-          chat_text_color: "#000000",
-          system_kind: "presence",
-          presence_kind: nextPresenceMessage.kind,
-          presence_actor_name: nextPresenceMessage.actorName,
-          presence_actor_chat_text_color: nextDisplayProfile?.chat_text_color || "",
-          presence_suffix: nextPresenceMessage.suffix
-        });
       }
     }
     clearPendingRoomDeletion(nextRoomId);
