@@ -612,12 +612,15 @@ function createHomePageService(options = {}) {
   }
 
   function getVisibleCharacterStatsForHomeStats(hiddenUserIds = null) {
-    const characters = db.prepare("SELECT user_id, server_id FROM characters").all();
+    const characters = db.prepare("SELECT user_id, server_id, festplay_id FROM characters").all();
     const visibleCharacters =
       hiddenUserIds instanceof Set
         ? characters.filter((character) => !hiddenUserIds.has(Number(character.user_id)))
         : characters;
-    const larpCharacters = visibleCharacters.filter(
+    const visibleMainCharacters = visibleCharacters.filter(
+      (character) => !(Number(character?.festplay_id) > 0)
+    );
+    const larpCharacters = visibleMainCharacters.filter(
       (character) => normalizeCharacterServerId(character.server_id) === larpServerId
     );
     const larpUserIds = new Set(
@@ -627,11 +630,11 @@ function createHomePageService(options = {}) {
     );
 
     return {
-      characterCount: visibleCharacters.length,
-      freeRpCharacterCount: visibleCharacters.filter(
+      characterCount: visibleMainCharacters.length,
+      freeRpCharacterCount: visibleMainCharacters.filter(
         (character) => normalizeCharacterServerId(character.server_id) === "free-rp"
       ).length,
-      erpCharacterCount: visibleCharacters.filter(
+      erpCharacterCount: visibleMainCharacters.filter(
         (character) => normalizeCharacterServerId(character.server_id) === "erp"
       ).length,
       larpCharacterCount: larpCharacters.length,
