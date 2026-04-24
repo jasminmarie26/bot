@@ -3961,6 +3961,88 @@ function buildGuestbookExportText(items) {
   return sections.join("\n\n").trim() || "Keine Gästebuchdaten vorhanden.";
 }
 
+function getGuestbookExportItemsForCharacters(characters, userId) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  return (Array.isArray(characters) ? characters : [])
+    .map((character) => getGuestbookExportDataForCharacter(character?.id))
+    .filter((item) => item && Number(item.character?.user_id) === parsedUserId);
+}
+
+function buildGuestbookExportOverviewCharacters(items) {
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const characterId = Number(item.character?.id);
+    const pages = Array.isArray(item.pages) ? item.pages : [];
+    const entries = Array.isArray(item.entries) ? item.entries : [];
+
+    return {
+      id: Number.isInteger(characterId) && characterId > 0 ? characterId : 0,
+      name: String(item.character?.name || "").trim() || "Unbenannter Charakter",
+      guestbookUrl:
+        Number.isInteger(characterId) && characterId > 0 ? `/characters/${characterId}/guestbook` : "",
+      serverLabel: getServerLabel(item.character?.server_id) || "-",
+      pageCount: pages.length,
+      entryCount: entries.length
+    };
+  });
+}
+
+async function sendGuestbookCodeEmailsSeparately(payload) {
+  const email = normalizeEmail(payload.email || "");
+  if (!email) {
+    const error = new Error("In deinem Account ist keine gültige E-Mail-Adresse hinterlegt.");
+    error.code = "MAIL_RECIPIENT_MISSING";
+    throw error;
+  }
+
+  const username = String(payload.username || "Abenteurer").trim() || "Abenteurer";
+  const items = Array.isArray(payload.items) ? payload.items.filter(Boolean) : [];
+  const deliveredItems = [];
+  const failedItems = [];
+
+  for (const item of items) {
+    const characterName = String(item.character?.name || "").trim() || "Unbenannter Charakter";
+
+    try {
+      const deliveryResult = await sendGuestbookCodeEmail({
+        email,
+        username,
+        exportLabel: characterName,
+        title: `Gästebuch-Code: ${characterName}`,
+        exportText: buildGuestbookExportText([item]),
+        attachmentBaseName: buildGuestbookExportAttachmentBaseName(characterName, new Date())
+      });
+
+      if (!deliveryResult?.delivered) {
+        const unavailableError = new Error("Der E-Mail-Versand ist aktuell nicht verfügbar.");
+        unavailableError.code = "MAILER_UNAVAILABLE";
+        throw unavailableError;
+      }
+
+      deliveredItems.push({
+        characterName,
+        deliveryMode: String(deliveryResult.deliveryMode || "").trim()
+      });
+    } catch (error) {
+      failedItems.push({
+        characterName,
+        error
+      });
+    }
+  }
+
+  return {
+    deliveredCount: deliveredItems.length,
+    failedCount: failedItems.length,
+    items: deliveredItems,
+    failedItems,
+    firstError: failedItems[0]?.error || null
+  };
+}
+
 function createGuestbookExportPdfBuffer(payload) {
   return new Promise((resolve, reject) => {
     try {
@@ -16922,6 +17004,38 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
   });
 });
 
+app.get("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, (req, res) => {
+  const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
+  if (!serverSection) {
+    return res.redirect("/dashboard");
+  }
+
+  const returnTarget = `/dashboard/areas/${serverSection.id}`;
+  const accountUser = getAccountUserById(req.session.user.id);
+  const email = normalizeEmail(accountUser?.email || "");
+  const exportItems = getGuestbookExportItemsForCharacters(
+    getDashboardGuestbookExportCharacters(serverSection),
+    req.session.user.id
+  );
+
+  return res.render("serverliste/guestbook-email", {
+    title: `Gästebücher per E-Mail: ${serverSection.dashboard_label || serverSection.label}`,
+    pageKicker: "Rollenspiel",
+    pageTitle: "Gästebücher per E-Mail",
+    pageDescription: `Für ${serverSection.dashboard_label || serverSection.label} wird pro Gästebuch eine eigene E-Mail mit dem Charakternamen verschickt.`,
+    backHref: returnTarget,
+    backLabel: "Zurück zum Bereich",
+    sendAction: `/dashboard/areas/${serverSection.id}/guestbook-code-email`,
+    returnTo: `/dashboard/areas/${serverSection.id}/guestbook-code-email`,
+    email,
+    hasEmail: Boolean(email),
+    collectionTitle: serverSection.dashboard_label || serverSection.label,
+    characters: buildGuestbookExportOverviewCharacters(exportItems),
+    emptyState: "Es sind keine eigenen Charaktere für diesen Bereich vorhanden.",
+    ...getServerListPageAssets()
+  });
+});
+
 app.post("/characters/:id/guestbook-code-email", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);
@@ -16983,7 +17097,7 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
     return res.redirect("/dashboard");
   }
 
-  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}`);
+  const returnTarget = getSafeReturnTarget(req, `/dashboard/areas/${serverSection.id}/guestbook-code-email`);
   const dashboardCharacters = getDashboardGuestbookExportCharacters(serverSection);
   if (!dashboardCharacters.length) {
     setFlash(req, "error", "Es sind keine eigenen Charaktere für diesen Bereich vorhanden.");
@@ -16997,9 +17111,7 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
     return res.redirect(returnTarget);
   }
 
-  const exportItems = dashboardCharacters
-    .map((character) => getGuestbookExportDataForCharacter(character.id))
-    .filter((item) => item && Number(item.character?.user_id) === Number(req.session.user.id));
+  const exportItems = getGuestbookExportItemsForCharacters(dashboardCharacters, req.session.user.id);
 
   if (!exportItems.length) {
     setFlash(req, "error", "Gästebuch-Codes konnten nicht geladen werden.");
@@ -17007,25 +17119,34 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
   }
 
   try {
-    const deliveryResult = await sendGuestbookCodeEmail({
+    const deliveryResult = await sendGuestbookCodeEmailsSeparately({
       email,
       username: accountUser?.username || req.session.user.username,
-      exportLabel: `${serverSection.dashboard_label || serverSection.label} (${exportItems.length})`,
-      title: `Gästebuch-Codes: ${serverSection.dashboard_label || serverSection.label}`,
-      exportText: buildGuestbookExportText(exportItems),
-      attachmentBaseName: buildGuestbookExportAttachmentBaseName(
-        `${serverSection.dashboard_label || serverSection.label}-alle`,
-        new Date()
-      )
+      items: exportItems
     });
-    if (!deliveryResult?.delivered) {
-      setFlash(req, "error", "Der E-Mail-Versand ist aktuell nicht verfügbar.");
+
+    if (deliveryResult.deliveredCount < 1) {
+      setFlash(
+        req,
+        "error",
+        `Gästebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(deliveryResult.firstError)}).`
+      );
       return res.redirect(returnTarget);
     }
+
+    if (deliveryResult.failedCount > 0) {
+      setFlash(
+        req,
+        "success",
+        `Gästebuch-Codes wurden als einzelne E-Mails verschickt: ${deliveryResult.deliveredCount} erfolgreich, ${deliveryResult.failedCount} fehlgeschlagen (${summarizeMailError(deliveryResult.firstError)}).`
+      );
+      return res.redirect(returnTarget);
+    }
+
     setFlash(
       req,
       "success",
-      `Gästebuch-Codes von ${exportItems.length} Charakteren wurden per E-Mail verschickt.`
+      `Gästebuch-Codes von ${deliveryResult.deliveredCount} Charakteren wurden als einzelne E-Mails verschickt.`
     );
   } catch (error) {
     console.error(error);
@@ -17039,8 +17160,35 @@ app.post("/dashboard/areas/:serverId/guestbook-code-email", requireAuth, async (
   return res.redirect(returnTarget);
 });
 
+app.get("/dashboard/larp/guestbook-code-email", requireAuth, (req, res) => {
+  const returnTarget = "/dashboard/larp";
+  const accountUser = getAccountUserById(req.session.user.id);
+  const email = normalizeEmail(accountUser?.email || "");
+  const exportItems = getGuestbookExportItemsForCharacters(
+    getLarpCharactersForUser(req.session.user.id),
+    req.session.user.id
+  );
+
+  return res.render("serverliste/guestbook-email", {
+    title: "Gästebücher per E-Mail: LARP",
+    pageKicker: "LARP",
+    pageTitle: "Gästebücher per E-Mail",
+    pageDescription: "Für LARP wird pro Gästebuch eine eigene E-Mail mit dem Charakternamen verschickt.",
+    backHref: returnTarget,
+    backLabel: "Zurück zum LARP-Bereich",
+    sendAction: "/dashboard/larp/guestbook-code-email",
+    returnTo: "/dashboard/larp/guestbook-code-email",
+    email,
+    hasEmail: Boolean(email),
+    collectionTitle: "LARP",
+    characters: buildGuestbookExportOverviewCharacters(exportItems),
+    emptyState: "Es sind keine eigenen LARP-Profile vorhanden.",
+    ...getServerListPageAssets()
+  });
+});
+
 app.post("/dashboard/larp/guestbook-code-email", requireAuth, async (req, res) => {
-  const returnTarget = getSafeReturnTarget(req, "/dashboard/larp");
+  const returnTarget = getSafeReturnTarget(req, "/dashboard/larp/guestbook-code-email");
   const dashboardCharacters = getLarpCharactersForUser(req.session.user.id);
   if (!dashboardCharacters.length) {
     setFlash(req, "error", "Es sind keine eigenen LARP-Charaktere vorhanden.");
@@ -17054,9 +17202,7 @@ app.post("/dashboard/larp/guestbook-code-email", requireAuth, async (req, res) =
     return res.redirect(returnTarget);
   }
 
-  const exportItems = dashboardCharacters
-    .map((character) => getGuestbookExportDataForCharacter(character.id))
-    .filter((item) => item && Number(item.character?.user_id) === Number(req.session.user.id));
+  const exportItems = getGuestbookExportItemsForCharacters(dashboardCharacters, req.session.user.id);
 
   if (!exportItems.length) {
     setFlash(req, "error", "Gästebuch-Codes konnten nicht geladen werden.");
@@ -17064,20 +17210,34 @@ app.post("/dashboard/larp/guestbook-code-email", requireAuth, async (req, res) =
   }
 
   try {
-    const deliveryResult = await sendGuestbookCodeEmail({
+    const deliveryResult = await sendGuestbookCodeEmailsSeparately({
       email,
       username: accountUser?.username || req.session.user.username,
-      exportLabel: `LARP (${exportItems.length})`,
-      title: "Gästebuch-Codes: LARP",
-      introText:
-        "Im Anhang findest du die Gästebuch-Codes deiner sichtbaren LARP-Charaktere.",
       items: exportItems
     });
+
+    if (deliveryResult.deliveredCount < 1) {
+      setFlash(
+        req,
+        "error",
+        `Gästebuch-Codes konnten nicht per E-Mail verschickt werden (${summarizeMailError(deliveryResult.firstError)}).`
+      );
+      return res.redirect(returnTarget);
+    }
+
+    if (deliveryResult.failedCount > 0) {
+      setFlash(
+        req,
+        "success",
+        `Gästebuch-Codes für LARP wurden als einzelne E-Mails verschickt: ${deliveryResult.deliveredCount} erfolgreich, ${deliveryResult.failedCount} fehlgeschlagen (${summarizeMailError(deliveryResult.firstError)}).`
+      );
+      return res.redirect(returnTarget);
+    }
 
     setFlash(
       req,
       "success",
-      `Gästebuch-Codes für LARP wurden per E-Mail verschickt (${deliveryResult.items.length}).`
+      `Gästebuch-Codes für LARP wurden als einzelne E-Mails verschickt (${deliveryResult.deliveredCount}).`
     );
   } catch (error) {
     console.error(error);

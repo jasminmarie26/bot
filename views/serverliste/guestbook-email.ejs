@@ -1,0 +1,80 @@
+<%- include("../partials/start") %>
+
+<section class="header-line serverlist-page-header">
+  <div>
+    <span class="serverlist-kicker"><%= pageKicker %></span>
+    <h1><%= pageTitle %></h1>
+    <p class="muted"><%= pageDescription %></p>
+  </div>
+  <div class="serverlist-actions">
+    <a class="btn btn-secondary" href="<%= backHref %>"><%= backLabel %></a>
+  </div>
+</section>
+
+<section class="serverlist-block">
+  <section class="panel serverlist-panel serverlist-subpanel">
+    <div class="header-line">
+      <div>
+        <h3>Versand</h3>
+        <% if (hasEmail) { %>
+          <p class="muted">
+            Der Versand geht an <strong><%= email %></strong>. F&uuml;r jedes G&auml;stebuch wird eine eigene
+            E-Mail mit dem Charakternamen im Betreff verschickt.
+          </p>
+        <% } else { %>
+          <p class="muted">
+            In deinem Account ist keine g&uuml;ltige E-Mail-Adresse hinterlegt. Ohne E-Mail-Adresse kann kein
+            G&auml;stebuch verschickt werden.
+          </p>
+        <% } %>
+      </div>
+      <form method="POST" action="<%= sendAction %>" class="serverlist-export-all-form">
+        <input type="hidden" name="return_to" value="<%= returnTo %>">
+        <button type="submit" class="btn" <%= hasEmail && characters.length ? "" : "disabled" %>>
+          Jetzt senden
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <details class="serverlist-festplay-overview serverlist-character-overview" open>
+    <summary class="serverlist-festplay-overview-header">
+      <div class="serverlist-festplay-overview-title">
+        <h3><%= collectionTitle %></h3>
+        <span class="serverlist-festplay-count">(<%= characters.length %>)</span>
+      </div>
+      <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
+    </summary>
+
+    <div class="serverlist-panel serverlist-character-overview-body">
+      <% if (!characters.length) { %>
+        <p class="muted"><%= emptyState %></p>
+      <% } else { %>
+        <div class="character-mini-grid">
+          <% characters.forEach((character) => { %>
+            <article class="character-mini-card">
+              <% if (character.guestbookUrl) { %>
+                <a
+                  class="character-mini-item"
+                  href="<%= character.guestbookUrl %>"
+                  title="G&auml;stebuch von <%= character.name %> &ouml;ffnen"
+                >
+                  <span class="character-mini-name"><%= character.name %></span>
+                </a>
+              <% } else { %>
+                <span class="character-mini-placeholder">
+                  <span class="character-mini-name"><%= character.name %></span>
+                </span>
+              <% } %>
+              <p class="muted">
+                <%= character.serverLabel %> &middot; <%= character.pageCount %> Seiten &middot; <%= character.entryCount %> Eintr&auml;ge
+              </p>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </details>
+</section>
+
+<%- include("../partials/end") %>
