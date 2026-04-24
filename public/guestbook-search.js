@@ -33,6 +33,8 @@
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  const normalizeComparable = (value) => normalize(value).replace(/[^a-z0-9]+/g, "");
+
   const normalizeServerId = (value) => String(value || "").trim().toLowerCase();
 
   const normalizeTagList = (value) => {
@@ -85,7 +87,9 @@
               ownerUsername: String(entry?.owner_username || "").trim(),
               tags,
               normalizedName: normalize(name),
+              comparableName: normalizeComparable(name),
               normalizedTags: tags.map((tag) => normalize(tag)),
+              comparableTags: tags.map((tag) => normalizeComparable(tag)),
               initialLetter: getInitialLetter(name)
             };
           })
@@ -218,6 +222,7 @@
 
   const getMatches = () => {
     const normalizedQuery = normalize(state.query);
+    const comparableQuery = normalizeComparable(state.query);
     return getScopedCharacters()
       .filter((entry) => {
         if (state.letter && entry.initialLetter !== state.letter) {
@@ -237,13 +242,27 @@
 
         return (
           entry.normalizedName.includes(normalizedQuery) ||
-          entry.normalizedTags.some((tag) => tag.includes(normalizedQuery))
+          entry.normalizedTags.some((tag) => tag.includes(normalizedQuery)) ||
+          (comparableQuery
+            ? (
+                entry.comparableName.includes(comparableQuery) ||
+                entry.comparableTags.some((tag) => tag.includes(comparableQuery))
+              )
+            : false)
         );
       })
       .sort((left, right) => {
         if (normalizedQuery) {
-          const leftStarts = left.normalizedName.startsWith(normalizedQuery) ? 0 : 1;
-          const rightStarts = right.normalizedName.startsWith(normalizedQuery) ? 0 : 1;
+          const leftStarts =
+            left.normalizedName.startsWith(normalizedQuery) ||
+            (comparableQuery && left.comparableName.startsWith(comparableQuery))
+              ? 0
+              : 1;
+          const rightStarts =
+            right.normalizedName.startsWith(normalizedQuery) ||
+            (comparableQuery && right.comparableName.startsWith(comparableQuery))
+              ? 0
+              : 1;
           if (leftStarts !== rightStarts) {
             return leftStarts - rightStarts;
           }

@@ -24347,8 +24347,40 @@ function normalizeSocialLookupValue(value) {
   return String(value || "").trim().replace(/^#/, "").slice(0, 80);
 }
 
+function normalizeComparableSocialLookupValue(value) {
+  return normalizeSocialLookupValue(value)
+    .toLowerCase()
+    .replace(/\u00e4/g, "ae")
+    .replace(/\u00f6/g, "oe")
+    .replace(/\u00fc/g, "ue")
+    .replace(/\u00df/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
 function escapeSqlLikePattern(value) {
   return String(value || "").replace(/[\\%_]/g, "\\$&");
+}
+
+function buildComparableSocialLookupSql(columnExpression) {
+  const normalizedColumnExpression = String(columnExpression || "").trim();
+  const baseExpression = `lower(COALESCE(${normalizedColumnExpression || "''"}, ''))`;
+  return [
+    " ",
+    "-",
+    "_",
+    ".",
+    ",",
+    "/",
+    "(",
+    ")",
+    "[",
+    "]"
+  ].reduce(
+    (expression, token) => `replace(${expression}, '${token}', '')`,
+    baseExpression
+  );
 }
 
 function isPrivilegedStaffUser(user) {
@@ -24393,20 +24425,18 @@ function findUserBySocialLookup(value) {
     return userMatch;
   }
 
-  return db
-    .prepare(
-      `SELECT u.id,
-              u.username,
-              u.account_number,
-              u.is_admin,
-              u.is_moderator
-         FROM characters c
-         JOIN users u ON u.id = c.user_id
-        WHERE lower(c.name) = lower(?)
-        ORDER BY c.id ASC
-        LIMIT 1`
-    )
-    .get(normalizedValue);
+  const characterMatch = findCharacterBySocialLookup(normalizedValue);
+  if (!characterMatch) {
+    return null;
+  }
+
+  return {
+    id: Number(characterMatch.user_id) || 0,
+    username: String(characterMatch.owner_username || "").trim(),
+    account_number: String(characterMatch.owner_account_number || "").trim(),
+    is_admin: Number(characterMatch.is_admin) === 1 ? 1 : 0,
+    is_moderator: Number(characterMatch.is_moderator) === 1 ? 1 : 0
+  };
 }
 
 function findCharacterBySocialLookup(value) {
@@ -24414,6 +24444,14 @@ function findCharacterBySocialLookup(value) {
   if (!normalizedValue) {
     return null;
   }
+
+  const comparableValue = normalizeComparableSocialLookupValue(normalizedValue);
+  const escapedValue = escapeSqlLikePattern(normalizedValue);
+  const prefixPattern = `${escapedValue}%`;
+  const containsPattern = `%${escapedValue}%`;
+  const comparablePrefixPattern = `${escapeSqlLikePattern(comparableValue)}%`;
+  const comparableContainsPattern = `%${escapeSqlLikePattern(comparableValue)}%`;
+  const comparableNameSql = buildComparableSocialLookupSql("c.name");
 
   return db
     .prepare(
@@ -24426,11 +24464,41 @@ function findCharacterBySocialLookup(value) {
               u.is_moderator
          FROM characters c
          JOIN users u ON u.id = c.user_id
-        WHERE lower(c.name) = lower(?)
-        ORDER BY c.id ASC
+        WHERE trim(COALESCE(c.name, '')) != ''
+          AND (
+            lower(c.name) = lower(?)
+            OR ${comparableNameSql} = ?
+            OR lower(c.name) LIKE lower(?) ESCAPE '\\'
+            OR lower(c.name) LIKE lower(?) ESCAPE '\\'
+            OR ${comparableNameSql} LIKE ? ESCAPE '\\'
+            OR ${comparableNameSql} LIKE ? ESCAPE '\\'
+          )
+        ORDER BY CASE
+                   WHEN lower(c.name) = lower(?) THEN 0
+                   WHEN ${comparableNameSql} = ? THEN 1
+                   WHEN lower(c.name) LIKE lower(?) ESCAPE '\\' THEN 2
+                   WHEN ${comparableNameSql} LIKE ? ESCAPE '\\' THEN 3
+                   WHEN lower(c.name) LIKE lower(?) ESCAPE '\\' THEN 4
+                   ELSE 5
+                 END,
+                 length(trim(COALESCE(c.name, ''))) ASC,
+                 lower(c.name) ASC,
+                 c.id ASC
         LIMIT 1`
     )
-    .get(normalizedValue);
+    .get(
+      normalizedValue,
+      comparableValue,
+      prefixPattern,
+      containsPattern,
+      comparablePrefixPattern,
+      comparableContainsPattern,
+      normalizedValue,
+      comparableValue,
+      prefixPattern,
+      comparablePrefixPattern,
+      containsPattern
+    );
 }
 
 function resolveGuestbookNotificationRecipient(value) {
@@ -24491,9 +24559,13 @@ function getGuestbookNotificationRecipientSuggestions(value, limit = 8) {
     return [];
   }
 
+  const comparableValue = normalizeComparableSocialLookupValue(normalizedValue);
   const escapedValue = escapeSqlLikePattern(normalizedValue);
   const prefixPattern = `${escapedValue}%`;
   const containsPattern = `%${escapedValue}%`;
+  const comparablePrefixPattern = `${escapeSqlLikePattern(comparableValue)}%`;
+  const comparableContainsPattern = `%${escapeSqlLikePattern(comparableValue)}%`;
+  const comparableNameSql = buildComparableSocialLookupSql("c.name");
 
   return db
     .prepare(
@@ -24507,19 +24579,39 @@ function getGuestbookNotificationRecipientSuggestions(value, limit = 8) {
         WHERE c.user_id IS NOT NULL
           AND trim(COALESCE(c.name, '')) != ''
           AND (
+            lower(c.name) = lower(?)
+            OR ${comparableNameSql} = ?
+            OR
             lower(c.name) LIKE lower(?) ESCAPE '\\'
             OR lower(c.name) LIKE lower(?) ESCAPE '\\'
+            OR ${comparableNameSql} LIKE ? ESCAPE '\\'
+            OR ${comparableNameSql} LIKE ? ESCAPE '\\'
           )
         ORDER BY CASE
                    WHEN lower(c.name) = lower(?) THEN 0
-                   WHEN lower(c.name) LIKE lower(?) ESCAPE '\\' THEN 1
-                   ELSE 2
+                   WHEN ${comparableNameSql} = ? THEN 1
+                   WHEN lower(c.name) LIKE lower(?) ESCAPE '\\' THEN 2
+                   WHEN ${comparableNameSql} LIKE ? ESCAPE '\\' THEN 3
+                   ELSE 4
                  END,
+                 length(trim(COALESCE(c.name, ''))) ASC,
                  lower(c.name) ASC,
                  c.id ASC
         LIMIT ?`
     )
-    .all(prefixPattern, containsPattern, normalizedValue, prefixPattern, parsedLimit);
+    .all(
+      normalizedValue,
+      comparableValue,
+      prefixPattern,
+      containsPattern,
+      comparablePrefixPattern,
+      comparableContainsPattern,
+      normalizedValue,
+      comparableValue,
+      prefixPattern,
+      comparablePrefixPattern,
+      parsedLimit
+    );
 }
 
 function getCharacterSocialTargetById(characterId) {
