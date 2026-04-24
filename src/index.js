@@ -17162,7 +17162,7 @@ const HELP_BBCODE_EXAMPLES = [
   { title: "Block", code: "[block]Blocktext[/block]" },
   {
     title: "Spalten",
-    code: "[block][table][tr][td]Textspalte links[/td][td]Textspalte rechts[/td][/tr][/table][/block]"
+    code: "[block][table][tr][td]Textzelle 1a[/td][td]Textzelle 2a[/td][td]Textzelle 3a[/td][/tr][tr][td]Textzelle 1b[/td][td]Textzelle 2b[/td][td]Textzelle 3b[/td][/tr][/table][/block]"
   },
   { title: "Bild", code: "[img]https://i.ibb.co/zH50MX7w/Unbenannt-2.png[/img]" },
   {

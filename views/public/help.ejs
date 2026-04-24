@@ -170,6 +170,7 @@
               </tbody>
             </table>
           </div>
+
         </div>
       </section>
     <% } %>
@@ -574,7 +575,7 @@
                 </tr>
                 <tr>
                   <td>Schriftgröße</td>
-                  <td><code>[size=14]Text[/size]</code></td>
+                  <td><code>[size=14]Text[/size]</code> und genauso auch andere Werte wie <code>[size=12]</code>, <code>[size=18]</code> oder <code>[size=24]</code>.</td>
                 </tr>
                 <tr>
                   <td>Story</td>
@@ -606,6 +607,44 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div class="help-example-card help-table-basics-card">
+            <h4>Tabellen-Basics</h4>
+            <p>So sieht eine Standard-Tabelle mit zwei Zeilen und drei Spalten aus:</p>
+            <div class="help-table-wrap">
+              <table class="help-table help-table-basics-preview">
+                <tbody>
+                  <tr>
+                    <td>Textzelle 1a</td>
+                    <td>Textzelle 2a</td>
+                    <td>Textzelle 3a</td>
+                  </tr>
+                  <tr>
+                    <td>Textzelle 1b</td>
+                    <td>Textzelle 2b</td>
+                    <td>Textzelle 3b</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Hier einmal untereinander aufgedröselt, damit man die Einzelteile besser sieht:</p>
+            <code class="help-example-code">[table]
+[tr]
+  [td]Textzelle 1a[/td]
+  [td]Textzelle 2a[/td]
+  [td]Textzelle 3a[/td]
+[/tr]
+[tr]
+  [td]Textzelle 1b[/td]
+  [td]Textzelle 2b[/td]
+  [td]Textzelle 3b[/td]
+[/tr]
+[/table]</code>
+            <p class="muted"><code>[table][/table]</code> beschreibt die ganze Tabelle.</p>
+            <p class="muted"><code>[tr][/tr]</code> beschreibt jeweils eine Zeile, in der die Zellen liegen.</p>
+            <p class="muted"><code>[td][/td]</code> beschreibt jede einzelne Zelle bzw. Spalte.</p>
+            <p class="muted">Die Zellen teilen sich die verfügbare Breite des Gästebuchs und haben standardmäßig etwas Abstand zueinander, damit das Layout sauberer wirkt.</p>
           </div>
         </div>
       </section>

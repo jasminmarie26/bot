@@ -5369,6 +5369,22 @@ body.theme-future.page-home-screen .home-copyright {
   text-align: center;
 }
 
+.help-table-basics-card {
+  gap: 0.55rem;
+}
+
+.help-table-basics-card p {
+  margin: 0;
+}
+
+.help-table-basics-preview {
+  min-width: 0;
+}
+
+.help-table-basics-preview td:first-child {
+  width: auto;
+}
+
 .help-example-line-text {
   display: block;
   font-family: inherit;
@@ -9010,7 +9026,8 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0.32rem;
   margin: 0.35rem 0;
 }
 
