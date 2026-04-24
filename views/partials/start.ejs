@@ -468,9 +468,18 @@
       ? recentSiteUpdateRevisions
       : []; %>
     <% const showNoctraServerWorkPreview =
-      normalizedTopbarBrandText === "noctra" ||
-      normalizedActiveMenuIdentityName === "noctra" ||
-      normalizedAccountDisplayName === "noctra" ||
+      /^noctra(?:\b|\s|\[|\()/i.test(String(topbarBrandText || "").trim()) ||
+      /^noctra(?:\b|\s|\[|\()/i.test(String(activeMenuIdentityName || "").trim()) ||
+      /^noctra(?:\b|\s|\[|\()/i.test(String(accountDisplayName || "").trim()) ||
+      /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.admin_display_name || "").trim()) ||
+      /^noctra(?:\b|\s|\[|\()/i.test(String(currentUser && currentUser.moderator_display_name || "").trim()) ||
+      Boolean(
+        currentUser &&
+        (
+          Number(currentUser.admin_character_id) === 65 ||
+          Number(currentUser.moderator_character_id) === 65
+        )
+      ) ||
       Boolean(menuCharacter && Number(menuCharacter.id) === 65); %>
     <% const activeServerWorkNotice = serverWorkNotice && serverWorkNotice.visible
       ? serverWorkNotice
@@ -484,20 +493,18 @@
     <% const serverWorkNoticeMessage = showServerWorkNotice
       ? String(activeServerWorkNotice.message || "").trim()
       : ""; %>
-    <% if (topbarHidden && showServerWorkNotice) { %>
-      <header class="topbar topbar-system-only">
-        <div class="topbar-server-work-preview" role="status" aria-live="polite">
-          <div class="topbar-server-work-preview-inner">
-            <strong><%= serverWorkNoticeTitle %></strong>
-            <% if (serverWorkNoticeMessage) { %>
-              <span><%= serverWorkNoticeMessage %></span>
-            <% } %>
-          </div>
+    <% if (showServerWorkNotice) { %>
+      <section class="server-work-notice" data-server-work-notice role="status" aria-live="polite">
+        <div class="server-work-notice-inner">
+          <strong><%= serverWorkNoticeTitle %></strong>
+          <% if (serverWorkNoticeMessage) { %>
+            <span><%= serverWorkNoticeMessage %></span>
+          <% } %>
         </div>
-      </header>
+      </section>
     <% } %>
     <% if (!topbarHidden) { %>
-      <header class="topbar<%= showServerWorkNotice ? " has-server-work-preview" : "" %>">
+      <header class="topbar">
         <div class="topbar-inner<%= showTopbarGuestbookInfoBlock ? " has-guestbook-created-at" : "" %>">
           <% if (!topbarGuestbookModeActive) { %>
             <a class="<%= topbarBrandClass %>" href="<%= topbarBrandTarget %>">
@@ -900,31 +907,29 @@
             <% } %>
           </nav>
         </div>
-        <% if (showServerWorkNotice) { %>
-          <div class="topbar-server-work-preview" role="status" aria-live="polite">
-            <div class="topbar-server-work-preview-inner">
-              <strong><%= serverWorkNoticeTitle %></strong>
-              <% if (serverWorkNoticeMessage) { %>
-                <span><%= serverWorkNoticeMessage %></span>
-              <% } %>
-            </div>
-          </div>
-        <% } %>
       </header>
     <% } %>
 
     <script>
       (() => {
         document.addEventListener("DOMContentLoaded", () => {
+          const serverWorkNotice = document.querySelector("[data-server-work-notice]");
           const topbar = document.querySelector(".topbar");
           const userMenus = Array.from(document.querySelectorAll(".topbar-user-menu"));
 
           const syncTopbarOffset = () => {
-            const fallbackOffset = 72;
+            const serverWorkNoticeOffset = serverWorkNotice
+              ? Math.max(0, Math.round(serverWorkNotice.getBoundingClientRect().height))
+              : 0;
+            const fallbackOffset = 72 + serverWorkNoticeOffset;
             const offset = topbar
               ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom))
-              : fallbackOffset;
+              : Math.max(serverWorkNoticeOffset, fallbackOffset);
 
+            document.documentElement.style.setProperty(
+              "--server-work-notice-height",
+              `${serverWorkNoticeOffset}px`
+            );
             document.documentElement.style.setProperty("--topbar-bottom-offset", `${offset}px`);
           };
 
@@ -936,6 +941,11 @@
           if (topbar && "ResizeObserver" in window) {
             const topbarObserver = new ResizeObserver(syncTopbarOffset);
             topbarObserver.observe(topbar);
+          }
+
+          if (serverWorkNotice && "ResizeObserver" in window) {
+            const serverWorkNoticeObserver = new ResizeObserver(syncTopbarOffset);
+            serverWorkNoticeObserver.observe(serverWorkNotice);
           }
 
           if (!userMenus.length) return;

@@ -1271,19 +1271,11 @@ a:hover {
 
 .topbar {
   position: sticky;
-  top: 0;
+  top: var(--server-work-notice-height, 0px);
   z-index: 20;
   border-top: 0;
   border-left: 0;
   border-right: 0;
-}
-
-.topbar-system-only {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .topbar-inner {
@@ -1297,42 +1289,40 @@ a:hover {
   flex-wrap: nowrap;
 }
 
-.topbar-server-work-preview {
-  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
+.server-work-notice {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 30;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--field-bg) 88%, #10131b 12%), color-mix(in srgb, var(--field-bg) 76%, #4a2f18 24%));
+  box-shadow: 0 12px 28px -24px var(--panel-shadow);
 }
 
-.topbar-system-only .topbar-server-work-preview {
-  border-top: 0;
-  border-left: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
-  border-right: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
-  border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 60%, transparent 40%);
-}
-
-.topbar-server-work-preview-inner {
-  max-width: 1150px;
-  margin: 0 auto;
-  padding: 0.56rem 0.9rem 0.64rem;
+.server-work-notice-inner {
+  width: 100%;
+  margin: 0;
+  padding: 0.62rem 1rem 0.7rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
   text-align: center;
 }
 
-.topbar-server-work-preview strong {
+.server-work-notice strong {
   color: color-mix(in srgb, var(--text) 78%, #f2d49b 22%);
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.topbar-server-work-preview span {
+.server-work-notice span {
   color: color-mix(in srgb, var(--muted) 60%, var(--text) 40%);
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   line-height: 1.35;
 }
 
@@ -2944,8 +2934,8 @@ a:hover {
 }
 
 .page-rp-screen {
-  height: 100vh;
-  height: 100dvh;
+  height: calc(100vh - var(--server-work-notice-height, 0px));
+  height: calc(100dvh - var(--server-work-notice-height, 0px));
   overflow: hidden;
 }
 
@@ -2996,8 +2986,8 @@ a:hover {
 .page-roomlist .rp-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: calc(100vh - 0.9rem);
-  min-height: calc(100dvh - 0.9rem);
+  min-height: calc(100vh - 0.9rem - var(--server-work-notice-height, 0px));
+  min-height: calc(100dvh - 0.9rem - var(--server-work-notice-height, 0px));
 }
 
 .page-roomlist .rp-room-panel {
@@ -14169,8 +14159,8 @@ html.software-renderer .guestbook-preview-shell::before {
 @media (max-width: 640px) {
   .page-rp-screen {
     height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: calc(100vh - var(--server-work-notice-height, 0px));
+    min-height: calc(100dvh - var(--server-work-notice-height, 0px));
     overflow-y: auto;
   }
 
