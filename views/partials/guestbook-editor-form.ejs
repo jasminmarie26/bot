@@ -1927,7 +1927,7 @@
         const tableMenu = triggerButton?.closest(".gb-bbcode-menu") || null;
         const tableBordersInput = tableMenu?.querySelector("[data-bbcode-table-borders]") || null;
         const showTableBorders = !(tableBordersInput instanceof HTMLInputElement) || tableBordersInput.checked;
-        const tableOpenTag = showTableBorders ? "[table]" : "[table=borderless]";
+        const tableOpenTag = showTableBorders ? "[table=lines]" : "[table]";
         insertBbcodeAtSelection(
           `${tableOpenTag}\n[tr]\n[td]Textzelle 1a[/td]\n[td]Textzelle 2a[/td]\n[td]Textzelle 3a[/td]\n[/tr]\n[tr]\n[td]Textzelle 1b[/td]\n[td]Textzelle 2b[/td]\n[td]Textzelle 3b[/td]\n[/tr]\n[/table]`
         );

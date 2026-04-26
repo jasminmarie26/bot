@@ -9927,6 +9927,40 @@ function wrapBbcodeStyledContent(inner, options = {}) {
 const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
 const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
 
+function decodeCommonHtmlEntities(rawValue) {
+  return String(rawValue || "")
+    .replace(/&#(\d+);/g, (full, rawCodePoint) => {
+      const parsedCodePoint = Number.parseInt(String(rawCodePoint || "").trim(), 10);
+      return Number.isInteger(parsedCodePoint) && parsedCodePoint > 0
+        ? String.fromCodePoint(parsedCodePoint)
+        : full;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (full, rawCodePoint) => {
+      const parsedCodePoint = Number.parseInt(String(rawCodePoint || "").trim(), 16);
+      return Number.isInteger(parsedCodePoint) && parsedCodePoint > 0
+        ? String.fromCodePoint(parsedCodePoint)
+        : full;
+    })
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/gi, (full, entityName) => {
+      switch (String(entityName || "").toLowerCase()) {
+        case "amp":
+          return "&";
+        case "lt":
+          return "<";
+        case "gt":
+          return ">";
+        case "quot":
+          return "\"";
+        case "apos":
+          return "'";
+        case "nbsp":
+          return " ";
+        default:
+          return full;
+      }
+    });
+}
+
 function normalizeBbcodeMarkup(rawContent) {
   return String(rawContent || "")
     .replace(/[ï¼»ã€]/g, "[")
@@ -9980,7 +10014,7 @@ function normalizeBbcodeMarkup(rawContent) {
     "s"
   ];
 
-  return String(rawContent || "")
+  return decodeCommonHtmlEntities(rawContent)
     .replace(/\\\[/g, BBCODE_LITERAL_OPEN_TOKEN)
     .replace(/\\\]/g, BBCODE_LITERAL_CLOSE_TOKEN)
     .replace(/[\uFF3B\u3010\u3014\u2772\u27E6]/g, "[")
@@ -10188,12 +10222,22 @@ function renderGuestbookBbcode(rawContent, options = {}) {
       .toLowerCase()
       .replace(/\s+/g, "")
       .replace(/_/g, "-");
+    const showTableBorders = /^(?:1|on|yes|true|border|borders|line|lines|lined|grid|with-?lines?|show-?borders?)$/.test(
+      normalizedOption
+    );
     const hideTableBorders = /^(?:0|off|none|false|noborder|no-border|borderless|hide-?borders?|no-?lines?)$/.test(
       normalizedOption
     );
-    return `<div class="bb-table-wrap"><table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}"><tbody>${inner}</tbody></table></div>`;
+    const tableStyleClass = showTableBorders
+      ? " bb-table-bordered"
+      : (hideTableBorders ? " bb-table-borderless" : " bb-table-borderless");
+    return `<div class="bb-table-wrap"><table class="bb-table${tableStyleClass}"><tbody>${inner}</tbody></table></div>`;
   });
-  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><table class=\"bb-table\"><tbody>$1</tbody></table></div>");
+  html = replaceInnermostBbcodeWrap(
+    html,
+    "table",
+    "<div class=\"bb-table-wrap\"><table class=\"bb-table bb-table-borderless\"><tbody>$1</tbody></table></div>"
+  );
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
     `<td class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</td>`

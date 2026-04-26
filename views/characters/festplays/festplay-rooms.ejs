@@ -16,12 +16,12 @@
     ? "/admin"
     : currentUser?.is_moderator
       ? "/staff"
-      : ""; %>
+      : (character ? `/characters/${character.id}/guestbook` : ""); %>
   <% const festplayRoomHeaderIdentityTitle = currentUser?.is_admin
     ? "Adminbereich im neuen Tab &ouml;ffnen"
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
-      : festplayRoomIdentityName; %>
+      : (character ? "Gaestebuch im neuen Tab oeffnen" : festplayRoomIdentityName); %>
   <% const formatFestplayBirthdayName = (entry) => {
     const label = String(entry?.name || "").trim();
     if (!label) return "";

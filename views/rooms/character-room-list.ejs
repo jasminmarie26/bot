@@ -19,12 +19,12 @@
     ? "/admin"
     : currentUser?.is_moderator
       ? "/staff"
-      : ""; %>
+      : ((currentHeaderCharacter || character) ? `/characters/${(currentHeaderCharacter || character).id}/guestbook` : ""); %>
   <% const roomlistHeaderIdentityTitle = currentUser?.is_admin
     ? "Adminbereich im neuen Tab öffnen"
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab öffnen"
-      : roomlistIdentityName; %>
+      : (((currentHeaderCharacter || character) && roomlistIdentityName) ? "Gaestebuch im neuen Tab oeffnen" : roomlistIdentityName); %>
   <% const isLarpCharacterView = character.server_id === "larp"; %>
   <% const roomlistAreaHref =
     isLarpCharacterView

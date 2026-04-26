@@ -8710,8 +8710,8 @@ body.theme-atari .guestbook-entry-panel {
   min-width: 0;
   line-height: 1.34;
   margin-top: 0;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .guestbook-page-preview[class*="gb-theme-"] .guestbook-entry-body a {
@@ -8722,7 +8722,7 @@ body.theme-atari .guestbook-entry-panel {
   border-top-color: var(--gb-theme-line);
 }
 
-.guestbook-page-preview[class*="gb-theme-"] .bb-table-cell {
+.guestbook-page-preview[class*="gb-theme-"] .bb-table.bb-table-bordered .bb-table-cell {
   border-color: var(--gb-theme-line);
 }
 
@@ -8950,7 +8950,7 @@ body.theme-atari .guestbook-entry-panel {
   border-top-color: color-mix(in srgb, currentColor 34%, transparent);
 }
 
-.guestbook-page-preview.gb-theme-transparent-pur .bb-table-cell {
+.guestbook-page-preview.gb-theme-transparent-pur .bb-table.bb-table-bordered .bb-table-cell {
   border-color: color-mix(in srgb, currentColor 28%, transparent);
 }
 
@@ -9142,6 +9142,21 @@ body.theme-atari .guestbook-entry-panel {
   text-align: right;
 }
 
+.bb-left .bb-table {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.bb-center .bb-table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bb-right .bb-table {
+  margin-left: auto;
+  margin-right: 0;
+}
+
 .bb-block {
   display: block;
   text-align: justify;
@@ -9171,12 +9186,12 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-table {
-  --bb-table-gap: 0.32rem;
+  --bb-table-gap: 0.16rem;
   width: auto;
   max-width: 100%;
   min-width: 0;
-  border-collapse: separate;
-  border-spacing: var(--bb-table-gap);
+  border-collapse: collapse;
+  border-spacing: 0;
   margin: 0 auto;
   table-layout: auto;
 }
@@ -9188,33 +9203,44 @@ body.theme-atari .guestbook-entry-panel {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin: 0.35rem 0;
+  margin: 0;
   overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .bb-table-cell {
   box-sizing: border-box;
-  border: 1px solid var(--field-edge);
-  padding: 0.32rem 0.4rem;
+  border: 0;
+  padding: 0.02rem 0.24rem;
+  text-align: left;
   vertical-align: top;
   min-width: 0;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .bb-table-cell-spacer {
-  width: clamp(0.8rem, 1.6vw, 1.8rem);
-  min-width: 0.8rem;
-  border-color: transparent;
-  background: transparent;
-  padding-left: 0.18rem;
-  padding-right: 0.18rem;
+  width: clamp(0.18rem, 0.55vw, 0.6rem);
+  min-width: 0.18rem;
+  padding: 0;
 }
 
-.bb-table.bb-table-borderless .bb-table-cell {
-  border: 0;
+.bb-table.bb-table-bordered {
+  border-collapse: separate;
+  border-spacing: var(--bb-table-gap);
+}
+
+.bb-table.bb-table-bordered .bb-table-cell {
+  border: 1px solid var(--field-edge);
+  padding: 0.28rem 0.36rem;
+}
+
+.bb-table.bb-table-bordered .bb-table-cell-spacer {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0.08rem;
+  padding-right: 0.08rem;
 }
 
 .bb-image {

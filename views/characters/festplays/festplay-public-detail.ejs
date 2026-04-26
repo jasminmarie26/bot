@@ -16,12 +16,12 @@
     ? "/admin"
     : currentUser?.is_moderator
       ? "/staff"
-      : ""; %>
+      : (character ? `/characters/${character.id}/guestbook` : ""); %>
   <% const festplayHeaderIdentityTitle = currentUser?.is_admin
     ? "Adminbereich im neuen Tab &ouml;ffnen"
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
-      : festplayIdentityName; %>
+      : (character ? "Gaestebuch im neuen Tab oeffnen" : festplayIdentityName); %>
   <% const festplayBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
 
   <header class="rp-topline">

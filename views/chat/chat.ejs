@@ -51,12 +51,12 @@
   ? "/admin"
   : currentUser?.is_moderator
     ? "/staff"
-    : ""; %>
+    : (activeCharacter ? `/characters/${activeCharacter.id}/guestbook` : ""); %>
 <% const chatHeaderIdentityTitle = currentUser?.is_admin
   ? "Adminbereich im neuen Tab öffnen"
   : currentUser?.is_moderator
     ? "Moderatorenbereich im neuen Tab öffnen"
-    : chatIdentityName; %>
+    : (activeCharacter ? "Gaestebuch im neuen Tab oeffnen" : chatIdentityName); %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
 <% const chatRoomListHref = activeCharacter
   ? `/characters/${activeCharacter.id}#roomlist`

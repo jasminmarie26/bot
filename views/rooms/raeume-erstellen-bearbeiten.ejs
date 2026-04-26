@@ -16,12 +16,12 @@
     ? "/admin"
     : currentUser?.is_moderator
       ? "/staff"
-      : ""; %>
+      : (character ? `/characters/${character.id}/guestbook` : ""); %>
   <% const roomcreateHeaderIdentityTitle = currentUser?.is_admin
     ? "Adminbereich im neuen Tab &ouml;ffnen"
     : currentUser?.is_moderator
       ? "Moderatorenbereich im neuen Tab &ouml;ffnen"
-      : roomcreateIdentityName; %>
+      : (character ? "Gaestebuch im neuen Tab oeffnen" : roomcreateIdentityName); %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
