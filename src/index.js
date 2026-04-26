@@ -6611,6 +6611,8 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
   const parsedFestplayId = Number(festplayId);
   const manualOnly = options?.manualOnly !== false;
   const supportsSortOrder = hasChatRoomColumn("sort_order");
+  const viewerUser = getUserForSessionById(parsedUserId);
+  const staffHasGlobalRoomRights = hasGlobalRoomRights(viewerUser);
   if (
     !Number.isInteger(parsedUserId) ||
     parsedUserId < 1 ||
@@ -6656,22 +6658,25 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
         ORDER BY ${supportsSortOrder ? "COALESCE(r.sort_order, 0) ASC," : ""} r.created_at ASC, r.id ASC`
      )
     .all(parsedUserId, parsedUserId, parsedFestplayId)
-    .map((room) => ({
-      ...room,
-      sort_order: Number(room.sort_order) || 0,
-      email_log_enabled: Number(room.email_log_enabled) === 1,
-      is_locked: Number(room.is_locked) === 1,
-      is_public_room: Number(room.is_public_room) === 1,
-      is_saved_room: Number(room.is_saved_room) === 1,
-      is_manual_festplay_room: Number(room.is_manual_festplay_room) === 1,
-      teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
-      can_manage_room: Number(room.can_manage_room) === 1,
-      can_enter:
-        Number(room.is_locked) !== 1 ||
-        Number(room.can_manage_room) === 1 ||
-        hasRoomInviteAccess({ id: parsedUserId }, room),
-      is_owned_room: Number(room.created_by_user_id) === parsedUserId
-    }));
+    .map((room) => {
+      const canManageRoom = staffHasGlobalRoomRights || Number(room.can_manage_room) === 1;
+      return {
+        ...room,
+        sort_order: Number(room.sort_order) || 0,
+        email_log_enabled: Number(room.email_log_enabled) === 1,
+        is_locked: Number(room.is_locked) === 1,
+        is_public_room: Number(room.is_public_room) === 1,
+        is_saved_room: Number(room.is_saved_room) === 1,
+        is_manual_festplay_room: Number(room.is_manual_festplay_room) === 1,
+        teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
+        can_manage_room: canManageRoom,
+        can_enter:
+          Number(room.is_locked) !== 1 ||
+          canManageRoom ||
+          hasRoomInviteAccess({ id: parsedUserId }, room),
+        is_owned_room: Number(room.created_by_user_id) === parsedUserId
+      };
+    });
 }
 
 function isLegacyAutoFestplayRoom(room, festplay) {
@@ -7941,6 +7946,8 @@ function getSavedNonFestplayRoomsForUser(userId, characterId, serverId) {
 function getFestplaySideChatsForUser(userId, festplayId) {
   const parsedUserId = Number(userId);
   const parsedFestplayId = Number(festplayId);
+  const viewerUser = getUserForSessionById(parsedUserId);
+  const staffHasGlobalRoomRights = hasGlobalRoomRights(viewerUser);
   if (
     !Number.isInteger(parsedUserId) ||
     parsedUserId < 1 ||
@@ -7984,20 +7991,23 @@ function getFestplaySideChatsForUser(userId, festplayId) {
         ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(parsedUserId, parsedUserId, parsedFestplayId)
-    .map((room) => ({
-      ...room,
-      email_log_enabled: Number(room.email_log_enabled) === 1,
-      is_locked: Number(room.is_locked) === 1,
-      is_public_room: Number(room.is_public_room) === 1,
-      is_saved_room: Number(room.is_saved_room) === 1,
-      teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
-      can_manage_room: Number(room.can_manage_room) === 1,
-      can_enter:
-        Number(room.is_locked) !== 1 ||
-        Number(room.can_manage_room) === 1 ||
-        hasRoomInviteAccess({ id: parsedUserId }, room),
-      is_owned_room: Number(room.created_by_user_id) === parsedUserId
-    }));
+    .map((room) => {
+      const canManageRoom = staffHasGlobalRoomRights || Number(room.can_manage_room) === 1;
+      return {
+        ...room,
+        email_log_enabled: Number(room.email_log_enabled) === 1,
+        is_locked: Number(room.is_locked) === 1,
+        is_public_room: Number(room.is_public_room) === 1,
+        is_saved_room: Number(room.is_saved_room) === 1,
+        teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
+        can_manage_room: canManageRoom,
+        can_enter:
+          Number(room.is_locked) !== 1 ||
+          canManageRoom ||
+          hasRoomInviteAccess({ id: parsedUserId }, room),
+        is_owned_room: Number(room.created_by_user_id) === parsedUserId
+      };
+    });
 }
 
 function findFestplaySideChatByNameKey(festplayId, serverId, roomNameKey, roomDescription = "") {
@@ -12705,6 +12715,15 @@ function isRoomOwner(user, room = null) {
   return Number(room.created_by_user_id) === Number(user.id);
 }
 
+function hasGlobalRoomRights(user) {
+  return Boolean(
+    user?.is_admin === true ||
+      user?.is_admin === 1 ||
+      user?.is_moderator === true ||
+      user?.is_moderator === 1
+  );
+}
+
 function hasPersistentRoomRights(userOrId, roomOrId) {
   const parsedUserId =
     Number.isInteger(Number(userOrId?.id)) ? Number(userOrId.id) : Number(userOrId);
@@ -12778,7 +12797,7 @@ function revokePersistentRoomRights(roomId, userId) {
 
 function canBypassRoomLock(user, room = null) {
   if (!user || !room) return false;
-  return isRoomOwner(user, room) || hasPersistentRoomRights(user, room);
+  return hasGlobalRoomRights(user) || isRoomOwner(user, room) || hasPersistentRoomRights(user, room);
 }
 
 function canGrantRoomPermissions(user, room = null) {
@@ -12860,6 +12879,9 @@ function isRoomLockedForUser(user, room = null) {
 
 function canAccessRoom(user, room = null) {
   if (!user || !room) return false;
+  if (hasGlobalRoomRights(user)) {
+    return true;
+  }
   const parsedFestplayId = Number(room.festplay_id);
   if (Number.isInteger(parsedFestplayId) && parsedFestplayId > 0) {
     const festplay = getFestplayById(parsedFestplayId);
@@ -18244,17 +18266,21 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         ORDER BY r.created_at ASC, r.id ASC`
     )
     .all(req.session.user.id, req.session.user.id, normalizeCharacterServerId(character.server_id))
-    .map((room) => ({
-      ...room,
-      is_locked: Number(room.is_locked) === 1,
-      is_public_room: Number(room.is_public_room) === 1,
-      is_saved_room: Number(room.is_saved_room) === 1,
-      can_manage_room: Number(room.can_manage_room) === 1,
-      can_enter:
-        Number(room.is_locked) !== 1 ||
-        Number(room.can_manage_room) === 1 ||
-        hasRoomInviteAccess(req.session.user, room)
-    })),
+    .map((room) => {
+      const canManageRoom =
+        hasGlobalRoomRights(req.session.user) || Number(room.can_manage_room) === 1;
+      return {
+        ...room,
+        is_locked: Number(room.is_locked) === 1,
+        is_public_room: Number(room.is_public_room) === 1,
+        is_saved_room: Number(room.is_saved_room) === 1,
+        can_manage_room: canManageRoom,
+        can_enter:
+          Number(room.is_locked) !== 1 ||
+          canManageRoom ||
+          hasRoomInviteAccess(req.session.user, room)
+      };
+    }),
     character.server_id
   );
   const publicRooms = rooms.filter(
