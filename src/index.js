@@ -10067,6 +10067,66 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     ["sub", "sub"],
     ["sup", "sup"]
   ];
+  const renderBbcodeInlineFragment = (rawFragment) => {
+    let fragmentHtml = escapeHtml(normalizeBbcodeMarkup(rawFragment)).replace(/\r\n?/g, "\n");
+
+    inlineTags.forEach(([bbTag, htmlTag]) => {
+      const re = createBbcodeWrapRegex(bbTag);
+      fragmentHtml = fragmentHtml.replace(re, `<${htmlTag}>$1</${htmlTag}>`);
+    });
+
+    fragmentHtml = fragmentHtml.replace(createBbcodeOptionRegex("color"), (full, rawColor, inner) => {
+      const safeColor = sanitizeBbcodeColor(rawColor);
+      if (!safeColor) return inner;
+      return wrapBbcodeStyledContent(inner, {
+        style: `color:${escapeHtml(safeColor)}`
+      });
+    });
+
+    fragmentHtml = fragmentHtml.replace(createBbcodeOptionRegex("size"), (full, rawSize, inner) => {
+      const safeSize = sanitizeBbcodeSize(rawSize);
+      if (!safeSize) return inner;
+      return wrapBbcodeStyledContent(inner, {
+        style: `font-size:${escapeHtml(safeSize)}px`
+      });
+    });
+
+    fragmentHtml = fragmentHtml.replace(createBbcodeOptionRegex("font"), (full, rawFontStyle, inner) => {
+      const fontConfig = resolveBbcodeFontStyle(rawFontStyle);
+      if (!fontConfig.style) return inner;
+      const fontDataset = fontConfig.webFamily
+        ? ` data-bb-font-family="${escapeHtml(fontConfig.webFamily)}"`
+        : "";
+      return wrapBbcodeStyledContent(inner, {
+        className: "bb-font",
+        dataset: fontDataset,
+        style: escapeHtml(fontConfig.style)
+      });
+    });
+
+    fragmentHtml = fragmentHtml.replace(createBbcodeOptionRegex("gradient"), (full, rawSpec, inner) => {
+      const gradient = parseGradientSpec(rawSpec);
+      if (!gradient) return inner;
+      return wrapBbcodeStyledContent(inner, {
+        className: "bb-gradient",
+        style: escapeHtml(`background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})`)
+      });
+    });
+
+    fragmentHtml = fragmentHtml.replace(createBbcodeShortGradientRegex(), (full, rawSpec, inner) => {
+      const gradient = parseGradientSpec(rawSpec);
+      if (!gradient) return inner;
+      return wrapBbcodeStyledContent(inner, {
+        className: "bb-gradient",
+        style: escapeHtml(`background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})`)
+      });
+    });
+
+    return fragmentHtml
+      .replace(/\n/g, "<br>")
+      .replace(new RegExp(BBCODE_LITERAL_OPEN_TOKEN, "g"), "[")
+      .replace(new RegExp(BBCODE_LITERAL_CLOSE_TOKEN, "g"), "]");
+  };
 
   html = html.replace(createBbcodeSingleRegex("hr"), "<hr class=\"bb-hr\">");
 
@@ -10114,9 +10174,12 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   html = replaceInnermostBbcodeWrap(html, "tr", "<div class=\"bb-table-row\">$1</div>");
   html = replaceInnermostBbcodeWrap(html, "td", "<div class=\"bb-table-cell\">$1</div>");
 
-  html = html.replace(createBbcodeOptionRegex("spoiler"), (full, title, inner) => (
-    `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
-  ));
+  html = html.replace(
+    /\[\s*spoiler\s*=\s*((?:[^\[\]]+|\[[^\[\]]*\])*)\s*\]([\s\S]*?)\[\s*\/\s*spoiler\s*\]/gi,
+    (full, rawTitle, inner) => (
+      `<details class="bb-spoiler"><summary>${renderBbcodeInlineFragment(rawTitle)}</summary><div class="bb-spoiler-content">${inner}</div></details>`
+    )
+  );
   html = replaceInnermostBbcodeWrap(
     html,
     "ab18",
@@ -20475,7 +20538,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
         maxLength: 0,
         compactImageLineBreaks: false,
-        compactBlockLineBreaks: false
+        compactBlockLineBreaks: true
       })
     },
     guestbookPageNavigation,
@@ -20740,7 +20803,7 @@ app.post("/characters/:id/guestbook/edit/render-html", requireAuth, (req, res) =
     html: renderGuestbookBbcode(pageContent, {
       maxLength: 0,
       compactImageLineBreaks: false,
-      compactBlockLineBreaks: false
+      compactBlockLineBreaks: true
     })
   });
 });
@@ -20828,7 +20891,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     previewHtml: renderGuestbookBbcode(previewContent, {
       maxLength: 0,
       compactImageLineBreaks: false,
-      compactBlockLineBreaks: false
+      compactBlockLineBreaks: true
     }),
     previewBackUrl: getSafeExplicitReturnTarget(
       previewOriginState?.return_to,

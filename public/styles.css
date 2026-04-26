@@ -9176,7 +9176,7 @@ body.theme-atari .guestbook-entry-panel {
   min-width: 0;
   border-spacing: 0.32rem;
   margin: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .bb-table-row {
@@ -9194,11 +9194,9 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-table-cell {
   display: table-cell;
-  width: 1%;
   border: 1px solid var(--field-edge);
   padding: 0.32rem 0.4rem;
   vertical-align: top;
-  max-width: 0;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
