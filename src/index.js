@@ -1361,7 +1361,8 @@ function formatGermanDate(value) {
   return new Intl.DateTimeFormat("de-DE", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "Europe/Berlin"
   }).format(parsed);
 }
 
@@ -1372,7 +1373,8 @@ function formatGermanTime(value) {
   return new Intl.DateTimeFormat("de-DE", {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false
+    hour12: false,
+    timeZone: "Europe/Berlin"
   }).format(parsed);
 }
 
@@ -1386,7 +1388,8 @@ function formatGermanDateTime(value) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false
+    hour12: false,
+    timeZone: "Europe/Berlin"
   })
     .format(parsed)
     .replace(",", " -");
