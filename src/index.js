@@ -13473,6 +13473,10 @@ app.get("/community-regeln", (req, res) => {
   });
 });
 
+app.get("/verhaltensregeln", (req, res) => {
+  return res.redirect(302, "/community-regeln");
+});
+
 app.get("/partner", (req, res) => {
   return res.render("public/partner", {
     title: "Unsere Partner",
