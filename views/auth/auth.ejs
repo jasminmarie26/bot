@@ -54,19 +54,13 @@
     <% if (error) { %>
       <div class="inline-error"><%= error %></div>
     <% } %>
-    <% if (success || recoveredUsername || resetUrl) { %>
+    <% if (success || recoveredUsername) { %>
       <div class="inline-success auth-result">
         <% if (success) { %>
           <p><%= success %></p>
         <% } %>
         <% if (recoveredUsername) { %>
           <p>Benutzername: <strong><%= recoveredUsername %></strong></p>
-        <% } %>
-        <% if (resetUrl) { %>
-          <a class="btn btn-secondary auth-result-link" href="<%= resetUrl %>">
-            Neues Passwort festlegen
-          </a>
-          <p class="field-hint">Der Link ist 2 Stunden gültig.</p>
         <% } %>
       </div>
     <% } %>

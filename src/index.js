@@ -14100,6 +14100,14 @@ app.post("/forgot-password", async (req, res) => {
     });
   }
 
+  if (!getVerificationMailer()) {
+    return renderForgotPasswordPage(req, res, {
+      status: 503,
+      error: "Der E-Mail-Versand ist derzeit nicht verfügbar. Bitte versuche es später erneut.",
+      values: { email }
+    });
+  }
+
   const resetToken = crypto.randomBytes(32).toString("hex");
   db.prepare(
     `UPDATE users
@@ -14107,24 +14115,26 @@ app.post("/forgot-password", async (req, res) => {
      WHERE id = ?`
   ).run(resetToken, user.id);
 
-  const resetUrl = getPasswordResetUrl(req, resetToken);
-  let success = "Klicke auf den Link unten, um dein neues Passwort festzulegen.";
-  if (EMAIL_VERIFICATION_MAIL_ENABLED) {
-    try {
-      await sendPasswordResetEmail(req, {
-        email: user.email,
-        username: user.username,
-        resetToken
-      });
-      success = "Der Passwort-Link wurde erstellt. Du kannst ihn unten direkt anklicken.";
-    } catch (error) {
-      console.error("Konnte Passwort-Reset-E-Mail nicht senden:", error);
-    }
+  try {
+    await sendPasswordResetEmail(req, {
+      email: user.email,
+      username: user.username,
+      resetToken
+    });
+  } catch (error) {
+    console.error("Konnte Passwort-Reset-E-Mail nicht senden:", error);
+    db.prepare(
+      "UPDATE users SET password_reset_token = '', password_reset_sent_at = '' WHERE id = ?"
+    ).run(user.id);
+    return renderForgotPasswordPage(req, res, {
+      status: 500,
+      error: "Der Passwort-Link konnte gerade nicht per E-Mail gesendet werden. Bitte versuche es später erneut.",
+      values: { email }
+    });
   }
 
   return renderForgotPasswordPage(req, res, {
-    success,
-    resetUrl,
+    success: "Wir haben dir einen Link per E-Mail geschickt. Bitte öffne den Link, um dein Passwort zu ändern.",
     values: { email }
   });
 });
