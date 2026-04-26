@@ -21133,6 +21133,22 @@ app.get("/chat", requireAuth, (req, res) => {
       });
     }
 
+    const roomKickBan = getActiveRoomKickBan(
+      req.session.user.id,
+      room.id,
+      room.server_id || room.character_server_id
+    );
+    if (roomKickBan) {
+      setFlash(req, "error", buildRoomKickBanMessage(roomKickBan));
+      return res.redirect(
+        buildRoomListRedirectUrlForUser(
+          req.session.user.id,
+          room.server_id || room.character_server_id,
+          requestedCharacterId
+        )
+      );
+    }
+
     if (isRoomLockedForUser(req.session.user, room)) {
       setFlash(req, "error", "Dieser Raum ist abgeschlossen.");
       return res.redirect(`/characters/${room.character_id}#roomlist`);
@@ -21198,6 +21214,22 @@ app.get("/chat", requireAuth, (req, res) => {
 
   if (!activeRoom) {
     standardRoom = resolveStandardRoomForServer(activeServerId, requestedStandardRoomId);
+    const standardRoomKickBan = getActiveRoomKickBan(
+      req.session.user.id,
+      null,
+      activeServerId,
+      standardRoom?.id || requestedStandardRoomId
+    );
+    if (standardRoomKickBan) {
+      setFlash(req, "error", buildRoomKickBanMessage(standardRoomKickBan));
+      return res.redirect(
+        buildRoomListRedirectUrlForUser(
+          req.session.user.id,
+          activeServerId,
+          activeCharacter?.id || requestedCharacterId
+        )
+      );
+    }
   }
 
   const messages = [];
@@ -23469,6 +23501,15 @@ function buildChatRedirectUrlForLocation(
 function buildCharacterRoomListRedirectUrl(characterId) {
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
   return normalizedCharacterId ? `/characters/${normalizedCharacterId}#roomlist` : "/dashboard";
+}
+
+function buildRoomListRedirectUrlForUser(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  preferredCharacterId = null
+) {
+  const preferredCharacter = getPreferredCharacterForUser(userId, serverId, preferredCharacterId);
+  return buildCharacterRoomListRedirectUrl(preferredCharacter?.id || preferredCharacterId);
 }
 
 function getConflictingChatSocketsForCharacter(
@@ -26626,9 +26667,11 @@ const pendingRoomInvites = new Map();
 const pendingChatDisconnects = new Map();
 const pendingRoomLogFinalizations = new Map();
 const CHAT_RECONNECT_GRACE_MS = 2000;
+const ROOM_KICK_BAN_MS = 10 * 60 * 1000;
 const ROOM_LOG_EMPTY_GRACE_MS = 10 * 60 * 1000;
 const ROOM_CLEANUP_GRACE_STARTED_AT = Date.now();
 const CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY = "lobby";
+const roomKickBans = new Map();
 const pruneExpiredChatReconnectSuppressionsStatement = db.prepare(
   "DELETE FROM chat_reconnect_suppressions WHERE expires_at <= ?"
 );
@@ -26657,6 +26700,122 @@ function getChatReconnectSuppressionRoomKey(roomId) {
   return Number.isInteger(roomId) && roomId > 0
     ? String(roomId)
     : CHAT_RECONNECT_SUPPRESSION_LOBBY_KEY;
+}
+
+function getRoomKickBanKey(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null
+) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return "";
+  }
+
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? Number(roomId) : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const scopeServerKey = getChatScopeServerKey(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId
+  );
+  const roomKey = normalizedRoomId
+    ? `room:${normalizedRoomId}`
+    : `standard:${resolvedStandardRoomId || "lobby"}`;
+  return `${parsedUserId}:${scopeServerKey}:${roomKey}`;
+}
+
+function pruneExpiredRoomKickBans(now = Date.now()) {
+  for (const [key, entry] of roomKickBans.entries()) {
+    if (!entry || Number(entry.expiresAt) <= now) {
+      roomKickBans.delete(key);
+    }
+  }
+}
+
+function setRoomKickBan(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  options = {}
+) {
+  const key = getRoomKickBanKey(userId, roomId, serverId, standardRoomId);
+  if (!key) {
+    return null;
+  }
+
+  const parsedUserId = Number(userId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? Number(roomId) : null;
+  const normalizedServerId = normalizeServer(serverId);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const durationMs = Math.max(0, Number(options?.durationMs) || ROOM_KICK_BAN_MS);
+  const now = Date.now();
+  const entry = {
+    userId: parsedUserId,
+    roomId: normalizedRoomId,
+    serverId: normalizedServerId,
+    standardRoomId: resolvedStandardRoomId,
+    roomLabel: String(options?.roomLabel || "").trim(),
+    isStandardChannel: normalizedRoomId == null,
+    expiresAt: now + durationMs
+  };
+  pruneExpiredRoomKickBans(now);
+  roomKickBans.set(key, entry);
+  return entry;
+}
+
+function getActiveRoomKickBan(
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null
+) {
+  const key = getRoomKickBanKey(userId, roomId, serverId, standardRoomId);
+  if (!key) {
+    return null;
+  }
+
+  const now = Date.now();
+  pruneExpiredRoomKickBans(now);
+  const entry = roomKickBans.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  const expiresAt = Number(entry.expiresAt);
+  if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+    roomKickBans.delete(key);
+    return null;
+  }
+
+  return {
+    ...entry,
+    remainingMs: Math.max(0, expiresAt - now)
+  };
+}
+
+function buildRoomKickBanMessage(entry) {
+  if (!entry) {
+    return "";
+  }
+
+  const expiresAt = new Date(Number(entry.expiresAt) || Date.now());
+  const roomLabel = String(entry.roomLabel || "").trim();
+  const availableAtLabel = `${formatGermanDate(expiresAt)} um ${formatGermanTime(expiresAt)}`;
+  if (entry.isStandardChannel) {
+    return `Du wurdest aus ${roomLabel || "diesem Bereich"} geworfen und kannst diesen Bereich erst wieder ab ${availableAtLabel} betreten.`;
+  }
+
+  return roomLabel
+    ? `Du wurdest aus dem Raum ${roomLabel} geworfen und kannst diesen Raum erst wieder ab ${availableAtLabel} betreten.`
+    : `Du wurdest aus diesem Raum geworfen und kannst diesen Raum erst wieder ab ${availableAtLabel} betreten.`;
 }
 
 function setChatReconnectSuppression(
@@ -27325,6 +27484,27 @@ io.on("connection", (socket) => {
       nextRoom = ensureSavedRoomVisibleForOwner(nextRoom, socket.data.user.id);
       nextServerId = normalizeServer(nextRoom.server_id || nextRoom.character_server_id);
       nextStandardRoomId = "";
+    }
+
+    const roomKickBan = getActiveRoomKickBan(
+      socket.data.user.id,
+      nextRoomId,
+      nextServerId,
+      nextStandardRoomId
+    );
+    if (roomKickBan) {
+      emitDirectSystemMessageToSocket(socket, buildRoomKickBanMessage(roomKickBan));
+      socket.emit("chat:redirect", {
+        url: buildRoomListRedirectUrlForUser(
+          socket.data.user.id,
+          nextServerId,
+          Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
+            ? parsedCharacterId
+            : getSocketPreferredCharacterId(socket, nextServerId)
+        ),
+        delayMs: 450
+      });
+      return;
     }
 
     const previousRoomId =
@@ -28520,6 +28700,10 @@ io.on("connection", (socket) => {
         targetPreferredCharacter?.id || kickTarget.characterId
       );
       const kickedFromLabel = room?.name || currentStandardRoomContext?.room?.name || "diesem Bereich";
+      const roomKickBan = setRoomKickBan(kickTarget.userId, roomId, serverId, standardRoomId, {
+        roomLabel: kickedFromLabel
+      });
+      const roomKickBanMessage = buildRoomKickBanMessage(roomKickBan);
 
       emitSystemChatMessage(
         roomId,
@@ -28533,7 +28717,10 @@ io.on("connection", (socket) => {
         memberSocket.data.skipDisconnectPresence = true;
         emitDirectSystemMessageToSocket(
           memberSocket,
-          room ? `Du wurdest aus dem Raum ${room.name} geworfen.` : `Du wurdest aus ${kickedFromLabel} geworfen.`
+          roomKickBanMessage ||
+            (room
+              ? `Du wurdest aus dem Raum ${room.name} geworfen.`
+              : `Du wurdest aus ${kickedFromLabel} geworfen.`)
         );
         memberSocket.emit("chat:redirect", {
           url: redirectUrl,

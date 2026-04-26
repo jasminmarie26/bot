@@ -1656,6 +1656,7 @@
     const nextUrl = String(payload?.url || "").trim();
     const delayMs = Number(payload?.delayMs);
     if (!nextUrl.startsWith("/")) return;
+    prepareForIntentionalChatLeave();
     if (Number.isFinite(delayMs) && delayMs > 0) {
       window.setTimeout(() => {
         window.location.assign(nextUrl);
