@@ -10092,9 +10092,9 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const hideTableBorders = /^(?:0|off|none|false|noborder|no-border|borderless|hide-?borders?|no-?lines?)$/.test(
       normalizedOption
     );
-    return `<table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</table>`;
+    return `<div class="bb-table-wrap"><table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</table></div>`;
   });
-  html = replaceInnermostBbcodeWrap(html, "table", "<table class=\"bb-table\">$1</table>");
+  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><table class=\"bb-table\">$1</table></div>");
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrap(html, "td", "<td>$1</td>");
 
