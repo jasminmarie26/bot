@@ -12724,6 +12724,16 @@ function hasGlobalRoomRights(user) {
   );
 }
 
+function isPrimaryAdminKickProtectedTarget(target = null) {
+  const parsedUserId =
+    Number.isInteger(Number(target?.userId)) ? Number(target.userId) : Number(target?.id);
+  const accountUser =
+    Number.isInteger(parsedUserId) && parsedUserId > 0 ? getAccountUserById(parsedUserId) : null;
+  const username = String(accountUser?.username || target?.username || "").trim().toLowerCase();
+  const characterName = String(target?.name || "").trim().toLowerCase();
+  return username === "naschblume" || characterName === "noctra";
+}
+
 function hasPersistentRoomRights(userOrId, roomOrId) {
   const parsedUserId =
     Number.isInteger(Number(userOrId?.id)) ? Number(userOrId.id) : Number(userOrId);
@@ -27773,8 +27783,14 @@ io.on("connection", (socket) => {
     const canUseRoomLog = canManageRoomLog(socket.data.user, room);
     const canManageRoomState = canBypassRoomLock(socket.data.user, room);
     const canGrantRoomRights = canGrantRoomPermissions(socket.data.user, room);
+    const staffHasGlobalRoomRights = hasGlobalRoomRights(socket.data.user);
+    const isKickCommand = /^\/werfen\b/i.test(content);
 
-    if (isManagedFestplayChatRoom && /^\/(?:rb|rrw?|i|werfen|s|log|logoff)\b/i.test(content)) {
+    if (
+      isManagedFestplayChatRoom &&
+      /^\/(?:rb|rrw?|i|werfen|s|log|logoff)\b/i.test(content) &&
+      !(staffHasGlobalRoomRights && isKickCommand)
+    ) {
       socket.emit("chat:message", {
         type: "system",
         content: "Festspiel-Räume steuerst du über die eigene Festspiel-Raumseite, nicht direkt im Chat.",
@@ -28386,7 +28402,11 @@ io.on("connection", (socket) => {
 
     const kickMatch = content.match(/^\/werfen(?:\s+(.+))?$/i);
     if (kickMatch) {
-      if (!roomId || !room) {
+      const isSharedChannel = isSharedStandardRoomContext(roomId);
+      const currentStandardRoomContext = isSharedChannel
+        ? getStandardRoomContext(serverId, standardRoomId)
+        : null;
+      if (!room && !isSharedChannel) {
         socket.emit("chat:message", {
           type: "system",
           content: "Du kannst nur in einem geöffneten Raum Personen werfen.",
@@ -28395,10 +28415,14 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (!canManageRoomState) {
+      const canKickInCurrentChannel =
+        canManageRoomState || (staffHasGlobalRoomRights && isSharedChannel);
+      if (!canKickInCurrentChannel) {
         socket.emit("chat:message", {
           type: "system",
-          content: "Nur der Raumbesitzer oder Personen mit Raumrechten können hier jemanden werfen.",
+          content: isSharedChannel
+            ? "Nur Admins und Moderatoren können hier jemanden werfen."
+            : "Nur der Raumbesitzer oder Personen mit Raumrechten können hier jemanden werfen.",
           created_at: formatChatTimestamp()
         });
         return;
@@ -28440,19 +28464,36 @@ io.on("connection", (socket) => {
       }
 
       const kickTarget = kickTargets[0];
-      const targetRoomSockets = getUserSocketsInChannel(roomId, serverId, kickTarget.userId);
+      const targetRoomSockets = getUserSocketsInChannel(
+        roomId,
+        serverId,
+        kickTarget.userId,
+        standardRoomId
+      );
       if (!targetRoomSockets.length) {
         socket.emit("chat:message", {
           type: "system",
-          content: `${kickTarget.name} ist nicht in diesem Raum.`,
+          content: isSharedChannel
+            ? `${kickTarget.name} ist nicht in diesem Bereich.`
+            : `${kickTarget.name} ist nicht in diesem Raum.`,
           created_at: formatChatTimestamp()
         });
         return;
       }
 
-      const kickerIsRoomOwner = isRoomOwner(socket.data.user, room);
-      const targetIsRoomOwner = Number(kickTarget.userId) === Number(room.created_by_user_id);
-      if (!kickerIsRoomOwner && targetIsRoomOwner) {
+      if (isPrimaryAdminKickProtectedTarget(kickTarget)) {
+        socket.emit("chat:message", {
+          type: "system",
+          content: `${kickTarget.name} kann hier nicht geworfen werden.`,
+          created_at: formatChatTimestamp()
+        });
+        return;
+      }
+
+      const kickerIsRoomOwner = room ? isRoomOwner(socket.data.user, room) : false;
+      const targetIsRoomOwner =
+        room && Number(kickTarget.userId) === Number(room.created_by_user_id);
+      if (room && !kickerIsRoomOwner && !staffHasGlobalRoomRights && targetIsRoomOwner) {
         socket.emit("chat:message", {
           type: "system",
           content: `${kickTarget.name} hat diesen Raum geöffnet und kann nicht von Raumrechten geworfen werden.`,
@@ -28473,17 +28514,27 @@ io.on("connection", (socket) => {
       const targetPreferredCharacter = getPreferredCharacterForUser(
         kickTarget.userId,
         serverId,
-        getSocketPreferredCharacterId(targetRoomSockets[0], serverId)
+        kickTarget.characterId || getSocketPreferredCharacterId(targetRoomSockets[0], serverId)
       );
       const redirectSuffix = targetPreferredCharacter?.id
         ? `&character_id=${targetPreferredCharacter.id}`
         : "";
-      const redirectUrl = `/chat?server=${encodeURIComponent(serverId)}${redirectSuffix}`;
+      const fallbackStandardRoom = currentStandardRoomContext
+        ? getStandardRoomsForServer(serverId).find(
+            (candidate) => candidate.id !== currentStandardRoomContext.standardRoomId
+          ) || null
+        : null;
+      const redirectUrl = room
+        ? `/chat?server=${encodeURIComponent(serverId)}${redirectSuffix}`
+        : fallbackStandardRoom
+          ? `/chat?server=${encodeURIComponent(serverId)}&standard_room=${encodeURIComponent(fallbackStandardRoom.id)}${redirectSuffix}`
+          : "/dashboard";
+      const kickedFromLabel = room?.name || currentStandardRoomContext?.room?.name || "diesem Bereich";
 
       emitSystemChatMessage(
         roomId,
         serverId,
-        `${kickTarget.name} wurde aus dem Raum geworfen.`,
+        room ? `${kickTarget.name} wurde aus dem Raum geworfen.` : `${kickTarget.name} wurde aus ${kickedFromLabel} geworfen.`,
         {},
         standardRoomId
       );
@@ -28492,7 +28543,7 @@ io.on("connection", (socket) => {
         memberSocket.data.skipDisconnectPresence = true;
         emitDirectSystemMessageToSocket(
           memberSocket,
-          `Du wurdest aus dem Raum ${room.name} geworfen.`
+          room ? `Du wurdest aus dem Raum ${room.name} geworfen.` : `Du wurdest aus ${kickedFromLabel} geworfen.`
         );
         memberSocket.emit("chat:redirect", {
           url: redirectUrl,
