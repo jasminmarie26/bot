@@ -6459,6 +6459,10 @@ body.theme-future.page-home-screen .home-copyright {
   --status-tone: #6bcf63;
 }
 
+.admin-status-group.is-minor {
+  --status-tone: #ffb000;
+}
+
 .admin-status-group.is-yellow {
   --status-tone: #e0b24c;
 }
@@ -6555,6 +6559,12 @@ body.theme-future.page-home-screen .home-copyright {
   border-color: color-mix(in srgb, #e0b24c 62%, transparent);
   color: color-mix(in srgb, #ffd980 78%, white 22%);
   background: color-mix(in srgb, #e0b24c 14%, var(--field-bg) 86%);
+}
+
+.admin-status-badge.is-minor {
+  border-color: color-mix(in srgb, #ffb000 62%, transparent);
+  color: color-mix(in srgb, #ffe3a1 82%, white 18%);
+  background: color-mix(in srgb, #ffb000 14%, var(--field-bg) 86%);
 }
 
 .admin-status-badge.is-red {

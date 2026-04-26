@@ -33,6 +33,14 @@
       open: true
     },
     {
+      key: "minor",
+      title: "Minderj&auml;hrige User",
+      tone: "minor",
+      users: Array.isArray(minorUsers) ? minorUsers : [],
+      description: "Accounts mit hinterlegtem Geburtsdatum unter 18.",
+      open: true
+    },
+    {
       key: "yellow",
       title: "Gelbe User",
       tone: "yellow",
@@ -111,6 +119,11 @@
           <td>Online jetzt</td>
           <td><strong><%= statusCounts?.online || 0 %></strong></td>
           <td>Accounts, die gerade irgendwo auf der Seite online sind.</td>
+        </tr>
+        <tr>
+          <td>Minderj&auml;hrig</td>
+          <td><strong><%= statusCounts?.minor || 0 %></strong></td>
+          <td>Accounts unter 18 mit hinterlegtem Geburtsdatum.</td>
         </tr>
         <tr>
           <td>Gr&uuml;n / Okay</td>

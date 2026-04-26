@@ -61,9 +61,6 @@
               <% if (!user.is_admin && !user.is_moderator) { %>
                 <span class="admin-role-badge">User</span>
               <% } %>
-              <% if (user.is_minor_account) { %>
-                <span class="admin-role-badge is-minor">Minderj&auml;hrig</span>
-              <% } %>
             </div>
           </td>
           <td>
@@ -73,6 +70,9 @@
               <span class="admin-status-badge is-<%= user.moderation_status.slug %>">
                 <%= user.moderation_status.label %>
               </span>
+              <% if (user.is_minor_account) { %>
+                <span class="admin-status-badge is-minor">Minderj&auml;hrig</span>
+              <% } %>
               <span class="admin-status-note<%= statusNoteIsEmpty ? ' is-empty' : '' %>"><%= statusNoteText %></span>
             </div>
           </td>

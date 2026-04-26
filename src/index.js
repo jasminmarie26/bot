@@ -21787,6 +21787,7 @@ function renderStaffOverview(req, res) {
   );
   const users = filteredUsers;
   const onlineUsers = filteredUsers.filter((user) => user.is_online);
+  const minorUsers = filteredUsers.filter((user) => user.is_minor_account);
   const greenUsers = filteredUsers.filter((user) => user.moderation_status_level === 1);
   const yellowUsers = filteredUsers.filter((user) => user.moderation_status_level === 2);
   const redUsers = filteredUsers.filter((user) => user.moderation_status_level === 3);
@@ -21818,6 +21819,7 @@ function renderStaffOverview(req, res) {
     canClearGuestbooks: panelConfig.canClearGuestbooks,
     users,
     onlineUsers,
+    minorUsers,
     greenUsers,
     yellowUsers,
     redUsers,
@@ -21831,6 +21833,7 @@ function renderStaffOverview(req, res) {
     statusDefinitions: MODERATION_STATUS_DEFINITIONS,
     statusCounts: {
       online: onlineUsers.length,
+      minor: minorUsers.length,
       green: greenUsers.length,
       yellow: yellowUsers.length,
       red: redUsers.length,
