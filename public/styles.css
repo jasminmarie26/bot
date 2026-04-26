@@ -10464,6 +10464,41 @@ body.page-guestbook-preview::after {
   margin: 0;
 }
 
+.gb-editor-scroll-nav {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 120;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.gb-editor-scroll-btn {
+  width: 2.7rem;
+  height: 2.7rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 82%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 92%, white 8%);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 12px 28px color-mix(in srgb, black 18%, transparent);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.gb-editor-scroll-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--field-edge));
+}
+
+.gb-editor-scroll-btn[hidden] {
+  display: none !important;
+}
+
 .gb-editor-inline-save {
   min-width: auto;
   padding: 0.48rem 1rem;
@@ -10548,7 +10583,7 @@ body.page-guestbook-preview::after {
 
 .character-editor-journey-track {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.45rem;
   min-width: 0;
 }
@@ -10664,7 +10699,7 @@ body.page-guestbook-preview::after {
 }
 
 .guestbook-editor-journey .character-editor-journey-track {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .guestbook-editor-journey .character-editor-journey-step {
@@ -11358,6 +11393,16 @@ body.gb-editor-fullscreen-open {
 }
 
 @media (max-width: 720px) {
+  .gb-editor-scroll-nav {
+    right: 0.72rem;
+    bottom: 0.72rem;
+  }
+
+  .gb-editor-scroll-btn {
+    width: 2.45rem;
+    height: 2.45rem;
+  }
+
   .character-editor-journey {
     grid-template-columns: 1fr;
     padding: 0.64rem;
@@ -11379,8 +11424,8 @@ body.gb-editor-fullscreen-open {
   }
 
   .character-form-editor-journey .character-editor-journey-track {
-    grid-template-columns: repeat(3, minmax(10rem, 1fr));
-    min-width: 31rem;
+    grid-template-columns: repeat(4, minmax(10rem, 1fr));
+    min-width: 41rem;
   }
 
   .character-form-editor-journey .character-editor-journey-arrow {
@@ -11393,8 +11438,8 @@ body.gb-editor-fullscreen-open {
   }
 
   .guestbook-editor-journey .character-editor-journey-track {
-    grid-template-columns: repeat(3, minmax(10rem, 1fr));
-    min-width: 31rem;
+    grid-template-columns: repeat(4, minmax(10rem, 1fr));
+    min-width: 41rem;
   }
 
   .character-form-panel {

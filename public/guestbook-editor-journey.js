@@ -7,7 +7,7 @@
     return;
   }
 
-  const stepOrder = ["character", "guestbook-design", "guestbook-content"];
+  const stepOrder = ["character", "guestbook-design", "guestbook-content", "guestbook-settings"];
   const stepTriggers = Array.from(journey.querySelectorAll("[data-character-editor-step-trigger]"));
   const prevButton = journey.querySelector('[data-character-editor-nav="prev"]');
   const nextButton = journey.querySelector('[data-character-editor-nav="next"]');
@@ -24,6 +24,9 @@
     if (currentHash === "#guestbook-content") {
       return "guestbook-content";
     }
+    if (currentHash === "#guestbook-settings") {
+      return "guestbook-settings";
+    }
     if (currentHash === "#guestbook-design") {
       return "guestbook-design";
     }
@@ -31,7 +34,12 @@
   };
 
   const updateGuestbookPageLinkHashes = (stepName) => {
-    const nextHash = stepName === "guestbook-content" ? "#guestbook-content" : "#guestbook-design";
+    const nextHash =
+      stepName === "guestbook-content"
+        ? "#guestbook-content"
+        : stepName === "guestbook-settings"
+          ? "#guestbook-settings"
+          : "#guestbook-design";
 
     guestbookPageLinks.forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) {
@@ -95,7 +103,14 @@
 
     if (isGuestbookStep && typeof window.setGuestbookEditorPage === "function") {
       syncingGuestbookPage = true;
-      window.setGuestbookEditorPage(nextStep === "guestbook-content" ? "content" : "design", { persist });
+      window.setGuestbookEditorPage(
+        nextStep === "guestbook-content"
+          ? "content"
+          : nextStep === "guestbook-settings"
+            ? "settings"
+            : "design",
+        { persist }
+      );
       syncingGuestbookPage = false;
     }
 
@@ -132,7 +147,12 @@
     }
 
     const nextPage = String(event.detail?.page || "").trim().toLowerCase();
-    const nextStep = nextPage === "content" ? "guestbook-content" : "guestbook-design";
+    const nextStep =
+      nextPage === "content"
+        ? "guestbook-content"
+        : nextPage === "settings"
+          ? "guestbook-settings"
+          : "guestbook-design";
 
     if (nextStep !== activeStep) {
       setActiveStep(nextStep);

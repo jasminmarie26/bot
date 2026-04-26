@@ -22,11 +22,13 @@
 
       <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
         <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+        <input type="hidden" name="editor_return_step" value="guestbook-design" />
         <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
       </form>
 
       <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
         <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+        <input type="hidden" name="editor_return_step" value="guestbook-design" />
         <button
           class="btn btn-danger"
           type="submit"
@@ -111,8 +113,22 @@
       >
         <span class="character-editor-journey-step-number">3</span>
         <span class="character-editor-journey-step-copy">
-          <strong>Inhalt &amp; Bilder</strong>
+          <strong>Seiteninhalt</strong>
           <small>Texte, Hinweise und BBCode</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="character-editor-journey-step"
+        data-character-editor-step-trigger="guestbook-settings"
+        aria-controls="guestbook-design"
+        aria-selected="false"
+      >
+        <span class="character-editor-journey-step-number">4</span>
+        <span class="character-editor-journey-step-copy">
+          <strong>Gesamt &amp; Musik</strong>
+          <small>Gilt f&uuml;r alle Seiten</small>
         </span>
       </button>
     </div>
@@ -461,7 +477,7 @@
     <div class="header-line character-guestbook-header">
       <div>
         <h2>G&auml;stebuch bearbeiten</h2>
-        <p>Oben wechselst du zwischen Design und Inhalt. Darunter bleibt die breite Editor-Fl&auml;che erhalten.</p>
+        <p>Oben wechselst du jetzt zwischen Design, Seiteninhalt und g&auml;stebuchweiten Einstellungen. Die Musik liegt gesammelt im vierten Schritt.</p>
       </div>
     </div>
 

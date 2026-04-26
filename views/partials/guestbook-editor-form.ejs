@@ -24,12 +24,12 @@
   <input type="hidden" name="session_page_path" value="" />
   <input type="hidden" name="session_page_title" value="" />
 
-  <div class="gb-editor-heading">
+<div class="gb-editor-heading">
     <h2>Einstellungen</h2>
     <span class="gb-editor-helptext">
       <%= usesOuterNavigation
-        ? "Schritt 2 und 3 sind getrennt, damit Design und Inhalt sauber hintereinander bleiben."
-        : "Aufgeteilt in zwei ruhige Seiten, damit der Editor nicht mehr so überladen wirkt." %>
+        ? "Schritt 2 bis 4 trennen Design, Seiteninhalt und globale G&auml;stebuch-Einstellungen sauber voneinander."
+        : "Aufgeteilt in drei ruhige Seiten, damit Inhalt und Gesamt-Einstellungen nicht mehr durcheinander geraten." %>
     </span>
   </div>
 
@@ -51,7 +51,16 @@
         aria-controls="gb-editor-page-content"
         aria-selected="false"
       >
-        2. Inhalt &amp; Bilder
+        2. Seiteninhalt
+      </button>
+      <button
+        type="button"
+        class="gb-editor-page-tab"
+        data-gb-editor-page-trigger="settings"
+        aria-controls="gb-editor-page-settings"
+        aria-selected="false"
+      >
+        3. Gesamt &amp; Musik
       </button>
     </div>
   <% } %>
@@ -63,43 +72,11 @@
     aria-labelledby="gb-editor-page-design-title"
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: Gästebuch Design" : "Seite 1: Design" %></h3>
-      <p class="gb-editor-helptext">
-        <%= usesOuterNavigation
-          ? "Stil, Schrift, Zensur und Farben für das Gästebuch."
-          : "Stil, Schrift, Zensur und Farben für das Gästebuch." %>
-      </p>
+      <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: Design &amp; Stil" : "Seite 1: Design &amp; Stil" %></h3>
+      <p class="gb-editor-helptext">Theme, Schrift und Farben f&uuml;r das gesamte G&auml;stebuch.</p>
     </div>
 
     <div class="gb-editor-basics">
-      <div class="gb-editor-card gb-editor-section">
-        <span class="gb-editor-subheading">Zensur</span>
-        <span class="gb-editor-helptext">Direkt f&uuml;r diese Seite festlegen.</span>
-        <div class="gb-radio-list gb-radio-card-list">
-          <label class="gb-radio-card">
-            <input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> />
-            <span class="gb-radio-card-copy">
-              <strong>Ab 18</strong>
-              <small>Nur f&uuml;r Erwachsene markieren</small>
-            </span>
-          </label>
-          <label class="gb-radio-card">
-            <input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> />
-            <span class="gb-radio-card-copy">
-              <strong>Sexuelle Darstellung</strong>
-              <small>Explizite Inhalte entsprechend kennzeichnen</small>
-            </span>
-          </label>
-          <label class="gb-radio-card">
-            <input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> />
-            <span class="gb-radio-card-copy">
-              <strong>Keine Altersbeschr&auml;nkung</strong>
-              <small>Ohne zus&auml;tzliche Zensur anzeigen</small>
-            </span>
-          </label>
-        </div>
-      </div>
-
       <label class="gb-editor-card gb-editor-card-field">
         <span class="gb-editor-subheading">Style</span>
         <span class="gb-editor-helptext">Enth&auml;lt jetzt auch ein rahmenloses Transparent-Design.</span>
@@ -130,44 +107,11 @@
         </select>
       </label>
 
-      <div class="gb-editor-card gb-editor-card-full gb-editor-section">
-        <span class="gb-editor-subheading">Themen-Tags</span>
+      <div class="gb-editor-card gb-editor-card-field">
+        <span class="gb-editor-subheading">Gilt f&uuml;r alle Seiten</span>
         <span class="gb-editor-helptext">
-          Damit andere G&auml;steb&uuml;cher sp&auml;ter nach Themen, Buchstaben und Server besser gefunden werden.
+          Alles aus diesem Schritt wird mit einem Speichern direkt f&uuml;r das komplette G&auml;stebuch &uuml;bernommen.
         </span>
-
-        <% if (selectedGuestbookTags.length) { %>
-          <div class="gb-tag-chip-list">
-            <% selectedGuestbookTags.forEach((tagLabel) => { %>
-              <span class="gb-tag-chip gb-tag-chip-static">
-                <span><%= tagLabel %></span>
-              </span>
-            <% }) %>
-          </div>
-        <% } %>
-
-        <label class="gb-editor-tag-custom-field">
-          <span class="gb-editor-subheading">Tags eingeben</span>
-          <input
-            type="text"
-            name="guestbook_tags_custom"
-            value="<%= selectedGuestbookTags.join(', ') %>"
-            maxlength="180"
-            placeholder="z. B. Slow Burn, Urban Fantasy, Enemies to Lovers"
-            spellcheck="false"
-            autocomplete="off"
-            aria-autocomplete="list"
-            aria-expanded="false"
-            aria-controls="guestbook-tag-suggestions-<%= character.id %>"
-          />
-          <div
-            id="guestbook-tag-suggestions-<%= character.id %>"
-            class="gb-tag-suggestion-list"
-            data-gb-tag-suggestions
-            role="listbox"
-            hidden
-          ></div>
-        </label>
       </div>
     </div>
 
@@ -358,101 +302,17 @@
     hidden
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-content-title"><%= usesOuterNavigation ? "Schritt 3: Inhalt & Bilder" : "Seite 2: Inhalt & Bilder" %></h3>
-      <p class="gb-editor-helptext">Bilder, Hinweise und der eigentliche BBCode-Inhalt der Seite.</p>
+      <h3 id="gb-editor-page-content-title"><%= usesOuterNavigation ? "Schritt 3: Seiteninhalt" : "Seite 2: Seiteninhalt" %></h3>
+      <p class="gb-editor-helptext">Hier bearbeitest du nur den Inhalt der aktuell gew&auml;hlten G&auml;stebuch-Seite.</p>
     </div>
 
     <div class="gb-editor-grid">
-  <div class="gb-image-field">
-    <div class="gb-editor-row-meta">
-      <span class="gb-editor-subheading">Bild innerhalb des Rahmens</span>
-      <span class="gb-editor-helptext">Bild-URL f&uuml;r die Fl&auml;che direkt im G&auml;stebuchrahmen.</span>
-      <span class="gb-editor-helptext">Wird automatisch skaliert, sichtbare Fl&auml;che bis ca. 620px Breite.</span>
-    </div>
-    <div class="gb-image-body">
-      <input
-        name="inner_image_url"
-        value="<%= settings.inner_image_url || '' %>"
-        maxlength="500"
-        placeholder="https://..."
-        spellcheck="false"
-        autocomplete="off"
-      />
-      <div class="gb-image-controls">
-        <label class="gb-image-toggle">
-          <input type="checkbox" name="clear_inner_image" value="1" />
-          Hintergrund l&ouml;schen
-        </label>
-
-        <label class="gb-image-opacity-field">
-          Transparenz
-          <input
-            type="number"
-            name="inner_image_opacity"
-            min="0"
-            max="100"
-            step="1"
-            value="<%= Number.isFinite(Number(settings.inner_image_opacity)) ? Number(settings.inner_image_opacity) : 100 %>"
-          />
-        </label>
-      </div>
-    </div>
+  <div class="gb-editor-card gb-editor-card-full gb-editor-section">
+    <span class="gb-editor-subheading">Seitenweise</span>
+    <span class="gb-editor-helptext">
+      BBCode und Texte gelten nur f&uuml;r die gerade ausgew&auml;hlte Seite. Die g&auml;stebuchweiten Bilder und die Musik findest du gesammelt in Schritt 4.
+    </span>
   </div>
-
-  <div class="gb-image-field">
-    <div class="gb-editor-row-meta">
-      <span class="gb-editor-subheading">Bild au&szlig;erhalb des Rahmens</span>
-      <span class="gb-editor-helptext">Bild-URL f&uuml;r den Bereich um das G&auml;stebuch herum.</span>
-      <span class="gb-editor-helptext">Wird automatisch als Hintergrund skaliert, keine feste Pixelgr&ouml;&szlig;e n&ouml;tig.</span>
-    </div>
-    <div class="gb-image-body">
-      <input
-        name="outer_image_url"
-        value="<%= settings.outer_image_url || '' %>"
-        maxlength="500"
-        placeholder="https://..."
-        spellcheck="false"
-        autocomplete="off"
-      />
-      <div class="gb-image-controls">
-        <label class="gb-image-toggle">
-          <input type="checkbox" name="clear_outer_image" value="1" />
-          Hintergrund l&ouml;schen
-        </label>
-
-        <label class="gb-image-opacity-field">
-          Transparenz
-          <input
-            type="number"
-            name="outer_image_opacity"
-            min="0"
-            max="100"
-            step="1"
-            value="<%= Number.isFinite(Number(settings.outer_image_opacity)) ? Number(settings.outer_image_opacity) : 100 %>"
-          />
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <div class="gb-image-field">
-    <div class="gb-editor-row-meta">
-      <span class="gb-editor-subheading">Hintergrundmusik</span>
-      <span class="gb-editor-helptext">YouTube-Link f&uuml;r Musik beim &Ouml;ffnen des G&auml;stebuchs.</span>
-      <span class="gb-editor-helptext">Ob jemand sie h&ouml;ren will, stellt jeder bei sich selbst im Account ein.</span>
-    </div>
-    <div class="gb-image-body">
-      <input
-        name="music_url"
-        value="<%= settings.music_url || '' %>"
-        maxlength="500"
-        placeholder="https://www.youtube.com/watch?v=..."
-        spellcheck="false"
-        autocomplete="off"
-      />
-    </div>
-  </div>
-
   <div class="gb-editor-row gb-editor-notes-row">
     <div class="gb-editor-row-meta">
       <span class="gb-editor-subheading">BBCode</span>
@@ -654,6 +514,181 @@
     </div>
   </section>
 
+  <section
+    id="gb-editor-page-settings"
+    class="gb-editor-page"
+    data-gb-editor-page="settings"
+    aria-labelledby="gb-editor-page-settings-title"
+    hidden
+  >
+    <div class="gb-editor-page-heading">
+      <h3 id="gb-editor-page-settings-title"><%= usesOuterNavigation ? "Schritt 4: Gesamt &amp; Musik" : "Seite 3: Gesamt &amp; Musik" %></h3>
+      <p class="gb-editor-helptext">Diese Einstellungen gelten nach dem Speichern f&uuml;r alle G&auml;stebuch-Seiten.</p>
+    </div>
+
+    <div class="gb-editor-basics">
+      <div class="gb-editor-card gb-editor-section">
+        <span class="gb-editor-subheading">Zensur</span>
+        <span class="gb-editor-helptext">Gilt f&uuml;r das komplette G&auml;stebuch und nicht nur f&uuml;r eine Seite.</span>
+        <div class="gb-radio-list gb-radio-card-list">
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Ab 18</strong>
+              <small>Nur f&uuml;r Erwachsene markieren</small>
+            </span>
+          </label>
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="sexual" <%= settings.censor_level === "sexual" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Sexuelle Darstellung</strong>
+              <small>Explizite Inhalte entsprechend kennzeichnen</small>
+            </span>
+          </label>
+          <label class="gb-radio-card">
+            <input type="radio" name="censor_level" value="none" <%= settings.censor_level !== "ab18" && settings.censor_level !== "sexual" ? "checked" : "" %> />
+            <span class="gb-radio-card-copy">
+              <strong>Keine Altersbeschr&auml;nkung</strong>
+              <small>Ohne zus&auml;tzliche Zensur anzeigen</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="gb-editor-card gb-editor-card-full gb-editor-section">
+        <span class="gb-editor-subheading">Themen-Tags</span>
+        <span class="gb-editor-helptext">
+          Damit andere G&auml;steb&uuml;cher sp&auml;ter nach Themen, Buchstaben und Server besser gefunden werden.
+        </span>
+
+        <% if (selectedGuestbookTags.length) { %>
+          <div class="gb-tag-chip-list">
+            <% selectedGuestbookTags.forEach((tagLabel) => { %>
+              <span class="gb-tag-chip gb-tag-chip-static">
+                <span><%= tagLabel %></span>
+              </span>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <label class="gb-editor-tag-custom-field">
+          <span class="gb-editor-subheading">Tags eingeben</span>
+          <input
+            type="text"
+            name="guestbook_tags_custom"
+            value="<%= selectedGuestbookTags.join(', ') %>"
+            maxlength="180"
+            placeholder="z. B. Slow Burn, Urban Fantasy, Enemies to Lovers"
+            spellcheck="false"
+            autocomplete="off"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="guestbook-tag-suggestions-<%= character.id %>"
+          />
+          <div
+            id="guestbook-tag-suggestions-<%= character.id %>"
+            class="gb-tag-suggestion-list"
+            data-gb-tag-suggestions
+            role="listbox"
+            hidden
+          ></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="gb-editor-grid">
+      <div class="gb-image-field">
+        <div class="gb-editor-row-meta">
+          <span class="gb-editor-subheading">Bild innerhalb des Rahmens</span>
+          <span class="gb-editor-helptext">Bild-URL f&uuml;r die Fl&auml;che direkt im G&auml;stebuchrahmen.</span>
+          <span class="gb-editor-helptext">Wird automatisch skaliert und auf allen Seiten gleich verwendet.</span>
+        </div>
+        <div class="gb-image-body">
+          <input
+            name="inner_image_url"
+            value="<%= settings.inner_image_url || '' %>"
+            maxlength="500"
+            placeholder="https://..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <div class="gb-image-controls">
+            <label class="gb-image-toggle">
+              <input type="checkbox" name="clear_inner_image" value="1" />
+              Hintergrund l&ouml;schen
+            </label>
+
+            <label class="gb-image-opacity-field">
+              Transparenz
+              <input
+                type="number"
+                name="inner_image_opacity"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= Number.isFinite(Number(settings.inner_image_opacity)) ? Number(settings.inner_image_opacity) : 100 %>"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="gb-image-field">
+        <div class="gb-editor-row-meta">
+          <span class="gb-editor-subheading">Bild au&szlig;erhalb des Rahmens</span>
+          <span class="gb-editor-helptext">Bild-URL f&uuml;r den Bereich um das G&auml;stebuch herum.</span>
+          <span class="gb-editor-helptext">Wird automatisch als Hintergrund skaliert und f&uuml;r alle Seiten &uuml;bernommen.</span>
+        </div>
+        <div class="gb-image-body">
+          <input
+            name="outer_image_url"
+            value="<%= settings.outer_image_url || '' %>"
+            maxlength="500"
+            placeholder="https://..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <div class="gb-image-controls">
+            <label class="gb-image-toggle">
+              <input type="checkbox" name="clear_outer_image" value="1" />
+              Hintergrund l&ouml;schen
+            </label>
+
+            <label class="gb-image-opacity-field">
+              Transparenz
+              <input
+                type="number"
+                name="outer_image_opacity"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= Number.isFinite(Number(settings.outer_image_opacity)) ? Number(settings.outer_image_opacity) : 100 %>"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="gb-image-field">
+        <div class="gb-editor-row-meta">
+          <span class="gb-editor-subheading">Hintergrundmusik</span>
+          <span class="gb-editor-helptext">YouTube-Link f&uuml;r Musik beim &Ouml;ffnen des G&auml;stebuchs.</span>
+          <span class="gb-editor-helptext">Liegt jetzt g&auml;stebuchweit und springt nicht mehr seitenweise mit.</span>
+        </div>
+        <div class="gb-image-body">
+          <input
+            name="music_url"
+            value="<%= settings.music_url || '' %>"
+            maxlength="500"
+            placeholder="https://www.youtube.com/watch?v=..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
   </form>
 
 <div class="gb-editor-inline-extra-row">
@@ -686,6 +721,25 @@
       Aktuelle Seite l&ouml;schen
     </button>
   </form>
+</div>
+
+<div class="gb-editor-scroll-nav" data-gb-editor-scroll-nav>
+  <button
+    type="button"
+    class="gb-editor-scroll-btn"
+    data-gb-editor-scroll-dir="down"
+    aria-label="Im Gästebuch-Editor nach unten springen"
+  >
+    ↓
+  </button>
+  <button
+    type="button"
+    class="gb-editor-scroll-btn"
+    data-gb-editor-scroll-dir="up"
+    aria-label="Im Gästebuch-Editor nach oben springen"
+  >
+    ↑
+  </button>
 </div>
 
 <script>
@@ -922,6 +976,9 @@
       .replace(/\u2028/g, "\\u2028")
       .replace(/\u2029/g, "\\u2029") %>;
     const editorForm = document.getElementById("guestbook-editor-form");
+    const editorScrollNav = document.querySelector("[data-gb-editor-scroll-nav]");
+    const editorScrollUpButton = editorScrollNav?.querySelector('[data-gb-editor-scroll-dir="up"]') || null;
+    const editorScrollDownButton = editorScrollNav?.querySelector('[data-gb-editor-scroll-dir="down"]') || null;
     const previewReturnToField = editorForm?.querySelector('input[name="preview_return_to"]') || null;
     const previewSourceWindowNameField =
       editorForm?.querySelector('input[name="preview_source_window_name"]') || null;
@@ -939,6 +996,16 @@
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const editorNavigationMode = String(editorForm?.dataset?.editorNavigationMode || "").trim().toLowerCase();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
+    const editorScrollTopTarget =
+      editorForm?.closest(".character-guestbook-panel") ||
+      editorForm?.closest(".gb-editor-shell") ||
+      editorForm ||
+      null;
+    const editorScrollBottomTarget =
+      document.querySelector(".gb-editor-inline-extra-row") ||
+      pageContentField ||
+      editorForm ||
+      null;
     const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
     const bbcodeColorToolbarButton = editorForm?.querySelector('button[data-bbcode-option="color"]') || null;
     const bbcodeEditorShell = editorForm?.querySelector("[data-gb-bbcode-editor-shell]") || null;
@@ -1230,12 +1297,23 @@
           return "character";
         }
 
-        return activeJourneyStep === "guestbook-content"
-          ? "guestbook-content"
-          : "guestbook-design";
+        if (activeJourneyStep === "guestbook-content") {
+          return "guestbook-content";
+        }
+        if (activeJourneyStep === "guestbook-settings") {
+          return "guestbook-settings";
+        }
+        return "guestbook-design";
       }
 
-      return getActiveEditorPage() === "content" ? "guestbook-content" : "guestbook-design";
+      const activeEditorPage = getActiveEditorPage();
+      if (activeEditorPage === "content") {
+        return "guestbook-content";
+      }
+      if (activeEditorPage === "settings") {
+        return "guestbook-settings";
+      }
+      return "guestbook-design";
     };
 
     const syncEditorReturnStepFields = () => {
@@ -2509,6 +2587,40 @@
           closeBbcodeMenus();
         }
       });
+    }
+
+    if (editorScrollNav && editorScrollTopTarget && editorScrollBottomTarget) {
+      const updateEditorScrollButtons = () => {
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const scrollTop = window.scrollY || window.pageYOffset || 0;
+        const documentHeight = Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight,
+          viewportHeight
+        );
+        const isNearTop = scrollTop <= 120;
+        const isNearBottom = scrollTop + viewportHeight >= documentHeight - 140;
+
+        if (editorScrollUpButton) {
+          editorScrollUpButton.hidden = isNearTop;
+        }
+
+        if (editorScrollDownButton) {
+          editorScrollDownButton.hidden = isNearBottom;
+        }
+      };
+
+      editorScrollUpButton?.addEventListener("click", () => {
+        editorScrollTopTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      editorScrollDownButton?.addEventListener("click", () => {
+        editorScrollBottomTarget.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+
+      window.addEventListener("scroll", updateEditorScrollButtons, { passive: true });
+      window.addEventListener("resize", updateEditorScrollButtons);
+      window.requestAnimationFrame(updateEditorScrollButtons);
     }
 
     document.addEventListener("keydown", (event) => {

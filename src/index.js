@@ -2598,6 +2598,14 @@ function normalizeGuestbookEditorReturnStep(value) {
   }
 
   if (
+    normalized === "settings" ||
+    normalized === "guestbook-settings" ||
+    normalized === "#guestbook-settings"
+  ) {
+    return "guestbook-settings";
+  }
+
+  if (
     normalized === "design" ||
     normalized === "guestbook-design" ||
     normalized === "#guestbook-design"
@@ -2613,7 +2621,13 @@ function buildGuestbookEditorReturnHash(editorStep = null) {
   if (normalizedStep === "character") {
     return "#character-editor-panel-character";
   }
-  return normalizedStep === "guestbook-content" ? "#guestbook-content" : "#guestbook-design";
+  if (normalizedStep === "guestbook-content") {
+    return "#guestbook-content";
+  }
+  if (normalizedStep === "guestbook-settings") {
+    return "#guestbook-settings";
+  }
+  return "#guestbook-design";
 }
 
 function buildStandaloneGuestbookEditorUrl(characterId, guestbookPageId = null, editorStep = null) {
@@ -10749,28 +10763,48 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
 
 function buildGuestbookPageSettings(baseSettings = null, page = null) {
   const normalizedTags = parseGuestbookDiscoveryTags(baseSettings?.tags);
+  const normalizeGuestbookUrl = (value) =>
+    /^https?:\/\/.+/i.test(String(value || "").trim())
+      ? String(value || "").trim().slice(0, 500)
+      : "";
+  const pageInnerImageOpacity = normalizeGuestbookOpacity(page?.inner_image_opacity, 100);
+  const pageOuterImageOpacity = normalizeGuestbookOpacity(page?.outer_image_opacity, 100);
+  const pageFrameColor = normalizeOptionalGuestbookPageColor(page?.frame_color);
+  const pageBackgroundColor = normalizeOptionalGuestbookPageColor(page?.background_color);
+  const pageSurroundColor = normalizeOptionalGuestbookPageColor(page?.surround_color);
+  const pageStyleFallback = normalizeGuestbookOption(page?.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, "scroll");
+  const themeStyleFallback = normalizeGuestbookOption(
+    page?.theme_style,
+    GUESTBOOK_THEME_STYLE_OPTIONS,
+    "pergament-gold"
+  );
   return {
-    image_url: /^https?:\/\/.+/i.test(String(page?.image_url || "").trim())
-      ? String(page.image_url || "").trim().slice(0, 500)
-      : "",
-    inner_image_url: /^https?:\/\/.+/i.test(String(page?.inner_image_url || "").trim())
-      ? String(page.inner_image_url || "").trim().slice(0, 500)
-      : "",
-    outer_image_url: /^https?:\/\/.+/i.test(String(page?.outer_image_url || "").trim())
-      ? String(page.outer_image_url || "").trim().slice(0, 500)
-      : "",
-    inner_image_opacity: normalizeGuestbookOpacity(page?.inner_image_opacity, 100),
-    outer_image_opacity: normalizeGuestbookOpacity(page?.outer_image_opacity, 100),
+    image_url: normalizeGuestbookUrl(baseSettings?.image_url) || normalizeGuestbookUrl(page?.image_url),
+    inner_image_url:
+      normalizeGuestbookUrl(baseSettings?.inner_image_url) || normalizeGuestbookUrl(page?.inner_image_url),
+    outer_image_url:
+      normalizeGuestbookUrl(baseSettings?.outer_image_url) || normalizeGuestbookUrl(page?.outer_image_url),
+    inner_image_opacity: normalizeGuestbookOpacity(baseSettings?.inner_image_opacity, pageInnerImageOpacity),
+    outer_image_opacity: normalizeGuestbookOpacity(baseSettings?.outer_image_opacity, pageOuterImageOpacity),
     inner_image_repeat: 0,
     outer_image_repeat: 0,
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
     chat_text_color: normalizeGuestbookColor(baseSettings?.chat_text_color),
     page_text_color: normalizeGuestbookColor(baseSettings?.page_text_color),
-    frame_color: normalizeOptionalGuestbookPageColor(page?.frame_color),
-    background_color: normalizeOptionalGuestbookPageColor(page?.background_color),
-    surround_color: normalizeOptionalGuestbookPageColor(page?.surround_color),
-    page_style: normalizeGuestbookOption(page?.page_style, GUESTBOOK_PAGE_STYLE_OPTIONS, "scroll"),
-    theme_style: normalizeGuestbookOption(page?.theme_style, GUESTBOOK_THEME_STYLE_OPTIONS, "pergament-gold"),
+    frame_color: normalizeOptionalGuestbookPageColor(baseSettings?.frame_color) || pageFrameColor,
+    background_color:
+      normalizeOptionalGuestbookPageColor(baseSettings?.background_color) || pageBackgroundColor,
+    surround_color: normalizeOptionalGuestbookPageColor(baseSettings?.surround_color) || pageSurroundColor,
+    page_style: normalizeGuestbookOption(
+      baseSettings?.page_style,
+      GUESTBOOK_PAGE_STYLE_OPTIONS,
+      pageStyleFallback
+    ),
+    theme_style: normalizeGuestbookOption(
+      baseSettings?.theme_style,
+      GUESTBOOK_THEME_STYLE_OPTIONS,
+      themeStyleFallback
+    ),
     font_style: normalizeGuestbookOption(baseSettings?.font_style, GUESTBOOK_FONT_STYLE_OPTIONS, "default"),
     music_url: normalizeGuestbookMusicUrl(baseSettings?.music_url),
     tags: serializeGuestbookDiscoveryTags(normalizedTags),
@@ -21038,84 +21072,91 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
 
-  db.prepare(
-    `UPDATE guestbook_pages
-     SET content = ?,
-         image_url = ?,
-         inner_image_url = ?,
-         outer_image_url = ?,
-         inner_image_opacity = ?,
-         outer_image_opacity = ?,
-         inner_image_repeat = ?,
-         outer_image_repeat = ?,
-         frame_color = ?,
-         background_color = ?,
-         surround_color = ?,
-         page_style = ?,
-         theme_style = ?,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = ? AND character_id = ?`
-  ).run(
-    payload.pageContent,
-    payload.settings.image_url,
-    payload.settings.inner_image_url,
-    payload.settings.outer_image_url,
-    payload.settings.inner_image_opacity,
-    payload.settings.outer_image_opacity,
-    payload.settings.inner_image_repeat,
-    payload.settings.outer_image_repeat,
-    payload.settings.frame_color,
-    payload.settings.background_color,
-    payload.settings.surround_color,
-    payload.settings.page_style,
-    payload.settings.theme_style,
-    activePage.id,
-    id
-  );
+  const saveGuestbookTx = db.transaction(() => {
+    db.prepare(
+      `UPDATE guestbook_pages
+       SET content = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND character_id = ?`
+    ).run(payload.pageContent, activePage.id, id);
 
-  db.prepare(
-    `UPDATE guestbook_settings
-     SET image_url = ?,
-         inner_image_url = ?,
-         outer_image_url = ?,
-         inner_image_opacity = ?,
-         outer_image_opacity = ?,
-         inner_image_repeat = ?,
-         outer_image_repeat = ?,
-         censor_level = ?,
-         chat_text_color = ?,
-         page_text_color = ?,
-         frame_color = ?,
-         background_color = ?,
-         surround_color = ?,
-         page_style = ?,
-         theme_style = ?,
-         font_style = ?,
-         music_url = ?,
-         tags = ?,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE character_id = ?`
-  ).run(
-    payload.settings.image_url,
-    payload.settings.inner_image_url,
-    payload.settings.outer_image_url,
-    payload.settings.inner_image_opacity,
-    payload.settings.outer_image_opacity,
-    payload.settings.inner_image_repeat,
-    payload.settings.outer_image_repeat,
-    payload.settings.censor_level,
-    payload.settings.chat_text_color,
-    payload.settings.page_text_color,
-    payload.settings.frame_color,
-    payload.settings.background_color,
-    payload.settings.surround_color,
-    payload.settings.page_style,
-    payload.settings.theme_style,
-    payload.settings.font_style,
-    payload.settings.music_url,
-    payload.settings.tags,
-    id
-  );
+    db.prepare(
+      `UPDATE guestbook_pages
+       SET image_url = ?,
+           inner_image_url = ?,
+           outer_image_url = ?,
+           inner_image_opacity = ?,
+           outer_image_opacity = ?,
+           inner_image_repeat = ?,
+           outer_image_repeat = ?,
+           frame_color = ?,
+           background_color = ?,
+           surround_color = ?,
+           page_style = ?,
+           theme_style = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE character_id = ?`
+    ).run(
+      payload.settings.image_url,
+      payload.settings.inner_image_url,
+      payload.settings.outer_image_url,
+      payload.settings.inner_image_opacity,
+      payload.settings.outer_image_opacity,
+      payload.settings.inner_image_repeat,
+      payload.settings.outer_image_repeat,
+      payload.settings.frame_color,
+      payload.settings.background_color,
+      payload.settings.surround_color,
+      payload.settings.page_style,
+      payload.settings.theme_style,
+      id
+    );
+
+    db.prepare(
+      `UPDATE guestbook_settings
+       SET image_url = ?,
+           inner_image_url = ?,
+           outer_image_url = ?,
+           inner_image_opacity = ?,
+           outer_image_opacity = ?,
+           inner_image_repeat = ?,
+           outer_image_repeat = ?,
+           censor_level = ?,
+           chat_text_color = ?,
+           page_text_color = ?,
+           frame_color = ?,
+           background_color = ?,
+           surround_color = ?,
+           page_style = ?,
+           theme_style = ?,
+           font_style = ?,
+           music_url = ?,
+           tags = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE character_id = ?`
+    ).run(
+      payload.settings.image_url,
+      payload.settings.inner_image_url,
+      payload.settings.outer_image_url,
+      payload.settings.inner_image_opacity,
+      payload.settings.outer_image_opacity,
+      payload.settings.inner_image_repeat,
+      payload.settings.outer_image_repeat,
+      payload.settings.censor_level,
+      payload.settings.chat_text_color,
+      payload.settings.page_text_color,
+      payload.settings.frame_color,
+      payload.settings.background_color,
+      payload.settings.surround_color,
+      payload.settings.page_style,
+      payload.settings.theme_style,
+      payload.settings.font_style,
+      payload.settings.music_url,
+      payload.settings.tags,
+      id
+    );
+  });
+  saveGuestbookTx();
 
   if (character.user_id === req.session.user.id) {
     const refreshedUser = updateUserRoleCharacterSelection(req.session.user, id, req.body);
@@ -21995,7 +22036,10 @@ function buildStaffUserLocationLabel(rawPath, rawTitle) {
   }
   if (/^\/characters\/\d+\/edit$/i.test(normalizedPathname)) {
     const isGuestbookEdit =
-      parsedUrl.searchParams.has("guestbook_page_id") || normalizedHash === "#guestbook-design";
+      parsedUrl.searchParams.has("guestbook_page_id") ||
+      normalizedHash === "#guestbook-design" ||
+      normalizedHash === "#guestbook-content" ||
+      normalizedHash === "#guestbook-settings";
     const characterEditTitle = normalizedTitle.match(/^Bearbeiten:\s*(.+)$/i);
     if (isGuestbookEdit) {
       return characterEditTitle
