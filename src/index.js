@@ -28516,19 +28516,9 @@ io.on("connection", (socket) => {
         serverId,
         kickTarget.characterId || getSocketPreferredCharacterId(targetRoomSockets[0], serverId)
       );
-      const redirectSuffix = targetPreferredCharacter?.id
-        ? `&character_id=${targetPreferredCharacter.id}`
-        : "";
-      const fallbackStandardRoom = currentStandardRoomContext
-        ? getStandardRoomsForServer(serverId).find(
-            (candidate) => candidate.id !== currentStandardRoomContext.standardRoomId
-          ) || null
-        : null;
-      const redirectUrl = room
-        ? `/chat?server=${encodeURIComponent(serverId)}${redirectSuffix}`
-        : fallbackStandardRoom
-          ? `/chat?server=${encodeURIComponent(serverId)}&standard_room=${encodeURIComponent(fallbackStandardRoom.id)}${redirectSuffix}`
-          : "/dashboard";
+      const redirectUrl = buildCharacterRoomListRedirectUrl(
+        targetPreferredCharacter?.id || kickTarget.characterId
+      );
       const kickedFromLabel = room?.name || currentStandardRoomContext?.room?.name || "diesem Bereich";
 
       emitSystemChatMessage(
