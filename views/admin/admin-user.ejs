@@ -55,14 +55,30 @@
     <% if (targetUser.is_suspicious) { %>
       <span class="admin-role-badge is-suspicious">Verd&auml;chtig</span>
     <% } %>
+    <% if (targetUser.is_minor_account) { %>
+      <span class="admin-role-badge is-minor">Minderj&auml;hrig</span>
+    <% } %>
     <span class="admin-status-badge is-<%= targetUser.moderation_status.slug %>">
       <%= targetUser.moderation_status.label %>
     </span>
   </div>
 
+  <% if (targetUser.is_minor_account) { %>
+    <div class="admin-minor-alert" role="alert">
+      <strong>Minderj&auml;hriger User</strong>
+      <span>
+        Dieser Account ist <%= targetUser.account_age_label || "unter 18" %>.
+        Bitte beim Moderieren und beim &Ouml;ffnen von G&auml;steb&uuml;chern den Jugendschutz beachten.
+      </span>
+    </div>
+  <% } %>
+
   <div class="admin-user-meta">
     <span>E-Mail: <%= targetUser.email || "-" %></span>
     <span>Geburtsdatum: <%= targetUser.birth_date_label || "-" %></span>
+    <% if (targetUser.account_age_label) { %>
+      <span>Alter: <%= targetUser.account_age_label %></span>
+    <% } %>
     <span>Charaktere: <%= targetUser.character_count %></span>
     <% if (targetUser.is_online && targetUser.online_location_label) { %>
       <span>Ort: <%= targetUser.online_location_label %></span>

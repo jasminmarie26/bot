@@ -120,6 +120,17 @@
 %>
 
 <div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookLayoutStyle %>">
+  <% if (guestbookMinorAccountWarning?.isMinor) { %>
+    <section class="guestbook-minor-warning" role="alert">
+      <strong>Minderj&auml;hriger User</strong>
+      <span>
+        Dieser Account<%= guestbookMinorAccountWarning.username ? ` (${guestbookMinorAccountWarning.username})` : "" %>
+        ist <%= guestbookMinorAccountWarning.ageLabel || "unter 18" %>.
+        Bitte keine Inhalte ausspielen, die f&uuml;r Minderj&auml;hrige nicht geeignet sind.
+      </span>
+    </section>
+  <% } %>
+
   <section class="guestbook-layout">
     <div class="guestbook-page-shell">
       <%- include("../../partials/guestbook-page-nav", { guestbookPageNavigation }) %>

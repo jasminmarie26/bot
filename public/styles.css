@@ -6134,6 +6134,12 @@ body.theme-future.page-home-screen .home-copyright {
   background: color-mix(in srgb, var(--danger) 14%, var(--field-bg) 86%);
 }
 
+.admin-role-badge.is-minor {
+  border-color: color-mix(in srgb, #ffb000 78%, transparent);
+  color: #ffe3a1;
+  background: color-mix(in srgb, #ffb000 18%, var(--field-bg) 82%);
+}
+
 .admin-user-summary-meta {
   display: flex;
   flex-wrap: wrap;
@@ -6154,6 +6160,22 @@ body.theme-future.page-home-screen .home-copyright {
   gap: 0.16rem;
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.admin-minor-alert {
+  display: grid;
+  gap: 0.32rem;
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, #ffb000 78%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffb000 18%, var(--panel-bg) 82%);
+  color: #fff0bf;
+}
+
+.admin-minor-alert strong {
+  color: #ffe3a1;
+  font-size: 1.25rem;
 }
 
 .account-layout {
@@ -9434,6 +9456,31 @@ body.page-guestbook-preview::after {
 .guestbook-view-shell {
   min-height: calc(100vh - var(--guestbook-top-offset, clamp(4.05rem, 6.8vw, 4.45rem)));
   padding: 0 0 2.4rem;
+}
+
+.guestbook-minor-warning {
+  display: grid;
+  gap: 0.45rem;
+  width: min(1120px, calc(100vw - 2rem));
+  margin: 1rem auto 0;
+  padding: 1rem 1.15rem;
+  border: 2px solid color-mix(in srgb, #ffb000 80%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffb000 20%, var(--panel-bg) 80%);
+  color: #fff2c7;
+  text-align: center;
+  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.55);
+}
+
+.guestbook-minor-warning strong {
+  color: #ffe3a1;
+  font-size: 2.2rem;
+  line-height: 1.05;
+}
+
+.guestbook-minor-warning span {
+  font-size: 1.02rem;
+  line-height: 1.45;
 }
 
 .guestbook-background-music {

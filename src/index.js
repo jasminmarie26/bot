@@ -1464,6 +1464,18 @@ function getAgeFromBirthDate(rawBirthDate, referenceDate = new Date()) {
   return age >= 0 ? age : null;
 }
 
+function getAccountAgeInfo(accountUser, referenceDate = new Date()) {
+  const age = getAgeFromBirthDate(accountUser?.birth_date, referenceDate);
+  const isMinor = age !== null && age < 18;
+
+  return {
+    age,
+    ageLabel: age !== null ? `${age} Jahre` : "",
+    birthDateLabel: formatGermanDate(accountUser?.birth_date) || "",
+    isMinor
+  };
+}
+
 function isBirthdayToday(rawBirthDate, referenceDate = new Date()) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(rawBirthDate || "").trim());
   if (!match) return false;
@@ -20308,14 +20320,26 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   }
 
   const topbarCharacter = getPreferredMenuCharacterForUser(req);
-  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character);
+  const characterAccountUser = getAccountUserById(character.user_id);
+  const characterAccountAgeInfo = getAccountAgeInfo(characterAccountUser);
+  const guestbookMinorAccountWarning =
+    (guestbookAccessState.isAdmin || guestbookAccessState.isModerator) &&
+    characterAccountAgeInfo.isMinor
+      ? {
+          isMinor: true,
+          username: String(characterAccountUser?.username || "").trim(),
+          ageLabel: characterAccountAgeInfo.ageLabel,
+          birthDateLabel: characterAccountAgeInfo.birthDateLabel
+        }
+      : null;
+  const publicBirthdayDisplay = getPublicBirthdayDisplayForCharacter(character, characterAccountUser);
   const guestbookTitle =
     normalizeCharacterServerId(character.server_id) === LARP_SERVER_ID
       ? `LARP-Gästebuch: ${character.name}`
       : `Gästebuch: ${character.name}`;
   const characterBirthdayCakeVisible = shouldShowBirthdayCakeForCharacter(
     character.id,
-    getAccountUserById(character.user_id),
+    characterAccountUser,
     {
       characterRecord: character
     }
@@ -20395,6 +20419,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     ),
     guestbookPostingCharacters: postingCharactersState.characters,
     selectedGuestbookAuthorCharacterId: postingCharactersState.selectedCharacterId,
+    guestbookMinorAccountWarning,
     guestbookContextQuery: buildGuestbookContextQuery(guestbookAccessState),
     topbarCharacter
   });
@@ -21546,7 +21571,8 @@ function getStaffOverviewUserSearchText(user) {
     user?.last_login_ip,
     user?.created_at,
     user?.account_number,
-    user?.moderation_status_note
+    user?.moderation_status_note,
+    user?.is_minor_account ? "minderjaehrig jugendschutz minderjaehriger user" : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -21722,6 +21748,7 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
   const normalizedModerationStatusNote = normalizeModerationStatusNote(user.moderation_status_note);
   const createdAtLabels = buildStaffDateTimeLabels(user.created_at);
   const lastLoginLabels = buildStaffDateTimeLabels(user.last_login_at);
+  const accountAgeInfo = getAccountAgeInfo(user);
   return {
     ...user,
     is_online: onlineAccountUserIds.has(parsedUserId),
@@ -21734,6 +21761,9 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
     moderation_status_note_preview: getLatestModerationNotePreview(normalizedModerationStatusNote),
     moderation_status: getModerationStatusDefinition(user.moderation_status_level),
     birth_date_label: formatGermanDate(user.birth_date) || "-",
+    account_age: accountAgeInfo.age,
+    account_age_label: accountAgeInfo.ageLabel,
+    is_minor_account: accountAgeInfo.isMinor,
     created_at_date_label: createdAtLabels.date,
     created_at_time_label: createdAtLabels.time,
     created_at_label: createdAtLabels.compact,
