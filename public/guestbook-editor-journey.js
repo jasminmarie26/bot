@@ -142,11 +142,11 @@
   const hashStep = getHashStep();
   const storedStep = String(getStoredStep() || "").trim().toLowerCase();
   const initialStep =
-    hashStep === "guestbook-content"
+    stepOrder.includes(hashStep)
       ? hashStep
       : stepOrder.includes(storedStep)
         ? storedStep
-        : hashStep || stepOrder[0];
+        : stepOrder[0];
 
   setActiveStep(initialStep, false);
 })();

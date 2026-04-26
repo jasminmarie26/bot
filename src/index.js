@@ -2579,24 +2579,65 @@ function normalizeCharacterEditGuestbookPageId(value) {
   return Number.isInteger(pageId) && pageId > 0 ? pageId : null;
 }
 
-function buildStandaloneGuestbookEditorUrl(characterId, guestbookPageId = null) {
-  const normalizedPageId = normalizeCharacterEditGuestbookPageId(guestbookPageId);
-  return normalizedPageId
-    ? `/characters/${characterId}/guestbook/edit?page_id=${normalizedPageId}`
-    : `/characters/${characterId}/guestbook/edit`;
+function normalizeGuestbookEditorReturnStep(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (
+    normalized === "character" ||
+    normalized === "#character" ||
+    normalized === "#character-editor-panel-character"
+  ) {
+    return "character";
+  }
+
+  if (
+    normalized === "content" ||
+    normalized === "guestbook-content" ||
+    normalized === "#guestbook-content"
+  ) {
+    return "guestbook-content";
+  }
+
+  if (
+    normalized === "design" ||
+    normalized === "guestbook-design" ||
+    normalized === "#guestbook-design"
+  ) {
+    return "guestbook-design";
+  }
+
+  return "guestbook-design";
 }
 
-function buildEmbeddedGuestbookEditorUrl(characterId, guestbookPageId = null) {
+function buildGuestbookEditorReturnHash(editorStep = null) {
+  const normalizedStep = normalizeGuestbookEditorReturnStep(editorStep);
+  if (normalizedStep === "character") {
+    return "#character-editor-panel-character";
+  }
+  return normalizedStep === "guestbook-content" ? "#guestbook-content" : "#guestbook-design";
+}
+
+function buildStandaloneGuestbookEditorUrl(characterId, guestbookPageId = null, editorStep = null) {
+  const normalizedPageId = normalizeCharacterEditGuestbookPageId(guestbookPageId);
+  const pathname = normalizedPageId
+    ? `/characters/${characterId}/guestbook/edit?page_id=${normalizedPageId}`
+    : `/characters/${characterId}/guestbook/edit`;
+  return `${pathname}${buildGuestbookEditorReturnHash(editorStep)}`;
+}
+
+function buildEmbeddedGuestbookEditorUrl(characterId, guestbookPageId = null, editorStep = null) {
   const normalizedPageId = normalizeCharacterEditGuestbookPageId(guestbookPageId);
   const query = normalizedPageId ? `?guestbook_page_id=${normalizedPageId}` : "";
-  return `/characters/${characterId}/edit${query}#guestbook-design`;
+  return `/characters/${characterId}/edit${query}${buildGuestbookEditorReturnHash(editorStep)}`;
 }
 
 function buildGuestbookEditorReturnUrl(req, character, guestbookPageId = null) {
   const isOwner = Number(character?.user_id) === Number(req?.session?.user?.id);
+  const editorStep = normalizeGuestbookEditorReturnStep(
+    req?.body?.editor_return_step || req?.query?.editor_return_step
+  );
   return isOwner
-    ? buildEmbeddedGuestbookEditorUrl(character.id, guestbookPageId)
-    : buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId);
+    ? buildEmbeddedGuestbookEditorUrl(character.id, guestbookPageId, editorStep)
+    : buildStandaloneGuestbookEditorUrl(character.id, guestbookPageId, editorStep);
 }
 
 function normalizeGuestbookPreviewWindowName(value) {

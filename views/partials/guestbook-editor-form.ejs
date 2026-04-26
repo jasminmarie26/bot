@@ -17,6 +17,7 @@
   data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+  <input type="hidden" name="editor_return_step" value="guestbook-design" />
   <input type="hidden" name="preview_return_to" value="" />
   <input type="hidden" name="preview_source_window_name" value="" />
   <input type="hidden" name="session_tab_id" value="" />
@@ -670,11 +671,13 @@
 
   <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/add-page" class="inline-form">
     <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+    <input type="hidden" name="editor_return_step" value="guestbook-design" />
     <button class="btn btn-secondary" type="submit">Seite hinzuf&uuml;gen</button>
   </form>
 
   <form method="POST" action="/characters/<%= character.id %>/guestbook/edit/delete-page" class="inline-form">
     <input type="hidden" name="page_id" value="<%= activePage.id %>" />
+    <input type="hidden" name="editor_return_step" value="guestbook-design" />
     <button
       class="btn btn-danger"
       type="submit"
@@ -922,6 +925,7 @@
     const previewReturnToField = editorForm?.querySelector('input[name="preview_return_to"]') || null;
     const previewSourceWindowNameField =
       editorForm?.querySelector('input[name="preview_source_window_name"]') || null;
+    const editorReturnStepFields = Array.from(document.querySelectorAll('input[name="editor_return_step"]'));
     const sessionTabIdField = editorForm?.querySelector('input[name="session_tab_id"]') || null;
     const sessionPagePathField = editorForm?.querySelector('input[name="session_page_path"]') || null;
     const sessionPageTitleField = editorForm?.querySelector('input[name="session_page_title"]') || null;
@@ -933,6 +937,7 @@
     const editorPages = Array.from(document.querySelectorAll("[data-gb-editor-page]"));
     const themeStyleField = editorForm?.querySelector("[data-guestbook-theme-style]") || null;
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
+    const editorNavigationMode = String(editorForm?.dataset?.editorNavigationMode || "").trim().toLowerCase();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const bbcodeToolbar = editorForm?.querySelector("[data-gb-bbcode-toolbar]") || null;
     const bbcodeColorToolbarButton = editorForm?.querySelector('button[data-bbcode-option="color"]') || null;
@@ -1150,6 +1155,8 @@
     };
 
     const preparePreviewSubmit = () => {
+      syncEditorReturnStepFields();
+
       const keepaliveState = window.__hrSessionKeepalive || null;
       if (sessionTabIdField) {
         sessionTabIdField.value =
@@ -1199,6 +1206,48 @@
         .trim()
         .toLowerCase();
 
+    const getCurrentEditorReturnStep = () => {
+      if (editorNavigationMode === "outer") {
+        const activeJourneyTrigger = Array.from(
+          document.querySelectorAll("[data-character-editor-step-trigger]")
+        ).find((trigger) => {
+          if (!(trigger instanceof HTMLElement)) {
+            return false;
+          }
+
+          return (
+            trigger.classList.contains("is-active") ||
+            String(trigger.getAttribute("aria-selected") || "").trim().toLowerCase() === "true"
+          );
+        });
+        const activeJourneyStep = String(
+          activeJourneyTrigger?.dataset?.characterEditorStepTrigger || ""
+        )
+          .trim()
+          .toLowerCase();
+
+        if (activeJourneyStep === "character") {
+          return "character";
+        }
+
+        return activeJourneyStep === "guestbook-content"
+          ? "guestbook-content"
+          : "guestbook-design";
+      }
+
+      return getActiveEditorPage() === "content" ? "guestbook-content" : "guestbook-design";
+    };
+
+    const syncEditorReturnStepFields = () => {
+      const nextStep = getCurrentEditorReturnStep();
+      editorReturnStepFields.forEach((field) => {
+        if (field instanceof HTMLInputElement) {
+          field.value = nextStep;
+        }
+      });
+      return nextStep;
+    };
+
     const setActiveEditorPage = (pageName, persist = true) => {
       const normalizedPageName = String(pageName || "").trim().toLowerCase();
       const fallbackPageName = String(editorPages[0]?.dataset?.gbEditorPage || "").trim().toLowerCase();
@@ -1231,6 +1280,8 @@
           }
         })
       );
+
+      syncEditorReturnStepFields();
     };
 
     if (editorPageTriggers.length && editorPages.length) {
@@ -1248,6 +1299,10 @@
         });
       });
     }
+
+    window.requestAnimationFrame(() => {
+      syncEditorReturnStepFields();
+    });
 
     if (editorPages.length) {
       window.setGuestbookEditorPage = (pageName, options = {}) => {
