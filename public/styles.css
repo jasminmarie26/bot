@@ -8722,7 +8722,7 @@ body.theme-atari .guestbook-entry-panel {
   border-top-color: var(--gb-theme-line);
 }
 
-.guestbook-page-preview[class*="gb-theme-"] .bb-table td {
+.guestbook-page-preview[class*="gb-theme-"] .bb-table-cell {
   border-color: var(--gb-theme-line);
 }
 
@@ -8950,7 +8950,7 @@ body.theme-atari .guestbook-entry-panel {
   border-top-color: color-mix(in srgb, currentColor 34%, transparent);
 }
 
-.guestbook-page-preview.gb-theme-transparent-pur .bb-table td {
+.guestbook-page-preview.gb-theme-transparent-pur .bb-table-cell {
   border-color: color-mix(in srgb, currentColor 28%, transparent);
 }
 
@@ -9078,7 +9078,7 @@ body.theme-atari .guestbook-entry-panel {
   line-height: 1.48;
 }
 
-.guestbook-entry-body :where(p, div, span, a, strong, b, em, i, u, s, blockquote, table, tbody, thead, tfoot, tr, td, th) {
+.guestbook-entry-body :where(p, div, span, a, strong, b, em, i, u, s, blockquote) {
   font-size: inherit;
   line-height: inherit;
 }
@@ -9171,12 +9171,16 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-table {
+  display: table;
   width: 100%;
   min-width: 0;
-  border-collapse: separate;
   border-spacing: 0.32rem;
   margin: 0;
   table-layout: fixed;
+}
+
+.bb-table-row {
+  display: table-row;
 }
 
 .bb-table-wrap {
@@ -9188,7 +9192,9 @@ body.theme-atari .guestbook-entry-panel {
   overflow-y: hidden;
 }
 
-.bb-table td {
+.bb-table-cell {
+  display: table-cell;
+  width: 1%;
   border: 1px solid var(--field-edge);
   padding: 0.32rem 0.4rem;
   vertical-align: top;
@@ -9198,7 +9204,7 @@ body.theme-atari .guestbook-entry-panel {
   overflow-wrap: anywhere;
 }
 
-.bb-table.bb-table-borderless td {
+.bb-table.bb-table-borderless .bb-table-cell {
   border: 0;
 }
 

@@ -10092,11 +10092,11 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const hideTableBorders = /^(?:0|off|none|false|noborder|no-border|borderless|hide-?borders?|no-?lines?)$/.test(
       normalizedOption
     );
-    return `<div class="bb-table-wrap"><table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</table></div>`;
+    return `<div class="bb-table-wrap"><div class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</div></div>`;
   });
-  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><table class=\"bb-table\">$1</table></div>");
-  html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
-  html = replaceInnermostBbcodeWrap(html, "td", "<td>$1</td>");
+  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><div class=\"bb-table\">$1</div></div>");
+  html = replaceInnermostBbcodeWrap(html, "tr", "<div class=\"bb-table-row\">$1</div>");
+  html = replaceInnermostBbcodeWrap(html, "td", "<div class=\"bb-table-cell\">$1</div>");
 
   html = html.replace(createBbcodeOptionRegex("spoiler"), (full, title, inner) => (
     `<details class="bb-spoiler"><summary>${title}</summary><div class="bb-spoiler-content">${inner}</div></details>`
