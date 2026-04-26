@@ -121,12 +121,11 @@
 
 <div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookLayoutStyle %>">
   <% if (guestbookMinorAccountWarning?.isMinor) { %>
-    <section class="guestbook-minor-warning" role="alert">
+    <section class="guestbook-minor-warning" role="note" aria-label="Jugendschutz-Hinweis">
       <strong>Minderj&auml;hriger User</strong>
       <span>
-        Dieser Account<%= guestbookMinorAccountWarning.username ? ` (${guestbookMinorAccountWarning.username})` : "" %>
-        ist <%= guestbookMinorAccountWarning.ageLabel || "unter 18" %>.
-        Bitte keine Inhalte ausspielen, die f&uuml;r Minderj&auml;hrige nicht geeignet sind.
+        <%= guestbookMinorAccountWarning.ageLabel || "unter 18" %>
+        &middot; Bitte Jugendschutz beachten.
       </span>
     </section>
   <% } %>
