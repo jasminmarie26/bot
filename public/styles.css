@@ -1,7 +1,7 @@
 :root {
   --font-ui: "Manrope", "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
   --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
-  --guestbook-frame-width: 620px;
+  --guestbook-frame-width: 680px;
 }
 
 html {
@@ -8566,7 +8566,7 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-preview {
   --gb-frame-width: var(--guestbook-frame-width);
-  --gb-content-width: 600px;
+  --gb-content-width: 640px;
   --gb-base-font-size: 10.16px;
   --gb-copy-font-size: 12.8px;
   position: relative;
@@ -8656,7 +8656,7 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .guestbook-page-preview[class*="gb-theme-"] {
-  --gb-content-width: 600px;
+  --gb-content-width: 640px;
   --gb-theme-border: rgba(178, 138, 84, 0.92);
   --gb-theme-line: color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 48%, transparent);
   --gb-theme-base: #241a12;
@@ -9172,17 +9172,20 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-table {
   --bb-table-gap: 0.32rem;
-  display: table;
-  width: calc(100% - (var(--bb-table-gap) * 2));
-  max-width: calc(100% - (var(--bb-table-gap) * 2));
+  display: grid;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  border-spacing: var(--bb-table-gap);
-  margin: 0 auto;
-  table-layout: fixed;
+  gap: var(--bb-table-gap);
+  margin: 0;
 }
 
 .bb-table-row {
-  display: table-row;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
+  gap: var(--bb-table-gap);
 }
 
 .bb-table-wrap {
@@ -9190,27 +9193,27 @@ body.theme-atari .guestbook-entry-panel {
   max-width: 100%;
   min-width: 0;
   margin: 0.35rem 0;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .bb-table-cell {
-  display: table-cell;
+  display: block;
   box-sizing: border-box;
   border: 1px solid var(--field-edge);
   padding: 0.32rem 0.4rem;
   vertical-align: top;
   min-width: 0;
-  max-width: 0;
+  max-width: 100%;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
 .bb-table-cell-spacer {
-  width: 6%;
   padding-left: 0.18rem;
   padding-right: 0.18rem;
+  min-height: 1.35rem;
 }
 
 .bb-table.bb-table-borderless .bb-table-cell {

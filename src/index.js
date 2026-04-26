@@ -9908,6 +9908,23 @@ function isBbcodeSpacerOnlyContent(inner) {
   return plainContent.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]+/g, "") === "";
 }
 
+function buildBbcodeTableRowMarkup(inner) {
+  const safeInner = String(inner || "");
+  const cellMatches = Array.from(safeInner.matchAll(/<bb-cell\b[^>]*>/gi));
+  const gridTemplate = cellMatches
+    .map((match) => (
+      /bb-table-cell-spacer/i.test(match[0])
+        ? "minmax(0, 0.22fr)"
+        : "minmax(0, 1fr)"
+    ))
+    .join(" ");
+  const rowStyle = gridTemplate ? ` style="grid-template-columns:${gridTemplate}"` : "";
+  const convertedInner = safeInner
+    .replace(/<bb-cell\b/gi, "<div")
+    .replace(/<\/bb-cell>/gi, "</div>");
+  return `<div class="bb-table-row"${rowStyle}>${convertedInner}</div>`;
+}
+
 function bbcodeContentNeedsBlockWrapper(inner) {
   return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
 }
@@ -10194,10 +10211,10 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     return `<div class="bb-table-wrap"><div class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</div></div>`;
   });
   html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><div class=\"bb-table\">$1</div></div>");
-  html = replaceInnermostBbcodeWrap(html, "tr", "<div class=\"bb-table-row\">$1</div>");
   html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
-    `<div class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</div>`
+    `<bb-cell class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</bb-cell>`
   ));
+  html = replaceInnermostBbcodeWrapWithCallback(html, "tr", (inner) => buildBbcodeTableRowMarkup(inner));
 
   html = html.replace(
     /\[\s*spoiler\s*=\s*((?:[^\[\]]+|\[[^\[\]]*\])*)\s*\]([\s\S]*?)\[\s*\/\s*spoiler\s*\]/gi,
