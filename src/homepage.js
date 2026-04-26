@@ -9,8 +9,8 @@ const HOME_DAILY_QUOTE_API_URL = "https://zenquotes.io/api/today";
 const HOME_DAILY_QUOTE_FETCH_TIMEOUT_MS = 5000;
 const HOME_DAILY_QUOTE_TRANSLATION_API_URL = "https://api.mymemory.translated.net/get";
 const HOME_DAILY_QUOTE_TRANSLATION_FETCH_TIMEOUT_MS = 5000;
-const DISCORD_HOME_INVITE_URL = "https://discord.gg/CWWxbZenwS";
-const DISCORD_HOME_INVITE_CODE = "CWWxbZenwS";
+const DISCORD_HOME_INVITE_URL = "https://discord.gg/CNXE5N33";
+const DISCORD_HOME_INVITE_CODE = "CNXE5N33";
 const DISCORD_HOME_INVITE_API_URL =
   `https://discord.com/api/v9/invites/${DISCORD_HOME_INVITE_CODE}?with_counts=true&with_expiration=true`;
 const DISCORD_HOME_STATS_CACHE_TTL_MS = 1000 * 60 * 2;
