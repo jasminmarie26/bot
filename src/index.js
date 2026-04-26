@@ -9885,6 +9885,29 @@ function replaceInnermostBbcodeWrap(html, tag, replacement) {
   return nextHtml;
 }
 
+function replaceInnermostBbcodeWrapWithCallback(html, tag, callback) {
+  const pattern = new RegExp(
+    `\\[\\s*${tag}\\s*\\]((?:(?!\\[\\s*${tag}\\s*\\]|\\[\\s*\\/\\s*${tag}\\s*\\])[\\s\\S])*)\\[\\s*\\/\\s*${tag}\\s*\\]`,
+    "gi"
+  );
+
+  let nextHtml = String(html || "");
+  let previousHtml = "";
+  while (nextHtml !== previousHtml) {
+    previousHtml = nextHtml;
+    nextHtml = nextHtml.replace(pattern, (full, inner) => callback(inner));
+  }
+
+  return nextHtml;
+}
+
+function isBbcodeSpacerOnlyContent(inner) {
+  const plainContent = String(inner || "")
+    .replace(/\[\s*\/?[a-z0-9]+(?:=[^\]]+)?\s*\]/gi, "")
+    .replace(/<[^>]+>/g, "");
+  return plainContent.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]+/g, "") === "";
+}
+
 function bbcodeContentNeedsBlockWrapper(inner) {
   return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
 }
@@ -10172,7 +10195,9 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   });
   html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><div class=\"bb-table\">$1</div></div>");
   html = replaceInnermostBbcodeWrap(html, "tr", "<div class=\"bb-table-row\">$1</div>");
-  html = replaceInnermostBbcodeWrap(html, "td", "<div class=\"bb-table-cell\">$1</div>");
+  html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
+    `<div class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</div>`
+  ));
 
   html = html.replace(
     /\[\s*spoiler\s*=\s*((?:[^\[\]]+|\[[^\[\]]*\])*)\s*\]([\s\S]*?)\[\s*\/\s*spoiler\s*\]/gi,
