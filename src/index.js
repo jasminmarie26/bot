@@ -9885,6 +9885,22 @@ function replaceInnermostBbcodeWrap(html, tag, replacement) {
   return nextHtml;
 }
 
+function bbcodeContentNeedsBlockWrapper(inner) {
+  return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
+}
+
+function wrapBbcodeStyledContent(inner, options = {}) {
+  const safeInner = String(inner || "");
+  const safeClassName = String(options?.className || "").trim();
+  const safeDataset = String(options?.dataset || "");
+  const safeStyle = String(options?.style || "");
+  const tagName = bbcodeContentNeedsBlockWrapper(safeInner) ? "div" : "span";
+  const classAttribute = safeClassName ? ` class="${safeClassName}"` : "";
+  const datasetAttribute = safeDataset ? ` ${safeDataset.trim()}` : "";
+  const styleAttribute = safeStyle ? ` style="${safeStyle}"` : "";
+  return `<${tagName}${classAttribute}${datasetAttribute}${styleAttribute}>${safeInner}</${tagName}>`;
+}
+
 const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
 const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
 
@@ -10176,13 +10192,17 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   html = html.replace(createBbcodeOptionRegex("color"), (full, rawColor, inner) => {
     const safeColor = sanitizeBbcodeColor(rawColor);
     if (!safeColor) return inner;
-    return `<span style="color:${safeColor}">${inner}</span>`;
+    return wrapBbcodeStyledContent(inner, {
+      style: `color:${escapeHtml(safeColor)}`
+    });
   });
 
   html = html.replace(createBbcodeOptionRegex("size"), (full, rawSize, inner) => {
     const safeSize = sanitizeBbcodeSize(rawSize);
     if (!safeSize) return inner;
-    return `<span style="font-size:${escapeHtml(safeSize)}px">${inner}</span>`;
+    return wrapBbcodeStyledContent(inner, {
+      style: `font-size:${escapeHtml(safeSize)}px`
+    });
   });
 
   html = html.replace(createBbcodeOptionRegex("font"), (full, rawFontStyle, inner) => {
@@ -10191,19 +10211,29 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const fontDataset = fontConfig.webFamily
       ? ` data-bb-font-family="${escapeHtml(fontConfig.webFamily)}"`
       : "";
-    return `<span class="bb-font"${fontDataset} style="${escapeHtml(fontConfig.style)}">${inner}</span>`;
+    return wrapBbcodeStyledContent(inner, {
+      className: "bb-font",
+      dataset: fontDataset,
+      style: escapeHtml(fontConfig.style)
+    });
   });
 
   html = html.replace(createBbcodeOptionRegex("gradient"), (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
-    return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
+    return wrapBbcodeStyledContent(inner, {
+      className: "bb-gradient",
+      style: escapeHtml(`background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})`)
+    });
   });
 
   html = html.replace(createBbcodeShortGradientRegex(), (full, rawSpec, inner) => {
     const gradient = parseGradientSpec(rawSpec);
     if (!gradient) return inner;
-    return `<span class="bb-gradient" style="background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})">${inner}</span>`;
+    return wrapBbcodeStyledContent(inner, {
+      className: "bb-gradient",
+      style: escapeHtml(`background-image:linear-gradient(${gradient.angle}deg, ${gradient.colors.join(", ")})`)
+    });
   });
 
   html = html.replace(
