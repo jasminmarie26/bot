@@ -9172,20 +9172,16 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-table {
   --bb-table-gap: 0.32rem;
-  display: grid;
-  width: 100%;
+  width: auto;
   max-width: 100%;
   min-width: 0;
-  gap: var(--bb-table-gap);
-  margin: 0;
+  border-collapse: separate;
+  border-spacing: var(--bb-table-gap);
+  margin: 0 auto;
+  table-layout: auto;
 }
 
 .bb-table-row {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  align-items: start;
-  gap: var(--bb-table-gap);
 }
 
 .bb-table-wrap {
@@ -9198,22 +9194,23 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-table-cell {
-  display: block;
   box-sizing: border-box;
   border: 1px solid var(--field-edge);
   padding: 0.32rem 0.4rem;
   vertical-align: top;
   min-width: 0;
-  max-width: 100%;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
 .bb-table-cell-spacer {
+  width: clamp(0.8rem, 1.6vw, 1.8rem);
+  min-width: 0.8rem;
+  border-color: transparent;
+  background: transparent;
   padding-left: 0.18rem;
   padding-right: 0.18rem;
-  min-height: 1.35rem;
 }
 
 .bb-table.bb-table-borderless .bb-table-cell {

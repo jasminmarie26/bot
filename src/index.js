@@ -9908,23 +9908,6 @@ function isBbcodeSpacerOnlyContent(inner) {
   return plainContent.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]+/g, "") === "";
 }
 
-function buildBbcodeTableRowMarkup(inner) {
-  const safeInner = String(inner || "");
-  const cellMatches = Array.from(safeInner.matchAll(/<bb-cell\b[^>]*>/gi));
-  const gridTemplate = cellMatches
-    .map((match) => (
-      /bb-table-cell-spacer/i.test(match[0])
-        ? "minmax(0, 0.22fr)"
-        : "minmax(0, 1fr)"
-    ))
-    .join(" ");
-  const rowStyle = gridTemplate ? ` style="grid-template-columns:${gridTemplate}"` : "";
-  const convertedInner = safeInner
-    .replace(/<bb-cell\b/gi, "<div")
-    .replace(/<\/bb-cell>/gi, "</div>");
-  return `<div class="bb-table-row"${rowStyle}>${convertedInner}</div>`;
-}
-
 function bbcodeContentNeedsBlockWrapper(inner) {
   return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
 }
@@ -10208,13 +10191,13 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const hideTableBorders = /^(?:0|off|none|false|noborder|no-border|borderless|hide-?borders?|no-?lines?)$/.test(
       normalizedOption
     );
-    return `<div class="bb-table-wrap"><div class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}">${inner}</div></div>`;
+    return `<div class="bb-table-wrap"><table class="bb-table${hideTableBorders ? " bb-table-borderless" : ""}"><tbody>${inner}</tbody></table></div>`;
   });
-  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><div class=\"bb-table\">$1</div></div>");
+  html = replaceInnermostBbcodeWrap(html, "table", "<div class=\"bb-table-wrap\"><table class=\"bb-table\"><tbody>$1</tbody></table></div>");
+  html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
-    `<bb-cell class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</bb-cell>`
+    `<td class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</td>`
   ));
-  html = replaceInnermostBbcodeWrapWithCallback(html, "tr", (inner) => buildBbcodeTableRowMarkup(inner));
 
   html = html.replace(
     /\[\s*spoiler\s*=\s*((?:[^\[\]]+|\[[^\[\]]*\])*)\s*\]([\s\S]*?)\[\s*\/\s*spoiler\s*\]/gi,
