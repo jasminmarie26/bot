@@ -9171,6 +9171,28 @@ body.theme-atari .guestbook-entry-panel {
   text-align: right;
 }
 
+.bb-left > .bb-table-wrap,
+.bb-center > .bb-table-wrap,
+.bb-right > .bb-table-wrap {
+  display: block;
+  width: fit-content;
+}
+
+.bb-left > .bb-table-wrap {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.bb-center > .bb-table-wrap {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bb-right > .bb-table-wrap {
+  margin-left: auto;
+  margin-right: 0;
+}
+
 .bb-block {
   display: block;
   text-align: justify;
