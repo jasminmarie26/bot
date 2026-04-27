@@ -231,6 +231,8 @@ const PERSONAL_STAFF_PM_NOTIFICATION_TYPE = "staff_pm";
 const STAFF_MAIL_NOTIFICATION_TYPE = "staff_mail";
 const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
+const PRIMARY_ADMIN_USERNAME = "naschblume";
+const PRIMARY_ADMIN_LOG_LABEL = "Noctra";
 const SERVER_WORK_NOTICE_WEEKDAYS = new Set(["Mon", "Wed", "Fri"]);
 const SERVER_WORK_NOTICE_START_MINUTES = 16 * 60 + 45;
 const SERVER_WORK_NOTICE_END_MINUTES = 20 * 60 + 30;
@@ -5539,6 +5541,9 @@ function parseStoredJsonObjectArray(rawValue) {
 }
 
 const STAFF_USER_LOG_BACKUP_RETENTION_MONTHS = 3;
+const ROOM_LOG_TYPE_STAFF = "staff";
+const ROOM_LOG_TYPE_ADMIN_AUTO = "admin-auto";
+const ROOM_LOG_TYPES = new Set([ROOM_LOG_TYPE_STAFF, ROOM_LOG_TYPE_ADMIN_AUTO]);
 
 const insertChatLogBackupStatement = db.prepare(
   `INSERT INTO chat_log_backups (
@@ -5580,17 +5585,43 @@ const insertStaffUserLogBackupStatement = db.prepare(
      entry_count,
      end_reason_text,
      log_text,
-     entries_json
-   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     entries_json,
+     log_scope
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 
 const cleanupExpiredStaffUserLogBackupsStatement = db.prepare(
   `DELETE FROM staff_user_log_backups
     WHERE datetime(COALESCE(NULLIF(ended_at, ''), created_at)) < datetime('now', ?)`
 );
+const deleteStaffUserLogBackupsByScopeStatement = db.prepare(
+  `DELETE FROM staff_user_log_backups
+    WHERE lower(COALESCE(log_scope, 'staff')) = lower(?)`
+);
+const selectPrimaryAdminLogIdentityStatement = db.prepare(
+  `SELECT id, username, account_number
+     FROM users
+    WHERE lower(username) = ?
+    LIMIT 1`
+);
 
 function cleanupExpiredStaffUserLogBackups() {
   cleanupExpiredStaffUserLogBackupsStatement.run(`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`);
+}
+
+function normalizeRoomLogType(logType) {
+  const normalizedLogType = String(logType || "").trim().toLowerCase();
+  return ROOM_LOG_TYPES.has(normalizedLogType) ? normalizedLogType : ROOM_LOG_TYPE_STAFF;
+}
+
+function getPrimaryAdminAutoLogStarterIdentity() {
+  const primaryAdmin = selectPrimaryAdminLogIdentityStatement.get(PRIMARY_ADMIN_USERNAME);
+  return {
+    userId: Number(primaryAdmin?.id) || 0,
+    username: String(primaryAdmin?.username || PRIMARY_ADMIN_USERNAME).trim() || PRIMARY_ADMIN_USERNAME,
+    accountNumber: String(primaryAdmin?.account_number || "").trim(),
+    displayName: PRIMARY_ADMIN_LOG_LABEL
+  };
 }
 
 const selectActiveRoomLogsStatement = db.prepare(
@@ -5602,7 +5633,8 @@ const selectActiveRoomLogsStatement = db.prepare(
           started_by_user_id,
           started_by_name,
           participants_json,
-          messages_json
+          messages_json,
+          log_type
      FROM active_chat_room_logs`
 );
 
@@ -5617,9 +5649,10 @@ const upsertActiveRoomLogStatement = db.prepare(
      started_by_name,
      participants_json,
      messages_json,
+     log_type,
      updated_at
-   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-   ON CONFLICT(room_id, server_id, standard_room_id) DO UPDATE SET
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+   ON CONFLICT(room_id, server_id, standard_room_id, log_type) DO UPDATE SET
      room_label = excluded.room_label,
      started_at = excluded.started_at,
      started_by_user_id = excluded.started_by_user_id,
@@ -5633,7 +5666,8 @@ const deleteActiveRoomLogStatement = db.prepare(
   `DELETE FROM active_chat_room_logs
     WHERE room_id = ?
       AND server_id = ?
-      AND standard_room_id = ?`
+      AND standard_room_id = ?
+      AND log_type = ?`
 );
 
 function saveChatLogBackupForUser(payload = {}) {
@@ -5678,6 +5712,7 @@ function saveChatLogBackupForUser(payload = {}) {
 }
 
 function saveStaffUserLogBackup(payload = {}) {
+  const logScope = normalizeRoomLogType(payload.logScope);
   const participantNames = Array.from(
     new Set((Array.isArray(payload.participantNames) ? payload.participantNames : [])
       .map((entry) => String(entry || "").trim())
@@ -5714,7 +5749,8 @@ function saveStaffUserLogBackup(payload = {}) {
       Array.isArray(payload.entries) ? payload.entries.length : 0,
       String(payload.endReasonText || "").trim(),
       String(payload.logText || "").trim(),
-      JSON.stringify(Array.isArray(payload.entries) ? payload.entries : [])
+      JSON.stringify(Array.isArray(payload.entries) ? payload.entries : []),
+      logScope
     );
 
     cleanupExpiredStaffUserLogBackups();
@@ -5821,13 +5857,15 @@ function getStaffUserLogBackups(options = {}) {
   cleanupExpiredStaffUserLogBackups();
 
   const searchQuery = String(options.query || "").trim().slice(0, 120);
+  const requestedLogScope = normalizeRoomLogType(options.logScope);
   const serverFilter = ["free-rp", "erp"].includes(String(options.serverId || "").trim().toLowerCase())
     ? String(options.serverId || "").trim().toLowerCase()
     : "";
   const clauses = [
-    `datetime(COALESCE(NULLIF(ended_at, ''), created_at)) >= datetime('now', ?)`
+    `datetime(COALESCE(NULLIF(ended_at, ''), created_at)) >= datetime('now', ?)`,
+    `lower(COALESCE(log_scope, 'staff')) = ?`
   ];
-  const values = [`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`];
+  const values = [`-${STAFF_USER_LOG_BACKUP_RETENTION_MONTHS} months`, requestedLogScope];
 
   if (serverFilter) {
     clauses.push(`lower(COALESCE(server_id, '')) = ?`);
@@ -5866,6 +5904,7 @@ function getStaffUserLogBackups(options = {}) {
               entry_count,
               end_reason_text,
               log_text,
+              log_scope,
               created_at
          FROM staff_user_log_backups
         WHERE ${clauses.join(" AND ")}
@@ -5874,9 +5913,34 @@ function getStaffUserLogBackups(options = {}) {
     .all(...values)
     .map((row) => ({
       ...row,
+      log_scope: normalizeRoomLogType(row.log_scope),
       participant_names: parseStoredJsonArray(row.participant_names_json),
       participant_details: parseStoredJsonObjectArray(row.participant_details_json)
     }));
+}
+
+function deleteStaffUserLogBackupsByIds(ids = [], logScope = ROOM_LOG_TYPE_STAFF) {
+  const normalizedIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0)));
+  if (!normalizedIds.length) {
+    return 0;
+  }
+
+  const placeholders = normalizedIds.map(() => "?").join(", ");
+  const normalizedLogScope = normalizeRoomLogType(logScope);
+  const deleteStatement = db.prepare(
+    `DELETE FROM staff_user_log_backups
+      WHERE lower(COALESCE(log_scope, 'staff')) = lower(?)
+        AND id IN (${placeholders})`
+  );
+  const result = deleteStatement.run(normalizedLogScope, ...normalizedIds);
+  return Number(result?.changes) || 0;
+}
+
+function deleteAllStaffUserLogBackups(logScope = ROOM_LOG_TYPE_STAFF) {
+  const result = deleteStaffUserLogBackupsByScopeStatement.run(normalizeRoomLogType(logScope));
+  return Number(result?.changes) || 0;
 }
 
 cleanupExpiredStaffUserLogBackups();
@@ -13044,6 +13108,23 @@ function hasGlobalRoomRights(user) {
   );
 }
 
+function isPrimaryAdminUser(user = null) {
+  const directUsername = String(user?.username || "").trim().toLowerCase();
+  const parsedUserId = Number(user?.id);
+  const accountUser =
+    Number.isInteger(parsedUserId) && parsedUserId > 0 ? getAccountUserById(parsedUserId) : null;
+  const username = directUsername || String(accountUser?.username || "").trim().toLowerCase();
+  return Boolean(
+    username === PRIMARY_ADMIN_USERNAME &&
+      (
+        user?.is_admin === true ||
+        user?.is_admin === 1 ||
+        accountUser?.is_admin === true ||
+        accountUser?.is_admin === 1
+      )
+  );
+}
+
 function isPrimaryAdminKickProtectedTarget(target = null) {
   const parsedUserId =
     Number.isInteger(Number(target?.userId)) ? Number(target.userId) : Number(target?.id);
@@ -13051,7 +13132,7 @@ function isPrimaryAdminKickProtectedTarget(target = null) {
     Number.isInteger(parsedUserId) && parsedUserId > 0 ? getAccountUserById(parsedUserId) : null;
   const username = String(accountUser?.username || target?.username || "").trim().toLowerCase();
   const characterName = String(target?.name || "").trim().toLowerCase();
-  return username === "naschblume" || characterName === "noctra";
+  return username === PRIMARY_ADMIN_USERNAME || characterName === PRIMARY_ADMIN_LOG_LABEL.toLowerCase();
 }
 
 function hasPersistentRoomRights(userOrId, roomOrId) {
@@ -13450,6 +13531,16 @@ function requireStaff(req, res, next) {
     return res.status(403).render("errors/error", {
       title: "Kein Zugriff",
       message: "Nur Admins und Moderatoren dürfen diese Seite sehen."
+    });
+  }
+  return next();
+}
+
+function requirePrimaryAdmin(req, res, next) {
+  if (!isPrimaryAdminUser(req.session.user)) {
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Nur der Hauptadmin darf diesen Bereich sehen."
     });
   }
   return next();
@@ -19306,7 +19397,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
     }
 
     clearPendingRoomDeletion(roomId);
-    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+    await finalizeAllRoomLogs(roomId, room.server_id);
     touchFestplayActivity(festplayId);
     deleteRoomData(roomId);
     io.emit("chat:room-removed", { room_id: roomId });
@@ -19357,7 +19448,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/update", requireAu
     maybeStartAutomaticRoomLog(roomId, room.server_id, refreshedRoom);
   } else if (emailLogEnabled !== 1 && Number(room.email_log_enabled) === 1 && getActiveRoomLog(roomId, room.server_id)) {
     emitSystemChatMessage(roomId, room.server_id, "Log wurde deaktiviert.");
-    await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+    await finalizeAllRoomLogs(roomId, room.server_id);
   }
 
   emitRoomStateUpdate(roomId, room.server_id, refreshedRoom);
@@ -19445,7 +19536,7 @@ app.post("/characters/:id/festplays/:festplayId/rooms/:roomId/delete", requireAu
   }
 
   clearPendingRoomDeletion(roomId);
-  await finalizeRoomLog(roomId, room.server_id, { reason: "manual" });
+  await finalizeAllRoomLogs(roomId, room.server_id);
   touchFestplayActivity(festplayId);
   deleteRoomData(roomId);
   io.emit("chat:room-removed", { room_id: roomId });
@@ -22257,61 +22348,55 @@ function renderStaffOverview(req, res) {
   });
 }
 
-function renderStaffUserBackups(req, res) {
-  const panelConfig = getStaffPanelConfig(req.session.user);
-  const searchQuery = String(req.query.q || "").trim().slice(0, 120);
-  const activeServerFilter = ["free-rp", "erp"].includes(String(req.query.server || "").trim().toLowerCase())
-    ? String(req.query.server || "").trim().toLowerCase()
-    : "";
-  const retentionSince = addUtcCalendarMonths(new Date(), -STAFF_USER_LOG_BACKUP_RETENTION_MONTHS);
-  const userBackupLogs = getStaffUserLogBackups({
-    query: searchQuery,
-    serverId: activeServerFilter
-  }).map((entry) => {
-    const participantDetails = Array.isArray(entry.participant_details)
-      ? entry.participant_details.map((participant) => ({
-        ...participant,
-        display_name: String(participant?.display_name || "").trim(),
-        username: String(participant?.username || "").trim(),
-        account_number: String(participant?.account_number || "").trim()
-      }))
-      : [];
-    const startedByName = String(entry.started_by_name || "").trim();
-    const startedByUsername = String(entry.started_by_username || "").trim();
-    const startedByAccountNumber = String(entry.started_by_account_number || "").trim();
-    const starterLabel = startedByName || startedByUsername || "Unbekannt";
+function decorateStaffUserBackupLogEntry(entry) {
+  const participantDetails = Array.isArray(entry.participant_details)
+    ? entry.participant_details.map((participant) => ({
+      ...participant,
+      display_name: String(participant?.display_name || "").trim(),
+      username: String(participant?.username || "").trim(),
+      account_number: String(participant?.account_number || "").trim()
+    }))
+    : [];
+  const startedByName = String(entry.started_by_name || "").trim();
+  const startedByUsername = String(entry.started_by_username || "").trim();
+  const startedByAccountNumber = String(entry.started_by_account_number || "").trim();
+  const starterLabel = startedByName || startedByUsername || "Unbekannt";
 
-    return {
-      ...entry,
-      participant_details: participantDetails,
-      participant_count: Number(entry.participant_count) || participantDetails.length,
-      entry_count: Number(entry.entry_count) || 0,
-      started_at_label: formatGermanDateTime(entry.started_at || entry.created_at),
-      ended_at_label: formatGermanDateTime(entry.ended_at || entry.created_at),
-      server_label: getServerLabel(entry.server_id),
-      starter_label: starterLabel,
-      starter_meta_parts: [
-        startedByUsername && startedByUsername !== starterLabel ? `@${startedByUsername}` : "",
-        startedByAccountNumber ? `#${startedByAccountNumber}` : ""
-      ].filter(Boolean)
-    };
-  });
-  const starterKeys = new Set(
-    userBackupLogs
-      .map((entry) =>
-        String(
-          entry.started_by_account_number ||
-            entry.started_by_username ||
-            entry.started_by_name ||
-            entry.id
-        ).trim().toLowerCase()
-      )
-      .filter(Boolean)
-  );
+  return {
+    ...entry,
+    log_scope: normalizeRoomLogType(entry.log_scope),
+    participant_details: participantDetails,
+    participant_count: Number(entry.participant_count) || participantDetails.length,
+    entry_count: Number(entry.entry_count) || 0,
+    started_at_label: formatGermanDateTime(entry.started_at || entry.created_at),
+    ended_at_label: formatGermanDateTime(entry.ended_at || entry.created_at),
+    server_label: getServerLabel(entry.server_id),
+    starter_label: starterLabel,
+    starter_meta_parts: [
+      startedByUsername && startedByUsername !== starterLabel ? `@${startedByUsername}` : "",
+      startedByAccountNumber ? `#${startedByAccountNumber}` : ""
+    ].filter(Boolean)
+  };
+}
+
+function buildStaffUserBackupStats(entries = []) {
+  const starterKeys = new Set();
   const participantKeys = new Set();
 
-  userBackupLogs.forEach((entry) => {
-    (Array.isArray(entry.participant_details) ? entry.participant_details : []).forEach((participant) => {
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const starterKey = String(
+      entry?.started_by_account_number ||
+        entry?.started_by_username ||
+        entry?.started_by_name ||
+        entry?.id
+    )
+      .trim()
+      .toLowerCase();
+    if (starterKey) {
+      starterKeys.add(starterKey);
+    }
+
+    (Array.isArray(entry?.participant_details) ? entry.participant_details : []).forEach((participant) => {
       const participantKey = String(
         participant?.account_number ||
           participant?.username ||
@@ -22325,6 +22410,35 @@ function renderStaffUserBackups(req, res) {
     });
   });
 
+  return {
+    starterCount: starterKeys.size,
+    participantCount: participantKeys.size
+  };
+}
+
+function renderStaffUserBackups(req, res) {
+  const panelConfig = getStaffPanelConfig(req.session.user);
+  const searchQuery = String(req.query.q || "").trim().slice(0, 120);
+  const activeServerFilter = ["free-rp", "erp"].includes(String(req.query.server || "").trim().toLowerCase())
+    ? String(req.query.server || "").trim().toLowerCase()
+    : "";
+  const retentionSince = addUtcCalendarMonths(new Date(), -STAFF_USER_LOG_BACKUP_RETENTION_MONTHS);
+  const userBackupLogs = getStaffUserLogBackups({
+    query: searchQuery,
+    serverId: activeServerFilter,
+    logScope: ROOM_LOG_TYPE_STAFF
+  }).map(decorateStaffUserBackupLogEntry);
+  const userBackupStats = buildStaffUserBackupStats(userBackupLogs);
+  const isPrimaryAdminAutoLogViewer = isPrimaryAdminUser(req.session.user);
+  const primaryAdminAutoLogs = isPrimaryAdminAutoLogViewer
+    ? getStaffUserLogBackups({
+      query: searchQuery,
+      serverId: activeServerFilter,
+      logScope: ROOM_LOG_TYPE_ADMIN_AUTO
+    }).map(decorateStaffUserBackupLogEntry)
+    : [];
+  const primaryAdminAutoLogStats = buildStaffUserBackupStats(primaryAdminAutoLogs);
+
   return res.render("admin/staff-user-backups", {
     title: `${panelConfig.panelTitle}: USER BACKUP`,
     panelTitle: panelConfig.panelTitle,
@@ -22335,12 +22449,57 @@ function renderStaffUserBackups(req, res) {
     searchQuery,
     activeServerFilter,
     userBackupLogs,
+    primaryAdminAutoLogs,
+    isPrimaryAdminAutoLogViewer,
     filteredLogCount: userBackupLogs.length,
-    starterCount: starterKeys.size,
-    participantCount: participantKeys.size,
+    starterCount: userBackupStats.starterCount,
+    participantCount: userBackupStats.participantCount,
+    primaryAdminAutoLogCount: primaryAdminAutoLogs.length,
+    primaryAdminAutoStarterCount: primaryAdminAutoLogStats.starterCount,
+    primaryAdminAutoParticipantCount: primaryAdminAutoLogStats.participantCount,
+    primaryAdminAutoDeleteSelectedPath: "/admin/user-backups/auto-logs/delete-selected",
+    primaryAdminAutoDeleteAllPath: "/admin/user-backups/auto-logs/delete-all",
+    primaryAdminAutoDeleteSinglePath: "/admin/user-backups/auto-logs/delete",
     retentionMonths: STAFF_USER_LOG_BACKUP_RETENTION_MONTHS,
     retentionSinceLabel: retentionSince ? formatGermanDateTime(retentionSince) : ""
   });
+}
+
+function getPrimaryAdminAutoUserBackupReturnTarget(req) {
+  return getSafeReturnTarget(req, "/admin/user-backups#primary-admin-auto-logs");
+}
+
+function deletePrimaryAdminAutoLog(req, res) {
+  const deletedCount = deleteStaffUserLogBackupsByIds([req.body.log_id], ROOM_LOG_TYPE_ADMIN_AUTO);
+  if (deletedCount > 0) {
+    setFlash(req, "success", "Auto-Log wurde gelöscht.");
+  } else {
+    setFlash(req, "error", "Dieses Auto-Log wurde nicht gefunden.");
+  }
+  return res.redirect(getPrimaryAdminAutoUserBackupReturnTarget(req));
+}
+
+function deleteSelectedPrimaryAdminAutoLogs(req, res) {
+  const requestedIds = Array.isArray(req.body.log_ids)
+    ? req.body.log_ids
+    : [req.body.log_ids];
+  const deletedCount = deleteStaffUserLogBackupsByIds(requestedIds, ROOM_LOG_TYPE_ADMIN_AUTO);
+  if (deletedCount > 0) {
+    setFlash(req, "success", `${deletedCount} Auto-Log${deletedCount === 1 ? "" : "s"} gelöscht.`);
+  } else {
+    setFlash(req, "error", "Bitte markiere mindestens ein Auto-Log.");
+  }
+  return res.redirect(getPrimaryAdminAutoUserBackupReturnTarget(req));
+}
+
+function deleteAllPrimaryAdminAutoLogs(req, res) {
+  const deletedCount = deleteAllStaffUserLogBackups(ROOM_LOG_TYPE_ADMIN_AUTO);
+  if (deletedCount > 0) {
+    setFlash(req, "success", `${deletedCount} Auto-Log${deletedCount === 1 ? "" : "s"} gelöscht.`);
+  } else {
+    setFlash(req, "error", "Es sind keine Auto-Logs zum Löschen vorhanden.");
+  }
+  return res.redirect(getPrimaryAdminAutoUserBackupReturnTarget(req));
 }
 
 function renderStaffUserDetails(req, res) {
@@ -22429,6 +22588,9 @@ app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
 app.get("/staff/overview", requireAuth, requireStaff, renderStaffOverview);
 app.get("/admin/user-backups", requireAuth, requireAdmin, renderStaffUserBackups);
 app.get("/staff/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
+app.post("/admin/user-backups/auto-logs/delete", requireAuth, requireAdmin, requirePrimaryAdmin, deletePrimaryAdminAutoLog);
+app.post("/admin/user-backups/auto-logs/delete-selected", requireAuth, requireAdmin, requirePrimaryAdmin, deleteSelectedPrimaryAdminAutoLogs);
+app.post("/admin/user-backups/auto-logs/delete-all", requireAuth, requireAdmin, requirePrimaryAdmin, deleteAllPrimaryAdminAutoLogs);
 
 app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
 app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
@@ -24035,7 +24197,7 @@ function ejectSocketFromActiveChat(memberSocket, options = {}) {
   if (!previousRoomWasRemoved) {
     emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
   }
-  void finalizeRoomLogIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
+  finalizeActiveRoomLogsIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
   emitHomeStatsUpdate();
 
   if (notice) {
@@ -25424,10 +25586,15 @@ function formatChatTimestamp(date = new Date()) {
     [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
 }
 
-function getRoomLogKey(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+function getRoomLogKey(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
   const scopeServerKey = getChatScopeServerKey(roomId, serverId, standardRoomId);
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "lobby";
-  return `${scopeServerKey}:${normalizedRoomId}`;
+  return `${scopeServerKey}:${normalizedRoomId}:${normalizeRoomLogType(logType)}`;
 }
 
 function getRoomLogLabel(roomId, serverId = DEFAULT_SERVER_ID, room = null, standardRoomId = null) {
@@ -25867,12 +26034,28 @@ function getRoomLogRecipients(userIds) {
 
 const activeRoomLogs = new Map();
 
-function getActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
-  return activeRoomLogs.get(getRoomLogKey(roomId, serverId, standardRoomId)) || null;
+function getActiveRoomLog(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
+  return activeRoomLogs.get(getRoomLogKey(roomId, serverId, standardRoomId, logType)) || null;
 }
 
-function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
-  const key = getRoomLogKey(roomId, serverId, standardRoomId);
+function getActiveRoomLogsForChannel(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+  return [ROOM_LOG_TYPE_STAFF, ROOM_LOG_TYPE_ADMIN_AUTO]
+    .map((logType) => getActiveRoomLog(roomId, serverId, standardRoomId, logType))
+    .filter(Boolean);
+}
+
+function clearPendingRoomLogFinalization(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
+  const key = getRoomLogKey(roomId, serverId, standardRoomId, logType);
   const timer = pendingRoomLogFinalizations.get(key);
   if (!timer) {
     return false;
@@ -25883,13 +26066,19 @@ function clearPendingRoomLogFinalization(roomId, serverId = DEFAULT_SERVER_ID, s
   return true;
 }
 
+function getRoomLogEmptyGraceMs(logType = ROOM_LOG_TYPE_STAFF) {
+  return normalizeRoomLogType(logType) === ROOM_LOG_TYPE_ADMIN_AUTO ? 0 : ROOM_LOG_EMPTY_GRACE_MS;
+}
+
 function schedulePendingRoomLogFinalization(
   roomId,
   serverId = DEFAULT_SERVER_ID,
   delayMs = ROOM_LOG_EMPTY_GRACE_MS,
-  standardRoomId = null
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
 ) {
-  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
+  const normalizedLogType = normalizeRoomLogType(logType);
+  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId, normalizedLogType);
   if (!roomLog) {
     return false;
   }
@@ -25899,9 +26088,14 @@ function schedulePendingRoomLogFinalization(
   const resolvedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
-  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId, normalizedLogType);
 
-  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  clearPendingRoomLogFinalization(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId,
+    normalizedLogType
+  );
 
   const timer = setTimeout(() => {
     pendingRoomLogFinalizations.delete(key);
@@ -25912,7 +26106,8 @@ function schedulePendingRoomLogFinalization(
       normalizedRoomId,
       normalizedServerId,
       { reason: "empty-room" },
-      resolvedStandardRoomId
+      resolvedStandardRoomId,
+      normalizedLogType
     );
   }, Math.max(0, Number(delayMs) || 0));
 
@@ -25997,10 +26192,12 @@ function hydrateActiveRoomLogRow(row) {
   const standardRoomId = roomId
     ? ""
     : getStandardRoomContext(serverId, row.standard_room_id).standardRoomId;
+  const logType = normalizeRoomLogType(row.log_type);
   return {
     roomId,
     serverId,
     standardRoomId,
+    logType,
     roomLabel: String(row.room_label || "").trim() || getRoomLogLabel(roomId, serverId, null, standardRoomId),
     startedAt: String(row.started_at || "").trim() || formatChatTimestamp(),
     startedByUserId: Number(row.started_by_user_id) || null,
@@ -26021,6 +26218,7 @@ function persistActiveRoomLog(roomLog) {
   const normalizedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, roomLog.standardRoomId).standardRoomId;
+  const normalizedLogType = normalizeRoomLogType(roomLog.logType);
 
   try {
     upsertActiveRoomLogStatement.run(
@@ -26033,7 +26231,8 @@ function persistActiveRoomLog(roomLog) {
       Number(roomLog.startedByUserId) || 0,
       String(roomLog.startedByName || "").trim() || "Jemand",
       JSON.stringify(serializeRoomLogParticipants(roomLog)),
-      JSON.stringify(serializeRoomLogMessages(roomLog))
+      JSON.stringify(serializeRoomLogMessages(roomLog)),
+      normalizedLogType
     );
     return true;
   } catch (error) {
@@ -26042,16 +26241,27 @@ function persistActiveRoomLog(roomLog) {
   }
 }
 
-function removePersistedActiveRoomLog(roomId, serverId = DEFAULT_SERVER_ID, standardRoomId = null) {
+function removePersistedActiveRoomLog(
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
   const parsedRoomId = Number(roomId);
   const normalizedRoomId = Number.isInteger(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : 0;
   const normalizedServerId = normalizeServer(serverId);
   const normalizedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+  const normalizedLogType = normalizeRoomLogType(logType);
 
   try {
-    deleteActiveRoomLogStatement.run(normalizedRoomId, normalizedServerId, normalizedStandardRoomId);
+    deleteActiveRoomLogStatement.run(
+      normalizedRoomId,
+      normalizedServerId,
+      normalizedStandardRoomId,
+      normalizedLogType
+    );
     return true;
   } catch (error) {
     console.error("Konnte aktives Raum-Log nicht entfernen:", error);
@@ -26067,7 +26277,7 @@ function restorePersistedActiveRoomLogs() {
     }
 
     activeRoomLogs.set(
-      getRoomLogKey(roomLog.roomId, roomLog.serverId, roomLog.standardRoomId),
+      getRoomLogKey(roomLog.roomId, roomLog.serverId, roomLog.standardRoomId, roomLog.logType),
       roomLog
     );
   });
@@ -26116,73 +26326,99 @@ function rememberRoomLogParticipant(
   user,
   displayName = "",
   characterId = null,
-  standardRoomId = null
+  standardRoomId = null,
+  logType = null
 ) {
-  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
-  if (!roomLog) return;
-
-  clearPendingRoomLogFinalization(roomId, serverId, standardRoomId);
-
   const userId = Number(user?.id);
   if (!Number.isInteger(userId) || userId < 1) return;
 
-  upsertRoomLogParticipant(
-    roomLog,
-    userId,
-    displayName || user?.display_name || user?.username || `User ${userId}`,
-    characterId
-  );
+  const roomLogs = logType
+    ? [getActiveRoomLog(roomId, serverId, standardRoomId, logType)].filter(Boolean)
+    : getActiveRoomLogsForChannel(roomId, serverId, standardRoomId);
+  if (!roomLogs.length) return;
+
+  roomLogs.forEach((roomLog) => {
+    clearPendingRoomLogFinalization(roomId, serverId, standardRoomId, roomLog.logType);
+    upsertRoomLogParticipant(
+      roomLog,
+      userId,
+      displayName || user?.display_name || user?.username || `User ${userId}`,
+      characterId
+    );
+  });
 }
 
-function appendMessageToActiveRoomLog(roomId, serverId, entry, standardRoomId = null) {
-  const roomLog = getActiveRoomLog(roomId, serverId, standardRoomId);
-  if (!roomLog) return;
-
+function appendMessageToActiveRoomLog(roomId, serverId, entry, standardRoomId = null, logType = null) {
   const content = String(entry?.content || "").trim();
   if (!content) return;
 
   const createdAt = String(entry?.created_at || formatChatTimestamp()).trim() || formatChatTimestamp();
   const type = String(entry?.type || "chat").trim().toLowerCase() === "system" ? "system" : "chat";
   const username = String(entry?.username || "").trim();
+  const roomLogs = logType
+    ? [getActiveRoomLog(roomId, serverId, standardRoomId, logType)].filter(Boolean)
+    : getActiveRoomLogsForChannel(roomId, serverId, standardRoomId);
+  if (!roomLogs.length) return;
 
-  roomLog.messages.push({
-    type,
-    username,
-    role_style: String(entry?.role_style || "").trim(),
-    content,
-    created_at: createdAt
+  roomLogs.forEach((roomLog) => {
+    roomLog.messages.push({
+      type,
+      username,
+      role_style: String(entry?.role_style || "").trim(),
+      content,
+      created_at: createdAt
+    });
+
+    const userId = Number(entry?.user_id);
+    if (type !== "system" && Number.isInteger(userId) && userId > 0) {
+      upsertRoomLogParticipant(roomLog, userId, username || `User ${userId}`, entry?.character_id);
+      return;
+    }
+
+    persistActiveRoomLog(roomLog);
   });
-
-  const userId = Number(entry?.user_id);
-  if (type !== "system" && Number.isInteger(userId) && userId > 0) {
-    upsertRoomLogParticipant(roomLog, userId, username || `User ${userId}`, entry?.character_id);
-    return;
-  }
-
-  persistActiveRoomLog(roomLog);
 }
 
-function startRoomLog(roomId, serverId, room, startedBySocket, standardRoomId = null) {
+function startRoomLog(roomId, serverId, room, startedBySocket, standardRoomId = null, options = {}) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
   const resolvedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
-  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  const normalizedLogType = normalizeRoomLogType(options.logType);
+  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId, normalizedLogType);
   if (activeRoomLogs.has(key)) {
     return null;
   }
 
-  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  clearPendingRoomLogFinalization(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId,
+    normalizedLogType
+  );
+
+  const parsedStartedByUserId = Number(options.startedByUserId);
+  const startedByUserId =
+    Number.isInteger(parsedStartedByUserId) && parsedStartedByUserId > 0
+      ? parsedStartedByUserId
+      : (Number(startedBySocket?.data?.user?.id) || null);
+  const startedByName =
+    String(options.startedByName || "").trim() ||
+    getSocketDisplayProfile(startedBySocket, normalizedServerId).label ||
+    "Jemand";
 
   const roomLog = {
     roomId: normalizedRoomId,
     serverId: normalizedServerId,
     standardRoomId: resolvedStandardRoomId,
+    logType: normalizedLogType,
     roomLabel: getRoomLogLabel(normalizedRoomId, normalizedServerId, room, resolvedStandardRoomId),
     startedAt: formatChatTimestamp(),
-    startedByUserId: Number(startedBySocket?.data?.user?.id) || null,
-    startedByName: getSocketDisplayProfile(startedBySocket, normalizedServerId).label || "Jemand",
+    startedByUserId,
+    startedByAccountNumber: String(options.startedByAccountNumber || "").trim(),
+    startedByUsername: String(options.startedByUsername || "").trim(),
+    startedByName,
     participants: new Map(),
     messages: []
   };
@@ -26197,7 +26433,8 @@ function startRoomLog(roomId, serverId, room, startedBySocket, standardRoomId = 
       memberSocket?.data?.user,
       getSocketDisplayProfile(memberSocket, socketServerId).label,
       getSocketPreferredCharacterId(memberSocket, socketServerId),
-      resolvedStandardRoomId
+      resolvedStandardRoomId,
+      normalizedLogType
     );
   });
 
@@ -26217,7 +26454,7 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
     return false;
   }
 
-  if (getActiveRoomLog(normalizedRoomId, normalizedServerId)) {
+  if (getActiveRoomLog(normalizedRoomId, normalizedServerId, null, ROOM_LOG_TYPE_STAFF)) {
     return false;
   }
 
@@ -26231,23 +26468,88 @@ function maybeStartAutomaticRoomLog(roomId, serverId, room = null, preferredSock
     return false;
   }
 
-  startRoomLog(normalizedRoomId, normalizedServerId, resolvedRoom, starterSocket);
+  startRoomLog(normalizedRoomId, normalizedServerId, resolvedRoom, starterSocket, null, {
+    logType: ROOM_LOG_TYPE_STAFF
+  });
   emitSystemChatMessage(normalizedRoomId, normalizedServerId, "Log ist aktiviert.");
   return true;
 }
 
-async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = null) {
+function maybeStartPrimaryAdminAutoRoomLog(
+  roomId,
+  serverId,
+  room = null,
+  preferredSocket = null,
+  standardRoomId = null
+) {
+  const normalizedRoomId = Number.isInteger(Number(roomId)) && Number(roomId) > 0 ? Number(roomId) : null;
+  const normalizedServerId = normalizeServer(serverId || room?.server_id);
+  const resolvedStandardRoomId = normalizedRoomId
+    ? ""
+    : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
+
+  if (
+    getActiveRoomLog(
+      normalizedRoomId,
+      normalizedServerId,
+      resolvedStandardRoomId,
+      ROOM_LOG_TYPE_ADMIN_AUTO
+    )
+  ) {
+    return false;
+  }
+
+  const memberSockets = getSocketsInChannel(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  if (!memberSockets.length) {
+    return false;
+  }
+
+  const starterSocket = memberSockets.includes(preferredSocket) ? preferredSocket : memberSockets[0];
+  if (!starterSocket) {
+    return false;
+  }
+
+  const primaryAdminIdentity = getPrimaryAdminAutoLogStarterIdentity();
+  startRoomLog(normalizedRoomId, normalizedServerId, room, starterSocket, resolvedStandardRoomId, {
+    logType: ROOM_LOG_TYPE_ADMIN_AUTO,
+    startedByUserId: primaryAdminIdentity.userId,
+    startedByAccountNumber: primaryAdminIdentity.accountNumber,
+    startedByUsername: primaryAdminIdentity.username,
+    startedByName: primaryAdminIdentity.displayName
+  });
+  return true;
+}
+
+async function finalizeRoomLog(
+  roomId,
+  serverId,
+  options = {},
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
   const resolvedStandardRoomId = normalizedRoomId
     ? ""
     : getStandardRoomContext(normalizedServerId, standardRoomId).standardRoomId;
-  const key = getRoomLogKey(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
-  clearPendingRoomLogFinalization(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  const normalizedLogType = normalizeRoomLogType(logType);
+  const key = getRoomLogKey(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId,
+    normalizedLogType
+  );
+  clearPendingRoomLogFinalization(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId,
+    normalizedLogType
+  );
   const roomLog = activeRoomLogs.get(key);
   if (!roomLog) {
     return {
       hadLog: false,
+      staffBackupSaved: false,
       backupSavedCount: 0,
       deliveredCount: 0,
       emailDisabledCount: 0,
@@ -26259,7 +26561,12 @@ async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = 
   }
 
   activeRoomLogs.delete(key);
-  removePersistedActiveRoomLog(normalizedRoomId, normalizedServerId, resolvedStandardRoomId);
+  removePersistedActiveRoomLog(
+    normalizedRoomId,
+    normalizedServerId,
+    resolvedStandardRoomId,
+    normalizedLogType
+  );
 
   const recipientRows = getRoomLogRecipients(Array.from(roomLog.participants.keys()));
   const recipientMap = new Map(
@@ -26307,15 +26614,34 @@ async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = 
     startedAt: roomLog.startedAt,
     endedAt,
     startedByUserId: roomLog.startedByUserId,
-    startedByAccountNumber: startedByRecipient?.account_number,
-    startedByUsername: startedByRecipient?.username,
+    startedByAccountNumber: roomLog.startedByAccountNumber || startedByRecipient?.account_number,
+    startedByUsername: roomLog.startedByUsername || startedByRecipient?.username,
     startedByName: roomLog.startedByName,
     participantNames,
     participantDetails,
     endReasonText,
     logText,
-    entries: roomLog.messages
+    entries: roomLog.messages,
+    logScope: roomLog.logType
   });
+  if (roomLog.logType === ROOM_LOG_TYPE_ADMIN_AUTO) {
+    return {
+      hadLog: true,
+      staffBackupSaved: true,
+      backupSavedCount: 0,
+      deliveredCount: 0,
+      emailDisabledCount: 0,
+      missingEmailCount: 0,
+      mailerUnavailableCount: 0,
+      failedCount: 0,
+      fullAttachmentCount: 0,
+      pdfOnlyCount: 0,
+      plainOnlyCount: 0,
+      participantCount: roomLog.participants.size,
+      lastErrorSummary: ""
+    };
+  }
+
   const mailerConfigured = Boolean(getVerificationMailer());
   let backupSavedCount = 0;
   let deliveredCount = 0;
@@ -26404,6 +26730,7 @@ async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = 
 
   return {
     hadLog: true,
+    staffBackupSaved: true,
     backupSavedCount,
     deliveredCount,
     emailDisabledCount,
@@ -26418,13 +26745,43 @@ async function finalizeRoomLog(roomId, serverId, options = {}, standardRoomId = 
   };
 }
 
-async function finalizeRoomLogIfEmpty(roomId, serverId, standardRoomId = null) {
+async function finalizeRoomLogIfEmpty(
+  roomId,
+  serverId,
+  standardRoomId = null,
+  logType = ROOM_LOG_TYPE_STAFF
+) {
   if (getSocketsInChannel(roomId, serverId, standardRoomId).length > 0) {
-    clearPendingRoomLogFinalization(roomId, serverId, standardRoomId);
+    clearPendingRoomLogFinalization(roomId, serverId, standardRoomId, logType);
     return false;
   }
 
-  return schedulePendingRoomLogFinalization(roomId, serverId, ROOM_LOG_EMPTY_GRACE_MS, standardRoomId);
+  return schedulePendingRoomLogFinalization(
+    roomId,
+    serverId,
+    getRoomLogEmptyGraceMs(logType),
+    standardRoomId,
+    logType
+  );
+}
+
+function finalizeActiveRoomLogsIfEmpty(roomId, serverId, standardRoomId = null) {
+  [ROOM_LOG_TYPE_STAFF, ROOM_LOG_TYPE_ADMIN_AUTO].forEach((logType) => {
+    if (getActiveRoomLog(roomId, serverId, standardRoomId, logType)) {
+      void finalizeRoomLogIfEmpty(roomId, serverId, standardRoomId, logType);
+    }
+  });
+}
+
+async function finalizeAllRoomLogs(roomId, serverId, standardRoomId = null) {
+  const results = [];
+  for (const logType of [ROOM_LOG_TYPE_STAFF, ROOM_LOG_TYPE_ADMIN_AUTO]) {
+    if (!getActiveRoomLog(roomId, serverId, standardRoomId, logType)) {
+      continue;
+    }
+    results.push(await finalizeRoomLog(roomId, serverId, { reason: "manual" }, standardRoomId, logType));
+  }
+  return results;
 }
 
 restorePersistedActiveRoomLogs();
@@ -27371,7 +27728,7 @@ function finalizeChatDisconnectEntry(entry) {
   }
 
   emitOnlineCharacters(entry.roomId, entry.serverId, entry.standardRoomId);
-  void finalizeRoomLogIfEmpty(entry.roomId, entry.serverId, entry.standardRoomId);
+  finalizeActiveRoomLogsIfEmpty(entry.roomId, entry.serverId, entry.standardRoomId);
   scheduleRoomDeletion(entry.roomId);
   emitHomeStatsUpdate();
   return true;
@@ -28064,7 +28421,7 @@ io.on("connection", (socket) => {
       ? maybeRemoveEmptyRoom(previousRoomId)
       : false;
     if (previousServerId) {
-      void finalizeRoomLogIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
+      finalizeActiveRoomLogsIfEmpty(previousRoomId, previousServerId, previousStandardRoomId);
     }
     if (previousServerId && !previousRoomWasRemoved) {
       emitOnlineCharacters(previousRoomId, previousServerId, previousStandardRoomId);
@@ -29408,6 +29765,7 @@ io.on("connection", (socket) => {
     const createdAt = formatChatTimestamp();
     const messageTimeIso = new Date().toISOString();
     const showNameTime = socket.data.user?.show_own_chat_time === true;
+    maybeStartPrimaryAdminAutoRoomLog(roomId, serverId, room, socket, standardRoomId);
     appendMessageToActiveRoomLog(
       roomId,
       serverId,

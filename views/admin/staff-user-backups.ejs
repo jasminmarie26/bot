@@ -6,6 +6,7 @@
   const currentSearchQuery = String(searchQuery || "");
   const selectedServerFilter = String(activeServerFilter || "").trim().toLowerCase();
   const visibleLogs = Array.isArray(userBackupLogs) ? userBackupLogs : [];
+  const visiblePrimaryAdminAutoLogs = Array.isArray(primaryAdminAutoLogs) ? primaryAdminAutoLogs : [];
   const buildUserBackupFilterUrl = (serverFilter = "") => {
     const params = [];
     if (currentSearchQuery) {
@@ -16,6 +17,7 @@
     }
     return params.length ? `${userBackupBasePath}?${params.join("&")}` : userBackupBasePath;
   };
+  const primaryAdminAutoReturnTarget = `${buildUserBackupFilterUrl(selectedServerFilter)}#primary-admin-auto-logs`;
 %>
 
 <section class="panel account-layout">
@@ -79,6 +81,13 @@
             <% } %>
           </td>
         </tr>
+        <% if (isPrimaryAdminAutoLogViewer) { %>
+          <tr>
+            <td>Noctra Auto-Logs</td>
+            <td><strong><%= primaryAdminAutoLogCount %></strong></td>
+            <td>Unsichtbare Hintergrund-Logs aus allen Räumen und Bereichen.</td>
+          </tr>
+        <% } %>
       </tbody>
     </table>
   </div>
@@ -225,5 +234,186 @@
     </div>
   <% } %>
 </section>
+
+<% if (isPrimaryAdminAutoLogViewer) { %>
+  <section class="panel account-layout" id="primary-admin-auto-logs">
+    <div class="header-line">
+      <div>
+        <h2>Noctra Auto-Logs</h2>
+        <p class="muted">
+          Dieser Bereich läuft unsichtbar im Hintergrund, startet mit der ersten echten Chat-Nachricht
+          im Raum und endet, sobald die letzte Person den Bereich verlassen hat.
+        </p>
+      </div>
+    </div>
+
+    <div class="help-table-wrap">
+      <table class="help-table admin-overview-table">
+        <thead>
+          <tr>
+            <th>Bereich</th>
+            <th>Wert</th>
+            <th>Hinweis</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Auto-Logs sichtbar</td>
+            <td><strong><%= primaryAdminAutoLogCount %></strong></td>
+            <td>Nur für Noctra sichtbar. Läuft getrennt von normalen Staff-Logs.</td>
+          </tr>
+          <tr>
+            <td>Starter</td>
+            <td><strong><%= primaryAdminAutoStarterCount %></strong></td>
+            <td>Automatisch mit Noctra-Hintergrundstarter gespeichert.</td>
+          </tr>
+          <tr>
+            <td>Beteiligte</td>
+            <td><strong><%= primaryAdminAutoParticipantCount %></strong></td>
+            <td>Alle beteiligten Accounts und Charaktere aus den Auto-Logs.</td>
+          </tr>
+          <tr>
+            <td>Aufbewahrung</td>
+            <td><strong><%= retentionMonths %> Monate</strong></td>
+            <td>
+              <% if (retentionSinceLabel) { %>
+                Alles vor <%= retentionSinceLabel %> fällt automatisch heraus.
+              <% } else { %>
+                Ältere Auto-Logs werden automatisch entfernt.
+              <% } %>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="admin-table-actions">
+      <% if (visiblePrimaryAdminAutoLogs.length) { %>
+        <button class="btn" type="submit" form="primary-admin-auto-log-selection-form">Markierte löschen</button>
+        <form method="POST" action="<%= primaryAdminAutoDeleteAllPath %>" class="admin-tools">
+          <input type="hidden" name="return_to" value="<%= primaryAdminAutoReturnTarget %>" />
+          <button class="btn btn-secondary" type="submit">Alle löschen</button>
+        </form>
+      <% } %>
+    </div>
+
+    <p class="muted">
+      <% if (visiblePrimaryAdminAutoLogs.length) { %>
+        <%= visiblePrimaryAdminAutoLogs.length %> Auto-Log<%= visiblePrimaryAdminAutoLogs.length === 1 ? "" : "s" %> gefunden<%= selectedServerFilter === "free-rp" ? " in FREE-RP" : selectedServerFilter === "erp" ? " in ERP" : "" %>.
+      <% } else if (currentSearchQuery) { %>
+        Kein Auto-Log passt auf deine Suche.
+      <% } else if (selectedServerFilter === "free-rp") { %>
+        Noch keine Auto-Logs in FREE-RP vorhanden.
+      <% } else if (selectedServerFilter === "erp") { %>
+        Noch keine Auto-Logs in ERP vorhanden.
+      <% } else { %>
+        Noch keine Auto-Logs vorhanden.
+      <% } %>
+    </p>
+
+    <% if (visiblePrimaryAdminAutoLogs.length) { %>
+      <form
+        id="primary-admin-auto-log-selection-form"
+        method="POST"
+        action="<%= primaryAdminAutoDeleteSelectedPath %>"
+      >
+        <input type="hidden" name="return_to" value="<%= primaryAdminAutoReturnTarget %>" />
+        <div class="backup-log-list staff-user-log-list">
+          <% visiblePrimaryAdminAutoLogs.forEach((entry) => { %>
+            <details class="backup-log-entry staff-user-log-entry">
+              <summary class="backup-log-entry-summary">
+                <div class="backup-log-entry-copy">
+                  <strong class="backup-log-entry-title"><%= entry.room_label || "Chat-Log" %></strong>
+                  <span class="character-log-meta">
+                    <%= entry.server_label %>
+                    &middot;
+                    <%= entry.ended_at_label || entry.started_at_label || "-" %>
+                    &middot;
+                    <%= entry.entry_count %> Zeilen
+                  </span>
+                  <span class="character-log-meta">
+                    Hintergrundstarter: <%= entry.starter_label %>
+                    <% if (entry.starter_meta_parts && entry.starter_meta_parts.length) { %>
+                      (<%= entry.starter_meta_parts.join(" / ") %>)
+                    <% } %>
+                  </span>
+
+                  <% if (entry.participant_details && entry.participant_details.length) { %>
+                    <div class="staff-user-log-participants">
+                      <% entry.participant_details.forEach((participant) => { %>
+                        <span class="staff-user-log-participant-chip"><%= participant.display_name %></span>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                </div>
+
+                <span class="backup-log-badge">
+                  <%= entry.participant_count %> Person<%= Number(entry.participant_count) === 1 ? "" : "en" %>
+                </span>
+              </summary>
+
+              <div class="backup-log-entry-body">
+                <div class="admin-table-actions">
+                  <label class="muted">
+                    <input type="checkbox" name="log_ids" value="<%= entry.id %>" />
+                    Für Sammellöschung markieren
+                  </label>
+                  <button
+                    class="btn btn-secondary"
+                    type="submit"
+                    formaction="<%= primaryAdminAutoDeleteSinglePath %>"
+                    name="log_id"
+                    value="<%= entry.id %>"
+                  >Einzeln löschen</button>
+                </div>
+
+                <p class="backup-log-meta-line">
+                  <strong>Zeitraum:</strong>
+                  <span><%= entry.started_at_label || "-" %> bis <%= entry.ended_at_label || entry.started_at_label || "-" %></span>
+                </p>
+                <p class="backup-log-meta-line">
+                  <strong>Hintergrundstarter:</strong>
+                  <span><%= entry.starter_label %></span>
+                  <% if (entry.starter_meta_parts && entry.starter_meta_parts.length) { %>
+                    <span><%= entry.starter_meta_parts.join(" / ") %></span>
+                  <% } %>
+                </p>
+                <p class="backup-log-meta-line">
+                  <strong>Server:</strong>
+                  <span><%= entry.server_label %></span>
+                </p>
+                <% if (entry.end_reason_text) { %>
+                  <p class="backup-log-meta-line">
+                    <strong>Ende:</strong>
+                    <span><%= entry.end_reason_text %></span>
+                  </p>
+                <% } %>
+
+                <% if (entry.participant_details && entry.participant_details.length) { %>
+                  <div class="staff-user-log-participant-grid">
+                    <% entry.participant_details.forEach((participant) => { %>
+                      <article class="staff-user-log-participant-card">
+                        <strong><%= participant.display_name %></strong>
+                        <% if (participant.username || participant.account_number) { %>
+                          <small>
+                            <% if (participant.username) { %>@<%= participant.username %><% } %>
+                            <% if (participant.username && participant.account_number) { %> / <% } %>
+                            <% if (participant.account_number) { %>#<%= participant.account_number %><% } %>
+                          </small>
+                        <% } %>
+                      </article>
+                    <% }) %>
+                  </div>
+                <% } %>
+
+                <pre class="backup-log-text"><%= entry.log_text || "Keine Log-Zeilen gespeichert." %></pre>
+              </div>
+            </details>
+          <% }) %>
+        </div>
+      </form>
+    <% } %>
+  </section>
+<% } %>
 
 <%- include("../partials/end") %>

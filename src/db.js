@@ -471,6 +471,7 @@ db.exec(`
     end_reason_text TEXT NOT NULL DEFAULT '',
     log_text TEXT NOT NULL DEFAULT '',
     entries_json TEXT NOT NULL DEFAULT '[]',
+    log_scope TEXT NOT NULL DEFAULT 'staff',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -484,8 +485,9 @@ db.exec(`
     started_by_name TEXT NOT NULL DEFAULT '',
     participants_json TEXT NOT NULL DEFAULT '[]',
     messages_json TEXT NOT NULL DEFAULT '[]',
+    log_type TEXT NOT NULL DEFAULT 'staff',
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (room_id, server_id, standard_room_id)
+    PRIMARY KEY (room_id, server_id, standard_room_id, log_type)
   );
 
   CREATE TABLE IF NOT EXISTS curated_room_overrides (
@@ -589,6 +591,12 @@ const ignoredAccountColumns = db
   .all()
   .map((column) => column.name);
 
+const staffUserLogBackupColumns = db
+  .prepare("PRAGMA table_info(staff_user_log_backups)")
+  .all()
+  .map((column) => String(column?.name || "").trim())
+  .filter(Boolean);
+
 const activeChatRoomLogColumns = db.prepare("PRAGMA table_info(active_chat_room_logs)").all();
 const activeChatRoomLogColumnNames = activeChatRoomLogColumns
   .map((column) => String(column?.name || "").trim())
@@ -597,12 +605,25 @@ const activeChatRoomLogPrimaryKeyColumns = activeChatRoomLogColumns
   .filter((column) => Number(column?.pk) > 0)
   .sort((a, b) => Number(a.pk || 0) - Number(b.pk || 0))
   .map((column) => String(column?.name || "").trim());
-const needsActiveChatRoomLogStandardRoomMigration =
+const needsActiveChatRoomLogMigration =
   activeChatRoomLogColumns.length > 0 &&
   (
     !activeChatRoomLogColumnNames.includes("standard_room_id") ||
-    activeChatRoomLogPrimaryKeyColumns.join(",") !== "room_id,server_id,standard_room_id"
+    !activeChatRoomLogColumnNames.includes("log_type") ||
+    activeChatRoomLogPrimaryKeyColumns.join(",") !== "room_id,server_id,standard_room_id,log_type"
   );
+const activeChatRoomLegacyStandardRoomExpression = activeChatRoomLogColumnNames.includes("standard_room_id")
+  ? `CASE
+       WHEN COALESCE(room_id, 0) > 0 THEN ''
+       ELSE COALESCE(NULLIF(standard_room_id, ''), 'zwischenwelten-foyer')
+     END`
+  : `CASE
+       WHEN COALESCE(room_id, 0) > 0 THEN ''
+       ELSE 'zwischenwelten-foyer'
+     END`;
+const activeChatRoomLegacyLogTypeExpression = activeChatRoomLogColumnNames.includes("log_type")
+  ? `COALESCE(NULLIF(log_type, ''), 'staff')`
+  : `'staff'`;
 
 const needsFriendLinkSourceCharacterMigration =
   friendLinkColumns.length > 0 &&
@@ -673,7 +694,7 @@ const friendCharacterLinkLegacySourceCharacterExpression = friendCharacterLinkCo
      END`
   : friendCharacterLinkLegacySourceCharacterFallbackExpression;
 
-if (needsActiveChatRoomLogStandardRoomMigration) {
+if (needsActiveChatRoomLogMigration) {
   db.exec(`
     ALTER TABLE active_chat_room_logs RENAME TO active_chat_room_logs_legacy_standard_room_migration;
 
@@ -687,8 +708,9 @@ if (needsActiveChatRoomLogStandardRoomMigration) {
       started_by_name TEXT NOT NULL DEFAULT '',
       participants_json TEXT NOT NULL DEFAULT '[]',
       messages_json TEXT NOT NULL DEFAULT '[]',
+      log_type TEXT NOT NULL DEFAULT 'staff',
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (room_id, server_id, standard_room_id)
+      PRIMARY KEY (room_id, server_id, standard_room_id, log_type)
     );
 
     INSERT INTO active_chat_room_logs (
@@ -701,27 +723,35 @@ if (needsActiveChatRoomLogStandardRoomMigration) {
       started_by_name,
       participants_json,
       messages_json,
+      log_type,
       updated_at
     )
     SELECT
       room_id,
       server_id,
-      CASE
-        WHEN COALESCE(room_id, 0) > 0 THEN ''
-        ELSE 'zwischenwelten-foyer'
-      END,
+      ${activeChatRoomLegacyStandardRoomExpression},
       room_label,
       started_at,
       started_by_user_id,
       started_by_name,
       participants_json,
       messages_json,
+      ${activeChatRoomLegacyLogTypeExpression},
       updated_at
     FROM active_chat_room_logs_legacy_standard_room_migration;
 
     DROP TABLE active_chat_room_logs_legacy_standard_room_migration;
   `);
 }
+
+if (!staffUserLogBackupColumns.includes("log_scope")) {
+  db.exec("ALTER TABLE staff_user_log_backups ADD COLUMN log_scope TEXT NOT NULL DEFAULT 'staff'");
+}
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_staff_user_log_backups_scope_timeline
+    ON staff_user_log_backups(log_scope, ended_at, created_at, id);
+`);
 
 if (needsFriendLinkSourceCharacterMigration) {
   db.exec(`
