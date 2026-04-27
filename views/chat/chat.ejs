@@ -500,12 +500,12 @@
                           class="<%= msg.presence_actor_role_style ? `role-name-${msg.presence_actor_role_style}` : '' %><%= systemActorSpecialClass ? ` ${systemActorSpecialClass}` : '' %>"
                           style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"
                         ><%= systemActorDisplayName %></strong>
-                        <span> <%= msg.actor_target_prefix %></span>
+                        <span style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"> <%= msg.actor_target_prefix %></span>
                         <strong
                           class="<%= msg.actor_target_role_style ? `role-name-${msg.actor_target_role_style}` : '' %><%= actorTargetSpecialClass ? ` ${actorTargetSpecialClass}` : '' %>"
                           style="<%= msg.actor_target_chat_text_color ? `color:${msg.actor_target_chat_text_color};` : '' %>"
                         ><%= actorTargetDisplayName %></strong>
-                        <span><%= msg.actor_target_suffix %></span>
+                        <span style="<%= msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"><%= msg.actor_target_suffix %></span>
                       </p>
                     <% } else if (msg.system_kind === "dice-roll" && msg.presence_actor_name) { %>
                       <% const systemActorDisplayName = formatChatRoleName(msg.presence_actor_name, msg.presence_actor_role_style); %>
@@ -518,7 +518,7 @@
                         <span> <%= msg.content %></span>
                       </p>
                     <% } else { %>
-                      <p><span><%= msg.content %></span></p>
+                      <p><span style="<%= msg.system_kind === 'actor-message' && msg.presence_actor_chat_text_color ? `color:${msg.presence_actor_chat_text_color};` : '' %>"><%= msg.content %></span></p>
                     <% } %>
                   <% } else { %>
                     <% const chatMessageDisplayName = formatChatRoleName(msg.username, msg.role_style); %>

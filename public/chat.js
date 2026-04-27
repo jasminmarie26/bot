@@ -2539,8 +2539,11 @@
       } else {
         body.textContent = content;
       }
-      setChatColorSource(body, "#000000");
-      applyStoredChatTextColor(body, "#000000", { allowGradient: false });
+      const systemBodyColor = systemKind === "actor-message"
+        ? (presenceActorChatTextColor || "#000000")
+        : "#000000";
+      setChatColorSource(body, systemBodyColor);
+      applyStoredChatTextColor(body, systemBodyColor, { allowGradient: false });
     } else if (emoteActionText) {
       const emote = document.createElement("em");
       const actor = document.createElement("span");
