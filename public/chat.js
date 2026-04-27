@@ -31,6 +31,8 @@
   const soundPanel = document.getElementById("chat-sound-panel");
   const entrySoundCheckbox = document.getElementById("chat-entry-sound-toggle");
   const messageSoundCheckbox = document.getElementById("chat-message-sound-toggle");
+  const entrySoundSelect = document.getElementById("chat-entry-sound-select");
+  const messageSoundSelect = document.getElementById("chat-message-sound-select");
   const whisperPanel = document.getElementById("chat-whisper-panel");
   const whisperPanelCloseBtn = document.getElementById("chat-whisper-close-btn");
   const whisperList = document.getElementById("chat-whisper-list");
@@ -146,6 +148,58 @@
   let whisperSequence = 0;
   const entrySoundPreferenceKey = "chat-room-entry-sound-enabled";
   const messageSoundPreferenceKey = "chat-room-message-sound-enabled";
+  const entrySoundTonePreferenceKey = "chat-room-entry-sound-tone";
+  const messageSoundTonePreferenceKey = "chat-room-message-sound-tone";
+  const notificationToneConfigs = {
+    aurora: {
+      label: "Aurora",
+      durationMs: 420,
+      tracks: [
+        { startMs: 0, durationMs: 210, startFreq: 880, endFreq: 1320, volume: 0.5, wave: "triangle" },
+        { startMs: 18, durationMs: 240, startFreq: 1320, endFreq: 1760, volume: 0.24, wave: "sine" },
+        { startMs: 150, durationMs: 160, startFreq: 1174, endFreq: 1046, volume: 0.18, wave: "sine" }
+      ]
+    },
+    crystal: {
+      label: "Kristall",
+      durationMs: 360,
+      tracks: [
+        { startMs: 0, durationMs: 170, startFreq: 1046, endFreq: 1568, volume: 0.42, wave: "sine" },
+        { startMs: 24, durationMs: 210, startFreq: 1568, endFreq: 2093, volume: 0.18, wave: "triangle" },
+        { startMs: 138, durationMs: 150, startFreq: 1318, endFreq: 1174, volume: 0.15, wave: "sine" }
+      ]
+    },
+    harbor: {
+      label: "Hafen",
+      durationMs: 390,
+      tracks: [
+        { startMs: 0, durationMs: 200, startFreq: 659, endFreq: 784, volume: 0.34, wave: "triangle" },
+        { startMs: 54, durationMs: 210, startFreq: 494, endFreq: 587, volume: 0.22, wave: "sine" },
+        { startMs: 138, durationMs: 170, startFreq: 784, endFreq: 698, volume: 0.14, wave: "triangle" }
+      ]
+    },
+    pulse: {
+      label: "Puls",
+      durationMs: 260,
+      tracks: [
+        { startMs: 0, durationMs: 150, startFreq: 740, endFreq: 988, volume: 0.28, wave: "sine" },
+        { startMs: 34, durationMs: 160, startFreq: 523, endFreq: 659, volume: 0.18, wave: "triangle" }
+      ]
+    },
+    ember: {
+      label: "Glut",
+      durationMs: 320,
+      tracks: [
+        { startMs: 0, durationMs: 190, startFreq: 587, endFreq: 659, volume: 0.26, wave: "triangle" },
+        { startMs: 42, durationMs: 200, startFreq: 392, endFreq: 523, volume: 0.16, wave: "sine" },
+        { startMs: 122, durationMs: 140, startFreq: 523, endFreq: 494, volume: 0.12, wave: "square" }
+      ]
+    }
+  };
+  const notificationToneIds = Object.keys(notificationToneConfigs);
+  const notificationToneIdSet = new Set(notificationToneIds);
+  const defaultEntryToneId = "aurora";
+  const defaultMessageToneId = "pulse";
   const chatInputHistoryLimit = 50;
   const chatMessageRestoreLimit = 150;
   const chatReloadSnapshotMaxAgeMs = 5 * 60 * 1000;
@@ -158,12 +212,11 @@
   let notificationAudioPrimePromise = null;
   let entrySoundEnabled = true;
   let messageSoundEnabled = true;
+  let selectedEntryToneId = defaultEntryToneId;
+  let selectedMessageToneId = defaultMessageToneId;
   let isSoundPanelOpen = false;
   const activeNotificationAudios = new Set();
-  const notificationToneDataUrls = {
-    entry: "",
-    chat: ""
-  };
+  const notificationToneDataUrls = Object.create(null);
   if (!chatBox || !chatScroll || !chatFeed || !form || !input) return;
   const defaultDocumentTitle = String(document.title || "Heldenhafte Reisen").trim() || "Heldenhafte Reisen";
   const chatTabSiteLabel = "HR";
@@ -171,6 +224,20 @@
   let unreadChatTabCount = 0;
   const chatBottomSnapThresholdPx = 48;
   let skipChatReloadSnapshotOnUnload = false;
+
+  function normalizeNotificationToneId(value, fallback = defaultMessageToneId) {
+    const normalizedValue = String(value || "").trim().toLowerCase();
+    if (notificationToneIdSet.has(normalizedValue)) {
+      return normalizedValue;
+    }
+    return notificationToneIdSet.has(fallback) ? fallback : defaultMessageToneId;
+  }
+
+  function getNotificationToneConfig(kind, toneId) {
+    const fallbackToneId = kind === "entry" ? defaultEntryToneId : defaultMessageToneId;
+    const normalizedToneId = normalizeNotificationToneId(toneId, fallbackToneId);
+    return notificationToneConfigs[normalizedToneId] || notificationToneConfigs[fallbackToneId];
+  }
 
   function clearChatReloadSnapshot() {
     removeSessionStorage(chatReloadSnapshotKey);
@@ -1714,6 +1781,24 @@
     messageSoundEnabled = true;
   }
 
+  try {
+    selectedEntryToneId = normalizeNotificationToneId(
+      window.localStorage.getItem(entrySoundTonePreferenceKey),
+      defaultEntryToneId
+    );
+  } catch (_error) {
+    selectedEntryToneId = defaultEntryToneId;
+  }
+
+  try {
+    selectedMessageToneId = normalizeNotificationToneId(
+      window.localStorage.getItem(messageSoundTonePreferenceKey),
+      defaultMessageToneId
+    );
+  } catch (_error) {
+    selectedMessageToneId = defaultMessageToneId;
+  }
+
   function clampNotificationSample(value) {
     return Math.max(-1, Math.min(1, Number(value) || 0));
   }
@@ -1739,10 +1824,14 @@
     return window.btoa(binary);
   }
 
-  function buildNotificationToneDataUrl(kind) {
+  function buildNotificationToneDataUrl(kind, toneId) {
     const normalizedKind = kind === "entry" ? "entry" : "chat";
-    if (notificationToneDataUrls[normalizedKind]) {
-      return notificationToneDataUrls[normalizedKind];
+    const fallbackToneId = normalizedKind === "entry" ? defaultEntryToneId : defaultMessageToneId;
+    const normalizedToneId = normalizeNotificationToneId(toneId, fallbackToneId);
+    const toneConfig = getNotificationToneConfig(normalizedKind, normalizedToneId);
+    const cacheKey = `${normalizedKind}:${normalizedToneId}`;
+    if (notificationToneDataUrls[cacheKey]) {
+      return notificationToneDataUrls[cacheKey];
     }
 
     if (typeof window.btoa !== "function") {
@@ -1750,19 +1839,10 @@
     }
 
     const sampleRate = 22050;
-    const totalDurationMs = normalizedKind === "entry" ? 420 : 320;
+    const totalDurationMs = toneConfig?.durationMs || (normalizedKind === "entry" ? 420 : 320);
     const totalSamples = Math.max(1, Math.floor((totalDurationMs / 1000) * sampleRate));
     const samples = new Float32Array(totalSamples);
-    const trackDefinitions = normalizedKind === "entry"
-      ? [
-          { startMs: 0, durationMs: 210, startFreq: 880, endFreq: 1320, volume: 0.5, wave: "triangle" },
-          { startMs: 18, durationMs: 240, startFreq: 1320, endFreq: 1760, volume: 0.24, wave: "sine" },
-          { startMs: 150, durationMs: 160, startFreq: 1174, endFreq: 1046, volume: 0.18, wave: "sine" }
-        ]
-      : [
-          { startMs: 0, durationMs: 170, startFreq: 660, endFreq: 880, volume: 0.42, wave: "sine" },
-          { startMs: 32, durationMs: 190, startFreq: 523, endFreq: 659, volume: 0.24, wave: "triangle" }
-        ];
+    const trackDefinitions = Array.isArray(toneConfig?.tracks) ? toneConfig.tracks : [];
 
     for (let sampleIndex = 0; sampleIndex < totalSamples; sampleIndex += 1) {
       const currentTime = sampleIndex / sampleRate;
@@ -1837,7 +1917,7 @@
     }
 
     const dataUrl = `data:audio/wav;base64,${bufferToBase64(wavBuffer)}`;
-    notificationToneDataUrls[normalizedKind] = dataUrl;
+    notificationToneDataUrls[cacheKey] = dataUrl;
     return dataUrl;
   }
 
@@ -1873,7 +1953,7 @@
     });
   }
 
-  async function playNotificationAudioElement(kind, { volume = 1 } = {}) {
+  async function playNotificationAudioElement(kind, toneId, { volume = 1 } = {}) {
     const normalizedKind = kind === "entry" ? "entry" : "chat";
     const preferenceEnabled = normalizedKind === "entry" ? entrySoundEnabled : messageSoundEnabled;
     if (!preferenceEnabled) {
@@ -1884,7 +1964,7 @@
       return false;
     }
 
-    const source = buildNotificationToneDataUrl(normalizedKind);
+    const source = buildNotificationToneDataUrl(normalizedKind, toneId);
     if (!source) {
       return false;
     }
@@ -1917,7 +1997,7 @@
       return notificationAudioPrimePromise;
     }
 
-    const source = buildNotificationToneDataUrl("chat");
+    const source = buildNotificationToneDataUrl("chat", selectedMessageToneId);
     if (!source) {
       return false;
     }
@@ -1952,6 +2032,49 @@
     })();
 
     return notificationAudioPrimePromise;
+  }
+
+  async function playNotificationOscillatorTone(kind, toneId, { volume = 1 } = {}) {
+    const normalizedKind = kind === "entry" ? "entry" : "chat";
+    const preferenceEnabled = normalizedKind === "entry" ? entrySoundEnabled : messageSoundEnabled;
+    const context = await getReadyNotificationAudioContext(preferenceEnabled);
+    if (!context) return;
+
+    const toneConfig = getNotificationToneConfig(normalizedKind, toneId);
+    const trackDefinitions = Array.isArray(toneConfig?.tracks) ? toneConfig.tracks : [];
+    const baseTime = context.currentTime;
+
+    trackDefinitions.forEach((track) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const startTime = baseTime + ((Number(track.startMs) || 0) / 1000);
+      const duration = Math.max(0.04, (Number(track.durationMs) || toneConfig.durationMs || 220) / 1000);
+      const endTime = startTime + duration;
+      const peakGain = Math.max(0.00015, (Number(track.volume) || 0.16) * Math.max(0.2, Math.min(1.2, volume)));
+      const sustainGain = Math.max(0.0001, peakGain * 0.42);
+      const attack = Math.min(0.028, duration * 0.35);
+      const decayEnd = startTime + Math.min(
+        Math.max(attack + 0.045, duration * 0.58),
+        Math.max(attack + 0.01, duration - 0.05)
+      );
+
+      oscillator.type = String(track.wave || "sine").trim().toLowerCase();
+      oscillator.frequency.setValueAtTime(Number(track.startFreq) || 660, startTime);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(40, Number(track.endFreq) || Number(track.startFreq) || 660),
+        endTime
+      );
+
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(peakGain, startTime + attack);
+      gain.gain.exponentialRampToValueAtTime(sustainGain, decayEnd);
+      gain.gain.exponentialRampToValueAtTime(0.0001, endTime);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(startTime);
+      oscillator.stop(endTime + 0.03);
+    });
   }
 
   function getNotificationAudioContext() {
@@ -2044,6 +2167,14 @@
     if (messageSoundCheckbox) {
       messageSoundCheckbox.checked = messageSoundEnabled;
     }
+
+    if (entrySoundSelect) {
+      entrySoundSelect.value = selectedEntryToneId;
+    }
+
+    if (messageSoundSelect) {
+      messageSoundSelect.value = selectedMessageToneId;
+    }
   }
 
   function openSoundPanel() {
@@ -2079,6 +2210,8 @@
     try {
       window.localStorage.setItem(entrySoundPreferenceKey, entrySoundEnabled ? "1" : "0");
       window.localStorage.setItem(messageSoundPreferenceKey, messageSoundEnabled ? "1" : "0");
+      window.localStorage.setItem(entrySoundTonePreferenceKey, selectedEntryToneId);
+      window.localStorage.setItem(messageSoundTonePreferenceKey, selectedMessageToneId);
     } catch (_error) {
       // Ignore storage failures; the toggles still work for the current session.
     }
@@ -2115,41 +2248,11 @@
       return;
     }
 
-    if (await playNotificationAudioElement("entry", { volume: 0.98 })) {
+    if (await playNotificationAudioElement("entry", selectedEntryToneId, { volume: 0.98 })) {
       return;
     }
 
-    const context = await getReadyNotificationAudioContext(entrySoundEnabled);
-    if (!context) return;
-
-    const lead = context.createOscillator();
-    const shimmer = context.createOscillator();
-    const gain = context.createGain();
-
-    lead.type = "triangle";
-    shimmer.type = "sine";
-
-    lead.frequency.setValueAtTime(932, context.currentTime);
-    lead.frequency.exponentialRampToValueAtTime(1396, context.currentTime + 0.1);
-    lead.frequency.exponentialRampToValueAtTime(1174, context.currentTime + 0.28);
-
-    shimmer.frequency.setValueAtTime(1396, context.currentTime);
-    shimmer.frequency.exponentialRampToValueAtTime(1760, context.currentTime + 0.12);
-    shimmer.frequency.exponentialRampToValueAtTime(1318, context.currentTime + 0.28);
-
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.2, context.currentTime + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.085, context.currentTime + 0.16);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.38);
-
-    lead.connect(gain);
-    shimmer.connect(gain);
-    gain.connect(context.destination);
-
-    lead.start(context.currentTime);
-    shimmer.start(context.currentTime);
-    lead.stop(context.currentTime + 0.4);
-    shimmer.stop(context.currentTime + 0.4);
+    await playNotificationOscillatorTone("entry", selectedEntryToneId, { volume: 0.98 });
   }
 
   async function playChatTone() {
@@ -2157,41 +2260,11 @@
       return;
     }
 
-    if (await playNotificationAudioElement("chat", { volume: 0.92 })) {
+    if (await playNotificationAudioElement("chat", selectedMessageToneId, { volume: 0.92 })) {
       return;
     }
 
-    const context = await getReadyNotificationAudioContext(messageSoundEnabled);
-    if (!context) return;
-
-    const lead = context.createOscillator();
-    const echo = context.createOscillator();
-    const gain = context.createGain();
-
-    lead.type = "sine";
-    echo.type = "triangle";
-
-    lead.frequency.setValueAtTime(740, context.currentTime);
-    lead.frequency.exponentialRampToValueAtTime(988, context.currentTime + 0.08);
-    lead.frequency.exponentialRampToValueAtTime(880, context.currentTime + 0.18);
-
-    echo.frequency.setValueAtTime(523, context.currentTime + 0.01);
-    echo.frequency.exponentialRampToValueAtTime(659, context.currentTime + 0.11);
-    echo.frequency.exponentialRampToValueAtTime(587, context.currentTime + 0.2);
-
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.16, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.06, context.currentTime + 0.16);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.28);
-
-    lead.connect(gain);
-    echo.connect(gain);
-    gain.connect(context.destination);
-
-    lead.start(context.currentTime);
-    echo.start(context.currentTime);
-    lead.stop(context.currentTime + 0.3);
-    echo.stop(context.currentTime + 0.3);
+    await playNotificationOscillatorTone("chat", selectedMessageToneId, { volume: 0.92 });
   }
 
   if (soundToggle) {
@@ -2216,6 +2289,32 @@
   if (messageSoundCheckbox) {
     messageSoundCheckbox.addEventListener("change", async () => {
       messageSoundEnabled = messageSoundCheckbox.checked;
+      await persistSoundPreferences();
+      if (messageSoundEnabled) {
+        await playChatTone();
+      }
+    });
+  }
+
+  if (entrySoundSelect) {
+    entrySoundSelect.addEventListener("change", async () => {
+      selectedEntryToneId = normalizeNotificationToneId(
+        entrySoundSelect.value,
+        defaultEntryToneId
+      );
+      await persistSoundPreferences();
+      if (entrySoundEnabled) {
+        await playEntryTone();
+      }
+    });
+  }
+
+  if (messageSoundSelect) {
+    messageSoundSelect.addEventListener("change", async () => {
+      selectedMessageToneId = normalizeNotificationToneId(
+        messageSoundSelect.value,
+        defaultMessageToneId
+      );
       await persistSoundPreferences();
       if (messageSoundEnabled) {
         await playChatTone();
