@@ -169,30 +169,12 @@
         { startMs: 138, durationMs: 150, startFreq: 1318, endFreq: 1174, volume: 0.15, wave: "sine" }
       ]
     },
-    harbor: {
-      label: "Hafen",
-      durationMs: 390,
-      tracks: [
-        { startMs: 0, durationMs: 200, startFreq: 659, endFreq: 784, volume: 0.34, wave: "triangle" },
-        { startMs: 54, durationMs: 210, startFreq: 494, endFreq: 587, volume: 0.22, wave: "sine" },
-        { startMs: 138, durationMs: 170, startFreq: 784, endFreq: 698, volume: 0.14, wave: "triangle" }
-      ]
-    },
     pulse: {
       label: "Puls",
       durationMs: 260,
       tracks: [
         { startMs: 0, durationMs: 150, startFreq: 740, endFreq: 988, volume: 0.28, wave: "sine" },
         { startMs: 34, durationMs: 160, startFreq: 523, endFreq: 659, volume: 0.18, wave: "triangle" }
-      ]
-    },
-    ember: {
-      label: "Glut",
-      durationMs: 320,
-      tracks: [
-        { startMs: 0, durationMs: 190, startFreq: 587, endFreq: 659, volume: 0.26, wave: "triangle" },
-        { startMs: 42, durationMs: 200, startFreq: 392, endFreq: 523, volume: 0.16, wave: "sine" },
-        { startMs: 122, durationMs: 140, startFreq: 523, endFreq: 494, volume: 0.12, wave: "square" }
       ]
     },
     bell: {
@@ -210,6 +192,140 @@
       tracks: [
         { startMs: 0, durationMs: 120, startFreq: 1320, endFreq: 1480, volume: 0.22, wave: "sine" },
         { startMs: 18, durationMs: 110, startFreq: 1760, endFreq: 1660, volume: 0.1, wave: "triangle" }
+      ]
+    },
+    dingdong: {
+      label: "Dingdong",
+      durationMs: 520,
+      tracks: [
+        { startMs: 0, durationMs: 170, startFreq: 784, endFreq: 784, volume: 0.26, wave: "sine" },
+        { startMs: 210, durationMs: 220, startFreq: 523, endFreq: 523, volume: 0.24, wave: "triangle" },
+        { startMs: 222, durationMs: 180, startFreq: 1046, endFreq: 988, volume: 0.1, wave: "sine" }
+      ]
+    },
+    clock: {
+      label: "Uhr",
+      durationMs: 320,
+      tracks: [
+        { startMs: 0, durationMs: 90, startFreq: 1640, endFreq: 1600, volume: 0.16, wave: "square" },
+        { startMs: 150, durationMs: 90, startFreq: 1640, endFreq: 1600, volume: 0.16, wave: "square" },
+        { startMs: 0, durationMs: 220, startFreq: 880, endFreq: 830, volume: 0.06, wave: "triangle" }
+      ]
+    },
+    ring: {
+      label: "Klingeln",
+      durationMs: 540,
+      tracks: [
+        { startMs: 0, durationMs: 180, startFreq: 988, endFreq: 1046, volume: 0.22, wave: "sine" },
+        { startMs: 70, durationMs: 180, startFreq: 1318, endFreq: 1396, volume: 0.1, wave: "triangle" },
+        { startMs: 240, durationMs: 180, startFreq: 988, endFreq: 1046, volume: 0.22, wave: "sine" },
+        { startMs: 310, durationMs: 180, startFreq: 1318, endFreq: 1396, volume: 0.1, wave: "triangle" }
+      ]
+    },
+    cat: {
+      label: "Katze",
+      durationMs: 340,
+      tracks: [
+        { startMs: 0, durationMs: 120, startFreq: 1320, endFreq: 1480, volume: 0.16, wave: "triangle" },
+        { startMs: 26, durationMs: 110, startFreq: 1760, endFreq: 2100, volume: 0.1, wave: "sine" },
+        { startMs: 150, durationMs: 130, startFreq: 1568, endFreq: 1320, volume: 0.13, wave: "triangle" }
+      ]
+    },
+    "phone-soft": {
+      label: "Handy soft",
+      durationMs: 300,
+      tracks: [
+        { startMs: 0, durationMs: 120, startFreq: 880, endFreq: 1046, volume: 0.2, wave: "sine" },
+        { startMs: 110, durationMs: 140, startFreq: 1174, endFreq: 1318, volume: 0.16, wave: "triangle" }
+      ]
+    },
+    "phone-bright": {
+      label: "Handy hell",
+      durationMs: 290,
+      tracks: [
+        { startMs: 0, durationMs: 110, startFreq: 1046, endFreq: 1318, volume: 0.18, wave: "sine" },
+        { startMs: 88, durationMs: 130, startFreq: 1568, endFreq: 1760, volume: 0.14, wave: "triangle" },
+        { startMs: 178, durationMs: 70, startFreq: 2093, endFreq: 1975, volume: 0.08, wave: "sine" }
+      ]
+    },
+    "phone-retro": {
+      label: "Handy retro",
+      durationMs: 410,
+      tracks: [
+        { startMs: 0, durationMs: 140, startFreq: 659, endFreq: 659, volume: 0.18, wave: "square" },
+        { startMs: 0, durationMs: 140, startFreq: 988, endFreq: 988, volume: 0.12, wave: "triangle" },
+        { startMs: 190, durationMs: 140, startFreq: 784, endFreq: 784, volume: 0.18, wave: "square" },
+        { startMs: 190, durationMs: 140, startFreq: 1174, endFreq: 1174, volume: 0.12, wave: "triangle" }
+      ]
+    },
+    "phone-pop": {
+      label: "Handy pop",
+      durationMs: 260,
+      tracks: [
+        { startMs: 0, durationMs: 110, startFreq: 988, endFreq: 1174, volume: 0.18, wave: "sine" },
+        { startMs: 84, durationMs: 110, startFreq: 1318, endFreq: 1568, volume: 0.14, wave: "triangle" }
+      ]
+    },
+    pling: {
+      label: "Pling",
+      durationMs: 220,
+      tracks: [
+        { startMs: 0, durationMs: 150, startFreq: 1480, endFreq: 1760, volume: 0.18, wave: "sine" },
+        { startMs: 24, durationMs: 130, startFreq: 1975, endFreq: 1864, volume: 0.08, wave: "triangle" }
+      ]
+    },
+    sparkle: {
+      label: "Funkeln",
+      durationMs: 360,
+      tracks: [
+        { startMs: 0, durationMs: 90, startFreq: 1568, endFreq: 1760, volume: 0.13, wave: "sine" },
+        { startMs: 72, durationMs: 90, startFreq: 1760, endFreq: 1975, volume: 0.11, wave: "sine" },
+        { startMs: 144, durationMs: 90, startFreq: 2093, endFreq: 2349, volume: 0.09, wave: "triangle" },
+        { startMs: 216, durationMs: 100, startFreq: 2637, endFreq: 2489, volume: 0.06, wave: "sine" }
+      ]
+    },
+    knock: {
+      label: "Klopfen",
+      durationMs: 260,
+      tracks: [
+        { startMs: 0, durationMs: 55, startFreq: 180, endFreq: 120, volume: 0.24, wave: "square" },
+        { startMs: 110, durationMs: 55, startFreq: 180, endFreq: 120, volume: 0.22, wave: "square" },
+        { startMs: 0, durationMs: 140, startFreq: 392, endFreq: 330, volume: 0.05, wave: "triangle" }
+      ]
+    },
+    twinkle: {
+      label: "Stern",
+      durationMs: 340,
+      tracks: [
+        { startMs: 0, durationMs: 110, startFreq: 1318, endFreq: 1568, volume: 0.14, wave: "triangle" },
+        { startMs: 86, durationMs: 110, startFreq: 1760, endFreq: 2093, volume: 0.11, wave: "sine" },
+        { startMs: 172, durationMs: 110, startFreq: 2349, endFreq: 2637, volume: 0.08, wave: "triangle" }
+      ]
+    },
+    echo: {
+      label: "Echo",
+      durationMs: 420,
+      tracks: [
+        { startMs: 0, durationMs: 120, startFreq: 988, endFreq: 1174, volume: 0.18, wave: "sine" },
+        { startMs: 110, durationMs: 110, startFreq: 988, endFreq: 1120, volume: 0.1, wave: "triangle" },
+        { startMs: 220, durationMs: 110, startFreq: 988, endFreq: 1080, volume: 0.06, wave: "sine" }
+      ]
+    },
+    chime: {
+      label: "Windspiel",
+      durationMs: 410,
+      tracks: [
+        { startMs: 0, durationMs: 170, startFreq: 1046, endFreq: 1046, volume: 0.14, wave: "sine" },
+        { startMs: 34, durationMs: 180, startFreq: 1318, endFreq: 1318, volume: 0.12, wave: "triangle" },
+        { startMs: 78, durationMs: 200, startFreq: 1568, endFreq: 1568, volume: 0.08, wave: "sine" }
+      ]
+    },
+    drop: {
+      label: "Tropfen",
+      durationMs: 210,
+      tracks: [
+        { startMs: 0, durationMs: 130, startFreq: 1760, endFreq: 1320, volume: 0.16, wave: "sine" },
+        { startMs: 14, durationMs: 120, startFreq: 2349, endFreq: 1864, volume: 0.08, wave: "triangle" }
       ]
     }
   };
