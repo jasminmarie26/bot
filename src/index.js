@@ -24104,6 +24104,17 @@ function getUserSocketsOnServer(
   });
 }
 
+function getUserJoinedChatSocketsOnServer(
+  userId,
+  serverId = DEFAULT_SERVER_ID,
+  roomId = null,
+  standardRoomId = null
+) {
+  return getUserSocketsOnServer(userId, serverId, roomId, standardRoomId).filter(
+    (memberSocket) => memberSocket?.connected === true && memberSocket?.data?.hasJoinedChat === true
+  );
+}
+
 function getCurrentChannelDisplayProfile(user, serverId = DEFAULT_SERVER_ID, preferredCharacterId = null) {
   const preferredCharacter = getPreferredCharacterForUser(user?.id, serverId, preferredCharacterId);
   return getUserDisplayProfile(user, preferredCharacter);
@@ -24647,7 +24658,7 @@ function emitWhisperBetweenUsers(
   const senderCharacterId = normalizePresenceCharacterId(
     getSocketPreferredCharacterId(senderSocket, senderServerId)
   );
-  const recipientSocketsAll = getUserSocketsOnServer(
+  const recipientSocketsAll = getUserJoinedChatSocketsOnServer(
     parsedTargetUserId,
     normalizedServerId,
     roomId,
@@ -24673,7 +24684,7 @@ function emitWhisperBetweenUsers(
     return { ok: false, reason: "missing_target" };
   }
 
-  let senderSockets = getUserSocketsOnServer(
+  let senderSockets = getUserJoinedChatSocketsOnServer(
     senderSocket.data.user.id,
     normalizedServerId,
     roomId,
@@ -24692,24 +24703,39 @@ function emitWhisperBetweenUsers(
     senderSockets = [senderSocket];
   }
   const senderProfile = getSocketDisplayProfile(senderSocket, senderServerId);
+  const recipientPrimarySocket = recipientSockets[0] || null;
+  const recipientRoomId =
+    Number.isInteger(recipientPrimarySocket?.data?.roomId) && recipientPrimarySocket.data.roomId > 0
+      ? recipientPrimarySocket.data.roomId
+      : null;
+  const recipientServerId = getSocketChannelServerId(
+    recipientPrimarySocket,
+    recipientRoomId,
+    normalizedServerId
+  );
+  const recipientStandardRoomId = getSocketChannelStandardRoomId(
+    recipientPrimarySocket,
+    recipientRoomId,
+    recipientServerId
+  );
   const recipientCharacterId = normalizePresenceCharacterId(
     getSocketPreferredCharacterId(
-      recipientSockets[0],
-      getSocketChannelServerId(recipientSockets[0], roomId, normalizedServerId)
+      recipientPrimarySocket,
+      recipientServerId
     )
   );
-  const recipientProfile = recipientSockets[0]
+  const recipientProfile = recipientPrimarySocket
     ? getSocketDisplayProfile(
-        recipientSockets[0],
-        getSocketChannelServerId(recipientSockets[0], roomId, normalizedServerId)
+        recipientPrimarySocket,
+        recipientServerId
       )
     : null;
   const recipientAfkState = getChatAfkState(
     parsedTargetUserId,
-    roomId,
-    normalizedServerId,
+    recipientRoomId,
+    recipientServerId,
     recipientCharacterId,
-    standardRoomId
+    recipientStandardRoomId
   );
   const recipientIsAfk = Boolean(recipientAfkState);
   const recipientAfkReason = String(recipientAfkState?.reason || "").trim();

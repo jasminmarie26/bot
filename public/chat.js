@@ -3247,9 +3247,7 @@
         const note = document.createElement("small");
         note.className = "whisper-thread-note";
         note.textContent = afkNoteText;
-        const afkNoteColor = normalizeChatTextColor(entry?.whisper_target_chat_text_color);
-        setChatColorSource(note, afkNoteColor);
-        applyStoredChatTextColor(note, afkNoteColor, { allowGradient: false });
+        applyWhisperAfkNoteAppearance(note, entry?.whisper_target_chat_text_color, { panel: true });
         article.appendChild(note);
       }
 
@@ -3316,6 +3314,28 @@
       : `${normalizedName} ist afk.`;
   }
 
+  function applyWhisperAfkNoteAppearance(node, rawColor, { panel = false } = {}) {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    const normalizedColor = normalizeChatTextColor(rawColor);
+    setChatColorSource(node, normalizedColor);
+    applyStoredChatTextColor(node, normalizedColor, { allowGradient: false });
+
+    if (!panel || !normalizedColor) {
+      node.style.removeProperty("--whisper-afk-note-bg");
+      node.style.removeProperty("--whisper-afk-note-border");
+      node.style.removeProperty("--whisper-afk-note-shadow");
+      return;
+    }
+
+    const { r, g, b } = hexToRgb(normalizedColor, "#EFEFEF");
+    node.style.setProperty("--whisper-afk-note-bg", `rgba(${r}, ${g}, ${b}, 0.14)`);
+    node.style.setProperty("--whisper-afk-note-border", `rgba(${r}, ${g}, ${b}, 0.28)`);
+    node.style.setProperty("--whisper-afk-note-shadow", `rgba(${r}, ${g}, ${b}, 0.2)`);
+  }
+
   function appendWhisper(msg) {
     const article = document.createElement("article");
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
@@ -3342,9 +3362,7 @@
       const note = document.createElement("small");
       note.className = "chat-whisper-note";
       note.textContent = afkNoteText;
-      const afkNoteColor = normalizeChatTextColor(msg?.whisper_target_chat_text_color);
-      setChatColorSource(note, afkNoteColor);
-      applyStoredChatTextColor(note, afkNoteColor, { allowGradient: false });
+      applyWhisperAfkNoteAppearance(note, msg?.whisper_target_chat_text_color);
       article.appendChild(note);
     }
     chatFeed.appendChild(article);
