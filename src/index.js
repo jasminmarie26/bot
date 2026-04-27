@@ -2662,7 +2662,7 @@ function normalizeGuestbookPreviewWindowName(value) {
 }
 
 function buildCharacterGuestbookEditorState(characterId, requestedPageId = null) {
-  const pages = ensureGuestbookPages(characterId);
+  const pages = applyGuestbookPageDrafts(ensureGuestbookPages(characterId));
   const normalizedRequestedPageId = normalizeCharacterEditGuestbookPageId(requestedPageId);
   const activePage = pages.find((page) => page.id === normalizedRequestedPageId) || pages[0];
   const settings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(characterId), activePage);
@@ -2709,6 +2709,15 @@ function buildGuestbookPreviewSessionState(characterId, activePage, payload, opt
     page_number: Number(activePage?.page_number) || 1,
     settings: payload?.settings || {},
     page_content: String(payload?.pageContent || ""),
+    page_title: normalizeGuestbookPageTitleInput(payload?.pageTitle),
+    page_content_updates: serializeGuestbookPageDraftUpdates(
+      options.pageContentUpdates,
+      normalizeGuestbookPageContentInput
+    ),
+    page_title_updates: serializeGuestbookPageDraftUpdates(
+      options.pageTitleUpdates,
+      normalizeGuestbookPageTitleInput
+    ),
     return_to: getSafeExplicitReturnTarget(options.returnTo, ""),
     source_window_name: normalizeGuestbookPreviewWindowName(options.sourceWindowName),
     saved_at: Date.now()
@@ -10737,6 +10746,7 @@ function getGuestbookDiscoveryTagSuggestions(viewer = null) {
 
 function getGuestbookEditorPayload(body, existingSettings = null) {
   const pageContent = normalizeGuestbookPageContentInput(body.page_content);
+  const pageTitle = normalizeGuestbookPageTitleInput(body.page_title);
   const safeBody = body || {};
   const existingImageUrl = String(existingSettings?.image_url || "").trim().slice(0, 500);
   const existingInnerImageUrl = String(existingSettings?.inner_image_url || "").trim().slice(0, 500);
@@ -10850,6 +10860,7 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   );
   return {
     pageContent,
+    pageTitle,
     settings: {
       image_url: sanitizedImageUrl,
       inner_image_url: sanitizedInnerImageUrl,
@@ -10880,6 +10891,93 @@ function getBodyValues(value) {
   return typeof value === "undefined" ? [] : [value];
 }
 
+function normalizeGuestbookPageTitleInput(value) {
+  return String(value || "")
+    .replace(/\r\n?/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function isDefaultGuestbookPageTitle(value, pageNumber) {
+  const normalizedTitle = normalizeGuestbookPageTitleInput(value);
+  const normalizedPageNumber = Number(pageNumber);
+  return Boolean(
+    normalizedTitle &&
+    Number.isInteger(normalizedPageNumber) &&
+    normalizedPageNumber > 0 &&
+    normalizedTitle === String(normalizedPageNumber)
+  );
+}
+
+function getGuestbookPageHeadingValue(pageOrTitle, pageNumber = null) {
+  const pageRecord = pageOrTitle && typeof pageOrTitle === "object" ? pageOrTitle : null;
+  const normalizedTitle = normalizeGuestbookPageTitleInput(pageRecord ? pageRecord.title : pageOrTitle);
+  const resolvedPageNumber = pageRecord ? pageRecord.page_number : pageNumber;
+  return isDefaultGuestbookPageTitle(normalizedTitle, resolvedPageNumber) ? "" : normalizedTitle;
+}
+
+function decorateGuestbookPage(page) {
+  if (!page || typeof page !== "object") {
+    return page;
+  }
+
+  return {
+    ...page,
+    page_heading: getGuestbookPageHeadingValue(page)
+  };
+}
+
+function serializeGuestbookPageDraftUpdates(updates, normalizer) {
+  if (!(updates instanceof Map)) {
+    return {};
+  }
+
+  return Array.from(updates.entries()).reduce((result, [pageId, value]) => {
+    const normalizedPageId = Number(pageId);
+    if (!Number.isInteger(normalizedPageId) || normalizedPageId < 1) {
+      return result;
+    }
+
+    result[String(normalizedPageId)] = normalizer(value);
+    return result;
+  }, {});
+}
+
+function readGuestbookPageDraftUpdates(previewState, draftKey, fallbackKey, normalizer) {
+  const updates = new Map();
+  if (!previewState || typeof previewState !== "object") {
+    return updates;
+  }
+
+  const draftEntries =
+    previewState[draftKey] && typeof previewState[draftKey] === "object"
+      ? previewState[draftKey]
+      : null;
+  if (draftEntries) {
+    Object.entries(draftEntries).forEach(([rawPageId, rawValue]) => {
+      const pageId = Number(rawPageId);
+      if (!Number.isInteger(pageId) || pageId < 1) {
+        return;
+      }
+
+      updates.set(pageId, normalizer(rawValue));
+    });
+  }
+
+  const fallbackPageId = Number(previewState.page_id);
+  if (
+    updates.size === 0 &&
+    Number.isInteger(fallbackPageId) &&
+    fallbackPageId > 0 &&
+    Object.prototype.hasOwnProperty.call(previewState, fallbackKey)
+  ) {
+    updates.set(fallbackPageId, normalizer(previewState[fallbackKey]));
+  }
+
+  return updates;
+}
+
 function buildGuestbookPageContentUpdates(body, pages, activePage, activePageContent) {
   const validPageIds = new Set((pages || []).map((page) => Number(page.id)).filter((pageId) => pageId > 0));
   const updates = new Map();
@@ -10900,6 +10998,42 @@ function buildGuestbookPageContentUpdates(body, pages, activePage, activePageCon
   });
 
   return updates;
+}
+
+function buildGuestbookPageTitleUpdates(body, pages, activePage, activePageTitle) {
+  const validPageIds = new Set((pages || []).map((page) => Number(page.id)).filter((pageId) => pageId > 0));
+  const updates = new Map();
+  const activePageId = Number(activePage?.id);
+  if (validPageIds.has(activePageId)) {
+    updates.set(activePageId, normalizeGuestbookPageTitleInput(activePageTitle));
+  }
+
+  const pageIds = getBodyValues(body?.guestbook_page_title_id);
+  const pageTitles = getBodyValues(body?.guestbook_page_title_value);
+  pageIds.forEach((rawPageId, index) => {
+    const pageId = Number(rawPageId);
+    if (!validPageIds.has(pageId)) {
+      return;
+    }
+
+    updates.set(pageId, normalizeGuestbookPageTitleInput(pageTitles[index]));
+  });
+
+  return updates;
+}
+
+function applyGuestbookPageDrafts(pages, options = {}) {
+  const titleUpdates = options.titleUpdates instanceof Map ? options.titleUpdates : new Map();
+  const contentUpdates = options.contentUpdates instanceof Map ? options.contentUpdates : new Map();
+
+  return orderGuestbookPages(pages).map((page) => {
+    const pageId = Number(page?.id);
+    return decorateGuestbookPage({
+      ...page,
+      title: titleUpdates.has(pageId) ? titleUpdates.get(pageId) : page?.title,
+      content: contentUpdates.has(pageId) ? contentUpdates.get(pageId) : page?.content
+    });
+  });
 }
 
 function buildGuestbookPageSettings(baseSettings = null, page = null) {
@@ -10991,7 +11125,7 @@ function ensureGuestbookPages(characterId) {
        page_style,
        theme_style
      )
-     VALUES (?, 1, '1', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     characterId,
     defaultSettings.image_url,
@@ -11032,25 +11166,35 @@ function orderGuestbookPages(pages) {
 }
 
 function buildGuestbookPageNavigation(pages, activePageId, buildPageUrl) {
-  const orderedPages = orderGuestbookPages(pages);
+  const orderedPages = orderGuestbookPages(pages).map((page) => decorateGuestbookPage(page));
   const activeIndex = orderedPages.findIndex((page) => Number(page.id) === Number(activePageId));
   const previousPage = activeIndex > 0 ? orderedPages[activeIndex - 1] : null;
   const nextPage =
     activeIndex >= 0 && activeIndex < orderedPages.length - 1 ? orderedPages[activeIndex + 1] : null;
+  const overviewPages = orderedPages
+    .filter((page) => page.page_heading)
+    .map((page) => ({
+      ...page,
+      label: page.page_heading,
+      url: buildPageUrl(page.id),
+      isActive: Number(page.id) === Number(activePageId)
+    }));
 
   const withUrl = (page) => (page ? { ...page, url: buildPageUrl(page.id) } : null);
 
   return {
     hasMultiplePages: orderedPages.length > 1,
     previousPage: withUrl(previousPage),
-    nextPage: withUrl(nextPage)
+    nextPage: withUrl(nextPage),
+    overviewPages,
+    hasOverviewPages: overviewPages.length > 0
   };
 }
 
 function renumberGuestbookPages(characterId) {
   const pages = db
     .prepare(
-      `SELECT id
+      `SELECT id, page_number, title
        FROM guestbook_pages
        WHERE character_id = ?
        ORDER BY page_number ASC, id ASC`
@@ -11066,7 +11210,7 @@ function renumberGuestbookPages(characterId) {
   const tx = db.transaction(() => {
     pages.forEach((page, index) => {
       const nextNumber = index + 1;
-      updatePage.run(nextNumber, String(nextNumber), page.id);
+      updatePage.run(nextNumber, getGuestbookPageHeadingValue(page), page.id);
     });
   });
 
@@ -21144,35 +21288,42 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
 
-  const pages = ensureGuestbookPages(id);
+  const savedPages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const previewMode = String(req.query.preview_mode || "").trim().toLowerCase();
   const previewToken = normalizeGuestbookPreviewToken(req.query.preview_token);
-  const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const cachedPreview = getGuestbookPreviewCacheState(previewToken, id, requestedPageId);
   const storedPreview = cachedPreview || getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
   const previewOriginState = cachedPreview || getGuestbookPreviewOriginSessionState(req, id, previewMode);
   const canUseStoredPreview = Boolean(storedPreview);
+  const previewDraftSource = storedPreview || previewOriginState;
+  const previewTitleUpdates = readGuestbookPageDraftUpdates(
+    previewDraftSource,
+    "page_title_updates",
+    "page_title",
+    normalizeGuestbookPageTitleInput
+  );
+  const previewContentUpdates = readGuestbookPageDraftUpdates(
+    previewDraftSource,
+    "page_content_updates",
+    "page_content",
+    normalizeGuestbookPageContentInput
+  );
+  const pages = applyGuestbookPageDrafts(savedPages, {
+    titleUpdates: previewTitleUpdates,
+    contentUpdates: previewContentUpdates
+  });
+  const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
 
   const previewPage = canUseStoredPreview
     ? pages.find((page) => page.id === Number(storedPreview.page_id)) || fallbackPage
     : fallbackPage;
 
   const baseSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), previewPage);
-  const previewSettings = canUseStoredPreview
-    ? { ...baseSettings, ...(storedPreview.settings || {}) }
+  const previewSettings = previewDraftSource
+    ? { ...baseSettings, ...(previewDraftSource.settings || {}) }
     : baseSettings;
-  const hasStoredPreviewContent =
-    canUseStoredPreview &&
-    storedPreview &&
-    Object.prototype.hasOwnProperty.call(storedPreview, "page_content");
-  const storedPreviewContent = hasStoredPreviewContent
-    ? String(storedPreview.page_content || "")
-    : "";
-  const savedPageContent = String(previewPage.content || "");
-  const previewContent = hasStoredPreviewContent
-    ? storedPreviewContent
-    : savedPageContent;
+  const previewContent = String(previewPage.content || "");
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     pages,
     previewPage.id,
@@ -21252,6 +21403,12 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
     activePage,
     payload.pageContent
   );
+  const pageTitleUpdates = buildGuestbookPageTitleUpdates(
+    req.body,
+    pages,
+    activePage,
+    payload.pageTitle
+  );
 
   const saveGuestbookTx = db.transaction(() => {
     const updatePageContent = db.prepare(
@@ -21260,8 +21417,17 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND character_id = ?`
     );
+    const updatePageTitle = db.prepare(
+      `UPDATE guestbook_pages
+       SET title = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND character_id = ?`
+    );
     pageContentUpdates.forEach((pageContent, pageId) => {
       updatePageContent.run(pageContent, pageId, id);
+    });
+    pageTitleUpdates.forEach((pageTitle, pageId) => {
+      updatePageTitle.run(pageTitle, pageId, id);
     });
 
     db.prepare(
@@ -21377,7 +21543,21 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
+  const pageContentUpdates = buildGuestbookPageContentUpdates(
+    req.body,
+    pages,
+    activePage,
+    payload.pageContent
+  );
+  const pageTitleUpdates = buildGuestbookPageTitleUpdates(
+    req.body,
+    pages,
+    activePage,
+    payload.pageTitle
+  );
   const nextPreviewState = buildGuestbookPreviewSessionState(id, activePage, payload, {
+    pageContentUpdates,
+    pageTitleUpdates,
     returnTo: req.body.preview_return_to,
     sourceWindowName: req.body.preview_source_window_name
   });
@@ -21471,12 +21651,11 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
          page_style,
          theme_style
        )
-       VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
       nextPageNumber,
-      String(nextPageNumber),
       sourcePageSettings.image_url,
       sourcePageSettings.inner_image_url,
       sourcePageSettings.outer_image_url,
@@ -23098,7 +23277,7 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
            page_style,
            theme_style
          )
-         VALUES (?, 1, '1', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         id,
         resetPageSettings.image_url,

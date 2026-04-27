@@ -324,10 +324,30 @@
 
     <div class="gb-editor-grid">
   <div class="gb-editor-card gb-editor-card-full gb-editor-section">
-    <span class="gb-editor-subheading">Seitenweise</span>
+    <span class="gb-editor-subheading">Seitenhinweise</span>
     <span class="gb-editor-helptext">
       BBCode und Texte gelten nur f&uuml;r die gerade ausgew&auml;hlte Seite. Die g&auml;stebuchweiten Bilder und die Musik findest du gesammelt in Schritt 4.
     </span>
+  </div>
+  <div class="gb-editor-row">
+    <div class="gb-editor-row-meta">
+      <span class="gb-editor-subheading">Seiten&uuml;bersicht</span>
+      <span class="gb-editor-helptext">Kein Pflichtfeld. Der Titel gilt nur f&uuml;r diese Seite.</span>
+      <span class="gb-editor-helptext">Sobald hier etwas eingetragen ist, erscheint oben im G&auml;stebuch ein Seiten-Men&uuml; mit diesem Titel.</span>
+    </div>
+    <div class="gb-editor-row-content">
+      <div class="gb-image-body">
+        <input
+          type="text"
+          name="page_title"
+          value="<%= activePage.page_heading || '' %>"
+          maxlength="80"
+          placeholder="z. B. Naschilein"
+          spellcheck="false"
+          autocomplete="off"
+        />
+      </div>
+    </div>
   </div>
   <div class="gb-editor-row gb-editor-notes-row">
     <div class="gb-editor-row-meta">
@@ -997,6 +1017,10 @@
       bindColorField("guestbook-surround-color", "#2C2118")
     ].filter(Boolean);
 
+    const initialPageTitle = <%- JSON.stringify(String(activePage.page_heading || ""))
+      .replace(/<\//g, "<\\/")
+      .replace(/\u2028/g, "\\u2028")
+      .replace(/\u2029/g, "\\u2029") %>;
     const initialPageContent = <%- JSON.stringify(String(activePage.content || ""))
       .replace(/<\//g, "<\\/")
       .replace(/\u2028/g, "\\u2028")
@@ -1028,6 +1052,7 @@
     const editorNavigationMode = String(editorForm?.dataset?.editorNavigationMode || "").trim().toLowerCase();
     const editorCharacterId = String(editorForm?.dataset?.editorCharacterId || "").trim();
     const currentGuestbookPageId = String(editorForm?.dataset?.editorCurrentPageId || "").trim();
+    const pageTitleField = editorForm?.querySelector('input[name="page_title"]') || null;
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const editorScrollTopTarget =
       editorForm?.closest(".character-guestbook-panel") ||
@@ -1192,9 +1217,10 @@
         updatedAt: now
       };
 
-      if (currentGuestbookPageId && pageContentField) {
+      if (currentGuestbookPageId && (pageTitleField || pageContentField)) {
         nextState.pages[currentGuestbookPageId] = {
-          content: pageContentField.value,
+          title: pageTitleField ? pageTitleField.value : "",
+          content: pageContentField ? pageContentField.value : "",
           updatedAt: now
         };
       }
@@ -1255,6 +1281,9 @@
         const activePageDraft = currentGuestbookPageId
           ? draftState.pages?.[currentGuestbookPageId]
           : null;
+        if (pageTitleField && activePageDraft && typeof activePageDraft.title === "string") {
+          pageTitleField.value = activePageDraft.title;
+        }
         if (pageContentField && activePageDraft && typeof activePageDraft.content === "string") {
           pageContentField.value = activePageDraft.content;
         }
@@ -1286,19 +1315,28 @@
       editorForm.appendChild(input);
     };
 
-    const appendGuestbookDraftPageContentFields = () => {
+    const appendGuestbookDraftPageFields = () => {
       removeGuestbookDraftInputs();
       rememberGuestbookDraft();
 
       const draftState = readGuestbookDraftState();
       Object.entries(draftState.pages || {}).forEach(([pageId, pageDraft]) => {
         const normalizedPageId = String(pageId || "").trim();
-        if (!/^\d+$/.test(normalizedPageId) || typeof pageDraft?.content !== "string") {
+        const hasPageTitle = typeof pageDraft?.title === "string";
+        const hasPageContent = typeof pageDraft?.content === "string";
+        if (!/^\d+$/.test(normalizedPageId) || (!hasPageTitle && !hasPageContent)) {
           return;
         }
 
-        appendGuestbookDraftInput("guestbook_page_content_id", normalizedPageId);
-        appendGuestbookDraftInput("guestbook_page_content_value", pageDraft.content);
+        if (hasPageTitle) {
+          appendGuestbookDraftInput("guestbook_page_title_id", normalizedPageId);
+          appendGuestbookDraftInput("guestbook_page_title_value", pageDraft.title);
+        }
+
+        if (hasPageContent) {
+          appendGuestbookDraftInput("guestbook_page_content_id", normalizedPageId);
+          appendGuestbookDraftInput("guestbook_page_content_value", pageDraft.content);
+        }
       });
     };
 
@@ -1639,6 +1677,9 @@
       window.getGuestbookEditorPage = () => getActiveEditorPage();
     }
 
+    if (pageTitleField) {
+      pageTitleField.value = initialPageTitle;
+    }
     if (pageContentField) {
       pageContentField.value = initialPageContent;
     }
@@ -2541,6 +2582,7 @@
 
       const requestController = new AbortController();
       previewSyncController = requestController;
+      appendGuestbookDraftPageFields();
       const formData = new FormData(editorForm);
       fetch(previewSyncUrl, {
         method: "POST",
@@ -2587,10 +2629,8 @@
         const isPreviewSubmit =
           String(event.submitter?.getAttribute?.("formtarget") || "").trim() === previewTargetName;
 
-        if (isPreviewSubmit) {
-          removeGuestbookDraftInputs();
-        } else {
-          appendGuestbookDraftPageContentFields();
+        appendGuestbookDraftPageFields();
+        if (!isPreviewSubmit) {
           setEditorReturnStepFields("guestbook-content");
         }
 

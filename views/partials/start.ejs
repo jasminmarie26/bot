@@ -406,13 +406,25 @@
         (entry) => entry && entry.id && entry.name && entry.url
       )
       : []; %>
+    <% const topbarGuestbookPageLinksList = Array.isArray(
+      typeof topbarGuestbookPageLinks !== "undefined" ? topbarGuestbookPageLinks : []
+    )
+      ? (typeof topbarGuestbookPageLinks !== "undefined" ? topbarGuestbookPageLinks : []).filter(
+        (entry) => entry && entry.label && entry.url
+      )
+      : []; %>
     <% const topbarGuestbookMusicVideoIdValue =
       typeof topbarGuestbookMusicVideoId !== "undefined" ? String(topbarGuestbookMusicVideoId || "").trim() : ""; %>
     <% const showTopbarGuestbookCreatedAt = Boolean(
       topbarGuestbookModeActive && (topbarCharacterCreatedAtLabel || topbarBirthdayRows.length)
     ); %>
     <% const showTopbarGuestbookTools = Boolean(
-      topbarGuestbookModeActive && (topbarGuestbookSearchCharactersList.length || topbarGuestbookMusicVideoIdValue)
+      topbarGuestbookModeActive &&
+      (
+        topbarGuestbookPageLinksList.length ||
+        topbarGuestbookSearchCharactersList.length ||
+        topbarGuestbookMusicVideoIdValue
+      )
     ); %>
     <% const showTopbarGuestbookInfoBlock = Boolean(
       topbarGuestbookModeActive && (showTopbarGuestbookCreatedAt || showTopbarGuestbookTools)
@@ -566,6 +578,25 @@
           <nav class="nav <%= topbarGuestbookModeActive ? "nav-guestbook-mode" : "" %>">
             <% if (topbarGuestbookModeActive && showTopbarGuestbookTools) { %>
               <div class="topbar-guestbook-tools">
+                <% if (topbarGuestbookPageLinksList.length) { %>
+                  <div class="rp-dropdown topbar-guestbook-page-menu">
+                    <button type="button" class="rp-dropdown-toggle topbar-guestbook-page-toggle">
+                      Seiten
+                    </button>
+                    <div class="rp-dropdown-menu topbar-guestbook-page-list" role="menu">
+                      <% topbarGuestbookPageLinksList.forEach((entry) => { %>
+                        <a
+                          href="<%= entry.url %>"
+                          class="<%= entry.isActive ? "is-active" : "" %>"
+                          <%= entry.isActive ? 'aria-current="page"' : "" %>
+                        >
+                          <%= entry.label %>
+                        </a>
+                      <% }) %>
+                    </div>
+                  </div>
+                <% } %>
+
                 <% if (topbarGuestbookSearchCharactersList.length) { %>
                   <div class="guestbook-search-shell" data-guestbook-search-root>
                     <button
