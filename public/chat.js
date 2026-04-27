@@ -2952,13 +2952,17 @@
   }
 
   function getWhisperThreadKey(characterId, userId) {
+    const parsedUserId = normalizePositiveNumber(userId);
+    if (parsedUserId) {
+      return `user:${parsedUserId}`;
+    }
+
     const parsedCharacterId = normalizePositiveNumber(characterId);
     if (parsedCharacterId) {
       return `character:${parsedCharacterId}`;
     }
 
-    const parsedUserId = normalizePositiveNumber(userId);
-    return parsedUserId ? `user:${parsedUserId}` : "";
+    return "";
   }
 
   function getWhisperThreadKeyFromEntry(entry) {
@@ -3027,8 +3031,29 @@
 
     const parsedUserId = normalizePositiveNumber(userId);
     const parsedCharacterId = normalizePositiveNumber(characterId);
-    const existing = whisperThreadsByKey.get(normalizedThreadKey);
+    const threadAliases = [
+      normalizedThreadKey,
+      parsedUserId ? `user:${parsedUserId}` : "",
+      parsedCharacterId ? `character:${parsedCharacterId}` : ""
+    ].filter(Boolean);
+    let existing = null;
+    let existingKey = "";
+
+    for (const alias of threadAliases) {
+      const aliasThread = whisperThreadsByKey.get(alias);
+      if (aliasThread) {
+        existing = aliasThread;
+        existingKey = alias;
+        break;
+      }
+    }
+
     if (existing) {
+      if (existingKey && existingKey !== normalizedThreadKey) {
+        whisperThreadsByKey.delete(existingKey);
+        existing.threadKey = normalizedThreadKey;
+        whisperThreadsByKey.set(normalizedThreadKey, existing);
+      }
       if (parsedUserId) {
         existing.userId = parsedUserId;
       }
@@ -3164,6 +3189,14 @@
       if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
       if (whisperInput) whisperInput.value = "";
       return;
+    }
+
+    const currentOnlineEntry = getOnlineEntryByUserId(thread.userId);
+    if (currentOnlineEntry) {
+      thread.characterId = normalizePositiveNumber(currentOnlineEntry.characterId);
+      if (String(currentOnlineEntry.name || "").trim()) {
+        thread.name = String(currentOnlineEntry.name).trim();
+      }
     }
 
     whisperThreadShell.hidden = false;
@@ -4027,7 +4060,10 @@
   function submitWhisperMessage() {
     const activeThread = whisperThreadsByKey.get(String(activeWhisperThreadKey || "").trim());
     const targetUserId = Number(activeThread?.userId || whisperTargetUserIdInput?.value);
-    const targetCharacterId = normalizePositiveNumber(activeThread?.characterId);
+    const currentOnlineEntry = getOnlineEntryByUserId(targetUserId);
+    const targetCharacterId = normalizePositiveNumber(
+      currentOnlineEntry?.characterId ?? activeThread?.characterId
+    );
     const content = String(whisperInput?.value || "").trim();
     if (!Number.isInteger(targetUserId) || targetUserId < 1 || !content) {
       return false;
@@ -4045,9 +4081,9 @@
       userId: targetUserId,
       characterId: targetCharacterId,
       name:
+        currentOnlineEntry?.name ||
         activeThread?.name ||
         getOnlineEntryByThreadKey(getWhisperThreadKey(targetCharacterId, targetUserId))?.name ||
-        getOnlineEntryByUserId(targetUserId)?.name ||
         whisperThreadsByKey.get(getWhisperThreadKey(targetCharacterId, targetUserId))?.name ||
         "Unbekannt"
     }, {

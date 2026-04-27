@@ -24552,7 +24552,7 @@ function findWhisperTargetsByDisplayName(
   }
 
   const matches = [];
-  const seenPresenceKeys = new Set();
+  const seenWhisperTargetKeys = new Set();
   const senderStandardRoomContext = isSharedStandardRoomContext(roomId)
     ? getStandardRoomContext(normalizedServerId, standardRoomId)
     : null;
@@ -24577,9 +24577,13 @@ function findWhisperTargetsByDisplayName(
       !Number.isInteger(userId) ||
       userId < 1 ||
       (Number.isInteger(parsedExcludeUserId) && userId === parsedExcludeUserId) ||
-      !presenceIdentity?.key ||
-      seenPresenceKeys.has(presenceIdentity.key)
+      !presenceIdentity?.key
     ) {
+      continue;
+    }
+
+    const whisperTargetKey = `user:${userId}`;
+    if (seenWhisperTargetKeys.has(whisperTargetKey)) {
       continue;
     }
 
@@ -24639,7 +24643,7 @@ function findWhisperTargetsByDisplayName(
       roleStyle: profile?.role_style || "",
       chatTextColor: profile?.chat_text_color || ""
     });
-    seenPresenceKeys.add(presenceIdentity.key);
+    seenWhisperTargetKeys.add(whisperTargetKey);
   }
 
   return matches;
