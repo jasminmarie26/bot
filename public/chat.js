@@ -194,6 +194,23 @@
         { startMs: 42, durationMs: 200, startFreq: 392, endFreq: 523, volume: 0.16, wave: "sine" },
         { startMs: 122, durationMs: 140, startFreq: 523, endFreq: 494, volume: 0.12, wave: "square" }
       ]
+    },
+    bell: {
+      label: "Glocke",
+      durationMs: 440,
+      tracks: [
+        { startMs: 0, durationMs: 260, startFreq: 1244, endFreq: 1174, volume: 0.28, wave: "sine" },
+        { startMs: 0, durationMs: 320, startFreq: 1864, endFreq: 1760, volume: 0.14, wave: "sine" },
+        { startMs: 28, durationMs: 360, startFreq: 2489, endFreq: 2349, volume: 0.09, wave: "triangle" }
+      ]
+    },
+    ping: {
+      label: "Ping",
+      durationMs: 180,
+      tracks: [
+        { startMs: 0, durationMs: 120, startFreq: 1320, endFreq: 1480, volume: 0.22, wave: "sine" },
+        { startMs: 18, durationMs: 110, startFreq: 1760, endFreq: 1660, volume: 0.1, wave: "triangle" }
+      ]
     }
   };
   const notificationToneIds = Object.keys(notificationToneConfigs);
