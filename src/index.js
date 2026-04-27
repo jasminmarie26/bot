@@ -24675,12 +24675,13 @@ function emitWhisperBetweenUsers(
   const senderCharacterId = normalizePresenceCharacterId(
     getSocketPreferredCharacterId(senderSocket, senderServerId)
   );
-  let recipientSockets = getUserSocketsOnServer(
+  const recipientSocketsAll = getUserSocketsOnServer(
     parsedTargetUserId,
     normalizedServerId,
     roomId,
     standardRoomId
   );
+  let recipientSockets = recipientSocketsAll;
   if (normalizedTargetCharacterId) {
     recipientSockets = recipientSockets.filter((memberSocket) => {
       const memberServerId = getSocketChannelServerId(memberSocket, roomId, normalizedServerId);
@@ -24689,6 +24690,12 @@ function emitWhisperBetweenUsers(
         normalizedTargetCharacterId
       );
     });
+
+    // Whisper threads can hold a stale character id after the recipient switches character.
+    // Fall back to "any character" sockets instead of reporting the user as offline.
+    if (!recipientSockets.length) {
+      recipientSockets = recipientSocketsAll;
+    }
   }
   if (!recipientSockets.length) {
     return { ok: false, reason: "missing_target" };
