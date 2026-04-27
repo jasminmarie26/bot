@@ -15,6 +15,8 @@
   data-html-source-url="/characters/<%= character.id %>/guestbook/edit/render-html?page_id=<%= activePage.id %>"
   data-editor-page-storage-key="guestbook-editor-pane-<%= character.id %>"
   data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
+  data-editor-character-id="<%= character.id %>"
+  data-editor-current-page-id="<%= activePage.id %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
   <input type="hidden" name="editor_return_step" value="guestbook-design" />
@@ -990,11 +992,14 @@
     const previewSubmitButtons = Array.from(
       document.querySelectorAll(`button[form="guestbook-editor-form"][formtarget="${previewTargetName}"]`)
     );
+    const guestbookPageLinks = Array.from(document.querySelectorAll("[data-character-guestbook-page-link]"));
     const editorPageTriggers = Array.from(document.querySelectorAll("[data-gb-editor-page-trigger]"));
     const editorPages = Array.from(document.querySelectorAll("[data-gb-editor-page]"));
     const themeStyleField = editorForm?.querySelector("[data-guestbook-theme-style]") || null;
     const editorPageStorageKey = String(editorForm?.dataset?.editorPageStorageKey || "").trim();
     const editorNavigationMode = String(editorForm?.dataset?.editorNavigationMode || "").trim().toLowerCase();
+    const editorCharacterId = String(editorForm?.dataset?.editorCharacterId || "").trim();
+    const currentGuestbookPageId = String(editorForm?.dataset?.editorCurrentPageId || "").trim();
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const editorScrollTopTarget =
       editorForm?.closest(".character-guestbook-panel") ||
@@ -1035,6 +1040,25 @@
     let editorWindowName = "";
     let guestbookTagSuggestionResults = [];
     let activeGuestbookTagSuggestionIndex = -1;
+    let restoringGuestbookDraft = false;
+    const guestbookDraftStorageKey = editorCharacterId ? `guestbook-editor-drafts-v1-${editorCharacterId}` : "";
+    const guestbookDraftMaxAgeMs = 24 * 60 * 60 * 1000;
+    const guestbookDraftSettingNames = new Set([
+      "theme_style",
+      "font_style",
+      "frame_color",
+      "background_color",
+      "surround_color",
+      "censor_level",
+      "guestbook_tags_custom",
+      "inner_image_url",
+      "clear_inner_image",
+      "inner_image_opacity",
+      "outer_image_url",
+      "clear_outer_image",
+      "outer_image_opacity",
+      "music_url"
+    ]);
 
     const normalizeGuestbookTagLabel = (value) =>
       String(value || "")
@@ -1055,6 +1079,200 @@
           .map((tagLabel) => [normalizeGuestbookTagKey(tagLabel), tagLabel])
       ).values()
     );
+
+    const readGuestbookDraftState = () => {
+      if (!guestbookDraftStorageKey) {
+        return { pages: {}, settings: {}, updatedAt: 0 };
+      }
+
+      try {
+        const parsed = JSON.parse(window.sessionStorage.getItem(guestbookDraftStorageKey) || "{}");
+        const updatedAt = Number(parsed?.updatedAt) || 0;
+        if (updatedAt && Date.now() - updatedAt > guestbookDraftMaxAgeMs) {
+          window.sessionStorage.removeItem(guestbookDraftStorageKey);
+          return { pages: {}, settings: {}, updatedAt: 0 };
+        }
+        return {
+          pages: parsed?.pages && typeof parsed.pages === "object" ? parsed.pages : {},
+          settings: parsed?.settings && typeof parsed.settings === "object" ? parsed.settings : {},
+          updatedAt
+        };
+      } catch (error) {
+        return { pages: {}, settings: {}, updatedAt: 0 };
+      }
+    };
+
+    const writeGuestbookDraftState = (state) => {
+      if (!guestbookDraftStorageKey) {
+        return;
+      }
+
+      try {
+        window.sessionStorage.setItem(guestbookDraftStorageKey, JSON.stringify(state));
+      } catch (error) {}
+    };
+
+    const readGuestbookSettingsDraftFields = () => {
+      if (!editorForm) {
+        return {};
+      }
+
+      return Array.from(editorForm.elements).reduce((fields, control) => {
+        const fieldName = String(control?.name || "").trim();
+        if (!fieldName || !guestbookDraftSettingNames.has(fieldName)) {
+          return fields;
+        }
+
+        if (control instanceof HTMLInputElement && control.type === "radio") {
+          if (control.checked) {
+            fields[fieldName] = control.value;
+          }
+          return fields;
+        }
+
+        if (control instanceof HTMLInputElement && control.type === "checkbox") {
+          fields[fieldName] = control.checked ? "1" : "";
+          return fields;
+        }
+
+        fields[fieldName] = String(control.value || "");
+        return fields;
+      }, {});
+    };
+
+    const getGuestbookDraftControls = (fieldName) => {
+      const safeFieldName = String(fieldName || "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+      return Array.from(editorForm?.querySelectorAll(`[name="${safeFieldName}"]`) || []);
+    };
+
+    const rememberGuestbookDraft = () => {
+      if (restoringGuestbookDraft || !guestbookDraftStorageKey) {
+        return;
+      }
+
+      const now = Date.now();
+      const draftState = readGuestbookDraftState();
+      const nextState = {
+        ...draftState,
+        pages: {
+          ...(draftState.pages || {})
+        },
+        settings: {
+          fields: readGuestbookSettingsDraftFields(),
+          updatedAt: now
+        },
+        updatedAt: now
+      };
+
+      if (currentGuestbookPageId && pageContentField) {
+        nextState.pages[currentGuestbookPageId] = {
+          content: pageContentField.value,
+          updatedAt: now
+        };
+      }
+
+      writeGuestbookDraftState(nextState);
+    };
+
+    const applyGuestbookSettingsDraft = (fields) => {
+      if (!editorForm || !fields || typeof fields !== "object") {
+        return;
+      }
+
+      Object.entries(fields).forEach(([fieldName, fieldValue]) => {
+        if (!guestbookDraftSettingNames.has(fieldName)) {
+          return;
+        }
+
+        const controls = getGuestbookDraftControls(fieldName);
+        controls.forEach((control) => {
+          if (control instanceof HTMLInputElement && control.type === "radio") {
+            control.checked = String(control.value) === String(fieldValue);
+            return;
+          }
+
+          if (control instanceof HTMLInputElement && control.type === "checkbox") {
+            control.checked = String(fieldValue || "").trim() === "1";
+            return;
+          }
+
+          if (
+            control instanceof HTMLInputElement ||
+            control instanceof HTMLTextAreaElement ||
+            control instanceof HTMLSelectElement
+          ) {
+            control.value = String(fieldValue || "");
+          }
+        });
+      });
+
+      Object.keys(fields).forEach((fieldName) => {
+        getGuestbookDraftControls(fieldName).forEach((control) => {
+          control.dispatchEvent(new Event("input", { bubbles: true }));
+          control.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      });
+    };
+
+    const restoreGuestbookDraft = () => {
+      if (!guestbookDraftStorageKey) {
+        return;
+      }
+
+      const draftState = readGuestbookDraftState();
+      restoringGuestbookDraft = true;
+      try {
+        applyGuestbookSettingsDraft(draftState.settings?.fields);
+
+        const activePageDraft = currentGuestbookPageId
+          ? draftState.pages?.[currentGuestbookPageId]
+          : null;
+        if (pageContentField && activePageDraft && typeof activePageDraft.content === "string") {
+          pageContentField.value = activePageDraft.content;
+        }
+      } finally {
+        restoringGuestbookDraft = false;
+      }
+    };
+
+    const removeGuestbookDraftInputs = () => {
+      if (!editorForm) {
+        return;
+      }
+
+      editorForm.querySelectorAll("[data-guestbook-draft-submit-field]").forEach((field) => {
+        field.remove();
+      });
+    };
+
+    const appendGuestbookDraftInput = (name, value) => {
+      if (!editorForm) {
+        return;
+      }
+
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = String(value || "");
+      input.dataset.guestbookDraftSubmitField = "true";
+      editorForm.appendChild(input);
+    };
+
+    const appendGuestbookDraftPageContentFields = () => {
+      removeGuestbookDraftInputs();
+      rememberGuestbookDraft();
+
+      const draftState = readGuestbookDraftState();
+      Object.entries(draftState.pages || {}).forEach(([pageId, pageDraft]) => {
+        const normalizedPageId = String(pageId || "").trim();
+        if (!/^\d+$/.test(normalizedPageId) || typeof pageDraft?.content !== "string") {
+          return;
+        }
+
+        appendGuestbookDraftInput("guestbook_page_content_id", normalizedPageId);
+        appendGuestbookDraftInput("guestbook_page_content_value", pageDraft.content);
+      });
+    };
 
     const readGuestbookTagInputState = () => {
       const rawParts = String(guestbookTagsInput?.value || "").split(",");
@@ -1395,6 +1613,7 @@
     if (pageContentField) {
       pageContentField.value = initialPageContent;
     }
+    restoreGuestbookDraft();
 
     const focusPageContentField = () => {
       if (!pageContentField) {
@@ -2334,13 +2553,27 @@
       editorForm.addEventListener("submit", (event) => {
         cancelPreviewSync();
         colorFieldControllers.forEach((controller) => controller.commit());
+        rememberGuestbookDraft();
 
-        if (
-          String(event.submitter?.getAttribute?.("formtarget") || "").trim() ===
-          previewTargetName
-        ) {
+        const isPreviewSubmit =
+          String(event.submitter?.getAttribute?.("formtarget") || "").trim() === previewTargetName;
+
+        if (isPreviewSubmit) {
+          removeGuestbookDraftInputs();
+        } else {
+          appendGuestbookDraftPageContentFields();
+        }
+
+        if (isPreviewSubmit) {
           preparePreviewSubmit();
         }
+      });
+
+      editorForm.addEventListener("input", rememberGuestbookDraft);
+      editorForm.addEventListener("change", rememberGuestbookDraft);
+      window.addEventListener("beforeunload", rememberGuestbookDraft);
+      guestbookPageLinks.forEach((link) => {
+        link.addEventListener("click", rememberGuestbookDraft);
       });
     }
 

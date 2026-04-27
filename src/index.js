@@ -10761,6 +10761,35 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   };
 }
 
+function getBodyValues(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return typeof value === "undefined" ? [] : [value];
+}
+
+function buildGuestbookPageContentUpdates(body, pages, activePage, activePageContent) {
+  const validPageIds = new Set((pages || []).map((page) => Number(page.id)).filter((pageId) => pageId > 0));
+  const updates = new Map();
+  const activePageId = Number(activePage?.id);
+  if (validPageIds.has(activePageId)) {
+    updates.set(activePageId, normalizeGuestbookPageContentInput(activePageContent));
+  }
+
+  const pageIds = getBodyValues(body?.guestbook_page_content_id);
+  const pageContents = getBodyValues(body?.guestbook_page_content_value);
+  pageIds.forEach((rawPageId, index) => {
+    const pageId = Number(rawPageId);
+    if (!validPageIds.has(pageId)) {
+      return;
+    }
+
+    updates.set(pageId, normalizeGuestbookPageContentInput(pageContents[index]));
+  });
+
+  return updates;
+}
+
 function buildGuestbookPageSettings(baseSettings = null, page = null) {
   const normalizedTags = parseGuestbookDiscoveryTags(baseSettings?.tags);
   const normalizeGuestbookUrl = (value) =>
@@ -11545,7 +11574,10 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
       return {
         ...entry,
         is_private: isPrivate,
-        content_html: renderGuestbookBbcode(entry.content),
+        content_html: renderGuestbookBbcode(entry.content, {
+          compactImageLineBreaks: false,
+          compactBlockLineBreaks: false
+        }),
         can_edit: entryAuthorId === viewerUserId || viewerIsAdmin,
         can_delete: entryAuthorId === viewerUserId || viewerIsOwner || viewerIsAdmin,
         author_guestbook_url:
@@ -20682,7 +20714,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
         maxLength: 0,
         compactImageLineBreaks: false,
-        compactBlockLineBreaks: true
+        compactBlockLineBreaks: false
       })
     },
     guestbookPageNavigation,
@@ -20947,7 +20979,7 @@ app.post("/characters/:id/guestbook/edit/render-html", requireAuth, (req, res) =
     html: renderGuestbookBbcode(pageContent, {
       maxLength: 0,
       compactImageLineBreaks: false,
-      compactBlockLineBreaks: true
+      compactBlockLineBreaks: false
     })
   });
 });
@@ -21035,7 +21067,7 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
     previewHtml: renderGuestbookBbcode(previewContent, {
       maxLength: 0,
       compactImageLineBreaks: false,
-      compactBlockLineBreaks: true
+      compactBlockLineBreaks: false
     }),
     previewBackUrl: getSafeExplicitReturnTarget(
       previewOriginState?.return_to,
@@ -21071,14 +21103,23 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
   const activePage = pages.find((page) => page.id === requestedPageId) || pages[0];
   const currentSettings = buildGuestbookPageSettings(getOrCreateGuestbookSettings(id), activePage);
   const payload = getGuestbookEditorPayload(req.body, currentSettings);
+  const pageContentUpdates = buildGuestbookPageContentUpdates(
+    req.body,
+    pages,
+    activePage,
+    payload.pageContent
+  );
 
   const saveGuestbookTx = db.transaction(() => {
-    db.prepare(
+    const updatePageContent = db.prepare(
       `UPDATE guestbook_pages
        SET content = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND character_id = ?`
-    ).run(payload.pageContent, activePage.id, id);
+    );
+    pageContentUpdates.forEach((pageContent, pageId) => {
+      updatePageContent.run(pageContent, pageId, id);
+    });
 
     db.prepare(
       `UPDATE guestbook_pages

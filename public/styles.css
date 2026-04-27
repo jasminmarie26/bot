@@ -9254,10 +9254,6 @@ body.theme-atari .guestbook-entry-panel {
   margin-right: auto;
 }
 
-.guestbook-page-preview .bb-image + br {
-  display: none;
-}
-
 .bb-image-left {
   float: left;
   width: auto;
