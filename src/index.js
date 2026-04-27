@@ -10214,14 +10214,17 @@ function normalizeBbcodeMarkup(rawContent) {
           continue;
         }
 
-        const remainder = String(openingMatch[2] || "").trim();
+        const rawRemainder = String(openingMatch[2] || "");
+        const remainder = rawRemainder.trim();
         if (!remainder) {
           return `[${tag}]`;
         }
         if (remainder.startsWith("=")) {
           return `[${tag}=${remainder.slice(1).trim()}]`;
         }
-        return `[${tag} ${remainder}]`;
+        if (tag === "img" && /^\s/.test(rawRemainder)) {
+          return `[${tag} ${remainder}]`;
+        }
       }
 
       return `[${normalizedInner}]`;
