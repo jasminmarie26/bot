@@ -24553,11 +24553,23 @@ function findWhisperTargetsByDisplayName(
 
   const matches = [];
   const seenPresenceKeys = new Set();
-  const candidateSockets = isSharedStandardRoomContext(roomId)
-    ? getSocketsInChannel(null, normalizedServerId, standardRoomId)
-    : Array.from(io.sockets.sockets.values());
+  const senderStandardRoomContext = isSharedStandardRoomContext(roomId)
+    ? getStandardRoomContext(normalizedServerId, standardRoomId)
+    : null;
+  const allowCrossServerSharedStandardRoom =
+    senderStandardRoomContext?.room?.shared_scope === true && Boolean(senderStandardRoomContext?.standardRoomId);
+  const candidateSockets = Array.from(io.sockets.sockets.values());
 
   for (const memberSocket of candidateSockets) {
+    if (
+      !memberSocket?.id ||
+      memberSocket?.connected !== true ||
+      !memberSocket?.data?.user ||
+      memberSocket?.data?.hasJoinedChat !== true
+    ) {
+      continue;
+    }
+
     const socketServerId = getSocketChannelServerId(memberSocket, roomId, normalizedServerId);
     const presenceIdentity = getSocketPresenceIdentity(memberSocket, socketServerId);
     const userId = Number(presenceIdentity?.userId);
@@ -24571,8 +24583,28 @@ function findWhisperTargetsByDisplayName(
       continue;
     }
 
-    if (!isSharedStandardRoomContext(roomId) && socketServerId !== normalizedServerId) {
-      continue;
+    if (socketServerId !== normalizedServerId) {
+      if (!allowCrossServerSharedStandardRoom) {
+        continue;
+      }
+
+      const socketRoomId =
+        Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
+          ? memberSocket.data.roomId
+          : null;
+      if (socketRoomId != null) {
+        continue;
+      }
+
+      const socketStandardRoomId = getSocketChannelStandardRoomId(
+        memberSocket,
+        socketRoomId,
+        socketServerId,
+        senderStandardRoomContext?.standardRoomId || ""
+      );
+      if (socketStandardRoomId !== senderStandardRoomContext?.standardRoomId) {
+        continue;
+      }
     }
 
     const profile = getCurrentChannelDisplayProfile(
