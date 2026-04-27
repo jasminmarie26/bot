@@ -2956,9 +2956,23 @@
         allowItalic: true,
         allowBold: true
       });
+      const afkNoteText = entry.outgoing
+        ? getWhisperAfkNoteText(
+            entry.whisper_target_afk_name || thread.name,
+            entry.whisper_target_is_afk,
+            entry.whisper_target_afk_reason
+          )
+        : "";
 
       article.appendChild(meta);
       article.appendChild(body);
+
+      if (afkNoteText) {
+        const note = document.createElement("small");
+        note.className = "whisper-thread-note";
+        note.textContent = afkNoteText;
+        article.appendChild(note);
+      }
 
       if (entry.created_at) {
         const time = document.createElement("small");
@@ -2997,7 +3011,10 @@
       content: String(msg?.content || ""),
       created_at: String(msg?.created_at || "").trim(),
       from_name: String(msg?.from_name || "").trim(),
-      to_name: String(msg?.to_name || "").trim()
+      to_name: String(msg?.to_name || "").trim(),
+      whisper_target_is_afk: Boolean(msg?.whisper_target_is_afk),
+      whisper_target_afk_reason: String(msg?.whisper_target_afk_reason || "").trim(),
+      whisper_target_afk_name: String(msg?.whisper_target_afk_name || "").trim()
     });
     thread.lastSequence = ++whisperSequence;
 
@@ -3006,6 +3023,17 @@
     }
 
     return thread;
+  }
+
+  function getWhisperAfkNoteText(targetName, isAfk, reason) {
+    const normalizedReason = String(reason || "").trim();
+    if (!isAfk && !normalizedReason) {
+      return "";
+    }
+    const normalizedName = String(targetName || "").trim() || "Dieser Charakter";
+    return normalizedReason
+      ? `${normalizedName} ist afk (${normalizedReason}).`
+      : `${normalizedName} ist afk.`;
   }
 
   function appendWhisper(msg) {
@@ -3021,8 +3049,21 @@
     line.appendChild(strong);
     appendFormattedChatText(body, msg?.content, { leadingSpace: true });
     line.appendChild(body);
+    const afkNoteText = msg?.outgoing
+      ? getWhisperAfkNoteText(
+          msg?.whisper_target_afk_name || msg?.to_name,
+          msg?.whisper_target_is_afk,
+          msg?.whisper_target_afk_reason
+        )
+      : "";
 
     article.appendChild(line);
+    if (afkNoteText) {
+      const note = document.createElement("small");
+      note.className = "chat-whisper-note";
+      note.textContent = afkNoteText;
+      article.appendChild(note);
+    }
     chatFeed.appendChild(article);
 
     while (chatFeed.children.length > 150) {

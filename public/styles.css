@@ -13903,6 +13903,14 @@ body.page-guestbook-view .guestbook-entry-heading {
   word-break: break-word;
 }
 
+.whisper-thread-note,
+.chat-box .chat-whisper-note {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
 .chat-whisper-form {
   display: grid;
   gap: 0.55rem;

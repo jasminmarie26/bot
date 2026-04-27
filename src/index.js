@@ -14908,7 +14908,9 @@ app.post("/account/update", requireAuth, (req, res) => {
   const email = normalizeEmail(req.body.email || "");
   const autoAfkEnabled = String(req.body.auto_afk_enabled || "").trim() === "1";
   const rawAfkTimeoutMinutes = String(req.body.afk_timeout_minutes || "").trim().slice(0, 3);
-  const guestbookMusicEnabled = String(req.body.guestbook_music_enabled || "").trim() === "1";
+  const guestbookMusicEnabled = Object.prototype.hasOwnProperty.call(req.body, "guestbook_music_enabled")
+    ? String(req.body.guestbook_music_enabled || "").trim() === "1"
+    : normalizeGuestbookMusicEnabled(accountUser.guestbook_music_enabled);
   const roomLogEmailEnabled = String(req.body.room_log_email_enabled || "").trim() === "1";
   const showOwnChatTime = String(req.body.show_own_chat_time || "").trim() === "1";
   const birthDate = normalizeBirthDate(accountUser.birth_date) || "";
@@ -24342,6 +24344,15 @@ function emitWhisperBetweenUsers(
         getSocketChannelServerId(recipientSockets[0], roomId, normalizedServerId)
       )
     : null;
+  const recipientAfkState = getChatAfkState(
+    parsedTargetUserId,
+    roomId,
+    normalizedServerId,
+    recipientCharacterId,
+    standardRoomId
+  );
+  const recipientIsAfk = Boolean(recipientAfkState);
+  const recipientAfkReason = String(recipientAfkState?.reason || "").trim();
   const ignoreFilterCache = new Map();
   const recipientIgnoreFilter = buildIgnoredSocialFilterForUser(parsedTargetUserId, ignoreFilterCache);
   if (
@@ -24373,6 +24384,9 @@ function emitWhisperBetweenUsers(
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
+    whisper_target_is_afk: recipientIsAfk,
+    whisper_target_afk_reason: recipientAfkReason,
+    whisper_target_afk_name: recipientName,
     created_at: createdAt
   };
   const recipientPayload = {
