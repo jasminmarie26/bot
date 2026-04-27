@@ -2452,15 +2452,16 @@
     const body = document.createElement("span");
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     const systemKind = String(msg?.system_kind || "").trim().toLowerCase();
+    const isActorSystemMessage = systemKind === "presence" || systemKind === "actor-message";
     const messageTimeColor = isSystemMessage
       ? (
-          systemKind === "presence"
+          isActorSystemMessage
             ? normalizeChatTextColor(msg?.presence_actor_chat_text_color || msg?.chat_text_color)
             : ""
         )
       : chatTextColor;
     const shouldShowMessageTime = showChatMessageTimestamps
-      && (!isSystemMessage || systemKind === "presence");
+      && (!isSystemMessage || isActorSystemMessage);
     const messageTimeLabel = shouldShowMessageTime
       ? getMessageTimeLabel(msg)
       : "";
