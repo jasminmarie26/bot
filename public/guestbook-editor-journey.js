@@ -101,17 +101,39 @@
       nextButton.disabled = nextIndex >= stepOrder.length - 1;
     }
 
-    if (isGuestbookStep && typeof window.setGuestbookEditorPage === "function") {
-      syncingGuestbookPage = true;
-      window.setGuestbookEditorPage(
+    if (isGuestbookStep) {
+      const nextGuestbookPage =
         nextStep === "guestbook-content"
           ? "content"
           : nextStep === "guestbook-settings"
             ? "settings"
-            : "design",
-        { persist }
-      );
-      syncingGuestbookPage = false;
+            : "design";
+      syncingGuestbookPage = true;
+      try {
+        if (typeof window.setGuestbookEditorPage === "function") {
+          window.setGuestbookEditorPage(nextGuestbookPage, { persist });
+        } else {
+          document.querySelectorAll("[data-gb-editor-page]").forEach((page) => {
+            const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === nextGuestbookPage;
+            page.hidden = !isActive;
+            page.classList.toggle("is-active", isActive);
+          });
+          document.querySelectorAll("[data-gb-editor-page-trigger]").forEach((trigger) => {
+            const isActive =
+              String(trigger.dataset.gbEditorPageTrigger || "").trim().toLowerCase() === nextGuestbookPage;
+            trigger.classList.toggle("is-active", isActive);
+            trigger.setAttribute("aria-selected", isActive ? "true" : "false");
+          });
+        }
+      } catch (_error) {
+        document.querySelectorAll("[data-gb-editor-page]").forEach((page) => {
+          const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === nextGuestbookPage;
+          page.hidden = !isActive;
+          page.classList.toggle("is-active", isActive);
+        });
+      } finally {
+        syncingGuestbookPage = false;
+      }
     }
 
     updateGuestbookPageLinkHashes(nextStep);

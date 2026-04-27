@@ -2713,6 +2713,25 @@ function buildGuestbookPreviewSessionState(characterId, activePage, payload, opt
   };
 }
 
+const guestbookPreviewCache = new Map();
+const GUESTBOOK_PREVIEW_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+
+function normalizeGuestbookPreviewToken(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return /^[a-f0-9]{24,64}$/.test(normalized) ? normalized : "";
+}
+
+function createGuestbookPreviewCacheEntry(previewState) {
+  const token = crypto.randomBytes(16).toString("hex");
+  const savedAt = Date.now();
+  guestbookPreviewCache.set(token, {
+    ...previewState,
+    saved_at: savedAt,
+    cache_expires_at: savedAt + GUESTBOOK_PREVIEW_CACHE_TTL_MS
+  });
+  return token;
+}
+
 function canUseGuestbookPreviewSessionState(previewState, characterId, requestedPageId = null) {
   const parsedCharacterId = Number(characterId);
   const parsedRequestedPageId = Number(requestedPageId);
@@ -2726,6 +2745,27 @@ function canUseGuestbookPreviewSessionState(previewState, characterId, requested
   }
 
   return Number(previewState.page_id) === parsedRequestedPageId;
+}
+
+function getGuestbookPreviewCacheState(token, characterId, requestedPageId = null) {
+  const normalizedToken = normalizeGuestbookPreviewToken(token);
+  if (!normalizedToken) {
+    return null;
+  }
+
+  const previewState = guestbookPreviewCache.get(normalizedToken);
+  if (!previewState) {
+    return null;
+  }
+
+  if (Number(previewState.cache_expires_at) < Date.now()) {
+    guestbookPreviewCache.delete(normalizedToken);
+    return null;
+  }
+
+  return canUseGuestbookPreviewSessionState(previewState, characterId, requestedPageId)
+    ? previewState
+    : null;
 }
 
 function getGuestbookPreviewSessionState(req, characterId, requestedPageId = null, mode = "") {
@@ -21006,9 +21046,11 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const pages = ensureGuestbookPages(id);
   const requestedPageId = Number(req.query.page_id);
   const previewMode = String(req.query.preview_mode || "").trim().toLowerCase();
+  const previewToken = normalizeGuestbookPreviewToken(req.query.preview_token);
   const fallbackPage = pages.find((page) => page.id === requestedPageId) || pages[0];
-  const storedPreview = getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
-  const previewOriginState = getGuestbookPreviewOriginSessionState(req, id, previewMode);
+  const cachedPreview = getGuestbookPreviewCacheState(previewToken, id, requestedPageId);
+  const storedPreview = cachedPreview || getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
+  const previewOriginState = cachedPreview || getGuestbookPreviewOriginSessionState(req, id, previewMode);
   const canUseStoredPreview = Boolean(storedPreview);
 
   const previewPage = canUseStoredPreview
@@ -21272,7 +21314,11 @@ app.post("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
       return res.status(204).end();
     }
 
-    return res.redirect(`/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}&preview_mode=explicit`);
+    const previewToken = createGuestbookPreviewCacheEntry(nextPreviewState);
+    return res.redirect(
+      `/characters/${id}/guestbook/edit/preview?page_id=${activePage.id}` +
+        `&preview_mode=explicit&preview_token=${previewToken}&preview_updated=${nextPreviewState.saved_at}`
+    );
   });
 });
 
