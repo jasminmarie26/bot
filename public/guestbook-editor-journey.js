@@ -54,6 +54,19 @@
     });
   };
 
+  const showGuestbookEditorPageFallback = (pageName) => {
+    document.querySelectorAll("[data-gb-editor-page]").forEach((page) => {
+      const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === pageName;
+      page.hidden = !isActive;
+      page.classList.toggle("is-active", isActive);
+    });
+    document.querySelectorAll("[data-gb-editor-page-trigger]").forEach((trigger) => {
+      const isActive = String(trigger.dataset.gbEditorPageTrigger || "").trim().toLowerCase() === pageName;
+      trigger.classList.toggle("is-active", isActive);
+      trigger.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+  };
+
   const persistStep = (stepName) => {
     if (!storageKey) {
       return;
@@ -112,26 +125,10 @@
       try {
         if (typeof window.setGuestbookEditorPage === "function") {
           window.setGuestbookEditorPage(nextGuestbookPage, { persist });
-        } else {
-          document.querySelectorAll("[data-gb-editor-page]").forEach((page) => {
-            const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === nextGuestbookPage;
-            page.hidden = !isActive;
-            page.classList.toggle("is-active", isActive);
-          });
-          document.querySelectorAll("[data-gb-editor-page-trigger]").forEach((trigger) => {
-            const isActive =
-              String(trigger.dataset.gbEditorPageTrigger || "").trim().toLowerCase() === nextGuestbookPage;
-            trigger.classList.toggle("is-active", isActive);
-            trigger.setAttribute("aria-selected", isActive ? "true" : "false");
-          });
         }
       } catch (_error) {
-        document.querySelectorAll("[data-gb-editor-page]").forEach((page) => {
-          const isActive = String(page.dataset.gbEditorPage || "").trim().toLowerCase() === nextGuestbookPage;
-          page.hidden = !isActive;
-          page.classList.toggle("is-active", isActive);
-        });
       } finally {
+        showGuestbookEditorPageFallback(nextGuestbookPage);
         syncingGuestbookPage = false;
       }
     }

@@ -201,8 +201,13 @@
           }) %>
         <% } %>
 
-        <fieldset class="character-form-basic-wide character-birthday-visibility-fieldset">
-          <legend>Geburtstag auf diesem Charakter anzeigen</legend>
+        <details class="character-form-basic-wide character-editor-fold" open>
+          <summary class="character-editor-fold-summary">
+            <span>Geburtstag auf diesem Charakter anzeigen</span>
+            <small>Sichtbarkeit pro Charakter</small>
+          </summary>
+
+        <div class="character-birthday-visibility-fieldset">
           <div class="account-birthday-visibility-options">
             <label class="checkbox account-table-checkbox">
               <input
@@ -241,7 +246,8 @@
               Ohne Geburtsdatum im Account bleiben die H&auml;kchen deaktiviert.
             <% } %>
           </span>
-        </fieldset>
+        </div>
+        </details>
       </div>
 
       <% if (!isLarpProfile) { %>

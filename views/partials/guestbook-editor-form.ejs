@@ -19,7 +19,7 @@
   data-editor-current-page-id="<%= activePage.id %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
-  <input type="hidden" name="editor_return_step" value="guestbook-design" />
+  <input type="hidden" name="editor_return_step" value="guestbook-content" />
   <input type="hidden" name="preview_return_to" value="" />
   <input type="hidden" name="preview_source_window_name" value="" />
   <input type="hidden" name="session_tab_id" value="" />
@@ -74,9 +74,15 @@
     aria-labelledby="gb-editor-page-design-title"
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: Design &amp; Stil" : "Seite 1: Design &amp; Stil" %></h3>
+      <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: Design & Stil" : "Seite 1: Design & Stil" %></h3>
       <p class="gb-editor-helptext">Theme, Schrift und Farben f&uuml;r das gesamte G&auml;stebuch.</p>
     </div>
+
+    <details class="gb-editor-fold" open>
+      <summary class="gb-editor-fold-summary">
+        <span>Grunddesign</span>
+        <small>Style, Font und Gesamtwirkung</small>
+      </summary>
 
     <div class="gb-editor-basics">
       <label class="gb-editor-card gb-editor-card-field">
@@ -116,6 +122,13 @@
         </span>
       </div>
     </div>
+    </details>
+
+    <details class="gb-editor-fold" open>
+      <summary class="gb-editor-fold-summary">
+        <span>Farben</span>
+        <small>Rahmen, Hintergrund und Fl&auml;che</small>
+      </summary>
 
     <div class="gb-editor-grid">
   <div class="gb-color-row" data-gb-theme-color-row>
@@ -294,6 +307,7 @@
     </div>
   </div>
     </div>
+    </details>
   </section>
 
   <section
@@ -524,15 +538,21 @@
     hidden
   >
     <div class="gb-editor-page-heading">
-      <h3 id="gb-editor-page-settings-title"><%= usesOuterNavigation ? "Schritt 4: Gesamt &amp; Musik" : "Seite 3: Gesamt &amp; Musik" %></h3>
+      <h3 id="gb-editor-page-settings-title"><%= usesOuterNavigation ? "Schritt 4: Gesamt & Musik" : "Seite 3: Gesamt & Musik" %></h3>
       <p class="gb-editor-helptext">Diese Einstellungen gelten nach dem Speichern f&uuml;r alle G&auml;stebuch-Seiten.</p>
     </div>
 
+    <details class="gb-editor-fold" open>
+      <summary class="gb-editor-fold-summary">
+        <span>Zensur und Themen-Tags</span>
+        <small>Gilt f&uuml;r das gesamte G&auml;stebuch</small>
+      </summary>
+
     <div class="gb-editor-basics">
-      <div class="gb-editor-card gb-editor-section">
+      <div class="gb-editor-card gb-editor-card-full gb-editor-section">
         <span class="gb-editor-subheading">Zensur</span>
         <span class="gb-editor-helptext">Gilt f&uuml;r das komplette G&auml;stebuch und nicht nur f&uuml;r eine Seite.</span>
-        <div class="gb-radio-list gb-radio-card-list">
+        <div class="gb-radio-list gb-radio-card-list gb-censor-card-list">
           <label class="gb-radio-card">
             <input type="radio" name="censor_level" value="ab18" <%= settings.censor_level === "ab18" ? "checked" : "" %> />
             <span class="gb-radio-card-copy">
@@ -597,6 +617,13 @@
         </label>
       </div>
     </div>
+    </details>
+
+    <details class="gb-editor-fold" open>
+      <summary class="gb-editor-fold-summary">
+        <span>Bilder und Musik</span>
+        <small>Hintergr&uuml;nde und YouTube-Link</small>
+      </summary>
 
     <div class="gb-editor-grid">
       <div class="gb-image-field">
@@ -689,6 +716,7 @@
         </div>
       </div>
     </div>
+    </details>
   </section>
 
   </form>
@@ -1534,8 +1562,7 @@
       return "guestbook-design";
     };
 
-    const syncEditorReturnStepFields = () => {
-      const nextStep = getCurrentEditorReturnStep();
+    const setEditorReturnStepFields = (nextStep) => {
       editorReturnStepFields.forEach((field) => {
         if (field instanceof HTMLInputElement) {
           field.value = nextStep;
@@ -1543,6 +1570,8 @@
       });
       return nextStep;
     };
+
+    const syncEditorReturnStepFields = () => setEditorReturnStepFields(getCurrentEditorReturnStep());
 
     const setActiveEditorPage = (pageName, persist = true) => {
       const normalizedPageName = String(pageName || "").trim().toLowerCase();
@@ -2562,6 +2591,7 @@
           removeGuestbookDraftInputs();
         } else {
           appendGuestbookDraftPageContentFields();
+          setEditorReturnStepFields("guestbook-content");
         }
 
         if (isPreviewSubmit) {
