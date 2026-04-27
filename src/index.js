@@ -10472,6 +10472,14 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   );
 
   html = html.replace(/\n/g, "<br>");
+  html = html.replace(
+    /<br>\s*(<\/?(?:tbody|thead|tfoot|tr|td|th)\b[^>]*>)/gi,
+    "$1"
+  );
+  html = html.replace(
+    /(<\/?(?:tbody|thead|tfoot|tr|td|th)\b[^>]*>)\s*<br>/gi,
+    "$1"
+  );
   if (compactImageLineBreaks) {
     html = html.replace(
       /<br>\s*(<img class="bb-image(?: bb-image-(?:left|right))?"[^>]*>)/gi,
