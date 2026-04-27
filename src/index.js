@@ -24095,18 +24095,8 @@ function getUserSocketsOnServer(
     return [];
   }
 
-  if (isSharedStandardRoomContext(roomId)) {
-    return getSocketsInChannel(null, normalizedServerId, standardRoomId).filter(
-      (memberSocket) => Number(memberSocket?.data?.user?.id) === parsedUserId
-    );
-  }
-
   return getAllSocketsForUser(parsedUserId).filter((memberSocket) => {
-    const socketServerId = ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.serverId || "").trim().toLowerCase())
-      ? normalizeServer(memberSocket.data.serverId)
-      : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
-        ? normalizeServer(memberSocket.data.presenceServerId)
-        : null;
+    const socketServerId = getSocketActiveServerId(memberSocket, normalizedServerId);
     return socketServerId === normalizedServerId;
   });
 }
@@ -24553,11 +24543,6 @@ function findWhisperTargetsByDisplayName(
 
   const matches = [];
   const seenWhisperTargetKeys = new Set();
-  const senderStandardRoomContext = isSharedStandardRoomContext(roomId)
-    ? getStandardRoomContext(normalizedServerId, standardRoomId)
-    : null;
-  const allowCrossServerSharedStandardRoom =
-    senderStandardRoomContext?.room?.shared_scope === true && Boolean(senderStandardRoomContext?.standardRoomId);
   const candidateSockets = Array.from(io.sockets.sockets.values());
 
   for (const memberSocket of candidateSockets) {
@@ -24570,7 +24555,7 @@ function findWhisperTargetsByDisplayName(
       continue;
     }
 
-    const socketServerId = getSocketChannelServerId(memberSocket, roomId, normalizedServerId);
+    const socketServerId = getSocketActiveServerId(memberSocket, normalizedServerId);
     const presenceIdentity = getSocketPresenceIdentity(memberSocket, socketServerId);
     const userId = Number(presenceIdentity?.userId);
     if (
@@ -24588,27 +24573,7 @@ function findWhisperTargetsByDisplayName(
     }
 
     if (socketServerId !== normalizedServerId) {
-      if (!allowCrossServerSharedStandardRoom) {
-        continue;
-      }
-
-      const socketRoomId =
-        Number.isInteger(memberSocket.data.roomId) && memberSocket.data.roomId > 0
-          ? memberSocket.data.roomId
-          : null;
-      if (socketRoomId != null) {
-        continue;
-      }
-
-      const socketStandardRoomId = getSocketChannelStandardRoomId(
-        memberSocket,
-        socketRoomId,
-        socketServerId,
-        senderStandardRoomContext?.standardRoomId || ""
-      );
-      if (socketStandardRoomId !== senderStandardRoomContext?.standardRoomId) {
-        continue;
-      }
+      continue;
     }
 
     const profile = getCurrentChannelDisplayProfile(
