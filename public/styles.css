@@ -9171,21 +9171,6 @@ body.theme-atari .guestbook-entry-panel {
   text-align: right;
 }
 
-.bb-left .bb-table-wrap {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-.bb-center .bb-table-wrap {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.bb-right .bb-table-wrap {
-  margin-left: auto;
-  margin-right: 0;
-}
-
 .bb-block {
   display: block;
   text-align: justify;
@@ -9221,21 +9206,26 @@ body.theme-atari .guestbook-entry-panel {
   min-width: 0;
   border-collapse: collapse;
   border-spacing: 0;
-  margin: 0 auto;
+  margin: 0;
   table-layout: auto;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .bb-table-row {
 }
 
 .bb-table-wrap {
-  display: block;
-  width: fit-content;
+  display: inline-block;
+  width: auto;
   max-width: 100%;
   min-width: 0;
   margin: 0;
+  vertical-align: top;
   overflow-x: auto;
   overflow-y: hidden;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .bb-table-cell {
@@ -9248,6 +9238,8 @@ body.theme-atari .guestbook-entry-panel {
   white-space: normal;
   word-break: normal;
   overflow-wrap: break-word;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .bb-table-cell-spacer {
