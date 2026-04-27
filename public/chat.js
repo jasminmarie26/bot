@@ -2974,6 +2974,9 @@
         const note = document.createElement("small");
         note.className = "whisper-thread-note";
         note.textContent = afkNoteText;
+        const afkNoteColor = normalizeChatTextColor(entry?.whisper_target_chat_text_color);
+        setChatColorSource(note, afkNoteColor);
+        applyStoredChatTextColor(note, afkNoteColor, { allowGradient: false });
         article.appendChild(note);
       }
 
@@ -3017,7 +3020,8 @@
       to_name: String(msg?.to_name || "").trim(),
       whisper_target_is_afk: Boolean(msg?.whisper_target_is_afk),
       whisper_target_afk_reason: String(msg?.whisper_target_afk_reason || "").trim(),
-      whisper_target_afk_name: String(msg?.whisper_target_afk_name || "").trim()
+      whisper_target_afk_name: String(msg?.whisper_target_afk_name || "").trim(),
+      whisper_target_chat_text_color: String(msg?.whisper_target_chat_text_color || "").trim()
     });
     thread.lastSequence = ++whisperSequence;
 
@@ -3065,6 +3069,9 @@
       const note = document.createElement("small");
       note.className = "chat-whisper-note";
       note.textContent = afkNoteText;
+      const afkNoteColor = normalizeChatTextColor(msg?.whisper_target_chat_text_color);
+      setChatColorSource(note, afkNoteColor);
+      applyStoredChatTextColor(note, afkNoteColor, { allowGradient: false });
       article.appendChild(note);
     }
     chatFeed.appendChild(article);

@@ -24387,6 +24387,7 @@ function emitWhisperBetweenUsers(
     whisper_target_is_afk: recipientIsAfk,
     whisper_target_afk_reason: recipientAfkReason,
     whisper_target_afk_name: recipientName,
+    whisper_target_chat_text_color: recipientAfkState?.chatTextColor || recipientProfile?.chat_text_color || "",
     created_at: createdAt
   };
   const recipientPayload = {
