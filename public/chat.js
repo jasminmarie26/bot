@@ -489,6 +489,14 @@
       : "/dashboard";
   }
 
+  function leaveChatToRoomList() {
+    prepareForIntentionalChatLeave();
+    stopTypingIndicator();
+    window.__chatImmediateLeave?.notifyImmediateChatLeave();
+    disconnectChatSocketForUnload();
+    window.location.assign(buildCurrentChatRoomListUrl());
+  }
+
   function buildCurrentRpBoardUrl() {
     if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
       return "/rp-board";
@@ -3799,6 +3807,13 @@
   function submitMainChatMessage() {
     const content = input.value.trim();
     if (!content) return;
+
+    if (/^\/exit(?:\s+.*)?$/i.test(content)) {
+      input.value = "";
+      resizeChatInput();
+      leaveChatToRoomList();
+      return;
+    }
 
     stopTypingIndicator();
     registerChatActivity({ typing: true });
