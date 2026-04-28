@@ -1,17 +1,5 @@
 (() => {
-  document.querySelectorAll('img[data-guestbook-image-fallback="1"]').forEach((image) => {
-    image.addEventListener("error", () => {
-      if (image.dataset.fallbackApplied === "1") return;
-
-      const fallbackSrc = String(image.dataset.fallbackSrc || "").trim();
-      if (!fallbackSrc || image.currentSrc === fallbackSrc) return;
-
-      image.dataset.fallbackApplied = "1";
-      image.src = fallbackSrc;
-    });
-  });
-
-  const tooltipTriggers = Array.from(document.querySelectorAll(".bb-fn"));
+  const tooltipTriggers = new Set();
 
   const getTooltipBoundary = (trigger) =>
     trigger.closest('.guestbook-page-preview[class*="gb-theme-"]') ||
@@ -77,23 +65,51 @@
     }
   };
 
-  tooltipTriggers.forEach((trigger) => {
-    ["mouseenter", "focus", "touchstart"].forEach((eventName) => {
-      trigger.addEventListener(
-        eventName,
-        () => {
-          positionTooltip(trigger);
-        },
-        { passive: true }
-      );
-    });
-  });
+  function initializeGuestbookMedia(root = document) {
+    root.querySelectorAll('img[data-guestbook-image-fallback="1"]').forEach((image) => {
+      if (image.dataset.fallbackBound === "1") return;
+      image.dataset.fallbackBound = "1";
+      image.addEventListener("error", () => {
+        if (image.dataset.fallbackApplied === "1") return;
 
-  if (tooltipTriggers.length) {
-    window.addEventListener("resize", () => {
-      tooltipTriggers.forEach((trigger) => {
-        positionTooltip(trigger);
+        const fallbackSrc = String(image.dataset.fallbackSrc || "").trim();
+        if (!fallbackSrc || image.currentSrc === fallbackSrc) return;
+
+        image.dataset.fallbackApplied = "1";
+        image.src = fallbackSrc;
+      });
+    });
+
+    root.querySelectorAll(".bb-fn").forEach((trigger) => {
+      if (trigger.dataset.tooltipBound === "1") {
+        return;
+      }
+
+      trigger.dataset.tooltipBound = "1";
+      tooltipTriggers.add(trigger);
+      ["mouseenter", "focus", "touchstart"].forEach((eventName) => {
+        trigger.addEventListener(
+          eventName,
+          () => {
+            positionTooltip(trigger);
+          },
+          { passive: true }
+        );
       });
     });
   }
+
+  window.__initializeGuestbookMedia = initializeGuestbookMedia;
+  initializeGuestbookMedia();
+
+  window.addEventListener("resize", () => {
+    tooltipTriggers.forEach((trigger) => {
+      if (!document.documentElement.contains(trigger)) {
+        tooltipTriggers.delete(trigger);
+        return;
+      }
+
+      positionTooltip(trigger);
+    });
+  });
 })();
