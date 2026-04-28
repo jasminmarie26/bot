@@ -347,6 +347,7 @@
 <div data-server-presence="<%= character.server_id %>" hidden></div>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
+<script src="/guestbook-page-navigation.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>
 <% if (Array.isArray(guestbookSearchCharacters) && guestbookSearchCharacters.length) { %>
   <script id="guestbook-search-data" type="application/json"><%- JSON.stringify({

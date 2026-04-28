@@ -3,6 +3,7 @@
     <% if (guestbookPageNavigation.previousPage?.url) { %>
       <a
         class="guestbook-page-nav guestbook-page-nav-prev"
+        data-guestbook-page-navigation-link
         href="<%= guestbookPageNavigation.previousPage.url %>"
         aria-label="Vorherige Gästebuch-Seite"
         title="Vorherige Seite"
@@ -16,6 +17,7 @@
     <% if (guestbookPageNavigation.nextPage?.url) { %>
       <a
         class="guestbook-page-nav guestbook-page-nav-next"
+        data-guestbook-page-navigation-link
         href="<%= guestbookPageNavigation.nextPage.url %>"
         aria-label="Nächste Gästebuch-Seite"
         title="Nächste Seite"

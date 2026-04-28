@@ -811,7 +811,7 @@ const sessionMiddleware = session({
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "2mb" }));
 fs.mkdirSync(BBCODE_1001FREEFONTS_CACHE_ROOT, { recursive: true });
 app.get("/healthz", (req, res) => {
   res.setHeader("Cache-Control", "no-store");

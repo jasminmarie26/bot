@@ -4,6 +4,10 @@
   const guestbookTagSuggestions = Array.isArray(guestbookDiscoveryTagSuggestions)
     ? guestbookDiscoveryTagSuggestions
     : [];
+  const guestbookEditorWasSaved =
+    typeof flash !== "undefined" &&
+    flash?.type === "success" &&
+    String(flash.text || "") === "Gästebuch gespeichert.";
 %>
 
 <form
@@ -17,6 +21,7 @@
   data-editor-navigation-mode="<%= usesOuterNavigation ? 'outer' : 'inner' %>"
   data-editor-character-id="<%= character.id %>"
   data-editor-current-page-id="<%= activePage.id %>"
+  data-editor-saved="<%= guestbookEditorWasSaved ? 'true' : 'false' %>"
 >
   <input type="hidden" name="page_id" value="<%= activePage.id %>" />
   <input type="hidden" name="editor_return_step" value="guestbook-content" />
@@ -1052,6 +1057,7 @@
     const editorNavigationMode = String(editorForm?.dataset?.editorNavigationMode || "").trim().toLowerCase();
     const editorCharacterId = String(editorForm?.dataset?.editorCharacterId || "").trim();
     const currentGuestbookPageId = String(editorForm?.dataset?.editorCurrentPageId || "").trim();
+    const editorWasSaved = String(editorForm?.dataset?.editorSaved || "").trim().toLowerCase() === "true";
     const pageTitleField = editorForm?.querySelector('input[name="page_title"]') || null;
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
     const editorScrollTopTarget =
@@ -1165,6 +1171,12 @@
       } catch (error) {}
     };
 
+    if (editorWasSaved && guestbookDraftStorageKey) {
+      try {
+        window.sessionStorage.removeItem(guestbookDraftStorageKey);
+      } catch (error) {}
+    }
+
     const readGuestbookSettingsDraftFields = () => {
       if (!editorForm) {
         return {};
@@ -1218,9 +1230,22 @@
       };
 
       if (currentGuestbookPageId && (pageTitleField || pageContentField)) {
+        const nextTitle = pageTitleField ? pageTitleField.value : "";
+        const nextContent = pageContentField ? pageContentField.value : "";
+        const isCurrentPageDirty =
+          nextTitle !== initialPageTitle ||
+          nextContent !== initialPageContent;
+
+        if (!isCurrentPageDirty) {
+          delete nextState.pages[currentGuestbookPageId];
+          writeGuestbookDraftState(nextState);
+          return;
+        }
+
         nextState.pages[currentGuestbookPageId] = {
-          title: pageTitleField ? pageTitleField.value : "",
-          content: pageContentField ? pageContentField.value : "",
+          title: nextTitle,
+          content: nextContent,
+          dirty: true,
           updatedAt: now
         };
       }
@@ -1281,10 +1306,11 @@
         const activePageDraft = currentGuestbookPageId
           ? draftState.pages?.[currentGuestbookPageId]
           : null;
-        if (pageTitleField && activePageDraft && typeof activePageDraft.title === "string") {
+        const shouldRestoreActivePageDraft = activePageDraft?.dirty === true;
+        if (shouldRestoreActivePageDraft && pageTitleField && typeof activePageDraft.title === "string") {
           pageTitleField.value = activePageDraft.title;
         }
-        if (pageContentField && activePageDraft && typeof activePageDraft.content === "string") {
+        if (shouldRestoreActivePageDraft && pageContentField && typeof activePageDraft.content === "string") {
           pageContentField.value = activePageDraft.content;
         }
       } finally {
@@ -1324,7 +1350,12 @@
         const normalizedPageId = String(pageId || "").trim();
         const hasPageTitle = typeof pageDraft?.title === "string";
         const hasPageContent = typeof pageDraft?.content === "string";
-        if (!/^\d+$/.test(normalizedPageId) || (!hasPageTitle && !hasPageContent)) {
+        if (
+          !/^\d+$/.test(normalizedPageId) ||
+          normalizedPageId === currentGuestbookPageId ||
+          pageDraft?.dirty !== true ||
+          (!hasPageTitle && !hasPageContent)
+        ) {
           return;
         }
 
