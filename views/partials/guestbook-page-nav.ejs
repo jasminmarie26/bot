@@ -4,6 +4,7 @@
       <a
         class="guestbook-page-nav guestbook-page-nav-prev"
         data-guestbook-page-navigation-link
+        data-guestbook-page-fetch-url="<%= guestbookPageNavigation.previousPage.fetchUrl || guestbookPageNavigation.previousPage.url %>"
         href="<%= guestbookPageNavigation.previousPage.url %>"
         aria-label="Vorherige Gästebuch-Seite"
         title="Vorherige Seite"
@@ -18,6 +19,7 @@
       <a
         class="guestbook-page-nav guestbook-page-nav-next"
         data-guestbook-page-navigation-link
+        data-guestbook-page-fetch-url="<%= guestbookPageNavigation.nextPage.fetchUrl || guestbookPageNavigation.nextPage.url %>"
         href="<%= guestbookPageNavigation.nextPage.url %>"
         aria-label="Nächste Gästebuch-Seite"
         title="Nächste Seite"

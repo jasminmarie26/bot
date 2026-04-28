@@ -589,6 +589,7 @@
                           href="<%= entry.url %>"
                           class="<%= entry.isActive ? "is-active" : "" %>"
                           data-guestbook-page-navigation-link
+                          data-guestbook-page-fetch-url="<%= entry.fetchUrl || entry.url %>"
                           <%= entry.isActive ? 'aria-current="page"' : "" %>
                         >
                           <%= entry.label %>

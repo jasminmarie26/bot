@@ -11168,27 +11168,36 @@ function orderGuestbookPages(pages) {
     : [];
 }
 
-function buildGuestbookPageNavigation(pages, activePageId, buildPageUrl) {
+function buildGuestbookPageNavigation(pages, activePageId, buildPageUrl, buildVisiblePageUrl = null) {
   const orderedPages = orderGuestbookPages(pages).map((page) => decorateGuestbookPage(page));
   const activeIndex = orderedPages.findIndex((page) => Number(page.id) === Number(activePageId));
   const previousPage = activeIndex > 0 ? orderedPages[activeIndex - 1] : null;
   const nextPage =
     activeIndex >= 0 && activeIndex < orderedPages.length - 1 ? orderedPages[activeIndex + 1] : null;
+  const buildNavigationEntry = (page) => {
+    if (!page) {
+      return null;
+    }
+
+    const fetchUrl = buildPageUrl(page.id);
+    return {
+      ...page,
+      url: typeof buildVisiblePageUrl === "function" ? buildVisiblePageUrl(page) : fetchUrl,
+      fetchUrl
+    };
+  };
   const overviewPages = orderedPages
     .filter((page) => page.page_heading)
     .map((page) => ({
-      ...page,
+      ...buildNavigationEntry(page),
       label: page.page_heading,
-      url: buildPageUrl(page.id),
       isActive: Number(page.id) === Number(activePageId)
     }));
 
-  const withUrl = (page) => (page ? { ...page, url: buildPageUrl(page.id) } : null);
-
   return {
     hasMultiplePages: orderedPages.length > 1,
-    previousPage: withUrl(previousPage),
-    nextPage: withUrl(nextPage),
+    previousPage: buildNavigationEntry(previousPage),
+    nextPage: buildNavigationEntry(nextPage),
     overviewPages,
     hasOverviewPages: overviewPages.length > 0
   };
@@ -20965,13 +20974,16 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   const guestbookMusicVideoId = guestbookMusicEnabled
     ? extractYouTubeVideoId(guestbookSettings?.music_url)
     : "";
+  const guestbookContextQuery = buildGuestbookContextQuery(guestbookAccessState);
+  const guestbookVisibleContextQuery = guestbookContextQuery ? `?${guestbookContextQuery.slice(1)}` : "";
   const guestbookPageNavigation = buildGuestbookPageNavigation(
     guestbookPages,
     activeGuestbookPage.id,
     (pageId) =>
       `/characters/${character.id}/guestbook?page_id=${pageId}` +
       (activeGuestbookEntriesPageNumber > 1 ? `&entries_page=${activeGuestbookEntriesPageNumber}` : "") +
-      buildGuestbookContextQuery(guestbookAccessState)
+      guestbookContextQuery,
+    (page) => `/characters/${character.id}/guestbook${guestbookVisibleContextQuery}#${page.page_number || 1}`
   );
 
   if (
@@ -21018,7 +21030,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     guestbookPostingCharacters: postingCharactersState.characters,
     selectedGuestbookAuthorCharacterId: postingCharactersState.selectedCharacterId,
     guestbookMinorAccountWarning,
-    guestbookContextQuery: buildGuestbookContextQuery(guestbookAccessState),
+    guestbookContextQuery,
     topbarCharacter
   });
 });
@@ -21994,6 +22006,46 @@ app.get("/chat/room", requireAuth, (req, res) => {
     standard_room: requestedStandardRoomId || rememberedLocation?.standard_room || "",
     server: req.query.server || rememberedLocation?.server || requestedCharacter?.server_id
   });
+});
+
+app.post("/chat/location", requireAuth, (req, res) => {
+  const character = getChatRouteCharacterForUser(req, req.body.c || req.body.character_id);
+  if (!character) {
+    return res.status(403).json({ ok: false, error: "Kein Zugriff auf diesen Charakter." });
+  }
+
+  const requestedServerId = normalizeServer(req.body.server || character.server_id);
+  const roomId = Number(req.body.room_id || req.body.room);
+  const standardRoomId = String(req.body.standard_room || req.body.s || "").trim().toLowerCase();
+
+  if (Number.isInteger(roomId) && roomId > 0) {
+    let room = getRoomWithCharacter(roomId);
+    if (!room) {
+      return res.status(404).json({ ok: false, error: "Raum wurde nicht gefunden." });
+    }
+
+    room = ensureSavedRoomVisibleForOwner(room, req.session.user.id);
+    if (!canAccessRoom(req.session.user, room) || isRoomLockedForUser(req.session.user, room)) {
+      return res.status(403).json({ ok: false, error: "Dieser Raum ist nicht zugänglich." });
+    }
+
+    rememberChatLocationForCharacter(req, character.id, {
+      roomId: room.id,
+      serverId: room.server_id || room.character_server_id || requestedServerId
+    });
+    return res.json({ ok: true, url: `/chat/room?c=${character.id}` });
+  }
+
+  const standardRoom = resolveStandardRoomForServer(requestedServerId, standardRoomId);
+  if (!standardRoom?.id) {
+    return res.status(400).json({ ok: false, error: "Raum wurde nicht gefunden." });
+  }
+
+  rememberChatLocationForCharacter(req, character.id, {
+    serverId: requestedServerId,
+    standardRoomId: standardRoom.id
+  });
+  return res.json({ ok: true, url: `/chat/room?c=${character.id}` });
 });
 
 app.get("/chat/rooms", requireAuth, (req, res) => {

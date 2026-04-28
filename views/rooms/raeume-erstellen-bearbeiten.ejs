@@ -196,7 +196,11 @@
           </div>
           <a
             class="rp-room-editor-enter"
-            href="/chat/room?c=<%= character.id %>&room_id=<%= selectedRoom.id %>"
+            href="/chat/room?c=<%= character.id %>"
+            data-chat-location-link
+            data-chat-location-character="<%= character.id %>"
+            data-chat-location-room="<%= selectedRoom.id %>"
+            data-chat-location-server="<%= character.server_id %>"
           >Raum betreten</a>
         </div>
 
@@ -323,6 +327,7 @@
   </section>
 </section>
 
+<script src="/chat-location-navigation.js?v=<%= staticAssetVersion %>"></script>
 <script>
   (() => {
     const sortList = document.querySelector("[data-owned-room-sort-list]");

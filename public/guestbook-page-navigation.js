@@ -106,7 +106,7 @@
     }
   };
 
-  const applyFetchedGuestbookPage = (nextDocument, targetPage, targetUrl) => {
+  const applyFetchedGuestbookPage = (nextDocument, targetPage, visibleUrl) => {
     const currentPageShell = document.querySelector(".guestbook-page-shell");
     const nextPageShell = nextDocument.querySelector(".guestbook-page-shell");
     const currentPanel = document.querySelector("[data-guestbook-panel]");
@@ -119,6 +119,7 @@
     }
 
     const wasPanelOpen = !currentPanel.hidden;
+    nextPageShell.classList.add("is-guestbook-page-entering");
     currentPageShell.replaceWith(nextPageShell);
 
     copyAttributes(nextPanel, currentPanel);
@@ -136,31 +137,36 @@
     }
 
     syncPanelState(wasPanelOpen);
-    replaceVisibleGuestbookUrl(targetPage.number, targetUrl.href);
+    replaceVisibleGuestbookUrl(targetPage.number, visibleUrl.href);
     window.__initializeGuestbookMedia?.(document);
   };
 
   let pendingNavigationController = null;
 
-  const loadGuestbookPage = async (targetUrl, targetPage) => {
+  const loadGuestbookPage = async (fetchUrl, targetPage, visibleUrl) => {
     pendingNavigationController?.abort();
     pendingNavigationController = typeof AbortController === "function" ? new AbortController() : null;
+    document.querySelector(".guestbook-page-shell")?.classList.add("is-guestbook-page-loading");
 
-    const response = await fetch(targetUrl.href, {
-      credentials: "same-origin",
-      headers: {
-        "X-Requested-With": "fetch"
-      },
-      signal: pendingNavigationController?.signal
-    });
+    try {
+      const response = await fetch(fetchUrl.href, {
+        credentials: "same-origin",
+        headers: {
+          "X-Requested-With": "fetch"
+        },
+        signal: pendingNavigationController?.signal
+      });
 
-    if (!response.ok) {
-      throw new Error(`Guestbook page request failed: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Guestbook page request failed: ${response.status}`);
+      }
+
+      const html = await response.text();
+      const nextDocument = new DOMParser().parseFromString(html, "text/html");
+      applyFetchedGuestbookPage(nextDocument, targetPage, visibleUrl);
+    } finally {
+      document.querySelector(".guestbook-page-shell")?.classList.remove("is-guestbook-page-loading");
     }
-
-    const html = await response.text();
-    const nextDocument = new DOMParser().parseFromString(html, "text/html");
-    applyFetchedGuestbookPage(nextDocument, targetPage, targetUrl);
   };
 
   if (!isLiveGuestbookPage) {
@@ -206,15 +212,18 @@
       return;
     }
 
-    const targetUrl = new URL(link.href, window.location.href);
+    const visibleUrl = new URL(link.href, window.location.href);
+    const fetchUrl = new URL(link.dataset.guestbookPageFetchUrl || link.href, window.location.href);
     if (
-      targetUrl.origin !== window.location.origin ||
-      normalizeGuestbookPath(targetUrl.pathname) !== normalizeGuestbookPath(window.location.pathname)
+      visibleUrl.origin !== window.location.origin ||
+      fetchUrl.origin !== window.location.origin ||
+      normalizeGuestbookPath(visibleUrl.pathname) !== normalizeGuestbookPath(window.location.pathname) ||
+      normalizeGuestbookPath(fetchUrl.pathname) !== normalizeGuestbookPath(window.location.pathname)
     ) {
       return;
     }
 
-    const targetPage = findPageByUrl(targetUrl);
+    const targetPage = findPageByUrl(fetchUrl) || findPageByUrl(visibleUrl);
     if (!targetPage) {
       return;
     }
@@ -222,16 +231,16 @@
     event.preventDefault();
 
     if (targetPage.number === getCurrentPageNumber()) {
-      replaceVisibleGuestbookUrl(targetPage.number, targetUrl.href);
+      replaceVisibleGuestbookUrl(targetPage.number, visibleUrl.href);
       return;
     }
 
-    loadGuestbookPage(targetUrl, targetPage).catch((error) => {
+    loadGuestbookPage(fetchUrl, targetPage, visibleUrl).catch((error) => {
       if (error?.name === "AbortError") {
         return;
       }
 
-      window.location.replace(targetUrl.href);
+      window.location.replace(fetchUrl.href);
     });
   });
 })();

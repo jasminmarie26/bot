@@ -14,8 +14,7 @@
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
-  <% const buildChatRoomHref = (room) => `/chat/room?c=${encodeURIComponent(String(character.id))}&room_id=${encodeURIComponent(String(room.id))}`; %>
-  <% const buildStandardChatRoomHref = (standardRoom) => `/chat/room?c=${encodeURIComponent(String(character.id))}&standard_room=${encodeURIComponent(String(standardRoom.id))}&server=${encodeURIComponent(String(character.server_id || ""))}`; %>
+  <% const buildChatRoomHref = () => `/chat/room?c=${encodeURIComponent(String(character.id))}`; %>
   <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
   <% const roomlistHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
@@ -273,6 +272,10 @@
                       class="rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
                       href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                       title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
+                      data-chat-location-link
+                      data-chat-location-character="<%= character.id %>"
+                      data-chat-location-room="<%= room.id %>"
+                      data-chat-location-server="<%= character.server_id %>"
                       data-room-link-target
                       data-room-link-room="<%= room.id %>"
                       data-room-link-server="<%= character.server_id %>"
@@ -361,7 +364,11 @@
                 <div class="rp-room-standard-card">
                   <a
                     class="rp-room-link rp-room-link-standard"
-                    href="<%= buildStandardChatRoomHref(standardRoom) %>"
+                    href="<%= buildChatRoomHref() %>"
+                    data-chat-location-link
+                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-standard-room="<%= standardRoom.id %>"
+                    data-chat-location-server="<%= character.server_id %>"
                     title="Treffpunkt betreten"
                 >
                   <span class="rp-room-link-name"><%= standardRoom.name %></span>
@@ -432,6 +439,10 @@
                     class="rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
                     href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                     title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
+                    data-chat-location-link
+                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-room="<%= room.id %>"
+                    data-chat-location-server="<%= character.server_id %>"
                     data-room-link-target
                     data-room-link-room="<%= room.id %>"
                     data-room-link-server="<%= character.server_id %>"
@@ -505,6 +516,10 @@
                     class="rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
                     href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                     title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
+                    data-chat-location-link
+                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-room="<%= room.id %>"
+                    data-chat-location-server="<%= character.server_id %>"
                     data-room-link-target
                     data-room-link-room="<%= room.id %>"
                     data-room-link-server="<%= character.server_id %>"
@@ -600,6 +615,7 @@
     }
   })();
 </script>
+<script src="/chat-location-navigation.js?v=<%= staticAssetVersion %>"></script>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 
 <%- include("../partials/end") %>
