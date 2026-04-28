@@ -579,15 +579,29 @@
             <% if (topbarGuestbookModeActive && showTopbarGuestbookTools) { %>
               <div class="topbar-guestbook-tools">
                 <% if (topbarGuestbookPageLinksList.length) { %>
-                  <div class="rp-dropdown topbar-guestbook-page-menu">
-                    <button type="button" class="rp-dropdown-toggle topbar-guestbook-page-toggle">
+                  <div class="rp-dropdown topbar-guestbook-page-menu" data-topbar-guestbook-page-menu>
+                    <button
+                      type="button"
+                      class="rp-dropdown-toggle topbar-guestbook-page-toggle"
+                      data-topbar-guestbook-page-toggle
+                      aria-haspopup="menu"
+                      aria-controls="topbar-guestbook-page-list"
+                      aria-expanded="false"
+                    >
                       Seiten
                     </button>
-                    <div class="rp-dropdown-menu topbar-guestbook-page-list" role="menu">
+                    <div
+                      id="topbar-guestbook-page-list"
+                      class="rp-dropdown-menu topbar-guestbook-page-list"
+                      role="menu"
+                      data-topbar-guestbook-page-list
+                      aria-hidden="true"
+                    >
                       <% topbarGuestbookPageLinksList.forEach((entry) => { %>
                         <a
                           href="<%= entry.url %>"
-                          class="<%= entry.isActive ? "is-active" : "" %>"
+                          class="topbar-guestbook-page-link<%= entry.isActive ? " is-active" : "" %>"
+                          role="menuitem"
                           data-guestbook-page-navigation-link
                           data-guestbook-page-fetch-url="<%= entry.fetchUrl || entry.url %>"
                           <%= entry.isActive ? 'aria-current="page"' : "" %>

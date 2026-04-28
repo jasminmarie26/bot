@@ -143,14 +143,16 @@
         class="guestbook-page-preview gb-theme-<%= guestbookSettings?.theme_style || 'pergament-gold' %> gb-font-<%= guestbookSettings?.font_style || 'default' %><%= hasCustomGuestbookColors ? ' gb-custom-colors' : '' %>"
         style="<%= guestbookPageStyle %>"
       >
-        <% if (guestbookSettings?.image_url) { %>
-          <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
-        <% } %>
-        <% if (activeGuestbookPage?.content_html) { %>
-          <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
-        <% } else { %>
-          <p class="muted">Diese Seite ist noch leer.</p>
-        <% } %>
+        <div class="guestbook-page-content-shell">
+          <% if (guestbookSettings?.image_url) { %>
+            <img class="guestbook-page-image" src="<%= guestbookSettings.image_url %>" alt="G&auml;stebuch Bild" />
+          <% } %>
+          <% if (activeGuestbookPage?.content_html) { %>
+            <div class="guestbook-entry-body"><%- activeGuestbookPage.content_html %></div>
+          <% } else { %>
+            <p class="muted">Diese Seite ist noch leer.</p>
+          <% } %>
+        </div>
       </article>
 
     </div>
