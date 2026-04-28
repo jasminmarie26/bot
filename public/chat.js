@@ -461,22 +461,30 @@
   }
 
   function syncChatUrlCharacterId() {
-    if (!Number.isInteger(currentActiveCharacterId) || currentActiveCharacterId < 1) {
-      return;
-    }
-
     try {
-      const currentUrl = new URL(window.location.href);
-      const nextCharacterId = String(currentActiveCharacterId);
-      if (currentUrl.searchParams.get("character_id") === nextCharacterId) {
+      let nextUrl = "";
+      if (hasRoom) {
+        nextUrl = `/chat/room?c=${encodeURIComponent(String(roomId))}`;
+      } else if (standardRoomId) {
+        const params = new URLSearchParams();
+        params.set("c", standardRoomId);
+        params.set("server", String(currentDisplayServerId || serverId || "free-rp"));
+        nextUrl = `/chat/room?${params.toString()}`;
+      }
+
+      if (!nextUrl) {
         return;
       }
 
-      currentUrl.searchParams.set("character_id", nextCharacterId);
+      const currentUrl = `${window.location.pathname}${window.location.search}`;
+      if (currentUrl === nextUrl) {
+        return;
+      }
+
       window.history.replaceState(
         window.history.state,
         "",
-        `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+        `${nextUrl}${window.location.hash}`
       );
     } catch (_error) {
       // Ignore history replacement failures.
@@ -485,7 +493,7 @@
 
   function buildCurrentChatRoomListUrl() {
     return Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
-      ? `/characters/${currentActiveCharacterId}#roomlist`
+      ? `/chat/rooms?c=${currentActiveCharacterId}`
       : "/dashboard";
   }
 

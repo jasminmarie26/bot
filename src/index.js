@@ -19242,7 +19242,9 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
     }
 
     touchFestplayActivity(festplayId);
-    return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
+    return res.redirect(
+      buildChatRedirectUrlForLocation(targetRoom.id, targetRoom.server_id || character.server_id)
+    );
   } catch (error) {
     console.error("festplay side chat creation failed", {
       festplayId,
@@ -21724,11 +21726,11 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   return res.redirect(buildGuestbookEditorReturnUrl(req, character, redirectPage.id));
 });
 
-app.get("/chat", requireAuth, (req, res) => {
-  const requestedServerId = normalizeServer(req.query.server);
-  const requestedStandardRoomId = String(req.query.standard_room || "").trim().toLowerCase();
-  const requestedCharacterId = Number(req.query.character_id);
-  const roomId = Number(req.query.room_id);
+function renderChatPage(req, res, chatQuery = req.query) {
+  const requestedServerId = normalizeServer(chatQuery.server);
+  const requestedStandardRoomId = String(chatQuery.standard_room || "").trim().toLowerCase();
+  const requestedCharacterId = Number(chatQuery.character_id);
+  const roomId = Number(chatQuery.room_id);
   let activeServerId = requestedServerId;
   let activeRoom = null;
   let activeCharacter = null;
@@ -21768,7 +21770,7 @@ app.get("/chat", requireAuth, (req, res) => {
 
     if (isRoomLockedForUser(req.session.user, room)) {
       setFlash(req, "error", "Dieser Raum ist abgeschlossen.");
-      return res.redirect(`/characters/${room.character_id}#roomlist`);
+      return res.redirect(buildCharacterRoomListRedirectUrl(room.character_id));
     }
 
     activeRoom = {
@@ -21883,6 +21885,32 @@ app.get("/chat", requireAuth, (req, res) => {
     standardRoom,
     onlineCharacters
   });
+}
+
+app.get("/chat", requireAuth, (req, res) => renderChatPage(req, res));
+
+app.get("/chat/room", requireAuth, (req, res) => {
+  const cleanRoomKey = String(req.query.c || "").trim();
+  const roomId = Number(cleanRoomKey || req.query.room_id);
+  const requestedStandardRoomId = String(
+    (!Number.isInteger(roomId) || roomId < 1 ? cleanRoomKey : "") || req.query.standard_room || ""
+  ).trim().toLowerCase();
+
+  return renderChatPage(req, res, {
+    ...req.query,
+    room_id: Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "",
+    standard_room: requestedStandardRoomId,
+    server: req.query.server
+  });
+});
+
+app.get("/chat/rooms", requireAuth, (req, res) => {
+  const characterId = normalizePresenceCharacterId(req.query.c || req.query.character_id);
+  if (!characterId) {
+    return res.redirect("/dashboard");
+  }
+
+  return res.redirect(`/characters/${characterId}?chat_rooms=1#roomlist`);
 });
 
 app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
@@ -24170,29 +24198,28 @@ function emitCharacterAppearanceUpdate(userId, characterId) {
 function buildChatRedirectUrlForLocation(
   roomId,
   serverId = DEFAULT_SERVER_ID,
-  characterId = null,
   standardRoomId = null
 ) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
-  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
 
   if (normalizedRoomId) {
-    const suffix = normalizedCharacterId ? `&character_id=${normalizedCharacterId}` : "";
-    return `/chat?room_id=${normalizedRoomId}${suffix}`;
+    return `/chat/room?c=${normalizedRoomId}`;
   }
 
   const defaultStandardRoom = resolveStandardRoomForServer(normalizedServerId, standardRoomId);
-  const standardRoomSuffix = defaultStandardRoom?.id
-    ? `&standard_room=${encodeURIComponent(String(defaultStandardRoom.id))}`
-    : "";
-  const characterSuffix = normalizedCharacterId ? `&character_id=${normalizedCharacterId}` : "";
-  return `/chat?server=${encodeURIComponent(normalizedServerId)}${standardRoomSuffix}${characterSuffix}`;
+  if (!defaultStandardRoom?.id) {
+    return `/chat?server=${encodeURIComponent(normalizedServerId)}`;
+  }
+
+  return `/chat/room?c=${encodeURIComponent(String(defaultStandardRoom.id))}&server=${encodeURIComponent(
+    normalizedServerId
+  )}`;
 }
 
 function buildCharacterRoomListRedirectUrl(characterId) {
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
-  return normalizedCharacterId ? `/characters/${normalizedCharacterId}#roomlist` : "/dashboard";
+  return normalizedCharacterId ? `/chat/rooms?c=${normalizedCharacterId}` : "/dashboard";
 }
 
 function buildRoomListRedirectUrlForUser(
@@ -29971,7 +29998,10 @@ io.on("connection", (socket) => {
       );
       socket.data.skipDisconnectPresence = true;
       socket.emit("chat:redirect", {
-        url: `/chat?room_id=${targetRoom.id}&character_id=${preferredCharacter.id}`,
+        url: buildChatRedirectUrlForLocation(
+          targetRoom.id,
+          targetRoom.server_id || preferredCharacter.server_id || serverId
+        ),
         delayMs: 550
       });
       return;
@@ -30149,17 +30179,11 @@ io.on("connection", (socket) => {
       `${recipientName} hat die Einladung in den Raum ${invite.roomName} angenommen.`
     );
 
-    const preferredCharacter = getPreferredCharacterForUser(
-      socket.data.user.id,
-      invite.serverId,
-      getSocketPreferredCharacterId(socket, invite.serverId)
-    );
-    const redirectSuffix = preferredCharacter?.id
-      ? `&character_id=${preferredCharacter.id}`
-      : "";
-
     socket.emit("chat:redirect", {
-      url: `/chat?room_id=${invite.roomId}${redirectSuffix}`,
+      url: buildChatRedirectUrlForLocation(
+        invite.roomId,
+        invitedRoom.server_id || invite.serverId
+      ),
       delayMs: 450
     });
   });

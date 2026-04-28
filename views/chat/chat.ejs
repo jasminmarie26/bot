@@ -59,10 +59,10 @@
     : (activeCharacter ? "Gaestebuch im neuen Tab oeffnen" : chatIdentityName); %>
 <% const isFestplayContext = Boolean(activeRoom && activeRoom.festplay_id); %>
 <% const chatRoomListHref = activeCharacter
-  ? `/characters/${activeCharacter.id}#roomlist`
+  ? `/chat/rooms?c=${activeCharacter.id}`
   : "/dashboard"; %>
 <% const chatRoomListHrefTemplate = activeCharacter
-  ? "/characters/__CHARACTER_ID__#roomlist"
+  ? "/chat/rooms?c=__CHARACTER_ID__"
   : ""; %>
 <% const chatBoardServerId = activeCharacter ? activeCharacter.server_id : activeServerId; %>
 <% const chatBoardFestplayId = 0; %>
