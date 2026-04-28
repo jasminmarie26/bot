@@ -1,5 +1,5 @@
 <%
-  const guestbookStaffContextQuery = guestbookAccessState?.staffViewRequested ? "?staff_view=1" : "";
+  const guestbookStaffContextQuery = guestbookAccessState?.staffViewRequested ? "?view=1" : "";
   const topbarBrandLabel = character?.name || "Heldenhafte Reisen";
   const topbarBrandPrefix = showBirthdayCake ? String.fromCodePoint(0x1F382) : "";
   const topbarBrandHref = character ? `/characters/${character.id}/guestbook${guestbookStaffContextQuery}` : "/";
@@ -177,7 +177,7 @@
       <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
     <% } %>
     <% if (guestbookAccessState?.staffViewRequested) { %>
-      <input type="hidden" name="staff_view" value="1" />
+      <input type="hidden" name="view" value="1" />
     <% } %>
     <% if (hasPostingCharacters && selectedGuestbookAuthorCharacterId) { %>
       <input type="hidden" name="author_character_id" value="<%= selectedGuestbookAuthorCharacterId %>" />
@@ -255,7 +255,7 @@
                       <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
                     <% } %>
                     <% if (guestbookAccessState?.staffViewRequested) { %>
-                      <input type="hidden" name="staff_view" value="1" />
+                      <input type="hidden" name="view" value="1" />
                     <% } %>
                     <label>
                       Inhalt
@@ -284,7 +284,7 @@
                     <input type="hidden" name="reply_context_character_id" value="<%= guestbookAccessState.replyContextCharacterId %>" />
                   <% } %>
                   <% if (guestbookAccessState?.staffViewRequested) { %>
-                    <input type="hidden" name="staff_view" value="1" />
+                    <input type="hidden" name="view" value="1" />
                   <% } %>
                   <button
                     type="submit"

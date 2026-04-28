@@ -119,8 +119,8 @@
     }
 
     const wasPanelOpen = !currentPanel.hidden;
-    nextPageShell.classList.add("is-guestbook-page-entering");
-    currentPageShell.replaceWith(nextPageShell);
+    copyAttributes(nextPageShell, currentPageShell);
+    currentPageShell.innerHTML = nextPageShell.innerHTML;
 
     copyAttributes(nextPanel, currentPanel);
     currentPanel.innerHTML = nextPanel.innerHTML;
@@ -146,27 +146,22 @@
   const loadGuestbookPage = async (fetchUrl, targetPage, visibleUrl) => {
     pendingNavigationController?.abort();
     pendingNavigationController = typeof AbortController === "function" ? new AbortController() : null;
-    document.querySelector(".guestbook-page-shell")?.classList.add("is-guestbook-page-loading");
 
-    try {
-      const response = await fetch(fetchUrl.href, {
-        credentials: "same-origin",
-        headers: {
-          "X-Requested-With": "fetch"
-        },
-        signal: pendingNavigationController?.signal
-      });
+    const response = await fetch(fetchUrl.href, {
+      credentials: "same-origin",
+      headers: {
+        "X-Requested-With": "fetch"
+      },
+      signal: pendingNavigationController?.signal
+    });
 
-      if (!response.ok) {
-        throw new Error(`Guestbook page request failed: ${response.status}`);
-      }
-
-      const html = await response.text();
-      const nextDocument = new DOMParser().parseFromString(html, "text/html");
-      applyFetchedGuestbookPage(nextDocument, targetPage, visibleUrl);
-    } finally {
-      document.querySelector(".guestbook-page-shell")?.classList.remove("is-guestbook-page-loading");
+    if (!response.ok) {
+      throw new Error(`Guestbook page request failed: ${response.status}`);
     }
+
+    const html = await response.text();
+    const nextDocument = new DOMParser().parseFromString(html, "text/html");
+    applyFetchedGuestbookPage(nextDocument, targetPage, visibleUrl);
   };
 
   if (!isLiveGuestbookPage) {

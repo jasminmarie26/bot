@@ -323,7 +323,7 @@
   <% } else { %>
     <div class="admin-character-grid">
       <% characters.forEach((character) => { %>
-        <% const guestbookStaffHref = `/characters/${character.id}/guestbook?staff_view=1`; %>
+        <% const guestbookStaffHref = `/characters/${character.id}/guestbook?view=1`; %>
         <article class="list-item admin-character-card">
           <a
             class="admin-character-primary"
@@ -345,7 +345,7 @@
             <a class="btn btn-secondary" href="/characters/<%= character.id %>">Charakter &ouml;ffnen</a>
             <a class="btn" href="<%= guestbookStaffHref %>">G&auml;stebuch &ouml;ffnen</a>
             <% if (canClearUserGuestbooks) { %>
-              <a class="btn" href="/characters/<%= character.id %>/guestbook/edit?staff_view=1">G&auml;stebuch bearbeiten</a>
+              <a class="btn" href="/characters/<%= character.id %>/guestbook/edit?view=1">G&auml;stebuch bearbeiten</a>
               <form method="POST" action="/admin/guestbooks/<%= character.id %>/clear" class="inline-form">
                 <button class="btn btn-danger" type="submit">G&auml;stebuch leeren</button>
               </form>

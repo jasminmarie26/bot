@@ -11465,7 +11465,7 @@ function getGuestbookPostingCharacters(req, targetCharacter) {
 }
 
 function isGuestbookStaffViewRequested(req) {
-  return String(req?.query?.staff_view || req?.body?.staff_view || "").trim() === "1";
+  return String(req?.query?.view || req?.body?.view || req?.query?.staff_view || req?.body?.staff_view || "").trim() === "1";
 }
 
 function getGuestbookStaffRoleCharacters(req, targetCharacter) {
@@ -11672,7 +11672,7 @@ function buildGuestbookContextQuery(accessState = {}) {
   const queryParts = [];
 
   if (accessState?.staffViewRequested) {
-    queryParts.push("staff_view=1");
+    queryParts.push("view=1");
   }
 
   if (accessState?.viaReplyAccess && accessState.replyContextEntryId && accessState.replyContextCharacterId) {
@@ -11851,7 +11851,7 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
         author_guestbook_url:
           Number.isInteger(authorCharacterId) && authorCharacterId > 0
             ? `/characters/${authorCharacterId}/guestbook?${
-                accessState?.staffViewRequested ? "staff_view=1&" : ""
+                accessState?.staffViewRequested ? "view=1&" : ""
               }reply_from_entry=${entry.id}&reply_to_character=${character.id}`
             : "",
         updated_label:
@@ -18105,7 +18105,7 @@ app.get("/members", requireAuth, (req, res) => {
     memberCount: displayedMemberIds.size,
     staffGuestbookQuery:
       req.session.user?.is_admin === true || req.session.user?.is_moderator === true
-        ? "?staff_view=1"
+        ? "?view=1"
         : ""
   });
 });
@@ -20968,7 +20968,7 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
     .map((entry) => ({
       id: Number(entry.id),
       name: String(entry.name || "").trim(),
-      url: `/characters/${Number(entry.id)}/guestbook${guestbookAccessState.staffViewRequested ? "?staff_view=1" : ""}`
+      url: `/characters/${Number(entry.id)}/guestbook${guestbookAccessState.staffViewRequested ? "?view=1" : ""}`
     }));
   const guestbookMusicEnabled = normalizeGuestbookMusicEnabled(req.session.user?.guestbook_music_enabled);
   const guestbookMusicVideoId = guestbookMusicEnabled
