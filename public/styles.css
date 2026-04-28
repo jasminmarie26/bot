@@ -9302,7 +9302,7 @@ body.theme-atari .guestbook-entry-panel {
   word-break: normal;
 }
 
-.bb-block > .bb-gradient {
+.bb-block > div.bb-gradient {
   display: block;
   font-size: inherit;
   line-height: inherit;
