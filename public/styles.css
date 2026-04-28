@@ -1,7 +1,7 @@
 :root {
   --font-ui: "Manrope", "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
   --font-display: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
-  --guestbook-frame-width: 680px;
+  --guestbook-frame-width: 620px;
 }
 
 html {
@@ -8595,7 +8595,7 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-preview {
   --gb-frame-width: var(--guestbook-frame-width);
-  --gb-content-width: 640px;
+  --gb-content-width: 600px;
   --gb-base-font-size: 10.16px;
   --gb-copy-font-size: 12.8px;
   position: relative;
@@ -8778,7 +8778,7 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .guestbook-page-preview[class*="gb-theme-"] {
-  --gb-content-width: 640px;
+  --gb-content-width: 600px;
   --gb-theme-border: rgba(178, 138, 84, 0.92);
   --gb-theme-line: color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 48%, transparent);
   --gb-theme-base: #241a12;
