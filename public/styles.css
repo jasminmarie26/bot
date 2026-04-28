@@ -8879,6 +8879,17 @@ body.theme-atari .guestbook-entry-panel {
   font-weight: 400;
 }
 
+.guestbook-page-preview[class*="gb-theme-"] .bb-spoiler {
+  --bb-spoiler-button-bg:
+    color-mix(in srgb, var(--gb-background-color, var(--gb-theme-base)) 76%, transparent);
+  --bb-spoiler-button-border:
+    color-mix(in srgb, var(--gb-frame-color, var(--gb-theme-border)) 72%, currentColor 28%);
+  --bb-spoiler-button-text: currentColor;
+  --bb-spoiler-button-open-bg: color-mix(in srgb, #868b93 82%, currentColor 18%);
+  --bb-spoiler-button-open-border: color-mix(in srgb, #6f747c 84%, currentColor 16%);
+  --bb-spoiler-button-open-text: currentColor;
+}
+
 .guestbook-page-preview[class*="gb-theme-"] .bb-block {
   text-align: justify;
   text-justify: inter-word;
@@ -9449,28 +9460,70 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-spoiler {
+  --bb-spoiler-button-bg: color-mix(in srgb, var(--field-bg) 88%, white 12%);
+  --bb-spoiler-button-border: color-mix(in srgb, var(--field-edge) 82%, transparent);
+  --bb-spoiler-button-text: var(--text);
+  --bb-spoiler-button-open-bg: color-mix(in srgb, #8b9097 84%, var(--panel-bg) 16%);
+  --bb-spoiler-button-open-border: color-mix(in srgb, #747980 82%, var(--field-edge) 18%);
+  --bb-spoiler-button-open-text: var(--text);
   margin-top: 0.35rem;
   max-width: 100%;
   min-width: 0;
-  border: 1px solid var(--field-edge);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--field-bg) 86%, white 14%);
-  padding: 0.36rem 0.46rem;
-  overflow: hidden;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  overflow: visible;
 }
 
 .bb-spoiler summary {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   max-width: 100%;
   cursor: pointer;
   user-select: none;
   overflow-wrap: anywhere;
+  list-style: none;
+  padding: 0.5rem 0.92rem;
+  border: 1px solid var(--bb-spoiler-button-border);
+  border-radius: 10px;
+  background: var(--bb-spoiler-button-bg);
+  color: var(--bb-spoiler-button-text);
+  box-shadow: 0 10px 20px -18px rgba(0, 0, 0, 0.42);
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    filter 120ms ease;
+}
+
+.bb-spoiler summary::-webkit-details-marker {
+  display: none;
+}
+
+.bb-spoiler summary::marker {
+  content: "";
+}
+
+.bb-spoiler summary:hover,
+.bb-spoiler summary:focus-visible {
+  filter: brightness(1.03);
+}
+
+.bb-spoiler summary:active,
+.bb-spoiler[open] > summary {
+  background: var(--bb-spoiler-button-open-bg);
+  border-color: var(--bb-spoiler-button-open-border);
+  color: var(--bb-spoiler-button-open-text);
 }
 
 .bb-spoiler-content {
   margin-top: 0.4rem;
   max-width: 100%;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -12834,6 +12887,17 @@ body.page-guestbook-view .guestbook-item {
   border-color: color-mix(in srgb, var(--panel-edge) 82%, transparent);
   backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(140%);
+}
+
+body.page-guestbook-view .guestbook-item .bb-spoiler,
+.guestbook-entry-panel .bb-spoiler {
+  --bb-spoiler-button-bg:
+    color-mix(in srgb, var(--gb-panel-bg-color, var(--panel-bg)) 78%, white 10%);
+  --bb-spoiler-button-border: color-mix(in srgb, var(--panel-edge) 82%, transparent);
+  --bb-spoiler-button-text: var(--text);
+  --bb-spoiler-button-open-bg: color-mix(in srgb, #8b9097 84%, var(--gb-panel-bg-color, var(--panel-bg)) 16%);
+  --bb-spoiler-button-open-border: color-mix(in srgb, #747980 82%, var(--panel-edge) 18%);
+  --bb-spoiler-button-open-text: var(--text);
 }
 
 body.page-guestbook-view .guestbook-entry-panel textarea,
