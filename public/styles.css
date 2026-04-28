@@ -13047,7 +13047,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
-  margin-top: 0;
+  margin-top: 0.8rem;
 }
 
 .page-chat .rp-room-panel.is-room-chat {
@@ -13056,8 +13056,8 @@ body.page-guestbook-view .guestbook-entry-heading {
   align-items: stretch;
   min-height: 0;
   height: 100%;
-  padding-top: 0.78rem;
-  padding-bottom: 0.22rem;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
 }
 
 .page-chat .rp-room-panel.is-room-chat .chat-layout {
