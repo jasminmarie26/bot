@@ -10348,6 +10348,8 @@ function wrapBbcodeStyledContent(inner, options = {}) {
 
 const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
 const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
+const BBCODE_HIDDEN_BREAK_CHARACTERS = /[\u00AD\u200B\uFEFF]/g;
+const BBCODE_SPACE_NORMALIZATION_CHARACTERS = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
 
 function decodeCommonHtmlEntities(rawValue) {
   return String(rawValue || "")
@@ -10381,6 +10383,12 @@ function decodeCommonHtmlEntities(rawValue) {
           return full;
       }
     });
+}
+
+function normalizeBbcodeTextFlow(rawContent) {
+  return String(rawContent || "")
+    .replace(BBCODE_HIDDEN_BREAK_CHARACTERS, "")
+    .replace(BBCODE_SPACE_NORMALIZATION_CHARACTERS, " ");
 }
 
 function normalizeBbcodeMarkup(rawContent) {
@@ -10436,7 +10444,7 @@ function normalizeBbcodeMarkup(rawContent) {
     "s"
   ];
 
-  return decodeCommonHtmlEntities(rawContent)
+  return decodeCommonHtmlEntities(normalizeBbcodeTextFlow(rawContent))
     .replace(/\\\[/g, BBCODE_LITERAL_OPEN_TOKEN)
     .replace(/\\\]/g, BBCODE_LITERAL_CLOSE_TOKEN)
     .replace(/[\uFF3B\u3010\u3014\u2772\u27E6]/g, "[")

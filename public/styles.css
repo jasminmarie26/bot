@@ -8834,6 +8834,8 @@ body.theme-atari .guestbook-entry-panel {
   margin-top: 0;
   word-break: normal;
   overflow-wrap: break-word;
+  hyphens: none;
+  text-wrap: pretty;
 }
 
 .guestbook-page-preview[class*="gb-theme-"] .guestbook-entry-body a {
@@ -9190,8 +9192,10 @@ body.theme-atari .guestbook-entry-panel {
   width: min(100%, var(--gb-content-width, 100%));
   max-width: 100%;
   min-width: 0;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
+  text-wrap: pretty;
   font-size: var(--gb-copy-font-size, 1.26em);
 }
 
@@ -9203,6 +9207,9 @@ body.theme-atari .guestbook-entry-panel {
 .guestbook-entry-body :where(p, div, span, a, strong, b, em, i, u, s, blockquote) {
   font-size: inherit;
   line-height: inherit;
+  word-break: inherit;
+  overflow-wrap: inherit;
+  hyphens: inherit;
 }
 
 .guestbook-entry-body::after {
