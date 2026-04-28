@@ -10260,16 +10260,17 @@ function parseGradientSpec(rawSpec) {
     return null;
   }
 
-  const angleMap = {
-    "0,0": 90,
-    "0,1": 135,
-    "1,0": 45,
-    "1,1": 180
-  };
+  let gradientColors = [...colors];
+  if (directionKey?.startsWith("1,")) {
+    gradientColors.reverse();
+  }
+  if (directionKey?.endsWith(",1")) {
+    gradientColors = gradientColors.concat(gradientColors.slice(0, -1).reverse());
+  }
 
   return {
-    angle: directionKey ? angleMap[directionKey] ?? 90 : 90,
-    colors
+    angle: directionKey ? 135 : 90,
+    colors: gradientColors
   };
 }
 

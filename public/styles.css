@@ -9431,8 +9431,11 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-gradient {
-  background-size: 100%;
-  background-repeat: repeat;
+  background-position: 0 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-box-decoration-break: slice;
+  box-decoration-break: slice;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent !important;
@@ -9441,13 +9444,8 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-gradient :is(strong, b, em, i, u, s, a, span) {
-  background-image: inherit;
-  background-size: inherit;
-  background-repeat: inherit;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
 }
 
 .bb-spoiler {
