@@ -9466,6 +9466,8 @@ body.theme-atari .guestbook-entry-panel {
   --bb-spoiler-button-open-bg: color-mix(in srgb, #8b9097 84%, var(--panel-bg) 16%);
   --bb-spoiler-button-open-border: color-mix(in srgb, #747980 82%, var(--field-edge) 18%);
   --bb-spoiler-button-open-text: var(--text);
+  --bb-spoiler-content-pad-x: 0.46rem;
+  --bb-spoiler-content-pad-bottom: 0.36rem;
   margin-top: 0.35rem;
   max-width: 100%;
   min-width: 0;
@@ -9521,7 +9523,7 @@ body.theme-atari .guestbook-entry-panel {
   margin-top: 0.4rem;
   max-width: 100%;
   min-width: 0;
-  padding: 0;
+  padding: 0 var(--bb-spoiler-content-pad-x) var(--bb-spoiler-content-pad-bottom);
   border: 0;
   background: transparent;
   overflow-x: auto;
