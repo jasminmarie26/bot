@@ -5491,6 +5491,154 @@ function getCharacterById(id) {
     .get(id);
 }
 
+function normalizeChatCharacterUrlNumber(value) {
+  const parsedNumber = Number(value);
+  return Number.isInteger(parsedNumber) && parsedNumber > 0 ? parsedNumber : null;
+}
+
+function getChatRouteCandidateServerIds(req, explicitServerId = "") {
+  const candidates = [];
+  const pushServerId = (value) => {
+    const normalizedServerId = String(value || "").trim().toLowerCase();
+    if (ALLOWED_SERVER_IDS.has(normalizedServerId) && !candidates.includes(normalizedServerId)) {
+      candidates.push(normalizedServerId);
+    }
+  };
+
+  pushServerId(explicitServerId);
+  pushServerId(req.session?.preferred_character_server_id);
+
+  const preferredMap = normalizePreferredCharacterMap(req.session?.preferred_character_ids);
+  SERVER_OPTIONS.forEach((server) => {
+    if (preferredMap[server.id]) {
+      pushServerId(server.id);
+    }
+  });
+
+  pushServerId(DEFAULT_SERVER_ID);
+  SERVER_OPTIONS.forEach((server) => pushServerId(server.id));
+  return candidates;
+}
+
+function getChatCharacterByUrlNumberForUser(userId, urlNumber, serverIds = []) {
+  const parsedUserId = Number(userId);
+  const parsedUrlNumber = normalizeChatCharacterUrlNumber(urlNumber);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !parsedUrlNumber) {
+    return null;
+  }
+
+  const candidateServerIds = Array.isArray(serverIds) && serverIds.length
+    ? serverIds
+    : SERVER_OPTIONS.map((server) => server.id);
+  const findCharacter = db.prepare(
+    `SELECT c.id
+       FROM character_chat_url_numbers cun
+       JOIN characters c
+         ON c.id = cun.character_id
+        AND c.user_id = cun.user_id
+        AND c.server_id = cun.server_id
+      WHERE cun.user_id = ?
+        AND cun.server_id = ?
+        AND cun.short_number = ?
+      LIMIT 1`
+  );
+
+  for (const serverId of candidateServerIds) {
+    const normalizedServerId = String(serverId || "").trim().toLowerCase();
+    if (!ALLOWED_SERVER_IDS.has(normalizedServerId)) {
+      continue;
+    }
+
+    const row = findCharacter.get(parsedUserId, normalizedServerId, parsedUrlNumber);
+    if (row?.id) {
+      return getCharacterById(row.id);
+    }
+  }
+
+  return null;
+}
+
+function getChatRouteCharacterByActualIdForUser(req, characterId) {
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  if (!normalizedCharacterId) {
+    return null;
+  }
+
+  const character = getCharacterById(normalizedCharacterId);
+  return character && Number(character.user_id) === Number(req.session?.user?.id) ? character : null;
+}
+
+function getChatCharacterUrlNumber(characterOrId) {
+  const characterId = Number(
+    characterOrId && typeof characterOrId === "object" ? characterOrId.id : characterOrId
+  );
+  if (!Number.isInteger(characterId) || characterId < 1) {
+    return null;
+  }
+
+  const hasUsableCharacterObject =
+    characterOrId &&
+    typeof characterOrId === "object" &&
+    Number(characterOrId.id) === characterId &&
+    Number.isInteger(Number(characterOrId.user_id)) &&
+    String(characterOrId.server_id || "").trim();
+  const character = hasUsableCharacterObject ? characterOrId : getCharacterById(characterId);
+  const userId = Number(character?.user_id);
+  const serverId = String(character?.server_id || "").trim().toLowerCase();
+  if (!Number.isInteger(userId) || userId < 1 || !ALLOWED_SERVER_IDS.has(serverId)) {
+    return null;
+  }
+
+  const getExistingNumber = db.prepare(
+    "SELECT short_number FROM character_chat_url_numbers WHERE character_id = ?"
+  );
+  const assignNumber = db.transaction(() => {
+    const existing = getExistingNumber.get(characterId);
+    const existingNumber = normalizeChatCharacterUrlNumber(existing?.short_number);
+    if (existingNumber) {
+      return existingNumber;
+    }
+
+    const maxNumber = Number(
+      db
+        .prepare(
+          `SELECT COALESCE(MAX(short_number), 0) AS max_number
+             FROM character_chat_url_numbers
+            WHERE user_id = ?
+              AND server_id = ?`
+        )
+        .get(userId, serverId)?.max_number || 0
+    );
+    const nextNumber = Number.isInteger(maxNumber) && maxNumber > 0 ? maxNumber + 1 : 1;
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO character_chat_url_numbers (
+           user_id,
+           server_id,
+           character_id,
+           short_number
+         ) VALUES (?, ?, ?, ?)`
+      )
+      .run(userId, serverId, characterId, nextNumber);
+
+    return normalizeChatCharacterUrlNumber(getExistingNumber.get(characterId)?.short_number);
+  });
+
+  return assignNumber();
+}
+
+function getChatCharacterUrlNumberById(characterId) {
+  return getChatCharacterUrlNumber(characterId);
+}
+
+function getChatCharacterRouteNumber(characterOrId) {
+  const characterId = Number(
+    characterOrId && typeof characterOrId === "object" ? characterOrId.id : characterOrId
+  );
+  const shortNumber = getChatCharacterUrlNumber(characterOrId);
+  return shortNumber || (Number.isInteger(characterId) && characterId > 0 ? characterId : null);
+}
+
 function getCharacterBackupsForUser(userId, options = {}) {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
@@ -18956,6 +19104,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
   return res.render("rooms/character-room-list", {
     title: character.name,
     character,
+    chatCharacterUrlNumber: getChatCharacterUrlNumberById(character.id),
     currentHeaderCharacter,
     characterCreatedAtLabel: getCharacterCreatedAtLabel(character),
     publicBirthdayRows: publicBirthdayDisplay.rows,
@@ -19002,7 +19151,9 @@ registerRaeumeErstellenBearbeitenRoutes(app, {
   maybeStartAutomaticRoomLog,
   getActiveRoomLog,
   emitSystemChatMessage,
-  emitRoomStateUpdate
+  emitRoomStateUpdate,
+  getChatCharacterUrlNumberById,
+  rememberChatLocationForCharacter
 });
 
 app.get("/characters/:id/festplays/public", requireAuth, (req, res) => {
@@ -19168,6 +19319,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     return res.render("characters/festplays/festplay-rooms", {
       title: `Festspiel-Räume: ${festplay.name}`,
       character,
+      chatCharacterUrlNumber: getChatCharacterUrlNumberById(character.id),
       festplay,
       festplayRooms,
       festplayRoomUsers,
@@ -19912,6 +20064,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     return res.render("characters/festplays/festplay-create", {
       title: `Festspiele erstellen: ${character.name}`,
       character,
+      chatCharacterUrlNumber: getChatCharacterUrlNumberById(character.id),
       ownedFestplays,
       otherFestplays,
       selectedFestplay,
@@ -21738,14 +21891,29 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   return res.redirect(buildGuestbookEditorReturnUrl(req, character, redirectPage.id));
 });
 
-function getChatRouteCharacterForUser(req, characterId) {
-  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
-  if (!normalizedCharacterId) {
+function getChatRouteCharacterForUser(req, characterToken, options = {}) {
+  const mode = String(options?.mode || "url").trim().toLowerCase();
+  if (mode === "actual" || mode === "character_id") {
+    return getChatRouteCharacterByActualIdForUser(req, characterToken);
+  }
+
+  const characterUrlNumber = normalizeChatCharacterUrlNumber(characterToken);
+  if (!characterUrlNumber) {
     return null;
   }
 
-  const character = getCharacterById(normalizedCharacterId);
-  return character && Number(character.user_id) === Number(req.session?.user?.id) ? character : null;
+  const character = getChatCharacterByUrlNumberForUser(
+    req.session?.user?.id,
+    characterUrlNumber,
+    getChatRouteCandidateServerIds(req, options?.serverId)
+  );
+  if (character) {
+    return character;
+  }
+
+  return options?.allowLegacyId === false
+    ? null
+    : getChatRouteCharacterByActualIdForUser(req, characterToken);
 }
 
 function getChatLocationStore(req) {
@@ -21977,6 +22145,7 @@ function renderChatPage(req, res, chatQuery = req.query) {
     activeRoom,
     activeRoomDescriptionHtml: activeRoom?.teaser ? renderGuestbookBbcode(activeRoom.teaser) : "",
     activeCharacter,
+    activeCharacterChatUrlNumber: getChatCharacterUrlNumberById(activeCharacter?.id),
     activeCharacterBirthdayCake,
     activeServerId,
     standardRoom,
@@ -21987,7 +22156,13 @@ function renderChatPage(req, res, chatQuery = req.query) {
 app.get("/chat", requireAuth, (req, res) => renderChatPage(req, res));
 
 app.get("/chat/room", requireAuth, (req, res) => {
-  const requestedCharacter = getChatRouteCharacterForUser(req, req.query.c || req.query.character_id);
+  const requestedCharacter = String(req.query.c || "").trim()
+    ? getChatRouteCharacterForUser(req, req.query.c, {
+        serverId: req.query.server
+      })
+    : getChatRouteCharacterForUser(req, req.query.character_id, {
+        mode: "actual"
+      });
   const roomId = Number(req.query.room_id || req.query.r || req.query.room);
   const hasExplicitRoom = Number.isInteger(roomId) && roomId > 0;
   const legacyStandardRoomId = requestedCharacter ? "" : String(req.query.c || "").trim().toLowerCase();
@@ -21998,6 +22173,9 @@ app.get("/chat/room", requireAuth, (req, res) => {
     !hasExplicitRoom && !requestedStandardRoomId && requestedCharacter
       ? getRememberedChatLocationForCharacter(req, requestedCharacter.id)
       : null;
+  if (requestedCharacter) {
+    rememberPreferredCharacter(req, requestedCharacter);
+  }
 
   return renderChatPage(req, res, {
     ...req.query,
@@ -22009,10 +22187,17 @@ app.get("/chat/room", requireAuth, (req, res) => {
 });
 
 app.post("/chat/location", requireAuth, (req, res) => {
-  const character = getChatRouteCharacterForUser(req, req.body.c || req.body.character_id);
+  const character = String(req.body.c || "").trim()
+    ? getChatRouteCharacterForUser(req, req.body.c, {
+        serverId: req.body.server
+      })
+    : getChatRouteCharacterForUser(req, req.body.character_id, {
+        mode: "actual"
+      });
   if (!character) {
     return res.status(403).json({ ok: false, error: "Kein Zugriff auf diesen Charakter." });
   }
+  rememberPreferredCharacter(req, character);
 
   const requestedServerId = normalizeServer(req.body.server || character.server_id);
   const roomId = Number(req.body.room_id || req.body.room);
@@ -22033,7 +22218,7 @@ app.post("/chat/location", requireAuth, (req, res) => {
       roomId: room.id,
       serverId: room.server_id || room.character_server_id || requestedServerId
     });
-    return res.json({ ok: true, url: `/chat/room?c=${character.id}` });
+    return res.json({ ok: true, url: `/chat/room?c=${getChatCharacterRouteNumber(character)}` });
   }
 
   const standardRoom = resolveStandardRoomForServer(requestedServerId, standardRoomId);
@@ -22045,16 +22230,23 @@ app.post("/chat/location", requireAuth, (req, res) => {
     serverId: requestedServerId,
     standardRoomId: standardRoom.id
   });
-  return res.json({ ok: true, url: `/chat/room?c=${character.id}` });
+  return res.json({ ok: true, url: `/chat/room?c=${getChatCharacterRouteNumber(character)}` });
 });
 
 app.get("/chat/rooms", requireAuth, (req, res) => {
-  const characterId = normalizePresenceCharacterId(req.query.c || req.query.character_id);
-  if (!characterId) {
+  const character = String(req.query.c || "").trim()
+    ? getChatRouteCharacterForUser(req, req.query.c, {
+        serverId: req.query.server
+      })
+    : getChatRouteCharacterForUser(req, req.query.character_id, {
+        mode: "actual"
+      });
+  if (!character) {
     return res.redirect("/dashboard");
   }
 
-  return res.redirect(`/characters/${characterId}?chat_rooms=1#roomlist`);
+  rememberPreferredCharacter(req, character);
+  return res.redirect(`/characters/${character.id}?chat_rooms=1#roomlist`);
 });
 
 app.post("/chat/disconnect-now", requireAuth, async (req, res) => {
@@ -24348,7 +24540,12 @@ function buildChatRedirectUrlForLocation(
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
-  const characterQuery = normalizedCharacterId ? `c=${normalizedCharacterId}` : "";
+  const characterRouteNumber = normalizedCharacterId
+    ? getChatCharacterRouteNumber(normalizedCharacterId)
+    : null;
+  const characterQuery = characterRouteNumber
+    ? `c=${encodeURIComponent(String(characterRouteNumber))}`
+    : "";
 
   if (normalizedRoomId) {
     const roomQuery = `room_id=${normalizedRoomId}`;
@@ -24372,7 +24569,10 @@ function buildChatRedirectUrlForLocation(
 
 function buildCharacterRoomListRedirectUrl(characterId) {
   const normalizedCharacterId = normalizePresenceCharacterId(characterId);
-  return normalizedCharacterId ? `/chat/rooms?c=${normalizedCharacterId}` : "/dashboard";
+  const characterRouteNumber = normalizedCharacterId
+    ? getChatCharacterRouteNumber(normalizedCharacterId)
+    : null;
+  return characterRouteNumber ? `/chat/rooms?c=${encodeURIComponent(String(characterRouteNumber))}` : "/dashboard";
 }
 
 function buildRoomListRedirectUrlForUser(
@@ -25033,6 +25233,7 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     chat_text_color: profile.chat_text_color || "",
     server_id: normalizedServerId,
     character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId),
+    character_url_number: getChatCharacterUrlNumberById(selectedCharacterId),
     chat_background_url: String(selectedCharacterAppearance?.chat_background_url || "").trim(),
     chat_background_color: normalizeChatBackgroundColor(selectedCharacterAppearance?.chat_background_color),
     chat_background_image_opacity: normalizeGuestbookOpacity(

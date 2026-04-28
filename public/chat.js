@@ -95,8 +95,10 @@
     document.body?.classList.add("is-standalone-app");
   }
   const activeCharacterIdRaw = chatBox?.dataset?.activeCharacterId || "";
+  const activeCharacterUrlNumberRaw = chatBox?.dataset?.activeCharacterUrlNumber || "";
   const roomId = Number(roomIdRaw);
   let currentActiveCharacterId = Number(activeCharacterIdRaw);
+  let currentActiveCharacterUrlNumber = Number(activeCharacterUrlNumberRaw);
   let currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
   let socialState = normalizeSocialState(window.__appSocialState || {});
   let lastRenderedOnlineEntries = [];
@@ -460,11 +462,22 @@
       : nextBaseTitle;
   }
 
+  function getCurrentChatCharacterRouteNumber() {
+    return Number.isInteger(currentActiveCharacterUrlNumber) && currentActiveCharacterUrlNumber > 0
+      ? currentActiveCharacterUrlNumber
+      : (
+        Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
+          ? currentActiveCharacterId
+          : null
+      );
+  }
+
   function syncChatUrlCharacterId() {
     try {
       let nextUrl = "";
-      if (Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0) {
-        nextUrl = `/chat/room?c=${encodeURIComponent(String(currentActiveCharacterId))}`;
+      const currentCharacterRouteNumber = getCurrentChatCharacterRouteNumber();
+      if (currentCharacterRouteNumber) {
+        nextUrl = `/chat/room?c=${encodeURIComponent(String(currentCharacterRouteNumber))}`;
       }
 
       if (!nextUrl) {
@@ -487,8 +500,9 @@
   }
 
   function buildCurrentChatRoomListUrl() {
-    return Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
-      ? `/chat/rooms?c=${currentActiveCharacterId}`
+    const currentCharacterRouteNumber = getCurrentChatCharacterRouteNumber();
+    return currentCharacterRouteNumber
+      ? `/chat/rooms?c=${encodeURIComponent(String(currentCharacterRouteNumber))}`
       : "/dashboard";
   }
 
@@ -837,12 +851,21 @@
       Number.isInteger(parsedCharacterId) && parsedCharacterId > 0
         ? parsedCharacterId
         : null;
+    const parsedCharacterUrlNumber = Number(payload?.character_url_number);
+    currentActiveCharacterUrlNumber =
+      Number.isInteger(parsedCharacterUrlNumber) && parsedCharacterUrlNumber > 0
+        ? parsedCharacterUrlNumber
+        : currentActiveCharacterId;
     currentPresenceKey = getOwnPresenceKey(currentActiveCharacterId);
 
     if (chatBox) {
       chatBox.dataset.activeCharacterId =
         Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
           ? String(currentActiveCharacterId)
+          : "";
+      chatBox.dataset.activeCharacterUrlNumber =
+        Number.isInteger(currentActiveCharacterUrlNumber) && currentActiveCharacterUrlNumber > 0
+          ? String(currentActiveCharacterUrlNumber)
           : "";
     }
     syncGlobalActiveCharacterId({

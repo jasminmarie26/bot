@@ -12,6 +12,8 @@
   <% const festplayRoomIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const festplayRoomLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const festplayRoomLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const festplayRoomChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
+  <% const buildFestplayRoomChatHref = (room) => `/chat/room?c=${encodeURIComponent(String(festplayRoomChatCharacterUrlNumber))}&room_id=${encodeURIComponent(String(room.id))}`; %>
   <% const festplayRoomHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
     : currentUser?.is_moderator
@@ -203,12 +205,12 @@
                 </svg></span>
                 <a
                   class="rp-room-custom-link<%= room.can_enter ? '' : ' is-disabled' %>"
-                  href="<%= room.can_enter ? `/chat?room_id=${room.id}&character_id=${character.id}` : '#' %>"
+                  href="<%= room.can_enter ? buildFestplayRoomChatHref(room) : '#' %>"
                   title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
                   data-room-link-target
                   data-room-link-room="<%= room.id %>"
                   data-room-link-server="<%= character.server_id %>"
-                  data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  data-room-link-url="<%= buildFestplayRoomChatHref(room) %>"
                   aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
                 ><%= room.name %></a>
               </div>
@@ -303,12 +305,12 @@
                 </svg></span>
                 <a
                   class="rp-room-custom-link"
-                  href="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  href="<%= buildFestplayRoomChatHref(room) %>"
                   title="Raum betreten"
                   data-room-link-target
                   data-room-link-room="<%= room.id %>"
                   data-room-link-server="<%= character.server_id %>"
-                  data-room-link-url="/chat?room_id=<%= room.id %>&character_id=<%= character.id %>"
+                  data-room-link-url="<%= buildFestplayRoomChatHref(room) %>"
                   aria-disabled="false"
                 ><%= room.name %></a>
               </div>

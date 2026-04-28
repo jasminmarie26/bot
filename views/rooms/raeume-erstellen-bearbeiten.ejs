@@ -12,6 +12,7 @@
   <% const roomcreateIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const roomcreateLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const roomcreateLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const roomcreateChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
   <% const roomcreateHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
     : currentUser?.is_moderator
@@ -196,9 +197,9 @@
           </div>
           <a
             class="rp-room-editor-enter"
-            href="/chat/room?c=<%= character.id %>"
+            href="/chat/room?c=<%= roomcreateChatCharacterUrlNumber %>"
             data-chat-location-link
-            data-chat-location-character="<%= character.id %>"
+            data-chat-location-character="<%= roomcreateChatCharacterUrlNumber %>"
             data-chat-location-room="<%= selectedRoom.id %>"
             data-chat-location-server="<%= character.server_id %>"
           >Raum betreten</a>

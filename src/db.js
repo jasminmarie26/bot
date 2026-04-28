@@ -97,6 +97,16 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS character_chat_url_numbers (
+    user_id INTEGER NOT NULL,
+    server_id TEXT NOT NULL,
+    character_id INTEGER NOT NULL,
+    short_number INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (character_id),
+    UNIQUE (user_id, server_id, short_number)
+  );
+
   CREATE TABLE IF NOT EXISTS festplays (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -500,6 +510,8 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_characters_user_id ON characters(user_id);
+  CREATE INDEX IF NOT EXISTS idx_character_chat_url_numbers_user_server
+    ON character_chat_url_numbers(user_id, server_id, short_number);
   CREATE INDEX IF NOT EXISTS idx_character_backups_user_id
     ON character_backups(user_id, restored_at, deleted_at);
   CREATE INDEX IF NOT EXISTS idx_chat_log_backups_user_character
@@ -2045,6 +2057,67 @@ db.prepare(
 db.prepare(
   "UPDATE site_updates SET updated_at = created_at WHERE updated_at IS NULL OR trim(updated_at) = ''"
 ).run();
+
+function ensureCharacterChatUrlNumbers() {
+  const characters = db
+    .prepare(
+      `SELECT id,
+              user_id,
+              server_id
+         FROM characters
+        WHERE server_id IN ('free-rp', 'erp')
+        ORDER BY user_id ASC,
+                 server_id ASC,
+                 CASE WHEN created_at IS NULL OR trim(created_at) = '' THEN 1 ELSE 0 END ASC,
+                 datetime(created_at) ASC,
+                 id ASC`
+    )
+    .all();
+
+  const getExistingNumber = db.prepare(
+    "SELECT short_number FROM character_chat_url_numbers WHERE character_id = ?"
+  );
+  const getMaxNumberForScope = db.prepare(
+    `SELECT COALESCE(MAX(short_number), 0) AS max_number
+       FROM character_chat_url_numbers
+      WHERE user_id = ?
+        AND server_id = ?`
+  );
+  const insertNumber = db.prepare(
+    `INSERT INTO character_chat_url_numbers (
+       user_id,
+       server_id,
+       character_id,
+       short_number
+     ) VALUES (?, ?, ?, ?)`
+  );
+  const nextNumberByScope = new Map();
+
+  const applyNumbers = db.transaction((rows) => {
+    rows.forEach((character) => {
+      const existing = getExistingNumber.get(character.id);
+      if (existing) {
+        return;
+      }
+
+      const scopeKey = `${character.user_id}:${character.server_id}`;
+      let nextNumber = nextNumberByScope.get(scopeKey);
+      if (!nextNumber) {
+        const maxNumber = Number(
+          getMaxNumberForScope.get(character.user_id, character.server_id)?.max_number || 0
+        );
+        nextNumber = Number.isInteger(maxNumber) && maxNumber > 0 ? maxNumber + 1 : 1;
+      }
+
+      insertNumber.run(character.user_id, character.server_id, character.id, nextNumber);
+      nextNumberByScope.set(scopeKey, nextNumber + 1);
+    });
+  });
+
+  applyNumbers(characters);
+}
+
+ensureCharacterChatUrlNumbers();
 
 function generateUniqueAccountNumber() {
   const usedAccountNumbers = new Set(

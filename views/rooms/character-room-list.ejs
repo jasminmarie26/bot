@@ -14,7 +14,8 @@
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
-  <% const buildChatRoomHref = () => `/chat/room?c=${encodeURIComponent(String(character.id))}`; %>
+  <% const roomlistChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
+  <% const buildChatRoomHref = () => `/chat/room?c=${encodeURIComponent(String(roomlistChatCharacterUrlNumber))}`; %>
   <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
   <% const roomlistHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
@@ -273,7 +274,7 @@
                       href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                       title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
                       data-chat-location-link
-                      data-chat-location-character="<%= character.id %>"
+                      data-chat-location-character="<%= roomlistChatCharacterUrlNumber %>"
                       data-chat-location-room="<%= room.id %>"
                       data-chat-location-server="<%= character.server_id %>"
                       data-room-link-target
@@ -366,7 +367,7 @@
                     class="rp-room-link rp-room-link-standard"
                     href="<%= buildChatRoomHref() %>"
                     data-chat-location-link
-                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-character="<%= roomlistChatCharacterUrlNumber %>"
                     data-chat-location-standard-room="<%= standardRoom.id %>"
                     data-chat-location-server="<%= character.server_id %>"
                     title="Treffpunkt betreten"
@@ -440,7 +441,7 @@
                     href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                     title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
                     data-chat-location-link
-                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-character="<%= roomlistChatCharacterUrlNumber %>"
                     data-chat-location-room="<%= room.id %>"
                     data-chat-location-server="<%= character.server_id %>"
                     data-room-link-target
@@ -517,7 +518,7 @@
                     href="<%= room.can_enter ? buildChatRoomHref(room) : '#' %>"
                     title="<%= room.can_enter ? 'Raum betreten' : 'Raum ist abgeschlossen' %>"
                     data-chat-location-link
-                    data-chat-location-character="<%= character.id %>"
+                    data-chat-location-character="<%= roomlistChatCharacterUrlNumber %>"
                     data-chat-location-room="<%= room.id %>"
                     data-chat-location-server="<%= character.server_id %>"
                     data-room-link-target
@@ -604,12 +605,12 @@
         return;
       }
 
-      const characterId = Number("<%= Number(character.id) %>");
-      if (!Number.isInteger(characterId) || characterId < 1) {
+      const characterUrlNumber = Number("<%= Number(roomlistChatCharacterUrlNumber) %>");
+      if (!Number.isInteger(characterUrlNumber) || characterUrlNumber < 1) {
         return;
       }
 
-      window.history.replaceState(window.history.state, "", `/chat/rooms?c=${characterId}`);
+      window.history.replaceState(window.history.state, "", `/chat/rooms?c=${characterUrlNumber}`);
     } catch (_error) {
       // Ignore history replacement failures.
     }

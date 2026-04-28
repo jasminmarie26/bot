@@ -29,7 +29,9 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     maybeStartAutomaticRoomLog,
     getActiveRoomLog,
     emitSystemChatMessage,
-    emitRoomStateUpdate
+    emitRoomStateUpdate,
+    getChatCharacterUrlNumberById,
+    rememberChatLocationForCharacter
   } = deps;
 
   app.get("/characters/:id/rooms/new", requireAuth, (req, res) => {
@@ -63,6 +65,10 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     return res.render("rooms/raeume-erstellen-bearbeiten", {
       title: `Raum erstellen: ${character.name}`,
       character,
+      chatCharacterUrlNumber:
+        typeof getChatCharacterUrlNumberById === "function"
+          ? getChatCharacterUrlNumberById(character.id) || character.id
+          : character.id,
       ownedRooms,
       selectedRoom
     });
@@ -207,7 +213,18 @@ function registerRaeumeErstellenBearbeitenRoutes(app, deps) {
     }
 
     if (returnTarget === "roomlist") {
-      return res.redirect(`/chat?room_id=${targetRoom.id}&character_id=${character.id}`);
+      if (typeof rememberChatLocationForCharacter === "function") {
+        rememberChatLocationForCharacter(req, character.id, {
+          roomId: targetRoom.id,
+          serverId: targetRoom.server_id || character.server_id
+        });
+      }
+
+      const chatCharacterUrlNumber =
+        typeof getChatCharacterUrlNumberById === "function"
+          ? getChatCharacterUrlNumberById(character.id) || character.id
+          : character.id;
+      return res.redirect(`/chat/room?c=${chatCharacterUrlNumber}`);
     }
 
     return res.redirect(`/characters/${id}/rooms/new`);

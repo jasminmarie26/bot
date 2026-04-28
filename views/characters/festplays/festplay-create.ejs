@@ -12,6 +12,8 @@
   <% const festplayIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
   <% const festplayLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const festplayLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
+  <% const festplayChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
+  <% const buildFestplayChatHref = (room) => `/chat/room?c=${encodeURIComponent(String(festplayChatCharacterUrlNumber))}&room_id=${encodeURIComponent(String(room.id))}`; %>
   <% const festplayHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
     : currentUser?.is_moderator
@@ -495,7 +497,7 @@
                 <% if (selectedFestplayRoom) { %>
                   <a
                     class="rp-room-editor-enter"
-                    href="/chat?room_id=<%= selectedFestplayRoom.id %>&character_id=<%= character.id %>"
+                    href="<%= buildFestplayChatHref(selectedFestplayRoom) %>"
                   >Raum betreten</a>
                   <% if (editableFestplayRoom) { %>
                     <form
