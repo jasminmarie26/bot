@@ -9304,6 +9304,14 @@ body.theme-atari .guestbook-entry-panel {
   margin-right: 0;
 }
 
+.bb-table-wrap.bb-table-flow,
+.bb-left > .bb-table-wrap.bb-table-flow,
+.bb-center > .bb-table-wrap.bb-table-flow,
+.bb-right > .bb-table-wrap.bb-table-flow {
+  display: block;
+  width: 100%;
+}
+
 .bb-block {
   display: block;
   text-align: justify;
@@ -9343,6 +9351,10 @@ body.theme-atari .guestbook-entry-panel {
   table-layout: auto;
   font-size: inherit;
   line-height: inherit;
+}
+
+.bb-table.bb-table-flow {
+  width: 100%;
 }
 
 .bb-table-row {

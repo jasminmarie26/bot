@@ -10335,6 +10335,10 @@ function bbcodeContentNeedsBlockWrapper(inner) {
   return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
 }
 
+function bbcodeTableNeedsFlowWidth(inner) {
+  return /<(?:div|details|ul|ol|li|blockquote|pre|h1|h2|h3|hr)\b/i.test(String(inner || ""));
+}
+
 function wrapBbcodeStyledContent(inner, options = {}) {
   const safeInner = String(inner || "");
   const safeClassName = String(options?.className || "").trim();
@@ -10665,13 +10669,13 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const tableStyleClass = showTableBorders
       ? " bb-table-bordered"
       : (hideTableBorders ? " bb-table-borderless" : " bb-table-borderless");
-    return `<div class="bb-table-wrap"><table class="bb-table${tableStyleClass}"><tbody>${inner}</tbody></table></div>`;
+    const tableFlowClass = bbcodeTableNeedsFlowWidth(inner) ? " bb-table-flow" : "";
+    return `<div class="bb-table-wrap${tableFlowClass}"><table class="bb-table${tableStyleClass}${tableFlowClass}"><tbody>${inner}</tbody></table></div>`;
   });
-  html = replaceInnermostBbcodeWrap(
-    html,
-    "table",
-    "<div class=\"bb-table-wrap\"><table class=\"bb-table bb-table-borderless\"><tbody>$1</tbody></table></div>"
-  );
+  html = replaceInnermostBbcodeWrapWithCallback(html, "table", (inner) => {
+    const tableFlowClass = bbcodeTableNeedsFlowWidth(inner) ? " bb-table-flow" : "";
+    return `<div class="bb-table-wrap${tableFlowClass}"><table class="bb-table bb-table-borderless${tableFlowClass}"><tbody>${inner}</tbody></table></div>`;
+  });
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
   html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
     `<td class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</td>`
