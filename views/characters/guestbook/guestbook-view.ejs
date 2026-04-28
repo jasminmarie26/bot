@@ -120,7 +120,11 @@
     guestbookContextQuery;
 %>
 
-<div class="guestbook-preview-shell guestbook-view-shell" style="<%= guestbookLayoutStyle %>">
+<div
+  class="guestbook-preview-shell guestbook-view-shell"
+  data-guestbook-current-page-number="<%= activeGuestbookPage.page_number || 1 %>"
+  style="<%= guestbookLayoutStyle %>"
+>
   <% if (guestbookMinorAccountWarning?.isMinor) { %>
     <section class="guestbook-minor-warning" role="note" aria-label="Jugendschutz-Hinweis">
       <strong>Minderj&auml;hriger User</strong>
@@ -345,6 +349,10 @@
 </div>
 
 <div data-server-presence="<%= character.server_id %>" hidden></div>
+<script id="guestbook-page-map" type="application/json"><%- JSON.stringify((guestbookPages || []).map((page) => ({
+  id: Number(page.id),
+  number: Number(page.page_number) || 1
+}))) %></script>
 <script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-page-navigation.js?v=<%= staticAssetVersion %>"></script>
