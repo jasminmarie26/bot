@@ -15,6 +15,11 @@
   const visibleUsers = Array.isArray(users) ? users : [];
   const totalFilteredUsers =
     typeof filteredUserCount === "number" ? filteredUserCount : visibleUsers.length;
+  const primaryAdminServerWorkSettings =
+    isPrimaryAdminViewer && serverWorkNoticeSettings ? serverWorkNoticeSettings : null;
+  const selectedServerWorkWeekdays = Array.isArray(primaryAdminServerWorkSettings?.weekdays)
+    ? primaryAdminServerWorkSettings.weekdays
+    : [];
   const groupedSections = [
     {
       key: "online",
@@ -149,6 +154,122 @@
     </table>
   </div>
 </section>
+
+<% if (primaryAdminServerWorkSettings) { %>
+  <section class="panel account-layout" id="server-work-notice-settings">
+    <div class="header-line">
+      <div>
+        <h2>Serverarbeit Status</h2>
+        <p class="muted">
+          Nur f&uuml;r Noctra. Hier steuerst du, wann der Hinweis automatisch eingeblendet und wieder ausgeblendet wird.
+        </p>
+      </div>
+    </div>
+
+    <form method="POST" action="/admin/server-work-notice" class="form admin-settings-form">
+      <input type="hidden" name="return_to" value="<%= `${overviewBasePath}#server-work-notice-settings` %>" />
+      <div class="help-table-wrap">
+        <table class="help-table admin-settings-table">
+          <thead>
+            <tr>
+              <th>Feld</th>
+              <th>Eingabe</th>
+              <th>Hinweis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Status / Titel</td>
+              <td>
+                <label class="account-table-field">
+                  <input
+                    name="server_work_notice_title"
+                    type="text"
+                    maxlength="80"
+                    autocomplete="off"
+                    value="<%= primaryAdminServerWorkSettings.title %>"
+                    required
+                  />
+                </label>
+              </td>
+              <td>Das ist die fette Zeile im Hinweis.</td>
+            </tr>
+            <tr>
+              <td>Text</td>
+              <td>
+                <label class="account-table-field">
+                  <input
+                    name="server_work_notice_message"
+                    type="text"
+                    maxlength="180"
+                    autocomplete="off"
+                    value="<%= primaryAdminServerWorkSettings.message %>"
+                    required
+                  />
+                </label>
+              </td>
+              <td>Freier Text unter dem Status, zum Beispiel Uhrzeit oder Hinweis.</td>
+            </tr>
+            <tr>
+              <td>Tag(e)</td>
+              <td>
+                <div class="admin-table-actions">
+                  <% (Array.isArray(serverWorkNoticeWeekdayOptions) ? serverWorkNoticeWeekdayOptions : []).forEach((option) => { %>
+                    <label class="muted" style="display:inline-flex;align-items:center;gap:0.35rem;">
+                      <input
+                        type="checkbox"
+                        name="server_work_notice_weekdays"
+                        value="<%= option.id %>"
+                        <%= selectedServerWorkWeekdays.includes(option.id) ? "checked" : "" %>
+                      />
+                      <span><%= option.label %></span>
+                    </label>
+                  <% }) %>
+                </div>
+              </td>
+              <td>Der Hinweis erscheint nur an den angehakten Wochentagen.</td>
+            </tr>
+            <tr>
+              <td>Von</td>
+              <td>
+                <label class="account-table-field">
+                  <input
+                    name="server_work_notice_start_time"
+                    type="time"
+                    value="<%= primaryAdminServerWorkSettings.startTime %>"
+                    required
+                  />
+                </label>
+              </td>
+              <td>Ab dieser Uhrzeit wird der Hinweis sichtbar.</td>
+            </tr>
+            <tr>
+              <td>Bis</td>
+              <td>
+                <label class="account-table-field">
+                  <input
+                    name="server_work_notice_end_time"
+                    type="time"
+                    value="<%= primaryAdminServerWorkSettings.endTime %>"
+                    required
+                  />
+                </label>
+              </td>
+              <td>Ab dieser Uhrzeit wird der Hinweis wieder ausgeblendet.</td>
+            </tr>
+            <tr>
+              <td>Aktion</td>
+              <td>
+                <button class="btn" type="submit">Serverarbeit speichern</button>
+              </td>
+              <td>Die aktuellen Standardwerte sind schon als Voreinstellung eingetragen.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+<% } %>
 
 <section class="panel account-layout">
   <h2>Als Benutzer testen</h2>

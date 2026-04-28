@@ -233,11 +233,23 @@ const ADMIN_SYSTEM_MESSAGE_NOTIFICATION_TYPE = "admin_system_message";
 const APP_PRIMARY_TIME_ZONE = "Europe/Berlin";
 const PRIMARY_ADMIN_USERNAME = "naschblume";
 const PRIMARY_ADMIN_LOG_LABEL = "Noctra";
-const SERVER_WORK_NOTICE_WEEKDAYS = new Set(["Mon", "Wed", "Fri"]);
-const SERVER_WORK_NOTICE_START_MINUTES = 16 * 60 + 45;
-const SERVER_WORK_NOTICE_END_MINUTES = 20 * 60 + 30;
-const SERVER_WORK_NOTICE_TITLE = "Heute Serverarbeit";
-const SERVER_WORK_NOTICE_MESSAGE = "17:00 bis 20:30 Uhr.";
+const SERVER_WORK_NOTICE_WEEKDAY_OPTIONS = Object.freeze([
+  { id: "Mon", label: "Montag" },
+  { id: "Tue", label: "Dienstag" },
+  { id: "Wed", label: "Mittwoch" },
+  { id: "Thu", label: "Donnerstag" },
+  { id: "Fri", label: "Freitag" },
+  { id: "Sat", label: "Samstag" },
+  { id: "Sun", label: "Sonntag" }
+]);
+const SERVER_WORK_NOTICE_WEEKDAY_IDS = new Set(
+  SERVER_WORK_NOTICE_WEEKDAY_OPTIONS.map((option) => option.id)
+);
+const SERVER_WORK_NOTICE_DEFAULT_WEEKDAYS = Object.freeze(["Mon", "Wed", "Fri"]);
+const SERVER_WORK_NOTICE_DEFAULT_START_TIME = "16:45";
+const SERVER_WORK_NOTICE_DEFAULT_END_TIME = "20:30";
+const SERVER_WORK_NOTICE_DEFAULT_TITLE = "Heute Serverarbeit";
+const SERVER_WORK_NOTICE_DEFAULT_MESSAGE = "17:00 bis 20:30 Uhr.";
 const LARP_PROFILE_GENDER_OPTION_VALUES = Object.freeze(["Weiblich", "Männlich", "Divers"]);
 const LARP_PROFILE_STAR_WARS_LARP_OPTION_VALUES = Object.freeze(["Republik", "Imperium"]);
 const HOLIDAY_NOTIFICATION_TYPES = Object.freeze({
@@ -1907,15 +1919,109 @@ function getPrimaryTimeZoneClockParts(referenceDate = new Date()) {
   };
 }
 
-function getServerWorkNotice(referenceDate = new Date()) {
+function normalizeServerWorkNoticeWeekdays(value, fallback = SERVER_WORK_NOTICE_DEFAULT_WEEKDAYS) {
+  const sourceValues = Array.isArray(value)
+    ? value
+    : String(value || "").split(",");
+  const normalizedValues = Array.from(new Set(sourceValues
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => SERVER_WORK_NOTICE_WEEKDAY_IDS.has(entry))));
+
+  if (normalizedValues.length) {
+    return normalizedValues;
+  }
+
+  const fallbackValues = Array.isArray(fallback) ? fallback : SERVER_WORK_NOTICE_DEFAULT_WEEKDAYS;
+  return Array.from(new Set(fallbackValues
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => SERVER_WORK_NOTICE_WEEKDAY_IDS.has(entry))));
+}
+
+function normalizeServerWorkNoticeTitle(value, fallback = SERVER_WORK_NOTICE_DEFAULT_TITLE) {
+  const normalizedValue = String(value || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (normalizedValue) {
+    return normalizedValue;
+  }
+  return String(fallback || "").replace(/\s+/g, " ").trim().slice(0, 80) || SERVER_WORK_NOTICE_DEFAULT_TITLE;
+}
+
+function normalizeServerWorkNoticeMessage(value, fallback = SERVER_WORK_NOTICE_DEFAULT_MESSAGE) {
+  const normalizedValue = String(value || "").replace(/\s+/g, " ").trim().slice(0, 180);
+  if (normalizedValue) {
+    return normalizedValue;
+  }
+  return String(fallback || "").replace(/\s+/g, " ").trim().slice(0, 180) || SERVER_WORK_NOTICE_DEFAULT_MESSAGE;
+}
+
+function parseServerWorkNoticeTimeToMinutes(value) {
+  const normalizedValue = String(value || "").trim();
+  const match = normalizedValue.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function normalizeServerWorkNoticeTime(value, fallback = SERVER_WORK_NOTICE_DEFAULT_START_TIME) {
+  const normalizedValue = String(value || "").trim();
+  return parseServerWorkNoticeTimeToMinutes(normalizedValue) != null
+    ? normalizedValue
+    : String(fallback || "").trim();
+}
+
+function getServerWorkNoticeSettings() {
+  const row = db
+    .prepare(
+      `SELECT server_work_notice_weekdays,
+              server_work_notice_start_time,
+              server_work_notice_end_time,
+              server_work_notice_title,
+              server_work_notice_message
+         FROM site_home_settings
+        WHERE id = 1`
+    )
+    .get() || {};
+  const weekdays = normalizeServerWorkNoticeWeekdays(row.server_work_notice_weekdays);
+  const startTime = normalizeServerWorkNoticeTime(
+    row.server_work_notice_start_time,
+    SERVER_WORK_NOTICE_DEFAULT_START_TIME
+  );
+  const endTime = normalizeServerWorkNoticeTime(
+    row.server_work_notice_end_time,
+    SERVER_WORK_NOTICE_DEFAULT_END_TIME
+  );
+
+  return {
+    weekdays,
+    weekdaysCsv: weekdays.join(","),
+    startTime,
+    endTime,
+    startMinutes: parseServerWorkNoticeTimeToMinutes(startTime),
+    endMinutes: parseServerWorkNoticeTimeToMinutes(endTime),
+    title: normalizeServerWorkNoticeTitle(row.server_work_notice_title),
+    message: normalizeServerWorkNoticeMessage(row.server_work_notice_message)
+  };
+}
+
+function getServerWorkNotice(referenceDate = new Date(), settings = getServerWorkNoticeSettings()) {
   const clockParts = getPrimaryTimeZoneClockParts(referenceDate);
   const currentMinutes = clockParts.hour * 60 + clockParts.minute;
-  const isServerWorkDay = SERVER_WORK_NOTICE_WEEKDAYS.has(clockParts.weekday);
+  const weekdays = normalizeServerWorkNoticeWeekdays(settings?.weekdays);
+  const startMinutes = Number.isInteger(Number(settings?.startMinutes))
+    ? Number(settings.startMinutes)
+    : parseServerWorkNoticeTimeToMinutes(settings?.startTime);
+  const endMinutes = Number.isInteger(Number(settings?.endMinutes))
+    ? Number(settings.endMinutes)
+    : parseServerWorkNoticeTimeToMinutes(settings?.endTime);
+  const isServerWorkDay = weekdays.includes(clockParts.weekday);
 
   if (
     !isServerWorkDay ||
-    currentMinutes < SERVER_WORK_NOTICE_START_MINUTES ||
-    currentMinutes >= SERVER_WORK_NOTICE_END_MINUTES
+    startMinutes == null ||
+    endMinutes == null ||
+    startMinutes >= endMinutes ||
+    currentMinutes < startMinutes ||
+    currentMinutes >= endMinutes
   ) {
     return {
       visible: false,
@@ -1926,8 +2032,8 @@ function getServerWorkNotice(referenceDate = new Date()) {
 
   return {
     visible: true,
-    title: SERVER_WORK_NOTICE_TITLE,
-    message: SERVER_WORK_NOTICE_MESSAGE
+    title: normalizeServerWorkNoticeTitle(settings?.title),
+    message: normalizeServerWorkNoticeMessage(settings?.message)
   };
 }
 
@@ -14060,14 +14166,15 @@ app.use((req, res, next) => {
     setThemeCookie(res, res.locals.activeTheme);
   }
 
-  res.locals.serverWorkNotice = getServerWorkNotice();
+  const serverWorkNoticeSettings = getServerWorkNoticeSettings();
+  res.locals.serverWorkNotice = getServerWorkNotice(new Date(), serverWorkNoticeSettings);
   res.locals.serverWorkNoticeConfig = {
     timeZone: APP_PRIMARY_TIME_ZONE,
-    weekdays: Array.from(SERVER_WORK_NOTICE_WEEKDAYS),
-    startMinutes: SERVER_WORK_NOTICE_START_MINUTES,
-    endMinutes: SERVER_WORK_NOTICE_END_MINUTES,
-    title: SERVER_WORK_NOTICE_TITLE,
-    message: SERVER_WORK_NOTICE_MESSAGE
+    weekdays: serverWorkNoticeSettings.weekdays,
+    startMinutes: serverWorkNoticeSettings.startMinutes,
+    endMinutes: serverWorkNoticeSettings.endMinutes,
+    title: serverWorkNoticeSettings.title,
+    message: serverWorkNoticeSettings.message
   };
   res.locals.flash = req.session.flash || null;
   res.locals.staticAssetVersion = STATIC_ASSET_VERSION;
@@ -16776,6 +16883,60 @@ app.post("/site-content/updates-title", requireAuth, requireAdmin, (req, res) =>
   io.emit("site:home-content:update", result.homeContent);
   setFlash(req, "success", "Live-Updates-Überschrift aktualisiert.");
   return res.redirect(req.get("referer") || "/");
+});
+
+app.post("/admin/server-work-notice", requireAuth, requireAdmin, requirePrimaryAdmin, (req, res) => {
+  const returnTarget = getSafeReturnTarget(req, "/admin#server-work-notice-settings");
+  const selectedWeekdays = normalizeServerWorkNoticeWeekdays(
+    Array.isArray(req.body.server_work_notice_weekdays)
+      ? req.body.server_work_notice_weekdays
+      : [req.body.server_work_notice_weekdays],
+    []
+  );
+  const startTime = String(req.body.server_work_notice_start_time || "").trim();
+  const endTime = String(req.body.server_work_notice_end_time || "").trim();
+  const title = String(req.body.server_work_notice_title || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  const message = String(req.body.server_work_notice_message || "").replace(/\s+/g, " ").trim().slice(0, 180);
+  const startMinutes = parseServerWorkNoticeTimeToMinutes(startTime);
+  const endMinutes = parseServerWorkNoticeTimeToMinutes(endTime);
+
+  if (!selectedWeekdays.length) {
+    setFlash(req, "error", "Bitte wähle mindestens einen Wochentag aus.");
+    return res.redirect(returnTarget);
+  }
+
+  if (startMinutes == null || endMinutes == null) {
+    setFlash(req, "error", "Bitte nutze gültige Uhrzeiten im Format HH:MM.");
+    return res.redirect(returnTarget);
+  }
+
+  if (startMinutes >= endMinutes) {
+    setFlash(req, "error", "Die Startzeit muss vor der Endzeit liegen.");
+    return res.redirect(returnTarget);
+  }
+
+  if (!title) {
+    setFlash(req, "error", "Bitte gib einen Status oder Titel ein.");
+    return res.redirect(returnTarget);
+  }
+
+  if (!message) {
+    setFlash(req, "error", "Bitte gib einen Text für die Serverarbeit ein.");
+    return res.redirect(returnTarget);
+  }
+
+  db.prepare(
+    `UPDATE site_home_settings
+        SET server_work_notice_weekdays = ?,
+            server_work_notice_start_time = ?,
+            server_work_notice_end_time = ?,
+            server_work_notice_title = ?,
+            server_work_notice_message = ?
+      WHERE id = 1`
+  ).run(selectedWeekdays.join(","), startTime, endTime, title, message);
+
+  setFlash(req, "success", "Serverarbeits-Status aktualisiert.");
+  return res.redirect(returnTarget);
 });
 
 app.post("/settings/theme", (req, res) => {
@@ -22827,6 +22988,8 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
 
 function renderStaffOverview(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
+  const isPrimaryAdminViewer = isPrimaryAdminUser(req.session.user);
+  const serverWorkNoticeSettings = isPrimaryAdminViewer ? getServerWorkNoticeSettings() : null;
   const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
   const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) =>
     decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId)
@@ -22883,6 +23046,9 @@ function renderStaffOverview(req, res) {
     adminCount,
     moderatorCount,
     statusDefinitions: MODERATION_STATUS_DEFINITIONS,
+    isPrimaryAdminViewer,
+    serverWorkNoticeSettings,
+    serverWorkNoticeWeekdayOptions: SERVER_WORK_NOTICE_WEEKDAY_OPTIONS,
     statusCounts: {
       online: onlineUsers.length,
       minor: minorUsers.length,

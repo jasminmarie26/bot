@@ -403,6 +403,11 @@ db.exec(`
     hero_title TEXT NOT NULL DEFAULT 'Heldenhaft Reisen',
     hero_body TEXT NOT NULL DEFAULT 'Aktuelle Neuigkeiten findest du oben über den Live-Updates-Tab im Header. Dort können Admins und Moderatoren neue Meldungen direkt veröffentlichen und bearbeiten.',
     updates_title TEXT NOT NULL DEFAULT 'Live Updates',
+    server_work_notice_weekdays TEXT NOT NULL DEFAULT 'Mon,Wed,Fri',
+    server_work_notice_start_time TEXT NOT NULL DEFAULT '16:45',
+    server_work_notice_end_time TEXT NOT NULL DEFAULT '20:30',
+    server_work_notice_title TEXT NOT NULL DEFAULT 'Heute Serverarbeit',
+    server_work_notice_message TEXT NOT NULL DEFAULT '17:00 bis 20:30 Uhr.',
     account_number_migration_version INTEGER NOT NULL DEFAULT 0,
     larp_online_record_count INTEGER NOT NULL DEFAULT 0,
     larp_online_record_at TEXT NOT NULL DEFAULT ''
@@ -1622,6 +1627,36 @@ if (!siteHomeSettingsColumns.includes("updates_title")) {
   db.exec("ALTER TABLE site_home_settings ADD COLUMN updates_title TEXT NOT NULL DEFAULT 'Live Updates'");
 }
 
+if (!siteHomeSettingsColumns.includes("server_work_notice_weekdays")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN server_work_notice_weekdays TEXT NOT NULL DEFAULT 'Mon,Wed,Fri'"
+  );
+}
+
+if (!siteHomeSettingsColumns.includes("server_work_notice_start_time")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN server_work_notice_start_time TEXT NOT NULL DEFAULT '16:45'"
+  );
+}
+
+if (!siteHomeSettingsColumns.includes("server_work_notice_end_time")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN server_work_notice_end_time TEXT NOT NULL DEFAULT '20:30'"
+  );
+}
+
+if (!siteHomeSettingsColumns.includes("server_work_notice_title")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN server_work_notice_title TEXT NOT NULL DEFAULT 'Heute Serverarbeit'"
+  );
+}
+
+if (!siteHomeSettingsColumns.includes("server_work_notice_message")) {
+  db.exec(
+    "ALTER TABLE site_home_settings ADD COLUMN server_work_notice_message TEXT NOT NULL DEFAULT '17:00 bis 20:30 Uhr.'"
+  );
+}
+
 if (!siteHomeSettingsColumns.includes("account_number_migration_version")) {
   db.exec(
     "ALTER TABLE site_home_settings ADD COLUMN account_number_migration_version INTEGER NOT NULL DEFAULT 0"
@@ -2047,6 +2082,21 @@ db.prepare(
 ).run();
 db.prepare(
   "UPDATE site_home_settings SET updates_title = 'Live Updates' WHERE updates_title IS NULL OR trim(updates_title) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET server_work_notice_weekdays = 'Mon,Wed,Fri' WHERE server_work_notice_weekdays IS NULL OR trim(server_work_notice_weekdays) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET server_work_notice_start_time = '16:45' WHERE server_work_notice_start_time IS NULL OR trim(server_work_notice_start_time) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET server_work_notice_end_time = '20:30' WHERE server_work_notice_end_time IS NULL OR trim(server_work_notice_end_time) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET server_work_notice_title = 'Heute Serverarbeit' WHERE server_work_notice_title IS NULL OR trim(server_work_notice_title) = ''"
+).run();
+db.prepare(
+  "UPDATE site_home_settings SET server_work_notice_message = '17:00 bis 20:30 Uhr.' WHERE server_work_notice_message IS NULL OR trim(server_work_notice_message) = ''"
 ).run();
 db.prepare(
   "UPDATE site_home_settings SET larp_online_record_count = 0 WHERE larp_online_record_count IS NULL"
