@@ -19243,7 +19243,7 @@ app.post("/characters/:id/festplays/:festplayId/enter-room", requireAuth, (req, 
 
     touchFestplayActivity(festplayId);
     return res.redirect(
-      buildChatRedirectUrlForLocation(targetRoom.id, targetRoom.server_id || character.server_id)
+      buildChatRedirectUrlForLocation(targetRoom.id, targetRoom.server_id || character.server_id, character.id)
     );
   } catch (error) {
     console.error("festplay side chat creation failed", {
@@ -21726,6 +21726,83 @@ app.post("/characters/:id/guestbook/edit/delete-page", requireAuth, (req, res) =
   return res.redirect(buildGuestbookEditorReturnUrl(req, character, redirectPage.id));
 });
 
+function getChatRouteCharacterForUser(req, characterId) {
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  if (!normalizedCharacterId) {
+    return null;
+  }
+
+  const character = getCharacterById(normalizedCharacterId);
+  return character && Number(character.user_id) === Number(req.session?.user?.id) ? character : null;
+}
+
+function getChatLocationStore(req) {
+  const currentStore = req.session?.chat_locations_by_character_id;
+  const store = currentStore && typeof currentStore === "object" && !Array.isArray(currentStore)
+    ? currentStore
+    : {};
+  req.session.chat_locations_by_character_id = store;
+  return store;
+}
+
+function rememberChatLocationForCharacter(req, characterId, location = {}) {
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  if (!normalizedCharacterId) {
+    return;
+  }
+
+  const roomId = Number(location.roomId);
+  const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
+  const normalizedServerId = normalizeServer(location.serverId);
+  const standardRoomId = String(location.standardRoomId || "").trim().toLowerCase();
+  if (!normalizedRoomId && !standardRoomId) {
+    return;
+  }
+
+  const store = getChatLocationStore(req);
+  store[String(normalizedCharacterId)] = {
+    room_id: normalizedRoomId || 0,
+    server_id: normalizedServerId,
+    standard_room_id: normalizedRoomId ? "" : standardRoomId
+  };
+}
+
+function getRememberedChatLocationForCharacter(req, characterId) {
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  if (!normalizedCharacterId) {
+    return null;
+  }
+
+  const store = getChatLocationStore(req);
+  const location = store[String(normalizedCharacterId)];
+  if (!location || typeof location !== "object") {
+    return null;
+  }
+
+  const serverId = normalizeServer(location.server_id);
+  const roomId = Number(location.room_id);
+  if (Number.isInteger(roomId) && roomId > 0 && getRoomWithCharacter(roomId)) {
+    return {
+      room_id: String(roomId),
+      server: serverId,
+      standard_room: ""
+    };
+  }
+
+  const standardRoomId = String(location.standard_room_id || "").trim().toLowerCase();
+  const standardRoom = standardRoomId ? resolveStandardRoomForServer(serverId, standardRoomId) : null;
+  if (standardRoom?.id) {
+    return {
+      room_id: "",
+      server: serverId,
+      standard_room: standardRoom.id
+    };
+  }
+
+  delete store[String(normalizedCharacterId)];
+  return null;
+}
+
 function renderChatPage(req, res, chatQuery = req.query) {
   const requestedServerId = normalizeServer(chatQuery.server);
   const requestedStandardRoomId = String(chatQuery.standard_room || "").trim().toLowerCase();
@@ -21851,6 +21928,14 @@ function renderChatPage(req, res, chatQuery = req.query) {
     }
   }
 
+  if (activeCharacter) {
+    rememberChatLocationForCharacter(req, activeCharacter.id, {
+      roomId: activeRoom?.id,
+      serverId: activeServerId,
+      standardRoomId: activeRoom ? "" : standardRoom?.id
+    });
+  }
+
   const messages = [];
 
   const onlineCharacters = getVisibleOnlineCharactersForUser(
@@ -21890,17 +21975,24 @@ function renderChatPage(req, res, chatQuery = req.query) {
 app.get("/chat", requireAuth, (req, res) => renderChatPage(req, res));
 
 app.get("/chat/room", requireAuth, (req, res) => {
-  const cleanRoomKey = String(req.query.c || "").trim();
-  const roomId = Number(cleanRoomKey || req.query.room_id);
+  const requestedCharacter = getChatRouteCharacterForUser(req, req.query.c || req.query.character_id);
+  const roomId = Number(req.query.room_id || req.query.r || req.query.room);
+  const hasExplicitRoom = Number.isInteger(roomId) && roomId > 0;
+  const legacyStandardRoomId = requestedCharacter ? "" : String(req.query.c || "").trim().toLowerCase();
   const requestedStandardRoomId = String(
-    (!Number.isInteger(roomId) || roomId < 1 ? cleanRoomKey : "") || req.query.standard_room || ""
+    req.query.standard_room || req.query.s || legacyStandardRoomId || ""
   ).trim().toLowerCase();
+  const rememberedLocation =
+    !hasExplicitRoom && !requestedStandardRoomId && requestedCharacter
+      ? getRememberedChatLocationForCharacter(req, requestedCharacter.id)
+      : null;
 
   return renderChatPage(req, res, {
     ...req.query,
-    room_id: Number.isInteger(roomId) && roomId > 0 ? String(roomId) : "",
-    standard_room: requestedStandardRoomId,
-    server: req.query.server
+    character_id: requestedCharacter?.id || req.query.character_id,
+    room_id: hasExplicitRoom ? String(roomId) : rememberedLocation?.room_id || "",
+    standard_room: requestedStandardRoomId || rememberedLocation?.standard_room || "",
+    server: req.query.server || rememberedLocation?.server || requestedCharacter?.server_id
   });
 });
 
@@ -24198,23 +24290,32 @@ function emitCharacterAppearanceUpdate(userId, characterId) {
 function buildChatRedirectUrlForLocation(
   roomId,
   serverId = DEFAULT_SERVER_ID,
+  characterId = null,
   standardRoomId = null
 ) {
   const normalizedRoomId = Number.isInteger(roomId) && roomId > 0 ? roomId : null;
   const normalizedServerId = normalizeServer(serverId);
+  const normalizedCharacterId = normalizePresenceCharacterId(characterId);
+  const characterQuery = normalizedCharacterId ? `c=${normalizedCharacterId}` : "";
 
   if (normalizedRoomId) {
-    return `/chat/room?c=${normalizedRoomId}`;
+    const roomQuery = `room_id=${normalizedRoomId}`;
+    return `/chat/room?${[characterQuery, roomQuery].filter(Boolean).join("&")}`;
   }
 
   const defaultStandardRoom = resolveStandardRoomForServer(normalizedServerId, standardRoomId);
   if (!defaultStandardRoom?.id) {
-    return `/chat?server=${encodeURIComponent(normalizedServerId)}`;
+    const serverQuery = `server=${encodeURIComponent(normalizedServerId)}`;
+    return characterQuery
+      ? `/chat/room?${characterQuery}&${serverQuery}`
+      : `/chat?${serverQuery}`;
   }
 
-  return `/chat/room?c=${encodeURIComponent(String(defaultStandardRoom.id))}&server=${encodeURIComponent(
-    normalizedServerId
-  )}`;
+  return `/chat/room?${[
+    characterQuery,
+    `standard_room=${encodeURIComponent(String(defaultStandardRoom.id))}`,
+    `server=${encodeURIComponent(normalizedServerId)}`
+  ].filter(Boolean).join("&")}`;
 }
 
 function buildCharacterRoomListRedirectUrl(characterId) {
@@ -30000,7 +30101,8 @@ io.on("connection", (socket) => {
       socket.emit("chat:redirect", {
         url: buildChatRedirectUrlForLocation(
           targetRoom.id,
-          targetRoom.server_id || preferredCharacter.server_id || serverId
+          targetRoom.server_id || preferredCharacter.server_id || serverId,
+          preferredCharacter.id
         ),
         delayMs: 550
       });
@@ -30179,10 +30281,17 @@ io.on("connection", (socket) => {
       `${recipientName} hat die Einladung in den Raum ${invite.roomName} angenommen.`
     );
 
+    const preferredCharacter = getPreferredCharacterForUser(
+      socket.data.user.id,
+      invitedRoom.server_id || invite.serverId,
+      getSocketPreferredCharacterId(socket, invitedRoom.server_id || invite.serverId)
+    );
+
     socket.emit("chat:redirect", {
       url: buildChatRedirectUrlForLocation(
         invite.roomId,
-        invitedRoom.server_id || invite.serverId
+        invitedRoom.server_id || invite.serverId,
+        preferredCharacter?.id
       ),
       delayMs: 450
     });

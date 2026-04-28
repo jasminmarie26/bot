@@ -463,13 +463,8 @@
   function syncChatUrlCharacterId() {
     try {
       let nextUrl = "";
-      if (hasRoom) {
-        nextUrl = `/chat/room?c=${encodeURIComponent(String(roomId))}`;
-      } else if (standardRoomId) {
-        const params = new URLSearchParams();
-        params.set("c", standardRoomId);
-        params.set("server", String(currentDisplayServerId || serverId || "free-rp"));
-        nextUrl = `/chat/room?${params.toString()}`;
+      if (Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0) {
+        nextUrl = `/chat/room?c=${encodeURIComponent(String(currentActiveCharacterId))}`;
       }
 
       if (!nextUrl) {

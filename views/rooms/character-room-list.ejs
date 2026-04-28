@@ -14,8 +14,8 @@
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
     : []; %>
-  <% const buildChatRoomHref = (room) => `/chat/room?c=${encodeURIComponent(String(room.id))}`; %>
-  <% const buildStandardChatRoomHref = (standardRoom) => `/chat/room?c=${encodeURIComponent(String(standardRoom.id))}&server=${encodeURIComponent(String(character.server_id || ""))}`; %>
+  <% const buildChatRoomHref = (room) => `/chat/room?c=${encodeURIComponent(String(character.id))}&room_id=${encodeURIComponent(String(room.id))}`; %>
+  <% const buildStandardChatRoomHref = (standardRoom) => `/chat/room?c=${encodeURIComponent(String(character.id))}&standard_room=${encodeURIComponent(String(standardRoom.id))}&server=${encodeURIComponent(String(character.server_id || ""))}`; %>
   <% const showRoomlistHeaderIdentity = Boolean(currentUser && roomlistIdentityName); %>
   <% const roomlistHeaderIdentityHref = currentUser?.is_admin
     ? "/admin"
