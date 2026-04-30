@@ -3646,14 +3646,20 @@
     const fromNode = createStyledChatNameNode(fromName, "", fromChatTextColor);
     const actionNode = document.createElement("strong");
     const toNode = createStyledChatNameNode(toName, "", toChatTextColor);
+    const body = document.createElement("span");
 
     actionNode.textContent = " flüstert an ";
     setChatColorSource(actionNode, fromChatTextColor);
     applyStoredChatTextColor(actionNode, fromChatTextColor, { allowGradient: false });
     toNode.appendChild(document.createTextNode(":"));
+    setChatColorSource(body, fromChatTextColor);
+    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
+    applyStoredChatTextColor(body, fromChatTextColor, { allowGradient: false });
+    applyChatTextColorToDescendants(body, fromChatTextColor);
     line.appendChild(fromNode);
     line.appendChild(actionNode);
     line.appendChild(toNode);
+    line.appendChild(body);
     const afkNoteText = msg?.outgoing
       ? getWhisperAfkNoteText(
           msg?.whisper_target_afk_name || msg?.to_name,
