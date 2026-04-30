@@ -25,6 +25,9 @@ const {
   TextRun
 } = require("docx");
 const db = require("./db");
+const {
+  getNaechsteAutomatischeAfkNachricht
+} = require("./chat-afk-nachrichten-de");
 const { buildRaumPraesenzNachricht } = require("./chat-nachrichten-de");
 const {
   registerRaeumeErstellenBearbeitenRoutes
@@ -23933,43 +23936,6 @@ function socketChannelForRoom(roomId, serverId = DEFAULT_SERVER_ID, standardRoom
 }
 
 const chatAfkStates = new Map();
-const CHAT_AFK_REASON_PREFIXES = [
-  "versucht gerade,",
-  "muss kurz",
-  "ist gerade damit beschäftigt,",
-  "nimmt sich einen Moment und",
-  "hat sich kurz verabschiedet, um",
-  "ist für einen Augenblick weg und",
-  "hat sich kurz verloren, um",
-  "kümmert sich gerade darum,",
-  "wurde kurz abgelenkt und",
-  "ist heimlich unterwegs, um",
-  "ist für einen Moment verschwunden, um",
-  "hat gerade Wichtigeres vor und",
-  "wurde von der Realität entführt, um",
-  "ist kurz im Nebenplot und",
-  "bearbeitet gerade ein dringendes Problem und",
-  "musste plötzlich los, um",
-  "steht kurz nicht zur Verfügung und",
-  "ist eben aus dem Bild, um",
-  "macht eine winzige Pause und",
-  "ist gerade auf geheimer Mission und"
-];
-const CHAT_AFK_REASON_SUFFIXES = [
-  "den letzten Keks zu retten",
-  "einen widerspenstigen Umhang zu falten",
-  "einem Teebeutel gut zuzureden",
-  "das Sockenmysterium zu lösen",
-  "einen verirrten Würfel einzusammeln",
-  "eine Tür ohne Tür zu finden",
-  "den inneren Dramabalken neu zu justieren",
-  "einer Brieftaube den Weg zu erklären",
-  "ein beleidigtes Schwert zu besänftigen",
-  "den Plot kurz wieder einzufangen"
-];
-const CHAT_AUTOMATIC_AFK_REASONS = CHAT_AFK_REASON_PREFIXES.flatMap((prefix) =>
-  CHAT_AFK_REASON_SUFFIXES.map((suffix) => `${prefix} ${suffix}`)
-);
 const CHAT_CHARACTER_SWITCH_SUFFIXES = [
   "wirbelt einmal durch eine Wolke aus Funken und taucht als %NAME% wieder auf.",
   "zieht kurz einen schiefen Zauber durch die Luft und steht plötzlich als %NAME% da.",
@@ -24024,11 +23990,7 @@ function getChatAfkState(
 }
 
 function getRandomAutomaticAfkReason() {
-  if (!CHAT_AUTOMATIC_AFK_REASONS.length) {
-    return "kurz in einem mysteriösen Nebenplot verschwunden";
-  }
-
-  return CHAT_AUTOMATIC_AFK_REASONS[crypto.randomInt(CHAT_AUTOMATIC_AFK_REASONS.length)];
+  return getNaechsteAutomatischeAfkNachricht();
 }
 
 function emitChatAfkStateToChannel(
