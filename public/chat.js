@@ -812,6 +812,8 @@
       show_name_time: Boolean(message?.show_name_time),
       system_kind: String(message?.system_kind || "").trim(),
       presence_kind: String(message?.presence_kind || "").trim(),
+      presence_actor_user_id: toPositiveIntegerOrNull(message?.presence_actor_user_id),
+      presence_actor_character_id: toPositiveIntegerOrNull(message?.presence_actor_character_id),
       presence_actor_name: String(message?.presence_actor_name || "").trim(),
       presence_actor_role_style: String(message?.presence_actor_role_style || "").trim(),
       presence_actor_chat_text_color: String(message?.presence_actor_chat_text_color || "").trim(),
@@ -2757,6 +2759,79 @@
     }
   }
 
+  function normalizeAfkReturnMergeName(value) {
+    return formatRoleDisplayName(value)
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function canMergeIntoPreviousAfkReturn(article, msg) {
+    if (!(article instanceof HTMLElement) || !article.classList.contains("chat-afk-return-message")) {
+      return false;
+    }
+    if (article.dataset.afkReturnMerged === "1") {
+      return false;
+    }
+
+    const messageUserId = toPositiveIntegerOrNull(msg?.user_id);
+    const returnUserId = toPositiveIntegerOrNull(article.dataset.afkReturnUserId);
+    if (messageUserId && returnUserId) {
+      if (messageUserId !== returnUserId) {
+        return false;
+      }
+
+      const messageCharacterId = toPositiveIntegerOrNull(msg?.character_id);
+      const returnCharacterId = toPositiveIntegerOrNull(article.dataset.afkReturnCharacterId);
+      return !messageCharacterId || !returnCharacterId || messageCharacterId === returnCharacterId;
+    }
+
+    const returnActorName = normalizeAfkReturnMergeName(article.dataset.afkReturnActorName || "");
+    const messageActorName = normalizeAfkReturnMergeName(msg?.username || "");
+    return Boolean(returnActorName && messageActorName && returnActorName === messageActorName);
+  }
+
+  function appendChatMessageInline(container, msg) {
+    const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
+    const body = document.createElement("span");
+    const strong = document.createElement("strong");
+    const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
+    const displayName = formatRoleDisplayName(msg?.username, roleStyle);
+    body.className = "chat-afk-return-inline-content";
+    strong.classList.add("chat-afk-return-inline-name");
+    if (roleStyle === "admin" || roleStyle === "moderator") {
+      strong.classList.add(`role-name-${roleStyle}`);
+    }
+    strong.textContent = `${displayName}:`;
+    applySpecialNameDecor(strong, displayName);
+    setChatColorSource(strong, chatTextColor);
+    setChatColorSource(body, chatTextColor);
+    applyStoredChatTextColor(strong, chatTextColor);
+    applyStoredChatTextColor(body, chatTextColor, { allowGradient: false });
+    container.appendChild(document.createTextNode(" "));
+    container.appendChild(strong);
+    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
+    container.appendChild(body);
+  }
+
+  function mergeMessageIntoPreviousAfkReturn(msg) {
+    const previousArticle = chatFeed.lastElementChild;
+    if (!canMergeIntoPreviousAfkReturn(previousArticle, msg)) {
+      return false;
+    }
+
+    const line = previousArticle.querySelector("p");
+    if (!line) {
+      return false;
+    }
+
+    appendChatMessageInline(line, msg);
+    previousArticle.dataset.afkReturnMerged = "1";
+    previousArticle.classList.add("chat-afk-return-merged-message");
+    scrollChatToBottom();
+    return true;
+  }
+
   function appendMessage(msg, options = {}) {
     const isSystemMessage = String(msg?.type || "").trim().toLowerCase() === "system";
     if (!isSystemMessage && isIgnoredSocialEntry(msg)) {
@@ -2764,6 +2839,18 @@
     }
 
     rememberRenderedChatMessage(msg);
+    if (!isSystemMessage && mergeMessageIntoPreviousAfkReturn(msg)) {
+      if (
+        Number(msg?.user_id) > 0 &&
+        Number(msg.user_id) !== currentUserId &&
+        options?.skipNotifications !== true
+      ) {
+        markUnreadChatTab();
+        playChatTone();
+      }
+      return;
+    }
+
     const article = document.createElement("article");
     const emoteActionText = !isSystemMessage
       ? getEmoteActionText(msg?.content, msg?.username)
@@ -2814,6 +2901,22 @@
       const actorTargetSuffix = String(msg?.actor_target_suffix || "");
       const presenceSuffix = String(msg?.presence_suffix || "").trim();
       const roomSwitchTargetName = String(msg?.room_switch_target_name || "").trim();
+      if (article.classList.contains("chat-afk-return-message")) {
+        const returnUserId = toPositiveIntegerOrNull(msg?.presence_actor_user_id || msg?.user_id);
+        const returnCharacterId = toPositiveIntegerOrNull(
+          msg?.presence_actor_character_id || msg?.character_id
+        );
+        if (returnUserId) {
+          article.dataset.afkReturnUserId = String(returnUserId);
+        }
+        if (returnCharacterId) {
+          article.dataset.afkReturnCharacterId = String(returnCharacterId);
+        }
+        article.dataset.afkReturnActorName = formatRoleDisplayName(
+          presenceActorName,
+          presenceActorRoleStyle
+        );
+      }
       if (systemKind === "presence" && presenceActorName && presenceSuffix) {
         const strong = createStyledChatNameNode(
           presenceActorName,

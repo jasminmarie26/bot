@@ -14636,19 +14636,11 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .chat-box .chat-system.chat-afk-return-message p {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
+  display: block;
 }
 
-.chat-box .chat-system.chat-afk-return-message .chat-own-message-time,
-.chat-box .chat-system.chat-afk-return-message strong {
-  flex: 0 0 auto;
-}
-
-.chat-box .chat-system.chat-afk-return-message p > span:not(.chat-own-message-time) {
-  flex: 1 1 auto;
-  min-width: 0;
+.chat-box .chat-system.chat-afk-return-message .chat-afk-return-inline-content {
+  font-weight: 400;
 }
 
 .page-chat .role-name-admin {

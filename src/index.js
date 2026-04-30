@@ -24245,6 +24245,8 @@ function clearChatAfkStateAndEmitReturnMessage({
     {
       system_kind: "actor-message",
       presence_kind: "return",
+      presence_actor_user_id: userId,
+      presence_actor_character_id: characterId,
       presence_actor_name: String(actorName || "").trim() || `User ${Number(userId) || "?"}`,
       presence_actor_role_style: String(roleStyle || "").trim(),
       presence_actor_chat_text_color: String(chatTextColor || "").trim()
@@ -27733,6 +27735,8 @@ function buildSystemChatPayload(content, options = {}) {
   if (!text) return null;
   const systemKind = String(options?.system_kind || "").trim();
   const messageTimeIso = new Date().toISOString();
+  const presenceActorUserId = Number(options?.presence_actor_user_id);
+  const presenceActorCharacterId = Number(options?.presence_actor_character_id);
 
   const chatTextColor = /^#[0-9a-f]{6}$/i.test(String(options?.chat_text_color || "").trim())
     ? normalizeGuestbookColor(options.chat_text_color)
@@ -27744,6 +27748,14 @@ function buildSystemChatPayload(content, options = {}) {
     chat_text_color: chatTextColor,
     system_kind: systemKind,
     presence_kind: String(options?.presence_kind || "").trim(),
+    presence_actor_user_id:
+      Number.isInteger(presenceActorUserId) && presenceActorUserId > 0
+        ? presenceActorUserId
+        : null,
+    presence_actor_character_id:
+      Number.isInteger(presenceActorCharacterId) && presenceActorCharacterId > 0
+        ? presenceActorCharacterId
+        : null,
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
     presence_actor_role_style: String(options?.presence_actor_role_style || "").trim(),
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
