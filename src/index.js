@@ -10355,7 +10355,7 @@ function wrapBbcodeStyledContent(inner, options = {}) {
 const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
 const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
 const BBCODE_HIDDEN_BREAK_CHARACTERS = /[\u00AD\u200B\uFEFF]/g;
-const BBCODE_SPACE_NORMALIZATION_CHARACTERS = /[\u1680\u2000-\u2006\u2008-\u200A\u202F\u205F\u3000]/g;
+const BBCODE_SPACE_NORMALIZATION_CHARACTERS = /[\u1680\u2000-\u2006\u2008-\u200A\u202F\u205F]/g;
 
 function decodeCommonHtmlEntities(rawValue) {
   return String(rawValue || "")
