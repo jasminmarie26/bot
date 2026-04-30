@@ -9389,15 +9389,9 @@ body.theme-atari .guestbook-entry-panel {
 
 .bb-table-cell-spacer {
   padding: 0;
-  padding-left: 0.18rem;
-  padding-right: 0.18rem;
   white-space: pre;
   word-break: normal;
   overflow-wrap: normal;
-}
-
-.bb-table-cell-spacer:not([width]):not([style*="width"]) {
-  min-width: clamp(0.8rem, 1.6vw, 1.8rem);
 }
 
 .bb-table.bb-table-bordered {
@@ -9413,8 +9407,7 @@ body.theme-atari .guestbook-entry-panel {
 .bb-table.bb-table-bordered .bb-table-cell-spacer {
   border-color: transparent;
   background: transparent;
-  padding-left: 0.08rem;
-  padding-right: 0.08rem;
+  padding: 0;
 }
 
 .bb-image {

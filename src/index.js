@@ -10327,7 +10327,8 @@ function replaceInnermostBbcodeWrapWithCallback(html, tag, callback) {
 function isBbcodeSpacerOnlyContent(inner) {
   const plainContent = String(inner || "")
     .replace(/\[\s*\/?[a-z0-9]+(?:=[^\]]+)?\s*\]/gi, "")
-    .replace(/<[^>]+>/g, "");
+    .replace(/<[^>]+>/g, "")
+    .replace(/&(amp;)?(?:nbsp|numsp);/gi, " ");
   return plainContent.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]+/g, "") === "";
 }
 
@@ -10678,9 +10679,17 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     return `<div class="bb-table-wrap${tableFlowClass}"><table class="bb-table bb-table-borderless${tableFlowClass}"><tbody>${inner}</tbody></table></div>`;
   });
   html = replaceInnermostBbcodeWrap(html, "tr", "<tr>$1</tr>");
-  html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => (
-    `<td class="bb-table-cell${isBbcodeSpacerOnlyContent(inner) ? " bb-table-cell-spacer" : ""}">${inner}</td>`
-  ));
+  html = replaceInnermostBbcodeWrapWithCallback(html, "td", (inner) => {
+    const safeInner = String(inner || "");
+    const isSpacerOnly = isBbcodeSpacerOnlyContent(safeInner);
+    const renderedInner = isSpacerOnly
+      ? safeInner
+        .replace(/&(amp;)?numsp;/gi, "&#8199;")
+        .replace(/&(amp;)?nbsp;/gi, "&nbsp;")
+        .replace(/ /g, "&nbsp;")
+      : safeInner;
+    return `<td class="bb-table-cell${isSpacerOnly ? " bb-table-cell-spacer" : ""}">${renderedInner}</td>`;
+  });
 
   html = html.replace(
     /\[\s*spoiler\s*=\s*((?:[^\[\]]+|\[[^\[\]]*\])*)\s*\]([\s\S]*?)\[\s*\/\s*spoiler\s*\]/gi,
