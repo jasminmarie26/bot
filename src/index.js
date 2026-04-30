@@ -23269,6 +23269,7 @@ function renderStaffUserDetails(req, res) {
 }
 
 app.get("/admin", requireAuth, requireAdmin, renderStaffOverview);
+app.get("/admin/overview", requireAuth, requireAdmin, renderStaffOverview);
 
 app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
   const username = String(req.body.username || "").trim().slice(0, 24);
