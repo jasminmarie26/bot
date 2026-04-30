@@ -60,6 +60,22 @@
                 <span class="character-mini-name"><%= char.name %></span>
               </a>
               <div class="character-mini-actions">
+                <a
+                  class="character-mini-guestbook-open-link"
+                  href="/characters/<%= char.id %>/guestbook"
+                  aria-label="G&auml;stebuch &ouml;ffnen"
+                  title="G&auml;stebuch &ouml;ffnen"
+                >
+                  <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                </a>
+                <a
+                  class="character-mini-guestbook-edit-link"
+                  href="/characters/<%= char.id %>/guestbook/edit"
+                  aria-label="G&auml;stebuch bearbeiten"
+                  title="G&auml;stebuch bearbeiten"
+                >
+                  <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
+                </a>
                 <% if (char.can_dashboard_move) { %>
                   <form
                     method="POST"
@@ -173,6 +189,22 @@
                     </span>
                   <% } %>
                   <div class="character-mini-actions">
+                    <a
+                      class="character-mini-guestbook-open-link"
+                      href="/characters/<%= char.id %>/guestbook"
+                      aria-label="G&auml;stebuch &ouml;ffnen"
+                      title="G&auml;stebuch &ouml;ffnen"
+                    >
+                      <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                    </a>
+                    <a
+                      class="character-mini-guestbook-edit-link"
+                      href="/characters/<%= char.id %>/guestbook/edit"
+                      aria-label="G&auml;stebuch bearbeiten"
+                      title="G&auml;stebuch bearbeiten"
+                    >
+                      <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
+                    </a>
                     <form
                       method="POST"
                       action="/characters/<%= char.id %>/move"
