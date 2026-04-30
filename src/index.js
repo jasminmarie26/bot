@@ -10686,7 +10686,7 @@ function renderGuestbookBbcode(rawContent, options = {}) {
       ? safeInner
         .replace(/&(amp;)?numsp;/gi, "&#8199;")
         .replace(/&(amp;)?nbsp;/gi, "&nbsp;")
-        .replace(/ /g, "&nbsp;")
+        .replace(/ /g, "&#12288;")
       : safeInner;
     return `<td class="bb-table-cell${isSpacerOnly ? " bb-table-cell-spacer" : ""}">${renderedInner}</td>`;
   });

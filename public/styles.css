@@ -9383,7 +9383,7 @@ body.theme-atari .guestbook-entry-panel {
   box-sizing: border-box;
   border: 0;
   padding: 0.02rem 0.24rem;
-  text-align: inherit;
+  text-align: left;
   vertical-align: top;
   min-width: 0;
   white-space: normal;
@@ -9393,8 +9393,11 @@ body.theme-atari .guestbook-entry-panel {
   line-height: inherit;
 }
 
+.bb-center .bb-table-cell:has(.bb-block) {
+  text-align: center;
+}
+
 .bb-table.bb-table-borderless .bb-table-cell {
-  padding: 0;
   border: 0;
 }
 
