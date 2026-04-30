@@ -285,18 +285,6 @@
       <% }) %>
     <% } %>
   </head>
-    <% const bodyClassNames = [`theme-${activeTheme}`]; %>
-    <% if (typeof pageClass !== "undefined" && pageClass) { bodyClassNames.push(pageClass); } %>
-  <body
-    class="<%= bodyClassNames.join(' ') %>"
-    data-current-user-is-admin="<%= currentUser && currentUser.is_admin ? 'true' : 'false' %>"
-  >
-    <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
-    <% const showAccountDeleteControl = Boolean(
-      currentUser &&
-      currentPath &&
-      currentPath.startsWith("/account")
-    ); %>
     <% const menuCharacter =
       typeof topbarCharacter !== "undefined"
         ? topbarCharacter
@@ -305,6 +293,32 @@
           : typeof character !== "undefined" && character
             ? character
             : null; %>
+    <% const themeCharacter =
+      menuCharacter ||
+      (typeof activeThemeCharacter !== "undefined" && activeThemeCharacter
+        ? activeThemeCharacter
+        : null); %>
+    <% const viewCharacterTheme =
+      themeCharacter && themeCharacter.theme
+        ? String(themeCharacter.theme || "").trim().toLowerCase()
+        : ""; %>
+    <% const viewActiveTheme =
+      viewCharacterTheme && availableThemes.some((theme) => theme.id === viewCharacterTheme)
+        ? viewCharacterTheme
+        : activeTheme; %>
+    <% const bodyClassNames = [`theme-${viewActiveTheme}`]; %>
+    <% if (typeof pageClass !== "undefined" && pageClass) { bodyClassNames.push(pageClass); } %>
+  <body
+    class="<%= bodyClassNames.join(' ') %>"
+    data-current-user-is-admin="<%= currentUser && currentUser.is_admin ? 'true' : 'false' %>"
+    data-theme-character-id="<%= themeCharacter ? Number(themeCharacter.id) : '' %>"
+  >
+    <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
+    <% const showAccountDeleteControl = Boolean(
+      currentUser &&
+      currentPath &&
+      currentPath.startsWith("/account")
+    ); %>
     <% const canEditMenuCharacter = Boolean(
       menuCharacter &&
       (
@@ -781,13 +795,14 @@
               <form method="POST" action="/settings/theme" class="inline-form theme-form">
                 <label for="theme-select">Design</label>
                 <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+                <input type="hidden" name="character_id" value="<%= themeCharacter ? Number(themeCharacter.id) : '' %>" />
                 <select
                   id="theme-select"
                   name="theme"
                   class="theme-select"
                 >
                   <% availableThemes.forEach((theme) => { %>
-                    <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+                    <option value="<%= theme.id %>" <%= viewActiveTheme === theme.id ? "selected" : "" %>>
                       <%= theme.label %>
                     </option>
                   <% }) %>

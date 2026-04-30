@@ -10,6 +10,11 @@
       : (currentUserDisplayRoleStyle || ""); %>
   <% const roomcreateIdentityName = character.name || roomcreateDisplayName; %>
   <% const roomcreateIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const roomcreateCharacterTheme = character?.theme ? String(character.theme || "").trim().toLowerCase() : ""; %>
+  <% const roomcreateActiveTheme =
+    roomcreateCharacterTheme && availableThemes.some((theme) => theme.id === roomcreateCharacterTheme)
+      ? roomcreateCharacterTheme
+      : activeTheme; %>
   <% const roomcreateLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const roomcreateLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
   <% const roomcreateChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
@@ -64,13 +69,14 @@
       <form method="POST" action="/settings/theme" class="inline-form theme-form">
         <label for="rp-theme-select-room-create">Design</label>
         <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <input type="hidden" name="character_id" value="<%= character ? Number(character.id) : '' %>" />
         <select
           id="rp-theme-select-room-create"
           name="theme"
           class="theme-select"
         >
           <% availableThemes.forEach((theme) => { %>
-            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <option value="<%= theme.id %>" <%= roomcreateActiveTheme === theme.id ? "selected" : "" %>>
               <%= theme.label %>
             </option>
           <% }) %>

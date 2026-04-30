@@ -5,7 +5,7 @@
   const body = document.body;
   const root = document.documentElement;
   const themeClassPrefix = "theme-";
-  const themeStorageKey = "active-theme-preview";
+  const themeStorageKeyBase = "active-theme-preview";
   let desiredTheme = "";
 
   function stripThemeClasses(element) {
@@ -39,19 +39,40 @@
     }
   }
 
-  function persistThemeLocally(themeId) {
+  function getThemeStorageKey(form) {
+    const characterField = form?.elements?.character_id;
+    const characterId = String(characterField?.value || body?.dataset?.themeCharacterId || "")
+      .trim();
+    return characterId ? `${themeStorageKeyBase}:character:${characterId}` : themeStorageKeyBase;
+  }
+
+  function persistThemeLocally(themeId, form) {
     try {
-      window.localStorage.setItem(themeStorageKey, themeId);
+      window.localStorage.setItem(getThemeStorageKey(form), themeId);
     } catch (_error) {
       // Ignore storage failures; the live switch still works for the current page.
     }
   }
 
-  function getPersistedLocalTheme() {
+  function getPersistedLocalTheme(form) {
     try {
-      return String(window.localStorage.getItem(themeStorageKey) || "").trim().toLowerCase();
+      return String(window.localStorage.getItem(getThemeStorageKey(form)) || "").trim().toLowerCase();
     } catch (_error) {
       return "";
+    }
+  }
+
+  function setThemeCharacterId(characterId) {
+    const normalizedCharacterId = String(characterId || "").trim();
+    if (body) {
+      body.dataset.themeCharacterId = normalizedCharacterId;
+    }
+
+    for (const form of forms) {
+      const characterField = form?.elements?.character_id;
+      if (characterField) {
+        characterField.value = normalizedCharacterId;
+      }
     }
   }
 
@@ -105,7 +126,7 @@
 
       applyTheme(nextTheme);
       syncThemeSelects(nextTheme);
-      persistThemeLocally(nextTheme);
+      persistThemeLocally(nextTheme, form);
 
       for (const candidate of forms) {
         const candidateSelect = candidate.querySelector('select[name="theme"]');
@@ -118,11 +139,11 @@
         const persistedTheme = await saveTheme(form, nextTheme);
         applyTheme(persistedTheme);
         syncThemeSelects(persistedTheme);
-        persistThemeLocally(persistedTheme);
+        persistThemeLocally(persistedTheme, form);
       } catch (_error) {
         applyTheme(nextTheme);
         syncThemeSelects(nextTheme);
-        persistThemeLocally(nextTheme);
+        persistThemeLocally(nextTheme, form);
       } finally {
         for (const candidate of forms) {
           const candidateSelect = candidate.querySelector('select[name="theme"]');
@@ -134,11 +155,23 @@
     });
   }
 
-  const localTheme = getPersistedLocalTheme();
+  const localTheme = getPersistedLocalTheme(forms[0]);
   if (localTheme) {
     applyTheme(localTheme);
     syncThemeSelects(localTheme);
   }
+
+  window.addEventListener("app:active-character-change", (event) => {
+    const characterId = Number(event?.detail?.characterId);
+    if (!Number.isInteger(characterId) || characterId < 1) return;
+
+    setThemeCharacterId(characterId);
+    const scopedTheme = getPersistedLocalTheme(forms[0]);
+    if (scopedTheme) {
+      applyTheme(scopedTheme);
+      syncThemeSelects(scopedTheme);
+    }
+  });
 
   if (body && typeof MutationObserver !== "undefined") {
     const observer = new MutationObserver(() => {

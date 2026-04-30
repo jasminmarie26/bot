@@ -539,6 +539,31 @@ function setThemeCookie(res, theme) {
   });
 }
 
+function resolveCharacterTheme(character, fallback = DEFAULT_THEME) {
+  const themeValue = String(character?.theme || "").trim().toLowerCase();
+  return ALLOWED_THEME_IDS.has(themeValue) ? themeValue : normalizeTheme(fallback);
+}
+
+function getThemeTargetCharacterForRequest(req) {
+  const currentUserId = Number(req.session?.user?.id);
+  if (!Number.isInteger(currentUserId) || currentUserId < 1) {
+    return null;
+  }
+
+  const requestedCharacterId = Number(req.body?.character_id);
+  if (Number.isInteger(requestedCharacterId) && requestedCharacterId > 0) {
+    const requestedCharacter = getCharacterById(requestedCharacterId);
+    if (requestedCharacter && Number(requestedCharacter.user_id) === currentUserId) {
+      return requestedCharacter;
+    }
+  }
+
+  const preferredCharacter = getPreferredMenuCharacterForUser(req);
+  return preferredCharacter && Number(preferredCharacter.user_id) === currentUserId
+    ? preferredCharacter
+    : null;
+}
+
 function normalizeServer(serverValue) {
   const input = (serverValue || "").trim().toLowerCase();
   return ALLOWED_SERVER_IDS.has(input) ? input : DEFAULT_SERVER_ID;
@@ -7271,6 +7296,7 @@ function getPreferredFestplayChatCharacterForUser(userId, festplayId, preferredC
         `SELECT c.id,
                 c.name,
                 c.server_id,
+                c.theme,
                 c.chat_background_url,
                 c.chat_background_color,
                 c.chat_background_image_opacity,
@@ -14141,6 +14167,7 @@ app.use((req, res, next) => {
   res.locals.currentUserDisplayName = req.session.user?.display_name || req.session.user?.username || "";
   res.locals.currentUserDisplayRoleStyle = req.session.user?.display_role_style || "";
   const topbarPreferredCharacter = req.session.user ? getPreferredMenuCharacterForUser(req) : null;
+  res.locals.activeThemeCharacter = topbarPreferredCharacter;
   res.locals.topbarOwnedCharacters = req.session.user
     ? getOwnedCharactersForUser(req.session.user.id, topbarPreferredCharacter?.server_id || DEFAULT_SERVER_ID)
     : [];
@@ -14192,13 +14219,11 @@ app.use((req, res, next) => {
     currentPath.startsWith("/") && !currentPath.startsWith("//")
       ? currentPath
       : "/";
-  res.locals.activeTheme =
-    cookieTheme ||
-    req.session.user?.theme ||
-    req.session.guest_theme ||
-    DEFAULT_THEME;
+  res.locals.activeTheme = req.session.user
+    ? resolveCharacterTheme(topbarPreferredCharacter, req.session.guest_theme || DEFAULT_THEME)
+    : cookieTheme || req.session.guest_theme || DEFAULT_THEME;
 
-  if (cookieTheme !== res.locals.activeTheme) {
+  if (!req.session.user && cookieTheme !== res.locals.activeTheme) {
     setThemeCookie(res, res.locals.activeTheme);
   }
 
@@ -16979,8 +17004,14 @@ app.post("/settings/theme", (req, res) => {
   const theme = normalizeTheme(req.body.theme);
 
   if (req.session.user) {
-    db.prepare("UPDATE users SET theme = ? WHERE id = ?").run(theme, req.session.user.id);
-    req.session.user.theme = theme;
+    const targetCharacter = getThemeTargetCharacterForRequest(req);
+    if (targetCharacter) {
+      db.prepare("UPDATE characters SET theme = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")
+        .run(theme, targetCharacter.id, req.session.user.id);
+      rememberPreferredCharacter(req, { ...targetCharacter, theme });
+    } else {
+      req.session.guest_theme = theme;
+    }
   } else {
     req.session.guest_theme = theme;
   }
@@ -19237,6 +19268,7 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         user_id: character.user_id,
         name: character.name,
         server_id: character.server_id,
+        theme: character.theme,
         chat_text_color: character.chat_text_color
       }
     : (getPreferredCharacterForUser(
@@ -22268,6 +22300,7 @@ function renderChatPage(req, res, chatQuery = req.query) {
         name: preferredCharacter.name,
         is_owner: true,
         server_id: normalizeServer(preferredCharacter.server_id),
+        theme: resolveCharacterTheme(preferredCharacter),
         chat_text_color: normalizeGuestbookColor(preferredCharacter.chat_text_color),
         chat_background_url: String(preferredCharacter.chat_background_url || "").trim(),
         chat_background_color: normalizeChatBackgroundColor(preferredCharacter.chat_background_color),
@@ -24552,6 +24585,7 @@ function getPreferredCharacterForUser(
         `SELECT c.id,
                 c.name,
                 c.server_id,
+                c.theme,
                 c.chat_background_url,
                 c.chat_background_color,
                 c.chat_background_image_opacity,
@@ -24573,6 +24607,7 @@ function getPreferredCharacterForUser(
       `SELECT c.id,
               c.name,
               c.server_id,
+              c.theme,
               c.chat_background_url,
               c.chat_background_color,
               c.chat_background_image_opacity,

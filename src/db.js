@@ -60,6 +60,7 @@ db.exec(`
     name TEXT NOT NULL,
     name_changed_at TEXT DEFAULT '',
     server_id TEXT NOT NULL DEFAULT 'free-rp',
+    theme TEXT NOT NULL DEFAULT 'glass-aurora',
     festplay_id INTEGER,
     festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay',
     species TEXT DEFAULT '',
@@ -1270,6 +1271,34 @@ if (!characterColumns.includes("server_id")) {
   db.exec("ALTER TABLE characters ADD COLUMN server_id TEXT NOT NULL DEFAULT 'free-rp'");
 }
 
+if (!characterColumns.includes("theme")) {
+  db.exec("ALTER TABLE characters ADD COLUMN theme TEXT NOT NULL DEFAULT 'glass-aurora'");
+  db.prepare(
+    `UPDATE characters
+     SET theme = COALESCE(
+       (
+         SELECT lower(trim(u.theme))
+         FROM users u
+         WHERE u.id = characters.user_id
+           AND lower(trim(COALESCE(u.theme, ''))) IN (
+             'glass-aurora',
+             'glass-noir',
+             'glass-sunset',
+             'future',
+             'paper-ink',
+             'windows-xp',
+             'atari',
+             'sith',
+             'jedi',
+             'larp',
+             'nature'
+           )
+       ),
+       'glass-aurora'
+     )`
+  ).run();
+}
+
 if (!characterColumns.includes("festplay_dashboard_mode")) {
   db.exec("ALTER TABLE characters ADD COLUMN festplay_dashboard_mode TEXT NOT NULL DEFAULT 'festplay'");
 }
@@ -1867,6 +1896,7 @@ db.prepare(
 ).run();
 db.prepare("UPDATE characters SET name_changed_at = '' WHERE name_changed_at IS NULL").run();
 db.prepare("UPDATE characters SET chat_background_url = '' WHERE chat_background_url IS NULL").run();
+db.prepare("UPDATE characters SET theme = 'glass-aurora' WHERE theme IS NULL OR trim(theme) = ''").run();
 db.prepare("UPDATE characters SET chat_background_color = '#EFEFEF' WHERE chat_background_color IS NULL OR trim(chat_background_color) = ''").run();
 db.prepare("UPDATE characters SET chat_background_image_opacity = 100 WHERE chat_background_image_opacity IS NULL").run();
 db.prepare("UPDATE characters SET larp_profile_title_image_url = '' WHERE larp_profile_title_image_url IS NULL").run();

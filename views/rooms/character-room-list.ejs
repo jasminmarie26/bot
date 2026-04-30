@@ -1,4 +1,8 @@
-<%- include("../partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+<%- include("../partials/start", {
+  hideTopbar: true,
+  topbarCharacter: (typeof currentHeaderCharacter !== "undefined" && currentHeaderCharacter) ? currentHeaderCharacter : character,
+  pageClass: "page-roomlist"
+}) %>
 
 <section class="rp-shell">
   <% const roomlistDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
@@ -10,6 +14,12 @@
       : (currentHeaderCharacter ? "" : (currentUserDisplayRoleStyle || "")); %>
   <% const roomlistIdentityName = currentHeaderCharacter?.name || roomlistDisplayName; %>
   <% const roomlistIdentityColor = currentHeaderCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const roomlistThemeCharacter = currentHeaderCharacter || character; %>
+  <% const roomlistCharacterTheme = roomlistThemeCharacter?.theme ? String(roomlistThemeCharacter.theme || "").trim().toLowerCase() : ""; %>
+  <% const roomlistActiveTheme =
+    roomlistCharacterTheme && availableThemes.some((theme) => theme.id === roomlistCharacterTheme)
+      ? roomlistCharacterTheme
+      : activeTheme; %>
   <% const roomlistLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const roomlistLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions)
     ? recentSiteUpdateRevisions
@@ -112,13 +122,14 @@
       <form method="POST" action="/settings/theme" class="inline-form theme-form">
         <label for="rp-theme-select-roomlist">Design</label>
         <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <input type="hidden" name="character_id" value="<%= roomlistThemeCharacter ? Number(roomlistThemeCharacter.id) : '' %>" />
         <select
           id="rp-theme-select-roomlist"
           name="theme"
           class="theme-select"
         >
           <% availableThemes.forEach((theme) => { %>
-            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <option value="<%= theme.id %>" <%= roomlistActiveTheme === theme.id ? "selected" : "" %>>
               <%= theme.label %>
             </option>
           <% }) %>
