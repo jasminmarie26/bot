@@ -9388,17 +9388,16 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-table-cell-spacer {
-  width: clamp(0.18rem, 0.55vw, 0.6rem);
-  min-width: 0.18rem;
   padding: 0;
-  white-space: normal;
+  padding-left: 0.18rem;
+  padding-right: 0.18rem;
+  white-space: pre;
   word-break: normal;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
 }
 
-.bb-table.bb-table-flow .bb-table-cell-spacer {
-  width: 0;
-  min-width: 0;
+.bb-table-cell-spacer:not([width]):not([style*="width"]) {
+  min-width: clamp(0.8rem, 1.6vw, 1.8rem);
 }
 
 .bb-table.bb-table-bordered {
