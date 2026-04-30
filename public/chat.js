@@ -811,6 +811,8 @@
         to_character_id: toPositiveIntegerOrNull(message?.to_character_id),
         from_name: String(message?.from_name || "").trim(),
         to_name: String(message?.to_name || "").trim(),
+        from_role_style: String(message?.from_role_style || "").trim(),
+        to_role_style: String(message?.to_role_style || "").trim(),
         content: String(message?.content || ""),
         chat_text_color: String(message?.chat_text_color || "").trim(),
         from_chat_text_color: String(message?.from_chat_text_color || "").trim(),
@@ -864,6 +866,8 @@
       created_at: String(entry?.created_at || "").trim(),
       from_name: String(entry?.from_name || "").trim(),
       to_name: String(entry?.to_name || "").trim(),
+      from_role_style: String(entry?.from_role_style || "").trim(),
+      to_role_style: String(entry?.to_role_style || "").trim(),
       whisper_target_is_afk: Boolean(entry?.whisper_target_is_afk),
       whisper_target_afk_reason: String(entry?.whisper_target_afk_reason || "").trim(),
       whisper_target_afk_name: String(entry?.whisper_target_afk_name || "").trim(),
@@ -2975,7 +2979,7 @@
     container,
     rawText,
     actorName,
-    { leadingSpace = false, rawColor = "", useChatColor = false } = {}
+    { leadingSpace = false, rawColor = "", actorRoleStyle = "", useChatColor = false } = {}
   ) {
     if (!(container instanceof HTMLElement)) {
       return;
@@ -2988,8 +2992,8 @@
     const emoteActionText = getEmoteActionText(rawText, actorName);
     if (emoteActionText) {
       const emote = document.createElement("em");
-      const displayName = formatRoleDisplayName(actorName);
-      const actor = createStyledChatNameNode(displayName, "", rawColor);
+      const displayName = formatRoleDisplayName(actorName, actorRoleStyle);
+      const actor = createStyledChatNameNode(displayName, actorRoleStyle, rawColor);
 
       emote.appendChild(actor);
       emote.appendChild(document.createTextNode(" "));
@@ -3769,7 +3773,10 @@
       appendWhisperFormattedContent(
         body,
         entry.content,
-        entry.from_name || (entry.outgoing ? currentDisplayName : thread.name)
+        entry.from_name || (entry.outgoing ? currentDisplayName : thread.name),
+        {
+          actorRoleStyle: entry.from_role_style
+        }
       );
       const afkNoteText = entry.outgoing
         ? getWhisperAfkNoteText(
@@ -3829,6 +3836,8 @@
       created_at: String(msg?.created_at || "").trim(),
       from_name: String(msg?.from_name || "").trim(),
       to_name: String(msg?.to_name || "").trim(),
+      from_role_style: String(msg?.from_role_style || "").trim(),
+      to_role_style: String(msg?.to_role_style || "").trim(),
       whisper_target_is_afk: Boolean(msg?.whisper_target_is_afk),
       whisper_target_afk_reason: String(msg?.whisper_target_afk_reason || "").trim(),
       whisper_target_afk_name: String(msg?.whisper_target_afk_name || "").trim(),
@@ -3919,11 +3928,13 @@
     const line = document.createElement("p");
     const fromName = String(msg?.from_name || "").trim() || "Unbekannt";
     const toName = String(msg?.to_name || "").trim() || "Unbekannt";
+    const fromRoleStyle = String(msg?.from_role_style || "").trim();
+    const toRoleStyle = String(msg?.to_role_style || "").trim();
     const fromChatTextColor = normalizeChatTextColor(msg?.from_chat_text_color || msg?.chat_text_color);
     const toChatTextColor = normalizeChatTextColor(msg?.to_chat_text_color);
-    const fromNode = createStyledChatNameNode(fromName, "", fromChatTextColor);
+    const fromNode = createStyledChatNameNode(fromName, fromRoleStyle, fromChatTextColor);
     const actionNode = document.createElement("strong");
-    const toNode = createStyledChatNameNode(toName, "", toChatTextColor);
+    const toNode = createStyledChatNameNode(toName, toRoleStyle, toChatTextColor);
     const body = document.createElement("span");
 
     actionNode.textContent = " flüstert an ";
@@ -3933,6 +3944,7 @@
     appendWhisperFormattedContent(body, msg?.content, fromName, {
       leadingSpace: true,
       rawColor: fromChatTextColor,
+      actorRoleStyle: fromRoleStyle,
       useChatColor: true
     });
     line.appendChild(fromNode);

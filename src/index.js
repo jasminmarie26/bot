@@ -25466,6 +25466,8 @@ function emitWhisperBetweenUsers(
     : `User ${parsedTargetUserId}`;
   const senderChatTextColor = senderProfile.chat_text_color || "";
   const recipientChatTextColor = recipientProfile?.chat_text_color || "";
+  const senderRoleStyle = senderProfile.role_style || "";
+  const recipientRoleStyle = recipientProfile?.role_style || "";
   const createdAt = formatChatTimestamp();
 
   const senderPayload = {
@@ -25476,6 +25478,8 @@ function emitWhisperBetweenUsers(
     to_character_id: recipientCharacterId,
     from_name: senderName,
     to_name: recipientName,
+    from_role_style: senderRoleStyle,
+    to_role_style: recipientRoleStyle,
     content: normalizedContent,
     chat_text_color: senderChatTextColor,
     from_chat_text_color: senderChatTextColor,
@@ -25494,6 +25498,8 @@ function emitWhisperBetweenUsers(
     to_character_id: recipientCharacterId,
     from_name: senderName,
     to_name: recipientName,
+    from_role_style: senderRoleStyle,
+    to_role_style: recipientRoleStyle,
     content: normalizedContent,
     chat_text_color: senderChatTextColor,
     from_chat_text_color: senderChatTextColor,
