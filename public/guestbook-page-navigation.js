@@ -74,21 +74,16 @@
 
     menuRoot.dataset.guestbookPageMenuBound = "true";
 
-    let isPinnedOpen = false;
-    let isHoverOpen = false;
-    let suppressHoverUntilLeave = false;
+    let isOpen = false;
 
     const renderMenuState = () => {
-      const isOpen = isPinnedOpen || isHoverOpen;
       menuRoot.classList.toggle("is-open", isOpen);
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
       list.setAttribute("aria-hidden", isOpen ? "false" : "true");
     };
 
     const closeMenu = ({ focusToggle = false } = {}) => {
-      isPinnedOpen = false;
-      isHoverOpen = false;
-      suppressHoverUntilLeave = false;
+      isOpen = false;
       renderMenuState();
       if (focusToggle) {
         toggle.focus();
@@ -98,32 +93,7 @@
     toggle.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-
-      if (isPinnedOpen || isHoverOpen) {
-        isPinnedOpen = false;
-        isHoverOpen = false;
-        suppressHoverUntilLeave = true;
-      } else {
-        isPinnedOpen = true;
-        isHoverOpen = false;
-        suppressHoverUntilLeave = false;
-      }
-
-      renderMenuState();
-    });
-
-    menuRoot.addEventListener("pointerenter", () => {
-      if (suppressHoverUntilLeave) {
-        return;
-      }
-
-      isHoverOpen = true;
-      renderMenuState();
-    });
-
-    menuRoot.addEventListener("pointerleave", () => {
-      isHoverOpen = false;
-      suppressHoverUntilLeave = false;
+      isOpen = !isOpen;
       renderMenuState();
     });
 
@@ -132,11 +102,7 @@
         return;
       }
 
-      if (!isPinnedOpen) {
-        isHoverOpen = false;
-        suppressHoverUntilLeave = false;
-        renderMenuState();
-      }
+      closeMenu();
     });
 
     list.addEventListener("click", (event) => {
@@ -152,7 +118,7 @@
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && (isPinnedOpen || isHoverOpen)) {
+      if (event.key === "Escape" && isOpen) {
         closeMenu({ focusToggle: true });
       }
     });
