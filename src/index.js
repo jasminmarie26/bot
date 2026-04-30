@@ -24203,6 +24203,46 @@ function clearChatAfkState(
   return true;
 }
 
+function clearChatAfkStateAndEmitReturnMessage({
+  userId,
+  roomId,
+  serverId = DEFAULT_SERVER_ID,
+  standardRoomId = null,
+  characterId = null,
+  actorName = "",
+  roleStyle = "",
+  chatTextColor = "",
+  options = {}
+}) {
+  const clearedAfkState = clearChatAfkState(
+    userId,
+    roomId,
+    serverId,
+    options,
+    characterId,
+    standardRoomId
+  );
+
+  if (!clearedAfkState) {
+    return false;
+  }
+
+  emitSystemChatMessage(
+    roomId,
+    serverId,
+    "ist wieder da.",
+    {
+      system_kind: "actor-message",
+      presence_actor_name: String(actorName || "").trim() || `User ${Number(userId) || "?"}`,
+      presence_actor_role_style: String(roleStyle || "").trim(),
+      presence_actor_chat_text_color: String(chatTextColor || "").trim()
+    },
+    standardRoomId
+  );
+
+  return true;
+}
+
 function getSocketLastChatActivityAt(socket) {
   const parsedTimestamp = Number(socket?.data?.lastChatActivityAt);
   return Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : 0;
@@ -29376,29 +29416,16 @@ io.on("connection", (socket) => {
       );
 
       if (existingAfkState) {
-        const clearedAfkState = clearChatAfkState(
-          socket.data.user.id,
+        clearChatAfkStateAndEmitReturnMessage({
+          userId: socket.data.user.id,
           roomId,
           serverId,
-          {},
-          currentCharacterId,
-          standardRoomId
-        );
-
-        if (clearedAfkState) {
-          emitSystemChatMessage(
-            roomId,
-            serverId,
-            "ist wieder da.",
-            {
-              system_kind: "actor-message",
-              presence_actor_name: afkDisplayName,
-              presence_actor_role_style: afkDisplayProfile?.role_style || "",
-              presence_actor_chat_text_color: afkDisplayProfile?.chat_text_color || ""
-            },
-            standardRoomId
-          );
-        }
+          standardRoomId,
+          characterId: currentCharacterId,
+          actorName: afkDisplayName,
+          roleStyle: afkDisplayProfile?.role_style || "",
+          chatTextColor: afkDisplayProfile?.chat_text_color || ""
+        });
         return;
       }
 
@@ -29418,14 +29445,17 @@ io.on("connection", (socket) => {
     }
 
     if (!shouldKeepAfkState) {
-      clearChatAfkState(
-        socket.data.user.id,
+      const returnDisplayProfile = getSocketDisplayProfile(socket, serverId);
+      clearChatAfkStateAndEmitReturnMessage({
+        userId: socket.data.user.id,
         roomId,
         serverId,
-        {},
-        getSocketPreferredCharacterId(socket, serverId),
-        standardRoomId
-      );
+        standardRoomId,
+        characterId: getSocketPreferredCharacterId(socket, serverId),
+        actorName: returnDisplayProfile?.label || getUserDefaultDisplayName(socket.data.user),
+        roleStyle: returnDisplayProfile?.role_style || "",
+        chatTextColor: returnDisplayProfile?.chat_text_color || ""
+      });
     }
 
     const normalizedCommand = content.toLowerCase();

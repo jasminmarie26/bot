@@ -22,12 +22,12 @@ const CHAT_AFK_AUFTAKTE = Object.freeze([
   "hat sich kurz aus dem Staub gemacht, um",
   "ist gerade in einer Zwischenquest, um",
   "hat sich rasch ausgeklinkt, um",
-  "ist einen Moment nicht greifbar, um",
-  "nimmt sich gerade die Freiheit, um",
-  "ist auf einem kurzen Umweg, um",
-  "hat kurz den Fokus verlagert, um",
-  "ist hinter den Kulissen verschwunden, um",
-  "hat sich eine winzige Pause genommen, um"
+  "hat für einen Moment pausiert, um",
+  "ist kurz zur Seite getreten, um",
+  "hat sich für einen Augenblick abgemeldet, um",
+  "ist eben auf einer kleinen Nebenmission, um",
+  "braucht einen kurzen Augenblick, um",
+  "ist für einen Moment außer Reichweite, um"
 ]);
 
 const CHAT_AFK_AUFGABEN = Object.freeze([
@@ -38,7 +38,7 @@ const CHAT_AFK_AUFGABEN = Object.freeze([
   "eine verlegte Notiz wiederzufinden",
   "den Plot kurz zu sortieren",
   "den Kopf einmal durchzulüften",
-  "einen beleidigten Stift zum Schreiben zu überreden",
+  "einen beleidigten Stift wieder zum Schreiben zu überreden",
   "den Wasserkocher von heldenhaften Alleingängen abzuhalten",
   "eine rebellische Haarsträhne zu besänftigen",
   "eine zu neugierige Katze von der Tastatur wegzulocken",
@@ -49,7 +49,7 @@ const CHAT_AFK_AUFGABEN = Object.freeze([
   "einen widerspenstigen Reißverschluss zu bezwingen",
   "eine verirrte Tasse sicher an den Tisch zu bringen",
   "die Zimmerpflanze vor dramatischen Entscheidungen zu bewahren",
-  "eine heimlich eskalierte Küchenszene zu beruhigen",
+  "eine eskalierende Küchenszene zu beruhigen",
   "den inneren Dramabalken neu zu kalibrieren",
   "einer Brieftaube gedanklich den Weg zu erklären",
   "ein beleidigtes Schwert zu besänftigen",
@@ -67,17 +67,17 @@ const CHAT_AFK_AUFGABEN = Object.freeze([
   "dem Tag etwas Struktur zu verleihen",
   "einen übermotivierten Timer zum Schweigen zu bringen",
   "eine angefangene Aufgabe sauber zu Ende zu bringen",
-  "den Fokus an den richtigen Platz zurückzusetzen",
+  "den Fokus wieder an den richtigen Platz zu setzen",
   "eine flüchtige Idee schnell festzuhalten",
   "den Mondkalender mit dem echten Datum zu versöhnen",
   "den Raum kurz gegen das Chaos zu verteidigen",
   "eine zu laute Pfanne zu beschwichtigen",
-  "die nächste Tasse sicher durch den Alltag zu geleiten",
+  "die nächste Tasse sicher ans Ziel zu bringen",
   "einen ungeduldigen Gedanken zu Ende zu denken",
   "die Wirklichkeit kurz neu zu sortieren",
   "einen wichtigen Handgriff noch schnell zu erledigen",
   "eine verpeilte Minute wieder einzufangen",
-  "den Flur mit einem würdevollen Auftritt zu durchqueren",
+  "den Flur mit würdevoller Entschlossenheit zu durchqueren",
   "einen kleinen Realitätscheck einzulegen",
   "eine heimliche Krümelkrise zu beenden",
   "die Ruhe im Hintergrund wiederherzustellen"
@@ -88,8 +88,8 @@ const CHAT_AFK_ENDUNGEN = Object.freeze([
   ", bevor das nächste Chaos anklopft",
   ", ehe der nächste Handgriff wartet",
   ", damit später wieder alles rundläuft",
-  ", solange das Schicksal noch mitspielt",
-  ", bevor die Szene erneut Fahrt aufnimmt"
+  ", bevor der Alltag wieder dazwischenfunkt",
+  ", damit gleich wieder Ruhe einkehrt"
 ]);
 
 function buildChatAfkNachrichten() {
