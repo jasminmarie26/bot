@@ -25475,6 +25475,7 @@ function emitWhisperBetweenUsers(
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
+    chat_text_color: senderProfile.chat_text_color || "",
     whisper_target_is_afk: recipientIsAfk,
     whisper_target_afk_reason: recipientAfkReason,
     whisper_target_afk_name: recipientName,
@@ -25490,6 +25491,7 @@ function emitWhisperBetweenUsers(
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
+    chat_text_color: senderProfile.chat_text_color || "",
     created_at: createdAt
   };
 

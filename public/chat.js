@@ -3645,13 +3645,13 @@
 
     const line = document.createElement("p");
     const strong = document.createElement("strong");
-    const body = document.createElement("span");
+    const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     strong.textContent = msg?.outgoing
       ? `Flüstern an ${msg?.to_name || "Unbekannt"}:`
       : `Flüstern von ${msg?.from_name || "Unbekannt"}:`;
     line.appendChild(strong);
-    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
-    line.appendChild(body);
+    setChatColorSource(strong, chatTextColor);
+    applyStoredChatTextColor(strong, chatTextColor);
     const afkNoteText = msg?.outgoing
       ? getWhisperAfkNoteText(
           msg?.whisper_target_afk_name || msg?.to_name,
