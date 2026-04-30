@@ -3800,6 +3800,10 @@
   }
 
   function registerChatActivity({ typing = false } = {}) {
+    if (isCurrentChannelAfk && typing) {
+      return;
+    }
+
     if (isCurrentChannelAfk && currentAfkMode === "auto") {
       socket.emit("chat:activity");
       isCurrentChannelAfk = false;

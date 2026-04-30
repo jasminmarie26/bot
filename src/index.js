@@ -8933,17 +8933,22 @@ function normalizeInviteTargetLookupKey(rawValue) {
   return normalizeInviteTargetName(rawValue).toLocaleLowerCase("de");
 }
 
-function parseInviteCommandArguments(rawArgs) {
+function parseInviteCommandArguments(rawArgs, options = {}) {
   const value = String(rawArgs || "").trim();
   if (!value) {
     return "";
   }
 
-  if (
+  const isQuoted =
     (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
+    (value.startsWith("'") && value.endsWith("'"));
+
+  if (isQuoted) {
     return normalizeInviteTargetName(value.slice(1, -1));
+  }
+
+  if (options?.requireQuotesForSpaces === true && /\s/.test(value)) {
+    return "";
   }
 
   return normalizeInviteTargetName(value);
@@ -29403,7 +29408,9 @@ io.on("connection", (socket) => {
     markSocketChatActivity(socket);
     touchFestplayActivityForRoom(room);
     const afkMatch = content.match(/^\/afk(?:\s+([\s\S]+))?$/i);
-    const shouldKeepAfkState = /^\/me(?:\s+[\s\S]+)?$/i.test(content);
+    const shouldKeepAfkState =
+      /^\/me(?:\s+[\s\S]+)?$/i.test(content) ||
+      /^\/fl(?:\s+[\s\S]+)?$/i.test(content);
     if (afkMatch) {
       const currentCharacterId = getSocketPreferredCharacterId(socket, serverId);
       const afkDisplayProfile = getSocketDisplayProfile(socket, serverId);
@@ -29489,7 +29496,7 @@ io.on("connection", (socket) => {
       if (whisperArgs.targetName.length < 2 || whisperArgs.message.length < 1) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /fl Name Nachricht. Bei Namen mit Leerzeichen geht auch /fl "Charaktername" Nachricht.',
+          content: 'Bitte nutze /fl Name Nachricht. Namen mit Leerzeichen bitte nur so: /fl "Charaktername" Nachricht.',
           created_at: formatChatTimestamp()
         });
         return;
@@ -29547,11 +29554,13 @@ io.on("connection", (socket) => {
 
     const nickMatch = content.match(/^\/nick(?:\s+([\s\S]+))?$/i);
     if (nickMatch) {
-      const requestedCharacterName = parseInviteCommandArguments(nickMatch[1] || "");
+      const requestedCharacterName = parseInviteCommandArguments(nickMatch[1] || "", {
+        requireQuotesForSpaces: true
+      });
       if (!requestedCharacterName) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /nick Name. Namen mit Leerzeichen gehen auch in Anführungszeichen.',
+          content: 'Bitte nutze /nick Name. Namen mit Leerzeichen bitte in Anführungszeichen schreiben.',
           created_at: formatChatTimestamp()
         });
         return;
@@ -29840,11 +29849,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const requestedTargetName = parseInviteCommandArguments(revokeRoomRightsMatch[1] || "");
+      const requestedTargetName = parseInviteCommandArguments(revokeRoomRightsMatch[1] || "", {
+        requireQuotesForSpaces: true
+      });
       if (requestedTargetName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /rrw Charaktername. Bei Namen mit Leerzeichen geht auch /rrw "Charaktername".',
+          content: 'Bitte nutze /rrw Charaktername. Namen mit Leerzeichen bitte nur so: /rrw "Charaktername".',
           created_at: formatChatTimestamp()
         });
         return;
@@ -29922,11 +29933,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const requestedTargetName = parseInviteCommandArguments(grantRoomRightsMatch[1] || "");
+      const requestedTargetName = parseInviteCommandArguments(grantRoomRightsMatch[1] || "", {
+        requireQuotesForSpaces: true
+      });
       if (requestedTargetName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /rr Charaktername. Bei Namen mit Leerzeichen geht auch /rr "Charaktername".',
+          content: 'Bitte nutze /rr Charaktername. Namen mit Leerzeichen bitte nur so: /rr "Charaktername".',
           created_at: formatChatTimestamp()
         });
         return;
@@ -30004,11 +30017,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const requestedTargetName = parseInviteCommandArguments(inviteMatch[1] || "");
+      const requestedTargetName = parseInviteCommandArguments(inviteMatch[1] || "", {
+        requireQuotesForSpaces: true
+      });
       if (requestedTargetName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
-          content: 'Bitte nutze /i Charaktername. Bei Namen mit Leerzeichen kannst du /i "Charaktername" schreiben.',
+          content: 'Bitte nutze /i Charaktername. Namen mit Leerzeichen bitte nur so: /i "Charaktername".',
           created_at: formatChatTimestamp()
         });
         return;
@@ -30112,12 +30127,14 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const requestedTargetName = parseInviteCommandArguments(kickMatch[1] || "");
+      const requestedTargetName = parseInviteCommandArguments(kickMatch[1] || "", {
+        requireQuotesForSpaces: true
+      });
       if (requestedTargetName.length < 2) {
         socket.emit("chat:message", {
           type: "system",
           content:
-            'Bitte nutze /werfen Charaktername. Bei Namen mit Leerzeichen geht auch /werfen "Charaktername".',
+            'Bitte nutze /werfen Charaktername. Namen mit Leerzeichen bitte nur so: /werfen "Charaktername".',
           created_at: formatChatTimestamp()
         });
         return;
@@ -30642,14 +30659,6 @@ io.on("connection", (socket) => {
     }
 
     markSocketChatActivity(socket);
-    clearChatAfkState(
-      socket.data.user.id,
-      roomId,
-      serverId,
-      {},
-      getSocketPreferredCharacterId(socket, serverId),
-      standardRoomId
-    );
     const whisperResult = emitWhisperBetweenUsers(
       socket,
       targetUserId,
