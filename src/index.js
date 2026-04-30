@@ -24138,6 +24138,7 @@ function setChatAfkState({
       `ist afk (${normalizedReason})`,
       {
         system_kind: "actor-message",
+        presence_kind: "afk",
         presence_actor_name: normalizedActorName,
         presence_actor_role_style: afkState.roleStyle,
         presence_actor_chat_text_color: afkState.chatTextColor
@@ -24233,6 +24234,7 @@ function clearChatAfkStateAndEmitReturnMessage({
     "ist wieder da.",
     {
       system_kind: "actor-message",
+      presence_kind: "return",
       presence_actor_name: String(actorName || "").trim() || `User ${Number(userId) || "?"}`,
       presence_actor_role_style: String(roleStyle || "").trim(),
       presence_actor_chat_text_color: String(chatTextColor || "").trim()

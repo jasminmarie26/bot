@@ -40,6 +40,7 @@
   const whisperPlaceholder = document.getElementById("chat-whisper-placeholder");
   const whisperThreadShell = document.getElementById("chat-whisper-thread-shell");
   const whisperThreadTitle = document.getElementById("chat-whisper-thread-title");
+  const whisperThreadClearBtn = document.getElementById("chat-whisper-thread-clear-btn");
   const whisperThread = document.getElementById("whisper-thread");
   const whisperThreadEmpty = document.getElementById("whisper-thread-empty");
   const whisperForm = document.getElementById("whisper-form");
@@ -2742,6 +2743,9 @@
     if (isSystemMessage) {
       const content = String(msg?.content || "");
       const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
+      if (systemKind === "actor-message" && (presenceKind === "afk" || presenceKind === "return")) {
+        article.classList.add("chat-afk-status-message");
+      }
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
       const presenceActorRoleStyle = String(msg?.presence_actor_role_style || "").trim().toLowerCase();
       const presenceActorChatTextColor = normalizeChatTextColor(msg?.presence_actor_chat_text_color);
@@ -3136,6 +3140,57 @@
       });
   }
 
+  function getWhisperThreadAliases(threadOrKey) {
+    const normalizedThreadKey = typeof threadOrKey === "string"
+      ? String(threadOrKey || "").trim()
+      : "";
+    const thread = normalizedThreadKey
+      ? whisperThreadsByKey.get(normalizedThreadKey)
+      : threadOrKey;
+    if (!thread || typeof thread !== "object") {
+      return normalizedThreadKey ? [normalizedThreadKey] : [];
+    }
+
+    const parsedUserId = normalizePositiveNumber(thread.userId);
+    const parsedCharacterId = normalizePositiveNumber(thread.characterId);
+    return Array.from(new Set([
+      String(thread.threadKey || normalizedThreadKey || "").trim(),
+      getWhisperThreadKey(parsedCharacterId, parsedUserId),
+      parsedUserId ? `user:${parsedUserId}` : "",
+      parsedCharacterId ? `character:${parsedCharacterId}` : ""
+    ].filter(Boolean)));
+  }
+
+  function removeWhisperThread(threadKey) {
+    const normalizedThreadKey = String(threadKey || "").trim();
+    if (!normalizedThreadKey) {
+      return false;
+    }
+
+    let targetThread = whisperThreadsByKey.get(normalizedThreadKey) || null;
+    if (!targetThread) {
+      targetThread = Array.from(whisperThreadsByKey.values()).find((candidate) => (
+        getWhisperThreadAliases(candidate).includes(normalizedThreadKey)
+      )) || null;
+    }
+    if (!targetThread) {
+      return false;
+    }
+
+    const aliases = getWhisperThreadAliases(targetThread);
+    aliases.forEach((alias) => {
+      whisperThreadsByKey.delete(alias);
+      whisperUnreadThreadKeys.delete(alias);
+    });
+
+    if (aliases.includes(String(activeWhisperThreadKey || "").trim())) {
+      const nextThread = sortWhisperThreads()[0] || null;
+      setActiveWhisperThreadKey(nextThread?.threadKey || "");
+    }
+
+    return true;
+  }
+
   function scrollWhisperThreadToBottom() {
     if (!whisperThread) return;
     whisperThread.scrollTop = whisperThread.scrollHeight;
@@ -3212,6 +3267,11 @@
       whisperThreadShell.hidden = true;
       whisperPlaceholder.hidden = false;
       whisperForm.hidden = true;
+      whisperThreadTitle.textContent = "Flüstern";
+      if (whisperThreadClearBtn) {
+        whisperThreadClearBtn.hidden = true;
+        whisperThreadClearBtn.disabled = true;
+      }
       if (whisperTargetUserIdInput) whisperTargetUserIdInput.value = "";
       if (whisperInput) whisperInput.value = "";
       return;
@@ -3229,6 +3289,12 @@
     whisperPlaceholder.hidden = true;
     whisperForm.hidden = false;
     whisperThreadTitle.textContent = `Flüstern mit ${thread.name}`;
+    if (whisperThreadClearBtn) {
+      whisperThreadClearBtn.hidden = false;
+      whisperThreadClearBtn.disabled = false;
+      whisperThreadClearBtn.setAttribute("aria-label", `Flüsterverlauf mit ${thread.name} entfernen`);
+      whisperThreadClearBtn.title = `Verlauf mit ${thread.name} entfernen`;
+    }
     if (whisperTargetUserIdInput) {
       whisperTargetUserIdInput.value = String(thread.userId);
     }
@@ -3346,20 +3412,51 @@
     }
 
     const normalizedColor = normalizeChatTextColor(rawColor);
-    setChatColorSource(node, normalizedColor);
-    applyStoredChatTextColor(node, normalizedColor, { allowGradient: false });
+    const toneSource = node.closest(".whisper-thread-message") || chatBox || chatShell || document.body;
+    const toneStyles = toneSource instanceof HTMLElement
+      ? window.getComputedStyle(toneSource)
+      : window.getComputedStyle(document.body);
+    const designTextColor = parseCssColorToHex(toneStyles.getPropertyValue("--text"))
+      || parseCssColorToHex(toneStyles.color)
+      || "#F3EAD6";
+    const surfaceColor = panel
+      ? (
+          parseCssColorToHex(window.getComputedStyle(node.closest(".whisper-thread-message") || node).backgroundColor)
+          || getChatSurfaceColorForNode(node)
+        )
+      : getChatSurfaceColorForNode(node);
+    const colorAnchor = normalizedColor || designTextColor;
+    const tintedBackground = panel
+      ? mixHexColors(surfaceColor, colorAnchor, normalizedColor ? 0.15 : 0.08)
+      : surfaceColor;
+    const tintedText = ensureTextContrast(
+      mixHexColors(designTextColor, colorAnchor, normalizedColor ? (panel ? 0.58 : 0.66) : 0.22),
+      tintedBackground,
+      panel ? 5 : 5.8
+    ) || ensureTextContrast(designTextColor, tintedBackground, panel ? 5 : 5.8) || colorAnchor;
 
-    if (!panel || !normalizedColor) {
+    setChatColorSource(node, tintedText);
+    applyStoredChatTextColor(node, tintedText, {
+      allowGradient: false,
+      backgroundColor: tintedBackground
+    });
+
+    if (!panel) {
       node.style.removeProperty("--whisper-afk-note-bg");
       node.style.removeProperty("--whisper-afk-note-border");
       node.style.removeProperty("--whisper-afk-note-shadow");
       return;
     }
 
-    const { r, g, b } = hexToRgb(normalizedColor, "#EFEFEF");
-    node.style.setProperty("--whisper-afk-note-bg", `rgba(${r}, ${g}, ${b}, 0.14)`);
-    node.style.setProperty("--whisper-afk-note-border", `rgba(${r}, ${g}, ${b}, 0.28)`);
-    node.style.setProperty("--whisper-afk-note-shadow", `rgba(${r}, ${g}, ${b}, 0.2)`);
+    const backgroundRgb = hexToRgb(tintedBackground, "#EFEFEF");
+    const borderRgb = hexToRgb(
+      mixHexColors(surfaceColor, colorAnchor, normalizedColor ? 0.32 : 0.18),
+      "#D6D0BE"
+    );
+    const shadowRgb = hexToRgb(tintedText, "#000000");
+    node.style.setProperty("--whisper-afk-note-bg", `rgba(${backgroundRgb.r}, ${backgroundRgb.g}, ${backgroundRgb.b}, 0.88)`);
+    node.style.setProperty("--whisper-afk-note-border", `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.62)`);
+    node.style.setProperty("--whisper-afk-note-shadow", `rgba(${shadowRgb.r}, ${shadowRgb.g}, ${shadowRgb.b}, 0.12)`);
   }
 
   function appendWhisper(msg) {
@@ -4099,6 +4196,21 @@
 
   if (whisperPanelCloseBtn) {
     whisperPanelCloseBtn.addEventListener("click", closeWhisperPanel);
+  }
+
+  if (whisperThreadClearBtn) {
+    whisperThreadClearBtn.addEventListener("click", () => {
+      const removed = removeWhisperThread(activeWhisperThreadKey);
+      if (!removed) {
+        return;
+      }
+      renderWhisperThreadList();
+      renderWhisperThread();
+      updateWhisperToggleBadge();
+      if (isWhisperPanelOpen() && !whisperForm?.hidden && whisperInput) {
+        whisperInput.focus();
+      }
+    });
   }
 
   function submitWhisperMessage() {

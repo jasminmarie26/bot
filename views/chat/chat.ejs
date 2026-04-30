@@ -540,7 +540,8 @@
             <% } %>
             <div id="chat-feed" class="chat-feed">
               <% messages.forEach((msg) => { %>
-                <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %>">
+                <% const isAfkStatusMessage = msg.type === "system" && msg.system_kind === "actor-message" && (msg.presence_kind === "afk" || msg.presence_kind === "return"); %>
+                <article class="chat-message<%= msg.type === 'system' ? ' chat-system' : '' %><%= isAfkStatusMessage ? ' chat-afk-status-message' : '' %>">
                   <% if (msg.type === "system") { %>
                     <% if (msg.system_kind === "actor-message" && msg.presence_actor_name && msg.actor_target_name && (msg.actor_target_prefix || msg.actor_target_suffix)) { %>
                       <% const systemActorDisplayName = formatChatRoleName(msg.presence_actor_name, msg.presence_actor_role_style); %>
@@ -657,6 +658,14 @@
         <div id="chat-whisper-thread-shell" class="whisper-thread-shell" hidden>
           <div class="chat-whisper-thread-head">
             <h4 id="chat-whisper-thread-title">Fl&uuml;stern</h4>
+            <button
+              id="chat-whisper-thread-clear-btn"
+              type="button"
+              class="chat-whisper-thread-clear-btn"
+              aria-label="Fl&uuml;sterverlauf entfernen"
+              title="Verlauf entfernen"
+              hidden
+            >&times;</button>
           </div>
           <p id="whisper-thread-empty" class="muted whisper-thread-empty">Noch keine Fl&uuml;sternachrichten.</p>
           <div id="whisper-thread" class="whisper-thread" aria-live="polite"></div>

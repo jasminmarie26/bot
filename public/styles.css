@@ -13653,6 +13653,37 @@ body.page-guestbook-view .guestbook-entry-heading {
   margin: 0;
 }
 
+.chat-whisper-thread-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid color-mix(in srgb, var(--danger, #c96d6d) 64%, var(--panel-edge) 36%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 82%, rgba(201, 109, 109, 0.18) 18%);
+  color: color-mix(in srgb, var(--text) 82%, #ffe6e0 18%);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.chat-whisper-thread-clear-btn:hover,
+.chat-whisper-thread-clear-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--danger, #c96d6d) 84%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 66%, rgba(201, 109, 109, 0.3) 34%);
+  color: color-mix(in srgb, var(--text) 92%, #fff2ec 8%);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.chat-whisper-thread-clear-btn[hidden] {
+  display: none;
+}
+
 .whisper-thread-shell {
   border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
   border-radius: 12px;
@@ -14236,7 +14267,8 @@ body.page-guestbook-view .guestbook-entry-heading {
   border-radius: 8px;
   background: var(--whisper-afk-note-bg, color-mix(in srgb, var(--panel-bg) 86%, white 14%));
   font-size: 0.76rem;
-  color: var(--muted);
+  color: var(--text);
+  font-weight: 600;
   line-height: 1.4;
   text-shadow: 0 1px 0 var(--whisper-afk-note-shadow, color-mix(in srgb, var(--panel-bg) 70%, transparent));
   word-break: break-word;
@@ -14246,7 +14278,8 @@ body.page-guestbook-view .guestbook-entry-heading {
   display: block;
   margin-top: 0.28rem;
   font-size: 0.76rem;
-  color: var(--muted);
+  color: var(--text);
+  font-weight: 600;
   line-height: 1.4;
   word-break: break-word;
 }
@@ -14592,6 +14625,14 @@ body.page-guestbook-view .guestbook-entry-heading {
 .chat-box .chat-system strong {
   font-weight: 700;
   color: #000000;
+}
+
+.chat-box .chat-system.chat-afk-status-message,
+.chat-box .chat-system.chat-afk-status-message p,
+.chat-box .chat-system.chat-afk-status-message span,
+.chat-box .chat-system.chat-afk-status-message strong {
+  font-style: normal;
+  font-weight: 700;
 }
 
 .page-chat .role-name-admin {
