@@ -164,19 +164,19 @@
       ]
     },
     "entry-voice-1": {
-      label: "Beitritt Sound 1",
+      label: "Warmer Gong",
       source: "/Voice/Beitritt%20Sound1.mp3"
     },
     "entry-voice-2": {
-      label: "Beitritt Sound 2",
+      label: "Heller Schimmer",
       source: "/Voice/Beitritt%20Sound2.mp3"
     },
     "entry-voice-3": {
-      label: "Beitritt Sound 3",
+      label: "Kurzer Ping",
       source: "/Voice/Beitritt%20Sound3.mp3"
     },
     "entry-voice-4": {
-      label: "Beitritt Sound 4",
+      label: "Dreifachklang",
       source: "/Voice/Beitritt%20Sound4.mp3"
     },
     crystal: {
@@ -197,23 +197,23 @@
       ]
     },
     "chat-voice-1": {
-      label: "Chatsound 1",
+      label: "Tiefer Puls",
       source: "/Voice/Sound1.mp3"
     },
     "chat-voice-2": {
-      label: "Chatsound 2",
+      label: "Sanfter Plopp",
       source: "/Voice/Sound2.mp3"
     },
     "chat-voice-3": {
-      label: "Chatsound 3",
+      label: "Doppelklang",
       source: "/Voice/Sound3.mp3"
     },
     "chat-voice-4": {
-      label: "Chatsound 4",
+      label: "Helle Klingel",
       source: "/Voice/Sound4.mp3"
     },
     "chat-voice-5": {
-      label: "Chatsound 5",
+      label: "Mini-Ping",
       source: "/Voice/Sound5.mp3"
     },
     bell: {
