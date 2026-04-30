@@ -10354,7 +10354,7 @@ function wrapBbcodeStyledContent(inner, options = {}) {
 const BBCODE_LITERAL_OPEN_TOKEN = "__BBCODE_LITERAL_OPEN__";
 const BBCODE_LITERAL_CLOSE_TOKEN = "__BBCODE_LITERAL_CLOSE__";
 const BBCODE_HIDDEN_BREAK_CHARACTERS = /[\u00AD\u200B\uFEFF]/g;
-const BBCODE_SPACE_NORMALIZATION_CHARACTERS = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
+const BBCODE_SPACE_NORMALIZATION_CHARACTERS = /[\u1680\u2000-\u2006\u2008-\u200A\u202F\u205F\u3000]/g;
 
 function decodeCommonHtmlEntities(rawValue) {
   return String(rawValue || "")
@@ -10370,7 +10370,7 @@ function decodeCommonHtmlEntities(rawValue) {
         ? String.fromCodePoint(parsedCodePoint)
         : full;
     })
-    .replace(/&(amp|lt|gt|quot|apos|nbsp);/gi, (full, entityName) => {
+    .replace(/&(amp|lt|gt|quot|apos|nbsp|numsp);/gi, (full, entityName) => {
       switch (String(entityName || "").toLowerCase()) {
         case "amp":
           return "&";
@@ -10383,7 +10383,8 @@ function decodeCommonHtmlEntities(rawValue) {
         case "apos":
           return "'";
         case "nbsp":
-          return " ";
+        case "numsp":
+          return full;
         default:
           return full;
       }
@@ -10403,7 +10404,7 @@ function normalizeBbcodeMarkup(rawContent) {
     .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
       const normalizedInner = String(inner || "")
         .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, "")
-        .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
+        .replace(/[\u1680\u2000-\u2006\u2008-\u200A\u202F\u205F\u3000]/g, " ");
       return `[${normalizedInner}]`;
     });
 }
@@ -10457,7 +10458,7 @@ function normalizeBbcodeMarkup(rawContent) {
     .replace(/\[([\s\S]*?)\]/g, (full, inner) => {
       const normalizedInner = String(inner || "")
         .replace(/\p{Cf}/gu, "")
-        .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ")
+        .replace(/[\u1680\u2000-\u2006\u2008-\u200A\u202F\u205F\u3000]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 
