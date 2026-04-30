@@ -23312,14 +23312,18 @@ app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
 
 app.get("/staff", requireAuth, requireStaff, renderStaffOverview);
 app.get("/staff/overview", requireAuth, requireStaff, renderStaffOverview);
+app.get("/moderation", requireAuth, requireStaff, renderStaffOverview);
+app.get("/moderation/overview", requireAuth, requireStaff, renderStaffOverview);
 app.get("/admin/user-backups", requireAuth, requireAdmin, renderStaffUserBackups);
 app.get("/staff/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
+app.get("/moderation/user-backups", requireAuth, requireStaff, renderStaffUserBackups);
 app.post("/admin/user-backups/auto-logs/delete", requireAuth, requireAdmin, requirePrimaryAdmin, deletePrimaryAdminAutoLog);
 app.post("/admin/user-backups/auto-logs/delete-selected", requireAuth, requireAdmin, requirePrimaryAdmin, deleteSelectedPrimaryAdminAutoLogs);
 app.post("/admin/user-backups/auto-logs/delete-all", requireAuth, requireAdmin, requirePrimaryAdmin, deleteAllPrimaryAdminAutoLogs);
 
 app.get("/admin/users/:id", requireAuth, requireAdmin, renderStaffUserDetails);
 app.get("/staff/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
+app.get("/moderation/users/:id", requireAuth, requireStaff, renderStaffUserDetails);
 
 function updateUserModerationStatus(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
@@ -23358,6 +23362,7 @@ function updateUserModerationStatus(req, res) {
 
 app.post("/admin/users/:id/moderation-status", requireAuth, requireAdmin, updateUserModerationStatus);
 app.post("/staff/users/:id/moderation-status", requireAuth, requireStaff, updateUserModerationStatus);
+app.post("/moderation/users/:id/moderation-status", requireAuth, requireStaff, updateUserModerationStatus);
 
 function updateUserLoginIpBlock(req, res) {
   const panelConfig = getStaffPanelConfig(req.session.user);
@@ -23405,6 +23410,7 @@ function updateUserLoginIpBlock(req, res) {
 
 app.post("/admin/users/:id/login-ip-block", requireAuth, requireAdmin, updateUserLoginIpBlock);
 app.post("/staff/users/:id/login-ip-block", requireAuth, requireStaff, updateUserLoginIpBlock);
+app.post("/moderation/users/:id/login-ip-block", requireAuth, requireStaff, updateUserLoginIpBlock);
 
 app.post("/admin/impersonation/stop", requireAuth, (req, res) => {
   const adminUserId = Number(req.session.admin_impersonator_user_id);
