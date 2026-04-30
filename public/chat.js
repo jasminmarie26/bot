@@ -387,6 +387,7 @@
   const defaultMessageToneId = "pulse";
   const chatInputHistoryLimit = 50;
   const chatMessageRestoreLimit = 150;
+  const whisperThreadMessageRestoreLimit = 80;
   const chatReloadSnapshotMaxAgeMs = 5 * 60 * 1000;
   const typingIdleDelayMs = 1400;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext || null;
@@ -799,6 +800,29 @@
       return null;
     }
 
+    const messageType = String(message?.type || "").trim().toLowerCase();
+    if (messageType === "whisper") {
+      return {
+        type: "whisper",
+        outgoing: Boolean(message?.outgoing),
+        from_user_id: toPositiveIntegerOrNull(message?.from_user_id),
+        to_user_id: toPositiveIntegerOrNull(message?.to_user_id),
+        from_character_id: toPositiveIntegerOrNull(message?.from_character_id),
+        to_character_id: toPositiveIntegerOrNull(message?.to_character_id),
+        from_name: String(message?.from_name || "").trim(),
+        to_name: String(message?.to_name || "").trim(),
+        content: String(message?.content || ""),
+        chat_text_color: String(message?.chat_text_color || "").trim(),
+        from_chat_text_color: String(message?.from_chat_text_color || "").trim(),
+        to_chat_text_color: String(message?.to_chat_text_color || "").trim(),
+        whisper_target_is_afk: Boolean(message?.whisper_target_is_afk),
+        whisper_target_afk_reason: String(message?.whisper_target_afk_reason || "").trim(),
+        whisper_target_afk_name: String(message?.whisper_target_afk_name || "").trim(),
+        whisper_target_chat_text_color: String(message?.whisper_target_chat_text_color || "").trim(),
+        created_at: String(message?.created_at || "").trim()
+      };
+    }
+
     return {
       type: String(message?.type || "").trim(),
       content: String(message?.content || ""),
@@ -826,6 +850,86 @@
       presence_suffix: String(message?.presence_suffix || "").trim(),
       room_switch_target_name: String(message?.room_switch_target_name || "").trim()
     };
+  }
+
+  function sanitizeWhisperThreadMessageForRestore(entry) {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+
+    return {
+      outgoing: Boolean(entry?.outgoing),
+      content: String(entry?.content || ""),
+      chat_text_color: String(entry?.chat_text_color || "").trim(),
+      created_at: String(entry?.created_at || "").trim(),
+      from_name: String(entry?.from_name || "").trim(),
+      to_name: String(entry?.to_name || "").trim(),
+      whisper_target_is_afk: Boolean(entry?.whisper_target_is_afk),
+      whisper_target_afk_reason: String(entry?.whisper_target_afk_reason || "").trim(),
+      whisper_target_afk_name: String(entry?.whisper_target_afk_name || "").trim(),
+      whisper_target_chat_text_color: String(entry?.whisper_target_chat_text_color || "").trim()
+    };
+  }
+
+  function sanitizeWhisperThreadForRestore(thread) {
+    if (!thread || typeof thread !== "object") {
+      return null;
+    }
+
+    const userId = toPositiveIntegerOrNull(thread?.userId ?? thread?.user_id);
+    const characterId = toPositiveIntegerOrNull(thread?.characterId ?? thread?.character_id);
+    const threadKey = String(thread?.threadKey || thread?.thread_key || getWhisperThreadKey(characterId, userId)).trim();
+    if (!threadKey) {
+      return null;
+    }
+
+    const messages = Array.isArray(thread?.messages)
+      ? thread.messages
+          .map((entry) => sanitizeWhisperThreadMessageForRestore(entry))
+          .filter(Boolean)
+          .slice(-whisperThreadMessageRestoreLimit)
+      : [];
+
+    return {
+      threadKey,
+      userId,
+      characterId,
+      name: String(thread?.name || "").trim() || "Unbekannt",
+      messages,
+      lastSequence: Number.isFinite(Number(thread?.lastSequence)) ? Number(thread.lastSequence) : messages.length
+    };
+  }
+
+  function sanitizeWhisperStatesForRestore(states) {
+    if (!Array.isArray(states)) {
+      return [];
+    }
+
+    return states
+      .map((state) => {
+        if (!state || typeof state !== "object") {
+          return null;
+        }
+
+        const threads = Array.isArray(state?.threads)
+          ? state.threads
+              .map((thread) => sanitizeWhisperThreadForRestore(thread))
+              .filter(Boolean)
+          : [];
+        const unreadThreadKeys = Array.isArray(state?.unreadThreadKeys)
+          ? state.unreadThreadKeys
+              .map((threadKey) => String(threadKey || "").trim())
+              .filter(Boolean)
+          : [];
+
+        return {
+          stateKey: String(state?.stateKey || "").trim(),
+          activeThreadKey: String(state?.activeThreadKey || "").trim(),
+          unreadThreadKeys,
+          threads
+        };
+      })
+      .filter(Boolean);
   }
 
   function consumeChatReloadSnapshot() {
@@ -862,7 +966,8 @@
         disconnectAt,
         scrollTop: Number.isFinite(scrollTop) && scrollTop >= 0 ? scrollTop : null,
         characterId: toPositiveIntegerOrNull(parsed.characterId),
-        messages
+        messages,
+        whisperStates: sanitizeWhisperStatesForRestore(parsed.whisperStates)
       };
     } catch (_error) {
       return null;
@@ -1792,6 +1897,83 @@
     }
   }
 
+  function serializeWhisperThreadMessage(entry) {
+    return sanitizeWhisperThreadMessageForRestore(entry);
+  }
+
+  function serializeWhisperStatesForSnapshot() {
+    return Array.from(whisperStateByPresenceKey.entries())
+      .map(([stateKey, state]) => {
+        const seenThreadKeys = new Set();
+        const threads = Array.from(state?.threadsByKey?.values?.() || [])
+          .map((thread) => sanitizeWhisperThreadForRestore({
+            ...thread,
+            messages: Array.isArray(thread?.messages)
+              ? thread.messages
+                  .map((entry) => serializeWhisperThreadMessage(entry))
+                  .filter(Boolean)
+                  .slice(-whisperThreadMessageRestoreLimit)
+              : []
+          }))
+          .filter((thread) => {
+            if (!thread || seenThreadKeys.has(thread.threadKey)) {
+              return false;
+            }
+            seenThreadKeys.add(thread.threadKey);
+            return true;
+          });
+        const knownThreadKeys = new Set(threads.map((thread) => thread.threadKey));
+        const unreadThreadKeys = Array.from(state?.unreadThreadKeys || [])
+          .map((threadKey) => String(threadKey || "").trim())
+          .filter((threadKey) => threadKey && knownThreadKeys.has(threadKey));
+        const activeThreadKey = String(state?.activeThreadKey || "").trim();
+
+        return {
+          stateKey: String(stateKey || "").trim(),
+          activeThreadKey: knownThreadKeys.has(activeThreadKey) ? activeThreadKey : "",
+          unreadThreadKeys,
+          threads
+        };
+      })
+      .filter((state) => state.stateKey && (state.threads.length || state.activeThreadKey || state.unreadThreadKeys.length));
+  }
+
+  function restoreWhisperStatesFromSnapshot(states) {
+    const restoredStates = sanitizeWhisperStatesForRestore(states);
+    if (!restoredStates.length) {
+      return;
+    }
+
+    restoredStates.forEach((state) => {
+      const stateKey = String(state?.stateKey || "").trim() || getWhisperStateKey();
+      const threadsByKey = new Map();
+      state.threads.forEach((thread) => {
+        threadsByKey.set(thread.threadKey, {
+          threadKey: thread.threadKey,
+          userId: thread.userId,
+          characterId: thread.characterId,
+          name: thread.name,
+          messages: thread.messages,
+          lastSequence: thread.lastSequence
+        });
+      });
+
+      const unreadThreadKeys = new Set(
+        state.unreadThreadKeys.filter((threadKey) => threadsByKey.has(threadKey))
+      );
+      const activeThreadKey = threadsByKey.has(state.activeThreadKey)
+        ? state.activeThreadKey
+        : "";
+
+      whisperStateByPresenceKey.set(stateKey, {
+        threadsByKey,
+        unreadThreadKeys,
+        activeThreadKey
+      });
+    });
+  }
+
+  restoreWhisperStatesFromSnapshot(pendingChatReloadRecovery?.whisperStates);
   switchWhisperState(currentPresenceKey);
 
   function hasNightEyeMarker() {
@@ -1896,7 +2078,8 @@
           Number.isInteger(currentActiveCharacterId) && currentActiveCharacterId > 0
             ? currentActiveCharacterId
             : null,
-        messages: renderedChatMessages.slice(-chatMessageRestoreLimit)
+        messages: renderedChatMessages.slice(-chatMessageRestoreLimit),
+        whisperStates: serializeWhisperStatesForSnapshot()
       })
     );
   }
@@ -3107,7 +3290,11 @@
 
   if (pendingChatReloadRecovery?.messages?.length) {
     pendingChatReloadRecovery.messages.forEach((message) => {
-      appendMessage(message, { skipNotifications: true });
+      if (String(message?.type || "").trim().toLowerCase() === "whisper") {
+        appendWhisper(message);
+      } else {
+        appendMessage(message, { skipNotifications: true });
+      }
     });
     if (pendingChatReloadRecovery.scrollTop != null) {
       chatScroll.scrollTop = pendingChatReloadRecovery.scrollTop;
@@ -3679,6 +3866,11 @@
   }
 
   function appendWhisper(msg) {
+    rememberRenderedChatMessage({
+      ...msg,
+      type: "whisper"
+    });
+
     const article = document.createElement("article");
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
 
