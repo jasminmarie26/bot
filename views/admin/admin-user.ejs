@@ -310,7 +310,7 @@
   </section>
 <% } %>
 
-<section class="panel">
+<section class="panel" id="user-characters">
   <div class="header-line">
     <div>
       <h2>Charaktere und G&auml;steb&uuml;cher</h2>
@@ -332,7 +332,7 @@
           >
             <span class="admin-character-name"><%= character.name %></span>
             <span class="admin-character-server">
-              <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %>
+              <%= character.server_label || (character.server_id === "erp" ? "ERP" : "FREE-RP") %>
             </span>
             <div class="admin-character-meta">
               <span><%= character.page_count %> Seiten</span>

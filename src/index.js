@@ -22582,6 +22582,48 @@ function getAdminUsersOverview() {
     }));
 }
 
+function getAdminOverviewCharactersByUserIds(userIds) {
+  const parsedUserIds = Array.from(
+    new Set(
+      (Array.isArray(userIds) ? userIds : [])
+        .map((userId) => Number(userId))
+        .filter((userId) => Number.isInteger(userId) && userId > 0)
+    )
+  );
+  const charactersByUserId = new Map();
+  if (!parsedUserIds.length) {
+    return charactersByUserId;
+  }
+
+  const chunkSize = 400;
+  for (let index = 0; index < parsedUserIds.length; index += chunkSize) {
+    const userIdChunk = parsedUserIds.slice(index, index + chunkSize);
+    const placeholders = userIdChunk.map(() => "?").join(", ");
+    const characterRows = db
+      .prepare(
+        `SELECT id, user_id, name, server_id
+           FROM characters
+          WHERE user_id IN (${placeholders})
+          ORDER BY lower(name) ASC, id ASC`
+      )
+      .all(...userIdChunk);
+
+    characterRows.forEach((character) => {
+      const parsedUserId = Number(character.user_id);
+      if (!charactersByUserId.has(parsedUserId)) {
+        charactersByUserId.set(parsedUserId, []);
+      }
+      charactersByUserId.get(parsedUserId).push({
+        ...character,
+        server_id: normalizeCharacterServerId(character.server_id),
+        server_label: getServerLabel(character.server_id)
+      });
+    });
+  }
+
+  return charactersByUserId;
+}
+
 function decorateAdminUsers(users) {
   const ipUsage = new Map();
   for (const user of users) {
@@ -22749,6 +22791,8 @@ function normalizeStaffOverviewSearchValue(value) {
     .replace(/\u00df/g, "ss")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -22810,18 +22854,57 @@ function sortStaffOverviewUsers(users, sortValue) {
 }
 
 function getStaffOverviewUserSearchText(user) {
+  const characters = Array.isArray(user?.characters) ? user.characters : [];
+  const characterSearchText = characters
+    .map((character) =>
+      [
+        character?.name,
+        character?.server_id,
+        character?.server_label
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+    .join(" ");
   return [
     user?.username,
     user?.email,
     user?.birth_date,
+    user?.birth_date_label,
     user?.last_login_ip,
     user?.created_at,
+    user?.created_at_date_label,
+    user?.created_at_time_label,
     user?.account_number,
     user?.moderation_status_note,
+    user?.last_login_at,
+    user?.last_login_at_date_label,
+    user?.last_login_at_time_label,
+    user?.online_location_label,
+    characterSearchText,
     user?.is_minor_account ? "minderjaehrig jugendschutz minderjaehriger user" : ""
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+function getStaffOverviewMatchedCharacters(user, normalizedQuery) {
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const characters = Array.isArray(user?.characters) ? user.characters : [];
+  return characters.filter((character) =>
+    normalizeStaffOverviewSearchValue(
+      [
+        character?.name,
+        character?.server_id,
+        character?.server_label
+      ]
+        .filter(Boolean)
+        .join(" ")
+    ).includes(normalizedQuery)
+  );
 }
 
 function filterStaffOverviewUsers(users, query) {
@@ -22830,11 +22913,21 @@ function filterStaffOverviewUsers(users, query) {
     return users;
   }
 
-  return users.filter((user) =>
-    normalizeStaffOverviewSearchValue(getStaffOverviewUserSearchText(user)).includes(
-      normalizedQuery
-    )
-  );
+  return users.reduce((results, user) => {
+    if (
+      !normalizeStaffOverviewSearchValue(getStaffOverviewUserSearchText(user)).includes(
+        normalizedQuery
+      )
+    ) {
+      return results;
+    }
+
+    results.push({
+      ...user,
+      matched_characters: getStaffOverviewMatchedCharacters(user, normalizedQuery)
+    });
+    return results;
+  }, []);
 }
 
 function getAdminUserCharacters(userId) {
@@ -22855,7 +22948,12 @@ function getAdminUserCharacters(userId) {
        WHERE c.user_id = ?
        ORDER BY c.updated_at DESC, c.id DESC`
     )
-    .all(userId);
+    .all(userId)
+    .map((character) => ({
+      ...character,
+      server_id: normalizeCharacterServerId(character.server_id),
+      server_label: getServerLabel(character.server_id)
+    }));
 }
 
 function getStaffPanelConfig(user) {
@@ -23000,6 +23098,8 @@ function decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsB
   const accountAgeInfo = getAccountAgeInfo(user);
   return {
     ...user,
+    characters: Array.isArray(user?.characters) ? user.characters : [],
+    matched_characters: Array.isArray(user?.matched_characters) ? user.matched_characters : [],
     is_online: onlineAccountUserIds.has(parsedUserId),
     online_location_label: buildStaffUserLocationLabel(
       sessionLocation?.path,
@@ -23027,7 +23127,16 @@ function renderStaffOverview(req, res) {
   const isPrimaryAdminViewer = isPrimaryAdminUser(req.session.user);
   const serverWorkNoticeSettings = isPrimaryAdminViewer ? getServerWorkNoticeSettings() : null;
   const { onlineAccountUserIds, sessionLocationsByUserId } = getOnlineAccountActivitySnapshot();
-  const allUsers = decorateAdminUsers(getAdminUsersOverview()).map((user) =>
+  const adminOverviewUsers = getAdminUsersOverview();
+  const charactersByUserId = getAdminOverviewCharactersByUserIds(
+    adminOverviewUsers.map((user) => user.id)
+  );
+  const allUsers = decorateAdminUsers(
+    adminOverviewUsers.map((user) => ({
+      ...user,
+      characters: charactersByUserId.get(Number(user.id)) || []
+    }))
+  ).map((user) =>
     decorateStaffOverviewUser(user, onlineAccountUserIds, sessionLocationsByUserId)
   );
   const searchQuery = String(req.query.q || "").trim();

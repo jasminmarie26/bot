@@ -19,6 +19,8 @@
     </thead>
     <tbody>
       <% statusUsers.forEach((user, index) => { %>
+        <% const matchedCharacters = Array.isArray(user.matched_characters) ? user.matched_characters : []; %>
+        <% const matchedCharacterPreview = matchedCharacters.slice(0, 3); %>
         <tr
           class="admin-user-row"
           data-admin-status-row
@@ -36,10 +38,30 @@
               <span>#<%= user.account_number %></span>
               <span>Erstellt: <%= user.created_at_date_label || "-" %> | <%= user.created_at_time_label || "--:--" %></span>
               <span>Letzter Login: <%= user.last_login_at_date_label || "-" %> | <%= user.last_login_at_time_label || "--:--" %></span>
+              <% if (Number(user.character_count) > 0) { %>
+                <span>Charaktere: <%= user.character_count %></span>
+              <% } %>
               <% if (user.is_online && user.online_location_label) { %>
                 <span>Ort: <%= user.online_location_label %></span>
               <% } %>
             </div>
+            <% if (matchedCharacterPreview.length) { %>
+              <div class="admin-character-match-list">
+                <% matchedCharacterPreview.forEach((character) => { %>
+                  <a
+                    class="admin-character-match-link"
+                    href="<%= `${detailBasePath}/${user.id}#user-characters` %>"
+                    title="Account und Charaktere von <%= user.username %> öffnen"
+                  >
+                    <span><%= character.name %></span>
+                    <span class="admin-character-match-server"><%= character.server_label || character.server_id %></span>
+                  </a>
+                <% }) %>
+                <% if (matchedCharacters.length > matchedCharacterPreview.length) { %>
+                  <span class="admin-character-match-more">+<%= matchedCharacters.length - matchedCharacterPreview.length %> weitere</span>
+                <% } %>
+              </div>
+            <% } %>
           </td>
           <td><%= user.email || "-" %></td>
           <td>
