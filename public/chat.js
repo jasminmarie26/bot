@@ -2792,14 +2792,7 @@
   }
 
   function appendChatMessageInline(container, msg) {
-    const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    const body = document.createElement("span");
-    body.className = "chat-afk-return-inline-content";
-    setChatColorSource(body, chatTextColor);
-    applyStoredChatTextColor(body, chatTextColor, { allowGradient: false });
-    container.appendChild(document.createTextNode(" "));
-    appendFormattedChatText(body, msg?.content);
-    container.appendChild(body);
+    appendFormattedChatText(container, msg?.content, { leadingSpace: true });
   }
 
   function mergeMessageIntoPreviousAfkReturn(msg) {
