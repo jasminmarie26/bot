@@ -2794,23 +2794,11 @@
   function appendChatMessageInline(container, msg) {
     const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
     const body = document.createElement("span");
-    const strong = document.createElement("strong");
-    const roleStyle = String(msg?.role_style || "").trim().toLowerCase();
-    const displayName = formatRoleDisplayName(msg?.username, roleStyle);
     body.className = "chat-afk-return-inline-content";
-    strong.classList.add("chat-afk-return-inline-name");
-    if (roleStyle === "admin" || roleStyle === "moderator") {
-      strong.classList.add(`role-name-${roleStyle}`);
-    }
-    strong.textContent = `${displayName}:`;
-    applySpecialNameDecor(strong, displayName);
-    setChatColorSource(strong, chatTextColor);
     setChatColorSource(body, chatTextColor);
-    applyStoredChatTextColor(strong, chatTextColor);
     applyStoredChatTextColor(body, chatTextColor, { allowGradient: false });
     container.appendChild(document.createTextNode(" "));
-    container.appendChild(strong);
-    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
+    appendFormattedChatText(body, msg?.content);
     container.appendChild(body);
   }
 
