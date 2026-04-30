@@ -13769,7 +13769,7 @@ function canAccessCharacter(userId, characterOwnerId, isCharacterPublic, isAdmin
 }
 
 function normalizeSiteUpdateContent(rawContent) {
-  return String(rawContent || "").trim().slice(0, 1200);
+  return String(rawContent || "").trim();
 }
 
 function normalizeSiteUpdateDisplayTimestamp(rawValue) {
