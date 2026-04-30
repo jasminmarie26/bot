@@ -3494,14 +3494,10 @@
 
       const body = document.createElement("div");
       body.className = "whisper-thread-body";
-      const entryChatTextColor = normalizeChatTextColor(entry.chat_text_color);
-      setChatColorSource(body, entryChatTextColor);
       appendFormattedChatNodes(body, entry.content, {
         allowItalic: true,
         allowBold: true
       });
-      applyStoredChatTextColor(body, entryChatTextColor, { allowGradient: false });
-      applyChatTextColorToDescendants(body, entryChatTextColor);
       const afkNoteText = entry.outgoing
         ? getWhisperAfkNoteText(
             entry.whisper_target_afk_name || thread.name,
@@ -3643,14 +3639,21 @@
     article.className = `chat-message chat-whisper ${msg?.outgoing ? "is-outgoing" : "is-incoming"}`;
 
     const line = document.createElement("p");
-    const strong = document.createElement("strong");
-    const chatTextColor = normalizeChatTextColor(msg?.chat_text_color);
-    strong.textContent = msg?.outgoing
-      ? `Flüstern an ${msg?.to_name || "Unbekannt"}:`
-      : `Flüstern von ${msg?.from_name || "Unbekannt"}:`;
-    line.appendChild(strong);
-    setChatColorSource(strong, chatTextColor);
-    applyStoredChatTextColor(strong, chatTextColor);
+    const fromName = String(msg?.from_name || "").trim() || "Unbekannt";
+    const toName = String(msg?.to_name || "").trim() || "Unbekannt";
+    const fromChatTextColor = normalizeChatTextColor(msg?.from_chat_text_color || msg?.chat_text_color);
+    const toChatTextColor = normalizeChatTextColor(msg?.to_chat_text_color);
+    const fromNode = createStyledChatNameNode(fromName, "", fromChatTextColor);
+    const actionNode = document.createElement("strong");
+    const toNode = createStyledChatNameNode(toName, "", toChatTextColor);
+
+    actionNode.textContent = " flüstert an ";
+    setChatColorSource(actionNode, fromChatTextColor);
+    applyStoredChatTextColor(actionNode, fromChatTextColor, { allowGradient: false });
+    toNode.appendChild(document.createTextNode(":"));
+    line.appendChild(fromNode);
+    line.appendChild(actionNode);
+    line.appendChild(toNode);
     const afkNoteText = msg?.outgoing
       ? getWhisperAfkNoteText(
           msg?.whisper_target_afk_name || msg?.to_name,

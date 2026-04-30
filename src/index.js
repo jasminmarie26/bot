@@ -25464,6 +25464,8 @@ function emitWhisperBetweenUsers(
   const recipientName = recipientProfile
     ? recipientProfile.label
     : `User ${parsedTargetUserId}`;
+  const senderChatTextColor = senderProfile.chat_text_color || "";
+  const recipientChatTextColor = recipientProfile?.chat_text_color || "";
   const createdAt = formatChatTimestamp();
 
   const senderPayload = {
@@ -25475,7 +25477,9 @@ function emitWhisperBetweenUsers(
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
-    chat_text_color: senderProfile.chat_text_color || "",
+    chat_text_color: senderChatTextColor,
+    from_chat_text_color: senderChatTextColor,
+    to_chat_text_color: recipientChatTextColor,
     whisper_target_is_afk: recipientIsAfk,
     whisper_target_afk_reason: recipientAfkReason,
     whisper_target_afk_name: recipientName,
@@ -25491,7 +25495,9 @@ function emitWhisperBetweenUsers(
     from_name: senderName,
     to_name: recipientName,
     content: normalizedContent,
-    chat_text_color: senderProfile.chat_text_color || "",
+    chat_text_color: senderChatTextColor,
+    from_chat_text_color: senderChatTextColor,
+    to_chat_text_color: recipientChatTextColor,
     created_at: createdAt
   };
 
