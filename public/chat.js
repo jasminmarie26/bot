@@ -2745,6 +2745,9 @@
       const presenceKind = String(msg?.presence_kind || "").trim().toLowerCase();
       if (systemKind === "actor-message" && (presenceKind === "afk" || presenceKind === "return")) {
         article.classList.add("chat-afk-status-message");
+        if (presenceKind === "return") {
+          article.classList.add("chat-afk-return-message");
+        }
       }
       const presenceActorName = String(msg?.presence_actor_name || "").trim();
       const presenceActorRoleStyle = String(msg?.presence_actor_role_style || "").trim().toLowerCase();

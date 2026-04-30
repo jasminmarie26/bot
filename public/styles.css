@@ -14635,6 +14635,22 @@ body.page-guestbook-view .guestbook-entry-heading {
   font-weight: 700;
 }
 
+.chat-box .chat-system.chat-afk-return-message p {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.chat-box .chat-system.chat-afk-return-message .chat-own-message-time,
+.chat-box .chat-system.chat-afk-return-message strong {
+  flex: 0 0 auto;
+}
+
+.chat-box .chat-system.chat-afk-return-message p > span:not(.chat-own-message-time) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .page-chat .role-name-admin {
   display: inline-block;
   background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%) !important;
