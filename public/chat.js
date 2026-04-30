@@ -2802,6 +2802,46 @@
     clearAfkTimer();
   });
 
+  const chatLinkPattern = /((?:https?:\/\/|www\.)[^\s<>"']+)/gi;
+
+  function appendLinkedChatText(container, text) {
+    const source = String(text || "");
+    if (!source) return;
+
+    let cursor = 0;
+    chatLinkPattern.lastIndex = 0;
+    let match = chatLinkPattern.exec(source);
+    while (match) {
+      const matchText = String(match[0] || "");
+      const matchIndex = match.index;
+      if (matchIndex > cursor) {
+        container.appendChild(document.createTextNode(source.slice(cursor, matchIndex)));
+      }
+
+      const trailingMatch = matchText.match(/[),.!?:;]+$/);
+      const trailingText = trailingMatch ? trailingMatch[0] : "";
+      const linkText = trailingText ? matchText.slice(0, -trailingText.length) : matchText;
+      if (linkText) {
+        const link = document.createElement("a");
+        link.href = /^www\./i.test(linkText) ? `https://${linkText}` : linkText;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = linkText;
+        container.appendChild(link);
+      }
+      if (trailingText) {
+        container.appendChild(document.createTextNode(trailingText));
+      }
+
+      cursor = matchIndex + matchText.length;
+      match = chatLinkPattern.exec(source);
+    }
+
+    if (cursor < source.length) {
+      container.appendChild(document.createTextNode(source.slice(cursor)));
+    }
+  }
+
   function appendFormattedChatNodes(
     container,
     text,
@@ -2813,7 +2853,7 @@
 
     function flushPlainBuffer() {
       if (!plainBuffer) return;
-      container.appendChild(document.createTextNode(plainBuffer));
+      appendLinkedChatText(container, plainBuffer);
       plainBuffer = "";
     }
 
@@ -2900,6 +2940,7 @@
     const normalizedRoleStyle = String(roleStyle || "").trim().toLowerCase();
     const displayName = formatRoleDisplayName(rawName, normalizedRoleStyle);
     strong.textContent = displayName;
+    strong.dataset.chatName = "1";
     if (normalizedRoleStyle === "admin" || normalizedRoleStyle === "moderator") {
       strong.classList.add(`role-name-${normalizedRoleStyle}`);
     }
@@ -2947,11 +2988,9 @@
     const emoteActionText = getEmoteActionText(rawText, actorName);
     if (emoteActionText) {
       const emote = document.createElement("em");
-      const actor = document.createElement("span");
       const displayName = formatRoleDisplayName(actorName);
+      const actor = createStyledChatNameNode(displayName, "", rawColor);
 
-      actor.textContent = displayName || "Unbekannt";
-      applySpecialNameDecor(actor, displayName);
       emote.appendChild(actor);
       emote.appendChild(document.createTextNode(" "));
       appendFormattedChatNodes(emote, emoteActionText, {
@@ -3036,6 +3075,9 @@
 
     container.querySelectorAll("strong, em, span").forEach((node) => {
       if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      if (node.dataset.chatName === "1") {
         return;
       }
       setChatColorSource(node, rawColor);
