@@ -2186,12 +2186,17 @@
       return false;
     }
 
-    if (!AudioElementCtor || !notificationAudioPlaybackUnlocked) {
+    if (!AudioElementCtor) {
       return false;
     }
 
     const source = buildNotificationToneDataUrl(normalizedKind, toneId);
     if (!source) {
+      return false;
+    }
+
+    const isGeneratedTone = source.startsWith("data:audio/");
+    if (isGeneratedTone && !notificationAudioPlaybackUnlocked) {
       return false;
     }
 
@@ -2205,6 +2210,8 @@
       if (playback && typeof playback.then === "function") {
         await playback;
       }
+      notificationAudioPlaybackUnlocked = true;
+      syncNotificationAudioUnlockState();
       return true;
     } catch (_error) {
       cleanup();
