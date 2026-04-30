@@ -852,6 +852,11 @@ app.use(express.static(publicDir));
 app.use("/bbcode-font-cache", express.static(BBCODE_1001FREEFONTS_CACHE_ROOT));
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
+  if (req.method === "POST" && req.path === "/session/touch" && req.session?.user) {
+    markSessionOpenTab(req.session, req.body?.tab_id);
+    markSessionTrackedPageLocation(req.session, req.body?.page_path, req.body?.page_title);
+  }
+
   if (isSessionTabHeartbeatExpired(req.session)) {
     return respondToInactiveSession(req, res);
   }
