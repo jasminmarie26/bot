@@ -163,6 +163,22 @@
         { startMs: 150, durationMs: 160, startFreq: 1174, endFreq: 1046, volume: 0.18, wave: "sine" }
       ]
     },
+    "entry-voice-1": {
+      label: "Beitritt Sound 1",
+      source: "/Voice/Beitritt%20Sound1.mp3"
+    },
+    "entry-voice-2": {
+      label: "Beitritt Sound 2",
+      source: "/Voice/Beitritt%20Sound2.mp3"
+    },
+    "entry-voice-3": {
+      label: "Beitritt Sound 3",
+      source: "/Voice/Beitritt%20Sound3.mp3"
+    },
+    "entry-voice-4": {
+      label: "Beitritt Sound 4",
+      source: "/Voice/Beitritt%20Sound4.mp3"
+    },
     crystal: {
       label: "Kristall",
       durationMs: 360,
@@ -179,6 +195,26 @@
         { startMs: 0, durationMs: 150, startFreq: 740, endFreq: 988, volume: 0.28, wave: "sine" },
         { startMs: 34, durationMs: 160, startFreq: 523, endFreq: 659, volume: 0.18, wave: "triangle" }
       ]
+    },
+    "chat-voice-1": {
+      label: "Chatsound 1",
+      source: "/Voice/Sound1.mp3"
+    },
+    "chat-voice-2": {
+      label: "Chatsound 2",
+      source: "/Voice/Sound2.mp3"
+    },
+    "chat-voice-3": {
+      label: "Chatsound 3",
+      source: "/Voice/Sound3.mp3"
+    },
+    "chat-voice-4": {
+      label: "Chatsound 4",
+      source: "/Voice/Sound4.mp3"
+    },
+    "chat-voice-5": {
+      label: "Chatsound 5",
+      source: "/Voice/Sound5.mp3"
     },
     bell: {
       label: "Glocke",
@@ -332,7 +368,20 @@
       ]
     }
   };
-  const notificationToneIds = Object.keys(notificationToneConfigs);
+  const notificationToneIds = [
+    "aurora",
+    "bell",
+    "pulse",
+    "entry-voice-1",
+    "entry-voice-2",
+    "entry-voice-3",
+    "entry-voice-4",
+    "chat-voice-1",
+    "chat-voice-2",
+    "chat-voice-3",
+    "chat-voice-4",
+    "chat-voice-5"
+  ];
   const notificationToneIdSet = new Set(notificationToneIds);
   const defaultEntryToneId = "aurora";
   const defaultMessageToneId = "pulse";
@@ -2000,6 +2049,12 @@
     const cacheKey = `${normalizedKind}:${normalizedToneId}`;
     if (notificationToneDataUrls[cacheKey]) {
       return notificationToneDataUrls[cacheKey];
+    }
+
+    const source = String(toneConfig?.source || "").trim();
+    if (source) {
+      notificationToneDataUrls[cacheKey] = source;
+      return source;
     }
 
     if (typeof window.btoa !== "function") {
