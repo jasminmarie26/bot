@@ -2813,7 +2813,7 @@
   function appendAfkReturnInlineText(container, rawText, rawColor) {
     const text = String(rawText || "").trim();
     if (!text) {
-      return;
+      return false;
     }
 
     const inlineText = document.createElement("span");
@@ -2824,6 +2824,7 @@
     applyChatTextColorToDescendants(inlineText, rawColor);
     container.appendChild(document.createTextNode(" "));
     container.appendChild(inlineText);
+    return true;
   }
 
   function mergeMessageIntoPreviousAfkReturn(msg) {
@@ -2988,7 +2989,10 @@
       setChatColorSource(body, systemBodyColor);
       applyStoredChatTextColor(body, systemBodyColor, { allowGradient: false });
       if (article.classList.contains("chat-afk-return-message")) {
-        appendAfkReturnInlineText(body, msg?.afk_return_text, systemBodyColor);
+        if (appendAfkReturnInlineText(body, msg?.afk_return_text, systemBodyColor)) {
+          article.dataset.afkReturnMerged = "1";
+          article.classList.add("chat-afk-return-merged-message");
+        }
       }
     } else if (emoteActionText) {
       const emote = document.createElement("em");
