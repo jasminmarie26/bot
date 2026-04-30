@@ -24223,6 +24223,7 @@ function clearChatAfkStateAndEmitReturnMessage({
   actorName = "",
   roleStyle = "",
   chatTextColor = "",
+  returnText = "",
   options = {}
 }) {
   const clearedAfkState = clearChatAfkState(
@@ -24238,6 +24239,8 @@ function clearChatAfkStateAndEmitReturnMessage({
     return false;
   }
 
+  const normalizedReturnText = String(returnText || "").trim();
+
   emitSystemChatMessage(
     roomId,
     serverId,
@@ -24245,6 +24248,7 @@ function clearChatAfkStateAndEmitReturnMessage({
     {
       system_kind: "actor-message",
       presence_kind: "return",
+      afk_return_text: normalizedReturnText,
       presence_actor_user_id: userId,
       presence_actor_character_id: characterId,
       presence_actor_name: String(actorName || "").trim() || `User ${Number(userId) || "?"}`,
@@ -27759,6 +27763,7 @@ function buildSystemChatPayload(content, options = {}) {
     presence_actor_name: String(options?.presence_actor_name || "").trim(),
     presence_actor_role_style: String(options?.presence_actor_role_style || "").trim(),
     presence_actor_chat_text_color: String(options?.presence_actor_chat_text_color || "").trim(),
+    afk_return_text: String(options?.afk_return_text || "").trim(),
     actor_target_name: String(options?.actor_target_name || "").trim(),
     actor_target_role_style: String(options?.actor_target_role_style || "").trim(),
     actor_target_chat_text_color: String(options?.actor_target_chat_text_color || "").trim(),
@@ -29450,7 +29455,8 @@ io.on("connection", (socket) => {
           characterId: currentCharacterId,
           actorName: afkDisplayName,
           roleStyle: afkDisplayProfile?.role_style || "",
-          chatTextColor: afkDisplayProfile?.chat_text_color || ""
+          chatTextColor: afkDisplayProfile?.chat_text_color || "",
+          returnText: String(afkMatch[1] || "").trim()
         });
         return;
       }

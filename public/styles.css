@@ -14639,6 +14639,11 @@ body.page-guestbook-view .guestbook-entry-heading {
   display: block;
 }
 
+.chat-box .chat-system.chat-afk-return-message .chat-afk-return-inline-content,
+.chat-box .chat-system.chat-afk-return-message .chat-afk-return-inline-content :where(strong, em, span) {
+  font-weight: 400;
+}
+
 .page-chat .role-name-admin {
   display: inline-block;
   background: linear-gradient(90deg, #ff4d6d 0%, #ff985c 45%, #ffe08a 100%) !important;

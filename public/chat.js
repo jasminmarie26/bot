@@ -817,6 +817,7 @@
       presence_actor_name: String(message?.presence_actor_name || "").trim(),
       presence_actor_role_style: String(message?.presence_actor_role_style || "").trim(),
       presence_actor_chat_text_color: String(message?.presence_actor_chat_text_color || "").trim(),
+      afk_return_text: String(message?.afk_return_text || ""),
       actor_target_name: String(message?.actor_target_name || "").trim(),
       actor_target_role_style: String(message?.actor_target_role_style || "").trim(),
       actor_target_chat_text_color: String(message?.actor_target_chat_text_color || "").trim(),
@@ -2792,7 +2793,37 @@
   }
 
   function appendChatMessageInline(container, msg) {
-    appendFormattedChatText(container, msg?.content, { leadingSpace: true });
+    appendAfkReturnInlineText(container, msg?.content, msg?.chat_text_color);
+  }
+
+  function applyChatTextColorToDescendants(container, rawColor) {
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    container.querySelectorAll("strong, em, span").forEach((node) => {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+      setChatColorSource(node, rawColor);
+      applyStoredChatTextColor(node, rawColor, { allowGradient: false });
+    });
+  }
+
+  function appendAfkReturnInlineText(container, rawText, rawColor) {
+    const text = String(rawText || "").trim();
+    if (!text) {
+      return;
+    }
+
+    const inlineText = document.createElement("span");
+    inlineText.className = "chat-afk-return-inline-content";
+    setChatColorSource(inlineText, rawColor);
+    appendFormattedChatText(inlineText, text);
+    applyStoredChatTextColor(inlineText, rawColor, { allowGradient: false });
+    applyChatTextColorToDescendants(inlineText, rawColor);
+    container.appendChild(document.createTextNode(" "));
+    container.appendChild(inlineText);
   }
 
   function mergeMessageIntoPreviousAfkReturn(msg) {
@@ -2956,6 +2987,9 @@
         : "#000000";
       setChatColorSource(body, systemBodyColor);
       applyStoredChatTextColor(body, systemBodyColor, { allowGradient: false });
+      if (article.classList.contains("chat-afk-return-message")) {
+        appendAfkReturnInlineText(body, msg?.afk_return_text, systemBodyColor);
+      }
     } else if (emoteActionText) {
       const emote = document.createElement("em");
       const actor = document.createElement("span");
