@@ -3401,23 +3401,12 @@
     threads.forEach((thread) => {
       const button = document.createElement("button");
       const name = document.createElement("strong");
-      const preview = document.createElement("span");
-      const meta = document.createElement("small");
       const unreadDot = document.createElement("span");
-      const lastEntry = thread.messages[thread.messages.length - 1] || null;
 
       button.type = "button";
       button.className = `chat-whisper-list-item${thread.threadKey === activeWhisperThreadKey ? " is-active" : ""}`;
       name.className = "chat-whisper-list-name";
       name.textContent = thread.name;
-
-      preview.className = "chat-whisper-list-preview";
-      preview.textContent = lastEntry
-        ? String(lastEntry.content || "").trim().slice(0, 90) || "Neue Nachricht"
-        : "Noch keine Nachrichten";
-
-      meta.className = "chat-whisper-list-meta";
-      meta.textContent = lastEntry?.created_at ? String(lastEntry.created_at) : "";
 
       if (whisperUnreadThreadKeys.has(thread.threadKey)) {
         unreadDot.className = "chat-whisper-list-unread";
@@ -3426,8 +3415,6 @@
       }
 
       button.appendChild(name);
-      button.appendChild(preview);
-      button.appendChild(meta);
       button.addEventListener("click", () => {
         setActiveWhisperThreadKey(thread.threadKey);
         whisperUnreadThreadKeys.delete(thread.threadKey);
@@ -3507,10 +3494,14 @@
 
       const body = document.createElement("div");
       body.className = "whisper-thread-body";
+      const entryChatTextColor = normalizeChatTextColor(entry.chat_text_color);
+      setChatColorSource(body, entryChatTextColor);
       appendFormattedChatNodes(body, entry.content, {
         allowItalic: true,
         allowBold: true
       });
+      applyStoredChatTextColor(body, entryChatTextColor, { allowGradient: false });
+      applyChatTextColorToDescendants(body, entryChatTextColor);
       const afkNoteText = entry.outgoing
         ? getWhisperAfkNoteText(
             entry.whisper_target_afk_name || thread.name,
@@ -3565,6 +3556,7 @@
     thread.messages.push({
       outgoing: Boolean(msg?.outgoing),
       content: String(msg?.content || ""),
+      chat_text_color: String(msg?.chat_text_color || "").trim(),
       created_at: String(msg?.created_at || "").trim(),
       from_name: String(msg?.from_name || "").trim(),
       to_name: String(msg?.to_name || "").trim(),
