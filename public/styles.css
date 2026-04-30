@@ -13502,12 +13502,12 @@ body.page-guestbook-view .guestbook-entry-heading {
 
 .chat-whisper-panel {
   position: fixed;
-  top: calc(4.8rem + 0.4rem);
+  top: 1rem;
   right: 1rem;
   z-index: 90;
   width: min(980px, calc(100vw - 2rem));
-  height: calc(100dvh - 6.2rem);
-  max-height: calc(100dvh - 6.2rem);
+  height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem);
 }
 
 .chat-whisper-panel[hidden] {
@@ -13527,7 +13527,7 @@ body.page-guestbook-view .guestbook-entry-heading {
   -webkit-backdrop-filter: blur(var(--glass-blur));
   padding: 1rem;
   height: 100%;
-  max-height: calc(100dvh - 6.2rem);
+  max-height: calc(100dvh - 2rem);
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -15599,14 +15599,14 @@ body.page-home-screen .home-hero-actions {
 }
 
 .chat-whisper-panel {
-  top: calc(var(--topbar-bottom-offset, 72px) + 0.4rem);
-  height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 1rem);
-  max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 1rem);
+  top: 0.75rem;
+  height: calc(100dvh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
 }
 
 .chat-whisper-panel-card {
   height: 100%;
-  max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 1rem);
+  max-height: calc(100dvh - 1.5rem);
 }
 
 @media (max-width: 900px) {
@@ -15869,7 +15869,7 @@ body.page-home-screen .home-hero-actions {
     right: 0.5rem;
     left: 0.5rem;
     width: auto;
-    height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.65rem);
+    height: calc(100dvh - 1rem);
   }
 
   .chat-whisper-panel-card {
@@ -15927,7 +15927,7 @@ body.page-home-screen .home-hero-actions {
 
   .chat-whisper-panel,
   .chat-whisper-panel-card {
-    height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.65rem);
-    max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.65rem);
+    height: calc(100dvh - 1rem);
+    max-height: calc(100dvh - 1rem);
   }
 }
