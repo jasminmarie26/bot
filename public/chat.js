@@ -2747,6 +2747,49 @@
     return actionText;
   }
 
+  function appendWhisperFormattedContent(
+    container,
+    rawText,
+    actorName,
+    { leadingSpace = false, rawColor = "", useChatColor = false } = {}
+  ) {
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    if (leadingSpace) {
+      container.appendChild(document.createTextNode(" "));
+    }
+
+    const emoteActionText = getEmoteActionText(rawText, actorName);
+    if (emoteActionText) {
+      const emote = document.createElement("em");
+      const actor = document.createElement("span");
+      const displayName = formatRoleDisplayName(actorName);
+
+      actor.textContent = displayName || "Unbekannt";
+      applySpecialNameDecor(actor, displayName);
+      emote.appendChild(actor);
+      emote.appendChild(document.createTextNode(" "));
+      appendFormattedChatNodes(emote, emoteActionText, {
+        allowItalic: false,
+        allowBold: true
+      });
+      container.appendChild(emote);
+    } else {
+      appendFormattedChatNodes(container, rawText, {
+        allowItalic: true,
+        allowBold: true
+      });
+    }
+
+    if (useChatColor) {
+      setChatColorSource(container, rawColor);
+      applyStoredChatTextColor(container, rawColor, { allowGradient: false });
+      applyChatTextColorToDescendants(container, rawColor);
+    }
+  }
+
   function getMessageTimeLabel(msg) {
     const rawValue = String(msg?.message_time_iso || msg?.created_at || "").trim();
     if (!rawValue) return "";
@@ -3494,10 +3537,11 @@
 
       const body = document.createElement("div");
       body.className = "whisper-thread-body";
-      appendFormattedChatNodes(body, entry.content, {
-        allowItalic: true,
-        allowBold: true
-      });
+      appendWhisperFormattedContent(
+        body,
+        entry.content,
+        entry.from_name || (entry.outgoing ? currentDisplayName : thread.name)
+      );
       const afkNoteText = entry.outgoing
         ? getWhisperAfkNoteText(
             entry.whisper_target_afk_name || thread.name,
@@ -3652,10 +3696,11 @@
     setChatColorSource(actionNode, fromChatTextColor);
     applyStoredChatTextColor(actionNode, fromChatTextColor, { allowGradient: false });
     toNode.appendChild(document.createTextNode(":"));
-    setChatColorSource(body, fromChatTextColor);
-    appendFormattedChatText(body, msg?.content, { leadingSpace: true });
-    applyStoredChatTextColor(body, fromChatTextColor, { allowGradient: false });
-    applyChatTextColorToDescendants(body, fromChatTextColor);
+    appendWhisperFormattedContent(body, msg?.content, fromName, {
+      leadingSpace: true,
+      rawColor: fromChatTextColor,
+      useChatColor: true
+    });
     line.appendChild(fromNode);
     line.appendChild(actionNode);
     line.appendChild(toNode);
