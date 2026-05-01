@@ -13671,10 +13671,9 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .chat-whisper-thread-wrap {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
-  align-content: stretch;
-  grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
 }
 
@@ -13690,6 +13689,10 @@ body.page-guestbook-view .guestbook-entry-heading {
 .chat-whisper-placeholder {
   margin: 0;
   padding: 0.4rem 0.1rem;
+}
+
+.chat-whisper-placeholder {
+  flex: 1 1 auto;
 }
 
 .chat-whisper-list-item {
@@ -13790,6 +13793,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .whisper-thread-shell {
+  flex: 1 1 auto;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -13799,7 +13803,7 @@ body.page-guestbook-view .guestbook-entry-heading {
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.55rem;
   min-height: 0;
-  height: 100%;
+  height: auto;
   max-height: none;
   overflow: hidden;
 }
@@ -14420,6 +14424,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 .chat-whisper-form {
+  flex: 0 0 auto;
   display: grid;
   gap: 0.55rem;
 }
