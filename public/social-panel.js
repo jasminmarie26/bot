@@ -356,8 +356,9 @@
       return;
     }
 
-    const { startIndex, endIndex } = getPageWindow(listName, items.length);
-    items.slice(startIndex, endIndex).forEach((entryData) => {
+    const pageWindow = pagerNode ? getPageWindow(listName, items.length) : null;
+    const visibleItems = pageWindow ? items.slice(pageWindow.startIndex, pageWindow.endIndex) : items;
+    visibleItems.forEach((entryData) => {
       listNode.appendChild(renderEntry(entryData));
     });
     renderPager(pagerNode, listName, items.length);
