@@ -9,6 +9,8 @@
   const updateSubmitButton = document.getElementById("update-submit-btn");
   const updateCloseButton = document.getElementById("update-close-btn");
   const updateField = updateForm?.querySelector("textarea[name='content']");
+  const updateImageInput = document.getElementById("update-image-upload");
+  const updateImageStatus = document.getElementById("update-image-upload-status");
 
   const siteContentModal = document.getElementById("site-content-modal");
   const siteContentForm = document.getElementById("site-content-form");
@@ -958,6 +960,8 @@
       updateSubmitButton.textContent = "Veröffentlichen";
       updateField.value = "";
     }
+
+    resetUpdateImageInput();
   }
 
   function openUpdateModal(item = null) {
@@ -1045,6 +1049,17 @@
     field.selectionEnd = innerEnd;
   }
 
+  function insertTextAtSelection(field, text, selectionMode = "end") {
+    if (!field) return;
+
+    const start = field.selectionStart ?? 0;
+    const end = field.selectionEnd ?? 0;
+    const replacement = String(text || "");
+
+    field.setRangeText(replacement, start, end, selectionMode);
+    field.focus();
+  }
+
   function resolveBbcodeField(button) {
     if (!button) return null;
     const target = button.dataset.bbcodeTarget || "";
@@ -1067,6 +1082,121 @@
     }
 
     insertBbcodeInto(field, `[url=${cleanedUrl}]`, "[/url]", "Linktext");
+  }
+
+  function insertListBbcode(field) {
+    if (!field) return;
+
+    const start = field.selectionStart ?? 0;
+    const end = field.selectionEnd ?? 0;
+    const selectedText = field.value.slice(start, end).replace(/\r\n?/g, "\n");
+    const preparedLines = selectedText
+      ? selectedText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+      : ["Punkt 1", "Punkt 2"];
+    const lines = preparedLines.length ? preparedLines : ["Punkt 1", "Punkt 2"];
+    const replacement = `[list]\n${lines.map((line) => `[li]${line}[/li]`).join("\n")}\n[/list]`;
+
+    insertTextAtSelection(field, replacement);
+  }
+
+  function setUpdateImageStatus(message = "", tone = "") {
+    if (!updateImageStatus) return;
+
+    const preparedMessage = String(message || "").trim();
+    updateImageStatus.textContent = preparedMessage;
+    updateImageStatus.hidden = !preparedMessage;
+    updateImageStatus.classList.remove("is-error", "is-success", "is-busy");
+    if (tone) {
+      updateImageStatus.classList.add(tone);
+    }
+  }
+
+  function resetUpdateImageInput() {
+    if (updateImageInput) {
+      updateImageInput.value = "";
+    }
+    setUpdateImageStatus("");
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Die Datei konnte nicht gelesen werden."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleUpdateImageUpload(file) {
+    if (!file || !updateField) return;
+
+    const allowedMimeTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
+    if (!allowedMimeTypes.has(String(file.type || "").trim().toLowerCase())) {
+      setUpdateImageStatus("Erlaubt sind GIF, JPG, PNG und WEBP.", "is-error");
+      if (updateImageInput) {
+        updateImageInput.value = "";
+      }
+      return;
+    }
+
+    if (Number(file.size || 0) > 2 * 1024 * 1024) {
+      setUpdateImageStatus("Die Datei darf maximal 2 MB gross sein.", "is-error");
+      if (updateImageInput) {
+        updateImageInput.value = "";
+      }
+      return;
+    }
+
+    if (typeof window.fetch !== "function") {
+      setUpdateImageStatus("Der Bild-Upload wird in diesem Browser nicht unterstuetzt.", "is-error");
+      if (updateImageInput) {
+        updateImageInput.value = "";
+      }
+      return;
+    }
+
+    setUpdateImageStatus("Bild wird hochgeladen...", "is-busy");
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      if (!dataUrl) {
+        throw new Error("Die Datei konnte nicht gelesen werden.");
+      }
+
+      const response = await window.fetch("/updates/upload-image", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "x-requested-with": "XMLHttpRequest"
+        },
+        body: JSON.stringify({
+          dataUrl,
+          mimeType: file.type || ""
+        })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok || !payload?.imageUrl) {
+        throw new Error(payload?.error || "Das Bild konnte nicht hochgeladen werden.");
+      }
+
+      const prefix = updateField.value && !updateField.value.endsWith("\n") ? "\n" : "";
+      insertTextAtSelection(updateField, `${prefix}[img]${payload.imageUrl}[/img]\n`);
+      setUpdateImageStatus("Bild eingefuegt.", "is-success");
+    } catch (error) {
+      setUpdateImageStatus(
+        String(error?.message || "").trim() || "Das Bild konnte nicht hochgeladen werden.",
+        "is-error"
+      );
+    } finally {
+      if (updateImageInput) {
+        updateImageInput.value = "";
+      }
+    }
   }
 
   if (updateModal) {
@@ -1126,6 +1256,21 @@
       insertLinkBbcode(resolveBbcodeField(button));
     });
   });
+
+  document.querySelectorAll("[data-bbcode-list]").forEach((button) => {
+    button.addEventListener("click", () => {
+      insertListBbcode(resolveBbcodeField(button));
+    });
+  });
+
+  if (updateImageInput) {
+    updateImageInput.addEventListener("change", () => {
+      const file = updateImageInput.files?.[0] || null;
+      if (file) {
+        handleUpdateImageUpload(file);
+      }
+    });
+  }
 
   if (list) {
     list.addEventListener("click", (event) => {

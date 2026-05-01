@@ -3427,6 +3427,37 @@ body.serverlist-account-icon-modal-open {
   gap: 0.85rem;
 }
 
+.update-upload-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.update-upload-field input[type="file"] {
+  margin-top: 0.35rem;
+  width: min(100%, 26rem);
+}
+
+.update-upload-status {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.update-upload-status[hidden] {
+  display: none !important;
+}
+
+.update-upload-status.is-busy {
+  color: var(--muted);
+}
+
+.update-upload-status.is-success {
+  color: color-mix(in srgb, var(--accent) 72%, white 28%);
+}
+
+.update-upload-status.is-error {
+  color: #d77a7a;
+}
+
 .live-updates-page-panel {
   max-width: min(960px, 100%);
   margin: 0 auto 1.35rem;

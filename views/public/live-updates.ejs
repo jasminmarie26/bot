@@ -112,6 +112,7 @@
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="i">I</button>
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="u">U</button>
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="h2">H2</button>
+          <button class="ghost-btn update-tool-btn" type="button" data-bbcode-list="unordered">Punkte</button>
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="left">Links</button>
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="center">Mitte</button>
           <button class="ghost-btn update-tool-btn" type="button" data-bbcode-tag="right">Rechts</button>
@@ -125,12 +126,26 @@
           <textarea name="content" rows="6" required></textarea>
         </label>
 
+        <div class="update-upload-field">
+          <label for="update-image-upload">
+            Bild hochladen
+            <input
+              id="update-image-upload"
+              type="file"
+              accept="image/gif,image/jpeg,image/png,image/webp"
+            />
+          </label>
+          <small class="muted">PNG, JPG, GIF oder WEBP bis 2 MB. Das Bild wird direkt in den Text eingef&uuml;gt.</small>
+          <small id="update-image-upload-status" class="update-upload-status" hidden></small>
+        </div>
+
         <details class="bbcode-help">
           <summary>BBCode Hilfe</summary>
           <div class="bbcode-help-content">
             <p><code>[b]fett[/b]</code> <code>[i]kursiv[/i]</code> <code>[u]unterstrichen[/u]</code></p>
             <p><code>[h2]Titel[/h2]</code> <code>[left]Links[/left]</code> <code>[center]Mitte[/center]</code></p>
             <p><code>[right]Rechts[/right]</code> <code>[block]Einr&uuml;cken[/block]</code> <code>[quote]Zitat[/quote]</code></p>
+            <p><code>[list][li]Punkt[/li][/list]</code> <code>[img]Bild-URL[/img]</code></p>
             <p><code>[url=https://beispiel.de]Linktext[/url]</code></p>
           </div>
         </details>

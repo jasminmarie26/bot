@@ -726,6 +726,12 @@ const LARP_PROFILE_COVER_ALLOWED_MIME_TYPES = new Map([
   ["image/png", ".png"],
   ["image/webp", ".webp"]
 ]);
+const SITE_UPDATE_IMAGE_UPLOAD_RELATIVE_DIR = path.posix.join("uploads", "site-update-images");
+const SITE_UPDATE_IMAGE_UPLOAD_WEB_ROOT = `/${SITE_UPDATE_IMAGE_UPLOAD_RELATIVE_DIR}`;
+const SITE_UPDATE_IMAGE_UPLOAD_ROOT = path.join(publicDir, "uploads", "site-update-images");
+const SITE_UPDATE_IMAGE_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+const SITE_UPDATE_IMAGE_UPLOAD_JSON_LIMIT = "4mb";
+const SITE_UPDATE_IMAGE_ALLOWED_MIME_TYPES = LARP_PROFILE_COVER_ALLOWED_MIME_TYPES;
 const CHARACTER_AVATAR_UPLOAD_RELATIVE_DIR = path.posix.join("uploads", "character-avatars");
 const CHARACTER_AVATAR_UPLOAD_WEB_ROOT = `/${CHARACTER_AVATAR_UPLOAD_RELATIVE_DIR}`;
 const CHARACTER_AVATAR_UPLOAD_ROOT = path.join(publicDir, "uploads", "character-avatars");
@@ -744,6 +750,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 fs.mkdirSync(LARP_PROFILE_COVER_UPLOAD_ROOT, { recursive: true });
+fs.mkdirSync(SITE_UPDATE_IMAGE_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(CHARACTER_AVATAR_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(SERVERLIST_ACCOUNT_ICON_UPLOAD_ROOT, { recursive: true });
 const sessionsDbPath = path.join(dataDir, "sessions.sqlite");
@@ -5548,6 +5555,20 @@ function buildLarpProfileCoverUploadDestination(characterId, fileExtension) {
   };
 }
 
+function buildSiteUpdateImageUploadDestination(userId, fileExtension) {
+  const normalizedUserId = Number(userId);
+  const safeExtension = String(fileExtension || "")
+    .trim()
+    .replace(/[^.a-z0-9]/gi, "")
+    .toLowerCase();
+  const fileName = `site-update-${normalizedUserId}-${Date.now()}-${crypto.randomUUID()}${safeExtension}`;
+
+  return {
+    absolutePath: path.join(SITE_UPDATE_IMAGE_UPLOAD_ROOT, fileName),
+    publicUrl: `${SITE_UPDATE_IMAGE_UPLOAD_WEB_ROOT}/${fileName}`
+  };
+}
+
 function buildCharacterAvatarUploadDestination(characterId, fileExtension) {
   const normalizedCharacterId = Number(characterId);
   const safeExtension = String(fileExtension || "")
@@ -5606,6 +5627,39 @@ function removeManagedLarpProfileCoverFile(imageUrl) {
     fs.unlinkSync(managedFilePath);
   } catch (error) {
     console.warn("LARP-Profil-Titelbild konnte nicht entfernt werden:", error);
+  }
+}
+
+function resolveManagedSiteUpdateImagePath(imageUrl) {
+  const normalizedImageUrl = String(imageUrl || "").trim();
+  if (!normalizedImageUrl.startsWith(`${SITE_UPDATE_IMAGE_UPLOAD_WEB_ROOT}/`)) {
+    return null;
+  }
+
+  const fileName = normalizedImageUrl.slice(SITE_UPDATE_IMAGE_UPLOAD_WEB_ROOT.length + 1);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(fileName)) {
+    return null;
+  }
+
+  const resolvedPath = path.resolve(SITE_UPDATE_IMAGE_UPLOAD_ROOT, fileName);
+  const uploadRootPath = path.resolve(SITE_UPDATE_IMAGE_UPLOAD_ROOT);
+  if (!resolvedPath.startsWith(`${uploadRootPath}${path.sep}`)) {
+    return null;
+  }
+
+  return resolvedPath;
+}
+
+function removeManagedSiteUpdateImageFile(imageUrl) {
+  const managedFilePath = resolveManagedSiteUpdateImagePath(imageUrl);
+  if (!managedFilePath || !fs.existsSync(managedFilePath)) {
+    return;
+  }
+
+  try {
+    fs.unlinkSync(managedFilePath);
+  } catch (error) {
+    console.warn("Live-Update-Bild konnte nicht entfernt werden:", error);
   }
 }
 
@@ -13870,6 +13924,47 @@ function normalizeSiteUpdateContent(rawContent) {
   return String(rawContent || "").trim();
 }
 
+function getManagedSiteUpdateImageUrlsFromContent(rawContent) {
+  const managedImageUrls = new Set();
+  const content = String(rawContent || "");
+
+  content.replace(/\[\s*img([^\]]*)\]([\s\S]*?)\[\s*\/\s*img\s*\]/gi, (full, rawAttributes, rawUrl) => {
+    const safeUrl = sanitizeBbcodeImageUrl(rawUrl);
+    if (!safeUrl) {
+      return full;
+    }
+
+    const normalizedUrl = String(safeUrl).trim();
+    if (resolveManagedSiteUpdateImagePath(normalizedUrl)) {
+      managedImageUrls.add(normalizedUrl);
+    }
+
+    return full;
+  });
+
+  return Array.from(managedImageUrls);
+}
+
+function removeManagedSiteUpdateImagesMissingFromContent(previousContent, nextContent) {
+  const previousImageUrls = getManagedSiteUpdateImageUrlsFromContent(previousContent);
+  if (!previousImageUrls.length) {
+    return;
+  }
+
+  const nextImageUrls = new Set(getManagedSiteUpdateImageUrlsFromContent(nextContent));
+  previousImageUrls.forEach((imageUrl) => {
+    if (!nextImageUrls.has(imageUrl)) {
+      removeManagedSiteUpdateImageFile(imageUrl);
+    }
+  });
+}
+
+function removeManagedSiteUpdateImagesFromContent(rawContent) {
+  getManagedSiteUpdateImageUrlsFromContent(rawContent).forEach((imageUrl) => {
+    removeManagedSiteUpdateImageFile(imageUrl);
+  });
+}
+
 function normalizeSiteUpdateDisplayTimestamp(rawValue) {
   const prepared = String(rawValue || "").trim();
   if (!prepared) {
@@ -16931,6 +17026,54 @@ app.post("/updates", requireAuth, requireSiteUpdateEditor, (req, res) => {
   return res.redirect(req.get("referer") || "/");
 });
 
+app.post(
+  "/updates/upload-image",
+  requireAuth,
+  requireSiteUpdateEditor,
+  express.json({ limit: SITE_UPDATE_IMAGE_UPLOAD_JSON_LIMIT }),
+  (req, res) => {
+    const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
+    if (!parsedImageData) {
+      return res.status(400).json({ ok: false, error: "Bitte waehle ein Bild vom PC aus." });
+    }
+
+    const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
+    const fileExtension = SITE_UPDATE_IMAGE_ALLOWED_MIME_TYPES.get(mimeType);
+    if (!fileExtension || mimeType !== parsedImageData.mimeType) {
+      return res.status(400).json({ ok: false, error: "Erlaubt sind gif, jpg, jpeg, png und webp." });
+    }
+
+    let fileBuffer = null;
+    try {
+      fileBuffer = Buffer.from(parsedImageData.base64Payload, "base64");
+    } catch (_error) {
+      fileBuffer = null;
+    }
+
+    if (!fileBuffer || !fileBuffer.length) {
+      return res.status(400).json({ ok: false, error: "Die Bilddatei konnte nicht gelesen werden." });
+    }
+
+    if (fileBuffer.length > SITE_UPDATE_IMAGE_UPLOAD_MAX_BYTES) {
+      return res.status(400).json({ ok: false, error: "Die Datei darf maximal 2 MB gross sein." });
+    }
+
+    const uploadDestination = buildSiteUpdateImageUploadDestination(req.session.user.id, fileExtension);
+
+    try {
+      fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
+    } catch (error) {
+      console.error("Live-Update-Bild konnte nicht gespeichert werden:", error);
+      return res.status(500).json({ ok: false, error: "Das Bild konnte nicht gespeichert werden." });
+    }
+
+    return res.json({
+      ok: true,
+      imageUrl: uploadDestination.publicUrl
+    });
+  }
+);
+
 app.post("/updates/:id/edit", requireAuth, requireSiteUpdateEditor, (req, res) => {
   const updateId = Number.parseInt(req.params.id, 10);
   if (!Number.isInteger(updateId) || updateId <= 0) {
@@ -16938,7 +17081,8 @@ app.post("/updates/:id/edit", requireAuth, requireSiteUpdateEditor, (req, res) =
     return res.redirect(req.get("referer") || "/");
   }
 
-  if (!getSiteUpdateById(updateId)) {
+  const existingUpdate = getSiteUpdateById(updateId);
+  if (!existingUpdate) {
     setFlash(req, "error", "Update wurde nicht gefunden.");
     return res.redirect(req.get("referer") || "/");
   }
@@ -16955,6 +17099,7 @@ app.post("/updates/:id/edit", requireAuth, requireSiteUpdateEditor, (req, res) =
     )
     .run(content, updateId);
 
+  removeManagedSiteUpdateImagesMissingFromContent(existingUpdate.content || "", content);
   const saved = getSiteUpdateById(updateId);
   io.emit("site:update:update", saved);
   setFlash(req, "success", "Live-Update aktualisiert.");
@@ -16968,12 +17113,19 @@ app.post("/updates/:id/delete", requireAuth, requireSiteUpdateEditor, (req, res)
     return res.redirect(req.get("referer") || "/");
   }
 
+  const existingUpdate = getSiteUpdateById(updateId);
+  if (!existingUpdate) {
+    setFlash(req, "error", "Update wurde nicht gefunden.");
+    return res.redirect(req.get("referer") || "/");
+  }
+
   const deleteInfo = db.prepare("DELETE FROM site_updates WHERE id = ?").run(updateId);
   if (deleteInfo.changes < 1) {
     setFlash(req, "error", "Update wurde nicht gefunden.");
     return res.redirect(req.get("referer") || "/");
   }
 
+  removeManagedSiteUpdateImagesFromContent(existingUpdate.content || "");
   io.emit("site:update:delete", { id: updateId });
   setFlash(req, "success", "Live-Update gelöscht.");
   return res.redirect(req.get("referer") || "/");
