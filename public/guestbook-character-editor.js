@@ -42,6 +42,165 @@
   const chatBackgroundPreviewName = document.getElementById("character-chat-background-preview-name");
   const chatBackgroundPreviewState = document.getElementById("character-chat-background-preview-state");
   const nameInput = document.querySelector('input[name="name"]');
+  const editorForm = document.getElementById("guestbook-editor-form");
+  const editorCharacterId = String(editorForm?.dataset.editorCharacterId || "").trim();
+  const collapsibleStorageKey = editorCharacterId ? `guestbook-editor-collapsible-${editorCharacterId}` : "";
+  const collapsiblePreserveKey = editorCharacterId ? `guestbook-editor-collapsible-preserve-${editorCharacterId}` : "";
+  const collapsibleDetails = editorForm
+    ? Array.from(editorForm.querySelectorAll("[data-gb-editor-collapsible]"))
+    : [];
+
+  const readSessionValue = (key) => {
+    if (!key) {
+      return "";
+    }
+
+    try {
+      return window.sessionStorage.getItem(key) || "";
+    } catch (_error) {
+      return "";
+    }
+  };
+
+  const writeSessionValue = (key, value) => {
+    if (!key) {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(key, value);
+    } catch (_error) {}
+  };
+
+  const removeSessionValue = (key) => {
+    if (!key) {
+      return;
+    }
+
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch (_error) {}
+  };
+
+  const shouldPreserveCollapsibleState = () => readSessionValue(collapsiblePreserveKey) === "1";
+
+  const writeCollapsibleState = () => {
+    if (!collapsibleStorageKey || !collapsibleDetails.length) {
+      return;
+    }
+
+    const nextState = {};
+    collapsibleDetails.forEach((detail) => {
+      if (!(detail instanceof HTMLDetailsElement)) {
+        return;
+      }
+
+      const stateKey = String(detail.dataset.gbEditorCollapsible || "").trim();
+      if (!stateKey) {
+        return;
+      }
+
+      nextState[stateKey] = detail.open;
+    });
+
+    writeSessionValue(collapsibleStorageKey, JSON.stringify(nextState));
+  };
+
+  const applyCollapsibleState = () => {
+    if (!collapsibleDetails.length) {
+      return;
+    }
+
+    let storedState = {};
+    if (shouldPreserveCollapsibleState()) {
+      try {
+        const parsedState = JSON.parse(readSessionValue(collapsibleStorageKey) || "{}");
+        if (parsedState && typeof parsedState === "object") {
+          storedState = parsedState;
+        }
+      } catch (_error) {
+        storedState = {};
+      }
+    } else {
+      removeSessionValue(collapsibleStorageKey);
+    }
+
+    collapsibleDetails.forEach((detail) => {
+      if (!(detail instanceof HTMLDetailsElement)) {
+        return;
+      }
+
+      const stateKey = String(detail.dataset.gbEditorCollapsible || "").trim();
+      detail.open = Boolean(stateKey && storedState[stateKey] === true);
+      detail.addEventListener("toggle", writeCollapsibleState);
+    });
+
+    removeSessionValue(collapsiblePreserveKey);
+    writeCollapsibleState();
+  };
+
+  const markCollapsibleStateForPreserve = () => {
+    if (!collapsiblePreserveKey) {
+      return;
+    }
+
+    writeSessionValue(collapsiblePreserveKey, "1");
+  };
+
+  const shouldPreserveFormNavigation = (form, submitter) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return false;
+    }
+
+    const resolvedTarget = String(
+      submitter?.getAttribute("formtarget") || form.getAttribute("target") || ""
+    ).trim().toLowerCase();
+    if (resolvedTarget && resolvedTarget !== "_self") {
+      return false;
+    }
+
+    const resolvedAction = String(
+      submitter?.getAttribute("formaction") || form.getAttribute("action") || ""
+    ).trim().toLowerCase();
+    if (!resolvedAction || resolvedAction === "/logout") {
+      return false;
+    }
+
+    return true;
+  };
+
+  applyCollapsibleState();
+
+  document.querySelectorAll("form").forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    form.addEventListener("submit", (event) => {
+      if (shouldPreserveFormNavigation(form, event.submitter)) {
+        markCollapsibleStateForPreserve();
+      }
+    });
+  });
+
+  document.querySelectorAll('a[href*="/guestbook/edit"]').forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    link.addEventListener("click", () => {
+      markCollapsibleStateForPreserve();
+    });
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (shouldPreserveCollapsibleState()) {
+      return;
+    }
+
+    removeSessionValue(collapsibleStorageKey);
+    removeSessionValue(collapsiblePreserveKey);
+  });
 
   if (
     !colorRoot ||
