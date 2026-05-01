@@ -193,97 +193,44 @@
 
         <div class="social-panel-grid">
           <section class="social-panel-section">
-            <h4>Freunde &amp; Ignorieren</h4>
-            <div class="social-panel-tabs" role="tablist" aria-label="Freunde und ignorierte Eintr&auml;ge">
-              <button
-                type="button"
-                class="social-panel-tab-btn is-active"
-                data-social-tab-button="friends"
-                role="tab"
-                aria-selected="true"
-                aria-controls="social-tab-friends"
-              >
-                Freunde
-              </button>
-              <button
-                type="button"
-                class="social-panel-tab-btn"
-                data-social-tab-button="ignored-accounts"
-                role="tab"
-                aria-selected="false"
-                aria-controls="social-tab-ignored-accounts"
-              >
-                Ignorierte Accounts
-              </button>
-              <button
-                type="button"
-                class="social-panel-tab-btn"
-                data-social-tab-button="ignored-characters"
-                role="tab"
-                aria-selected="false"
-                aria-controls="social-tab-ignored-characters"
-              >
-                Ignorierte Charaktere
-              </button>
-            </div>
-
-            <div
-              id="social-tab-friends"
-              class="social-panel-tab-panel"
-              data-social-tab-panel="friends"
-              role="tabpanel"
-            >
-              <p class="muted social-panel-hint">Hier werden nur Freunde angezeigt, die gerade online sind.</p>
-              <div class="social-panel-table">
-                <div class="social-panel-list-head" aria-hidden="true">
-                  <span>Name</span>
-                  <span>Ort</span>
-                  <span>Funktion</span>
-                </div>
-                <div class="social-panel-list" data-social-friends-list>
-                  <p class="muted">Noch keine Freunde gespeichert.</p>
-                </div>
-                <div class="social-panel-pager" data-social-friends-pager hidden></div>
+            <h4>Freunde</h4>
+            <p class="muted social-panel-hint">Hier werden nur Freunde angezeigt, die gerade online sind.</p>
+            <div class="social-panel-table">
+              <div class="social-panel-list-head" aria-hidden="true">
+                <span>Freund</span>
+                <span>Ort</span>
+                <span>Aktion</span>
+              </div>
+              <div class="social-panel-list" data-social-friends-list>
+                <p class="muted">Noch keine Freunde gespeichert.</p>
               </div>
             </div>
+          </section>
 
-            <div
-              id="social-tab-ignored-accounts"
-              class="social-panel-tab-panel"
-              data-social-tab-panel="ignored-accounts"
-              role="tabpanel"
-              hidden
-            >
-              <div class="social-panel-table">
-                <div class="social-panel-list-head" aria-hidden="true">
-                  <span>Name</span>
-                  <span>Ort</span>
-                  <span>Funktion</span>
-                </div>
-                <div class="social-panel-list" data-social-ignored-accounts-list>
-                  <p class="muted">Keine ignorierten Accounts.</p>
-                </div>
-                <div class="social-panel-pager" data-social-ignored-accounts-pager hidden></div>
+          <section class="social-panel-section">
+            <h4>Ignorierte Accounts</h4>
+            <div class="social-panel-table">
+              <div class="social-panel-list-head" aria-hidden="true">
+                <span>Eintrag</span>
+                <span>Hinweis</span>
+                <span>Aktion</span>
+              </div>
+              <div class="social-panel-list" data-social-ignored-accounts-list>
+                <p class="muted">Keine ignorierten Accounts.</p>
               </div>
             </div>
+          </section>
 
-            <div
-              id="social-tab-ignored-characters"
-              class="social-panel-tab-panel"
-              data-social-tab-panel="ignored-characters"
-              role="tabpanel"
-              hidden
-            >
-              <div class="social-panel-table">
-                <div class="social-panel-list-head" aria-hidden="true">
-                  <span>Name</span>
-                  <span>Ort</span>
-                  <span>Funktion</span>
-                </div>
-                <div class="social-panel-list" data-social-ignored-characters-list>
-                  <p class="muted">Keine ignorierten Charaktere.</p>
-                </div>
-                <div class="social-panel-pager" data-social-ignored-characters-pager hidden></div>
+          <section class="social-panel-section">
+            <h4>Ignorierte Charaktere</h4>
+            <div class="social-panel-table">
+              <div class="social-panel-list-head" aria-hidden="true">
+                <span>Eintrag</span>
+                <span>Hinweis</span>
+                <span>Aktion</span>
+              </div>
+              <div class="social-panel-list" data-social-ignored-characters-list>
+                <p class="muted">Keine ignorierten Charaktere.</p>
               </div>
             </div>
           </section>
