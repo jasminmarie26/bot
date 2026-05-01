@@ -444,7 +444,7 @@
     };
 
     const applySavedState = () => {
-      guestbookCharacterIconUrlInput.value = savedImageUrl;
+      guestbookCharacterIconUrlInput.value = "";
       guestbookCharacterIconFileInput.value = "";
       guestbookCharacterIconFocusXInput.value = String(savedFocusX);
       guestbookCharacterIconFocusYInput.value = String(savedFocusY);
