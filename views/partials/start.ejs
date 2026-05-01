@@ -334,6 +334,20 @@
       currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : ""); %>
     <% const accountDisplayName =
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
+    <% const showServerlistAccountIconEditor = Boolean(
+      currentUser &&
+      typeof serverlistAccountIconEditorEnabled !== "undefined" &&
+      serverlistAccountIconEditorEnabled
+    ); %>
+    <% const serverlistAccountIconUrl = showServerlistAccountIconEditor
+      ? String(currentUser.serverlist_icon_url || "").trim()
+      : ""; %>
+    <% const serverlistAccountIconFocusX = showServerlistAccountIconEditor
+      ? Number(currentUser.serverlist_icon_focus_x ?? 50)
+      : 50; %>
+    <% const serverlistAccountIconFocusY = showServerlistAccountIconEditor
+      ? Number(currentUser.serverlist_icon_focus_y ?? 50)
+      : 50; %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const menuCharacterEditHref = menuCharacter
       ? (isLarpMenuContext
@@ -829,7 +843,20 @@
                   aria-label="Benutzermen&uuml; &ouml;ffnen"
                   title="Benutzermen&uuml;"
                 >
-                  <span class="topbar-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+                  <span
+                    class="topbar-user-menu-toggle-icon"
+                    aria-hidden="true"
+                    data-serverlist-account-icon-anchor
+                    style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%"
+                  >
+                    <% if (serverlistAccountIconUrl) { %>
+                      <img
+                        src="<%= serverlistAccountIconUrl %>"
+                        alt=""
+                        data-serverlist-account-icon-image
+                      />
+                    <% } %>
+                  </span>
                 </summary>
                 <div class="topbar-user-menu-panel<%= isLarpMenuContext ? " has-profile-settings-menu" : "" %>">
                   <div class="topbar-user-menu-meta">
@@ -848,6 +875,13 @@
 
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="<%= accountMenuHref %>" target="_blank" rel="noopener noreferrer">Account</a>
+                    <% if (showServerlistAccountIconEditor) { %>
+                      <button
+                        type="button"
+                        class="topbar-user-menu-link-button"
+                        data-serverlist-account-icon-open
+                      >Icon bearbeiten</button>
+                    <% } %>
                     <% if (menuCharacter) { %>
                       <% if (isLarpMenuContext) { %>
                         <section class="topbar-profile-settings-menu" aria-label="Profilbereiche">
@@ -981,6 +1015,82 @@
                   </form>
                 </div>
               </details>
+              <% if (showServerlistAccountIconEditor) { %>
+                <div class="serverlist-account-icon-modal" data-serverlist-account-icon-modal hidden>
+                  <div class="serverlist-account-icon-backdrop" data-serverlist-account-icon-close></div>
+                  <section
+                    class="serverlist-account-icon-dialog panel"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="serverlist-account-icon-title"
+                  >
+                    <form
+                      class="serverlist-account-icon-form"
+                      data-serverlist-account-icon-form
+                      data-current-image-url="<%= serverlistAccountIconUrl %>"
+                      data-current-focus-x="<%= serverlistAccountIconFocusX %>"
+                      data-current-focus-y="<%= serverlistAccountIconFocusY %>"
+                    >
+                      <div class="serverlist-account-icon-dialog-head">
+                        <div>
+                          <h2 id="serverlist-account-icon-title">Icon bearbeiten</h2>
+                          <p>Von URL oder vom PC ausw&auml;hlen. Die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
+                        </div>
+                        <button
+                          type="button"
+                          class="serverlist-account-icon-close"
+                          aria-label="Fenster schlie&szlig;en"
+                          data-serverlist-account-icon-close
+                        >&times;</button>
+                      </div>
+
+                      <label class="serverlist-account-icon-field">
+                        <span>Bild-URL</span>
+                        <input type="url" name="imageUrl" value="<%= serverlistAccountIconUrl %>" placeholder="https://..." />
+                      </label>
+
+                      <label class="serverlist-account-icon-field">
+                        <span>Bild vom PC</span>
+                        <input type="file" name="iconFile" accept="image/gif,image/jpeg,image/png,image/webp" />
+                      </label>
+
+                      <div class="serverlist-account-icon-preview-wrap">
+                        <div
+                          class="serverlist-account-icon-preview"
+                          data-serverlist-account-icon-preview
+                          style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%"
+                        >
+                          <% if (serverlistAccountIconUrl) { %>
+                            <img
+                              src="<%= serverlistAccountIconUrl %>"
+                              alt=""
+                              data-serverlist-account-icon-preview-image
+                            />
+                          <% } %>
+                        </div>
+                      </div>
+
+                      <div class="serverlist-account-icon-sliders">
+                        <label class="serverlist-account-icon-field">
+                          <span>Links / Rechts</span>
+                          <input type="range" name="focusX" min="0" max="100" step="1" value="<%= serverlistAccountIconFocusX %>" />
+                        </label>
+                        <label class="serverlist-account-icon-field">
+                          <span>Oben / Unten</span>
+                          <input type="range" name="focusY" min="0" max="100" step="1" value="<%= serverlistAccountIconFocusY %>" />
+                        </label>
+                      </div>
+
+                      <p class="serverlist-account-icon-status" data-serverlist-account-icon-status hidden></p>
+
+                      <div class="serverlist-account-icon-actions">
+                        <button type="button" class="btn btn-secondary" data-serverlist-account-icon-close>Abbrechen</button>
+                        <button type="submit" class="btn">Speichern</button>
+                      </div>
+                    </form>
+                  </section>
+                </div>
+              <% } %>
             <% } %>
           </nav>
         </div>

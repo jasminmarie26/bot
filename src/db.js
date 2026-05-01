@@ -26,6 +26,9 @@ db.exec(`
     admin_character_id INTEGER,
     moderator_character_id INTEGER,
     theme TEXT NOT NULL DEFAULT 'glass-aurora',
+    serverlist_icon_url TEXT NOT NULL DEFAULT '',
+    serverlist_icon_focus_x REAL NOT NULL DEFAULT 50,
+    serverlist_icon_focus_y REAL NOT NULL DEFAULT 50,
     email TEXT DEFAULT '',
     birth_date TEXT DEFAULT '',
     public_birth_show_age INTEGER NOT NULL DEFAULT 0,
@@ -1115,6 +1118,18 @@ if (!userColumns.includes("theme")) {
   db.exec("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'glass-aurora'");
 }
 
+if (!userColumns.includes("serverlist_icon_url")) {
+  db.exec("ALTER TABLE users ADD COLUMN serverlist_icon_url TEXT NOT NULL DEFAULT ''");
+}
+
+if (!userColumns.includes("serverlist_icon_focus_x")) {
+  db.exec("ALTER TABLE users ADD COLUMN serverlist_icon_focus_x REAL NOT NULL DEFAULT 50");
+}
+
+if (!userColumns.includes("serverlist_icon_focus_y")) {
+  db.exec("ALTER TABLE users ADD COLUMN serverlist_icon_focus_y REAL NOT NULL DEFAULT 50");
+}
+
 if (!userColumns.includes("admin_display_name")) {
   db.exec("ALTER TABLE users ADD COLUMN admin_display_name TEXT NOT NULL DEFAULT ''");
 }
@@ -1779,6 +1794,9 @@ if (!ignoredAccountColumns.includes("label")) {
 }
 
 db.prepare("UPDATE users SET theme = 'glass-aurora' WHERE theme IS NULL OR theme = ''").run();
+db.prepare("UPDATE users SET serverlist_icon_url = '' WHERE serverlist_icon_url IS NULL").run();
+db.prepare("UPDATE users SET serverlist_icon_focus_x = 50 WHERE serverlist_icon_focus_x IS NULL").run();
+db.prepare("UPDATE users SET serverlist_icon_focus_y = 50 WHERE serverlist_icon_focus_y IS NULL").run();
 db.prepare("UPDATE users SET is_moderator = 0 WHERE is_moderator IS NULL").run();
 db.prepare("UPDATE users SET admin_display_name = '' WHERE admin_display_name IS NULL").run();
 db.prepare("UPDATE users SET moderator_display_name = '' WHERE moderator_display_name IS NULL").run();
