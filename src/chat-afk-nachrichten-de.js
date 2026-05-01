@@ -1,121 +1,107 @@
 const crypto = require("crypto");
 
-const MIN_CHAT_AFK_NACHRICHTEN = 5000;
-
-const CHAT_AFK_AUFTAKTE = Object.freeze([
-  "ist kurz weg, um",
-  "taucht kurz ab, um",
-  "muss kurz raus, um",
-  "ist eben fort, um",
-  "verschwindet kurz, um",
-  "macht Pause, um",
-  "zieht kurz los, um",
-  "tritt kurz ab, um",
-  "flieht kurz, um",
-  "schleicht raus, um",
-  "ist im Off, um",
-  "geht kurz, um",
-  "pausiert, um",
-  "duckt sich weg, um",
-  "ist kurz stumm, um",
-  "holt Luft, um",
-  "nimmt Abstand, um",
-  "ist kurz raus, um",
-  "verzieht sich, um",
-  "macht sich rar, um",
-  "ist kurz abwesend, um",
-  "bleibt kurz fern, um",
-  "ist kurz still, um",
-  "zieht sich weg, um",
-  "muss kurz los, um"
+const CHAT_AFK_NACHRICHTEN = Object.freeze([
+  "Ist kurz weg, Respawn läuft",
+  "Hat das Spiel kurz verlassen",
+  "Ist kurz verschwunden, Snack-Quest aktiv",
+  "Lädt gerade neu",
+  "Ist kurz raus, Ping im echten Leben",
+  "Hat AFK... äh Pause aktiviert",
+  "Ist kurz off, kommt gleich wieder",
+  "Regeneriert gerade HP",
+  "Ist auf einer Real-Life Sidequest",
+  "Hat kurz das Menü geöffnet",
+  "Ist kurz weg, Inventory wird geplündert (Kühlschrank)",
+  "Hat kurz Disconnect im echten Leben",
+  "Ist gerade nicht am Controller",
+  "Hat den Fokus verloren, sucht ihn wieder",
+  "Ist kurz raus, Energie wird nachgeladen",
+  "Befindet sich im Ladebildschirm",
+  "Hat kurz Pause gedrückt",
+  "Ist temporär nicht steuerbar",
+  "Hat das Spiel minimiert",
+  "Ist kurz nicht im Match",
+  "Ist kurz weg, Sofa hat gewonnen",
+  "Wurde kurz vom echten Leben abgeholt",
+  "Ist verschwunden, Motivation wird gesucht",
+  "Hat sich kurz verabschiedet (freiwillig?)",
+  "Ist kurz raus, Chaos bleibt bestehen",
+  "Hat kurz den Kopf neu gestartet",
+  "Ist nicht da, kommt aber wieder",
+  "Wurde kurz von Snacks entführt",
+  "Ist kurz nicht verfügbar, bitte warten",
+  "Hat sich kurz aus der Realität entfernt",
+  "Ist kurz weg, nichts eskaliert hoffentlich",
+  "Hat den Überblick abgegeben",
+  "Ist verschwunden, Verantwortung auch",
+  "Ist kurz raus, viel Glück allen Beteiligten",
+  "Hat sich entfernt, Probleme bleiben",
+  "Ist nicht da, aber das merkt man eh",
+  "Hat kurz aufgegeben, kommt gleich zurück",
+  "Ist weg, das endet bestimmt gut",
+  "Hat sich kurz verdrückt",
+  "Ist kurz nicht da, das wird schon schiefgehen",
+  "Ist kurz weg",
+  "Kommt gleich wieder",
+  "Ist kurz nicht da",
+  "Hat Pause",
+  "Ist eben raus",
+  "Kommt gleich zurück",
+  "Ist kurz verschwunden",
+  "Ist nicht verfügbar",
+  "Macht kurz Pause",
+  "Ist gleich wieder da",
+  "Ist kurz weg, Respawn wird vorbereitet",
+  "Hat das System kurz verlassen",
+  "Lädt gerade neu, bitte warten",
+  "Ist auf einer Nebenquest im echten Leben",
+  "Hat kurz Pause gedrückt",
+  "Ist temporär nicht verfügbar",
+  "Befindet sich im Ladebildschirm",
+  "Hat das Spiel minimiert",
+  "Ist kurz außerhalb der Map",
+  "Wird gleich wieder gespawnt",
+  "Wurde kurz vom echten Leben abgeholt",
+  "Ist verschwunden, Snacks werden beschafft",
+  "Hat sich kurz selbst pausiert",
+  "Ist gerade nicht auffindbar",
+  "Wurde kurz entführt (vom Alltag)",
+  "Hat kurz den Kopf ausgeschaltet",
+  "Ist kurz weg, Chaos bleibt bestehen",
+  "Hat sich diskret entfernt",
+  "Ist kurz nicht im System auffindbar",
+  "Wurde temporär deaktiviert",
+  "Ist kurz weg, alles bleibt wie es ist (hoffentlich)",
+  "Hat die Verantwortung kurz abgegeben",
+  "Ist verschwunden, Probleme bleiben bestehen",
+  "Wurde kurz aus dem Betrieb genommen",
+  "Ist nicht da, das merkt man vermutlich",
+  "Hat sich kurz entzogen",
+  "Ist außer Betrieb, Ursache unbekannt",
+  "Hat sich für einen Moment verabschiedet",
+  "Ist aktuell nicht verfügbar, Geduld optional",
+  "Wurde kurz aus dem Verkehr gezogen",
+  "Status: kurzzeitig nicht verfügbar",
+  "Hinweis: Rückkehr in Kürze geplant",
+  "Meldung: Benutzer nicht am Platz",
+  "Systeminfo: Pause aktiv",
+  "Update: Abwesenheit erkannt",
+  "Hinweis: Aktivität pausiert",
+  "Statusmeldung: kurz offline",
+  "System: Benutzer reagiert gerade nicht",
+  "Info: temporär abgemeldet",
+  "Hinweis: Rückkehr wahrscheinlich",
+  "Status: abwesend",
+  "Pause aktiv",
+  "Kurz nicht da",
+  "Rückkehr folgt",
+  "Offline (kurz)",
+  "Nicht verfügbar",
+  "Kurz verschwunden",
+  "Pause läuft",
+  "Gleich zurück",
+  "Aktivität pausiert"
 ]);
-
-const CHAT_AFK_AUFGABEN = Object.freeze([
-  "Tee zu retten",
-  "Wasser zu holen",
-  "Luft zu schnappen",
-  "den Kopf zu resetten",
-  "den Plot zu ordnen",
-  "Drama zu löschen",
-  "Chaos zu treten",
-  "Böses zu planen",
-  "Unheil zu sortieren",
-  "finster zu grinsen",
-  "harmlos zu wirken",
-  "die Welt zu retten",
-  "Realität zu ertragen",
-  "kurz zu existieren",
-  "den Fokus zu finden",
-  "den Akku zu schonen",
-  "die Tastatur zu retten",
-  "Würfel zu suchen",
-  "einen Plan zu schmieden",
-  "Ruhe zu erzwingen",
-  "Geduld zu heucheln",
-  "den Alltag zu boxen",
-  "die Nerven zu zählen",
-  "kurz nicht zu fluchen",
-  "sehr zu leiden",
-  "professionell zu seufzen",
-  "dumm zu gucken",
-  "smart zu wirken",
-  "den Kaffee zu ehren",
-  "den Tee zu befragen",
-  "ein Wunder zu versuchen",
-  "die Lage zu verfluchen",
-  "das Chaos zu segnen",
-  "den Bildschirm anzustarren",
-  "kurz offline zu sein",
-  "das Leben zu verhandeln",
-  "die Moral zu ignorieren",
-  "den Frieden zu bedrohen",
-  "eine Idee zu fangen",
-  "einen Fehler zu jagen",
-  "die Pause zu verdienen",
-  "den Raum zu meiden",
-  "kurz ernst zu sein",
-  "kurz gemein zu sein",
-  "nett zu scheitern",
-  "leise zu triumphieren",
-  "den Tag zu überleben",
-  "das Timing zu hassen",
-  "innerlich zu lachen",
-  "kurz nicht da zu sein"
-]);
-
-const CHAT_AFK_ENDUNGEN = Object.freeze([
-  "",
-  ", gleich zurück",
-  ", keine Panik",
-  ", leider nötig",
-  ", sehr dramatisch",
-  ", wie man halt muss"
-]);
-
-function buildChatAfkNachrichten() {
-  const nachrichten = new Set();
-
-  CHAT_AFK_AUFTAKTE.forEach((auftakt) => {
-    CHAT_AFK_AUFGABEN.forEach((aufgabe) => {
-      CHAT_AFK_ENDUNGEN.forEach((endung) => {
-        const nachricht = `${auftakt} ${aufgabe}${endung}`.replace(/\s+/g, " ").trim();
-        if (nachricht) {
-          nachrichten.add(nachricht);
-        }
-      });
-    });
-  });
-
-  return Array.from(nachrichten);
-}
-
-const CHAT_AFK_NACHRICHTEN = Object.freeze(buildChatAfkNachrichten());
-
-if (CHAT_AFK_NACHRICHTEN.length < MIN_CHAT_AFK_NACHRICHTEN) {
-  throw new Error(
-    `Zu wenige AFK-Nachrichten erzeugt: ${CHAT_AFK_NACHRICHTEN.length} statt mindestens ${MIN_CHAT_AFK_NACHRICHTEN}.`
-  );
-}
 
 let verbleibendeChatAfkNachrichten = [];
 
@@ -132,7 +118,7 @@ function shuffleStrings(values) {
 
 function getNaechsteAutomatischeAfkNachricht() {
   if (!CHAT_AFK_NACHRICHTEN.length) {
-    return "kurz in einem mysteriösen Nebenplot verschwunden";
+    return "Kurz nicht da";
   }
 
   if (!verbleibendeChatAfkNachrichten.length) {
