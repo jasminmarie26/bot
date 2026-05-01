@@ -35,7 +35,7 @@
     <h2>Einstellungen</h2>
     <span class="gb-editor-helptext">
       <%= usesOuterNavigation
-        ? "Schritt 2 bis 4 trennen Design, Seiteninhalt und globale G&auml;stebuch-Einstellungen sauber voneinander."
+        ? "Schritt 2 bis 4 trennen Design, Seiteninhalt und globale G\u00E4stebuch-Einstellungen sauber voneinander."
         : "Aufgeteilt in drei ruhige Seiten, damit Inhalt und Gesamt-Einstellungen nicht mehr durcheinander geraten." %>
     </span>
   </div>
@@ -82,6 +82,113 @@
       <h3 id="gb-editor-page-design-title"><%= usesOuterNavigation ? "Schritt 2: Design & Stil" : "Seite 1: Design & Stil" %></h3>
       <p class="gb-editor-helptext">Theme, Schrift und Farben f&uuml;r das gesamte G&auml;stebuch.</p>
     </div>
+
+    <details class="gb-editor-fold" data-gb-editor-collapsible="design-character-icon">
+      <summary class="gb-editor-fold-summary">
+        <span>Charakter Icon</span>
+        <small>URL, Upload und Bildausschnitt f&uuml;r deinen Charakter</small>
+      </summary>
+
+      <div class="gb-editor-grid">
+        <div
+          class="gb-editor-card gb-editor-card-full gb-character-icon-card"
+          data-guestbook-character-icon-root
+          data-character-id="<%= Number(character.id) %>"
+          data-current-image-url="<%= String(character.serverlist_icon_url || "") %>"
+          data-current-focus-x="<%= Number(character.serverlist_icon_focus_x ?? 50) %>"
+          data-current-focus-y="<%= Number(character.serverlist_icon_focus_y ?? 50) %>"
+        >
+          <div class="gb-character-icon-layout">
+            <div class="gb-character-icon-fields">
+              <div class="gb-editor-section">
+                <span class="gb-editor-subheading">Sichtbarkeit</span>
+                <span class="gb-editor-helptext">
+                  Dieses Bild ist &uuml;berall sichtbar, wenn du mit <strong><%= character.name %></strong> eingeloggt bist.
+                </span>
+              </div>
+
+              <label class="serverlist-account-icon-field">
+                <span>Bild-URL</span>
+                <input
+                  type="url"
+                  value="<%= String(character.serverlist_icon_url || "") %>"
+                  placeholder="https://... oder /uploads/..."
+                  inputmode="url"
+                  spellcheck="false"
+                  autocomplete="off"
+                  data-guestbook-character-icon-url
+                />
+              </label>
+
+              <label class="serverlist-account-icon-field">
+                <span>Bild vom PC</span>
+                <input
+                  type="file"
+                  accept="image/gif,image/jpeg,image/jpg,image/png,image/webp"
+                  data-guestbook-character-icon-file
+                />
+              </label>
+            </div>
+
+            <div class="gb-character-icon-preview-panel">
+              <div class="serverlist-account-icon-preview-wrap">
+                <div
+                  class="serverlist-account-icon-preview"
+                  data-guestbook-character-icon-preview
+                  style="--serverlist-account-icon-focus-x: <%= Number(character.serverlist_icon_focus_x ?? 50) %>%; --serverlist-account-icon-focus-y: <%= Number(character.serverlist_icon_focus_y ?? 50) %>%"
+                >
+                  <% if (String(character.serverlist_icon_url || "").trim()) { %>
+                    <img
+                      src="<%= String(character.serverlist_icon_url || "").trim() %>"
+                      alt=""
+                      data-guestbook-character-icon-preview-image
+                    />
+                  <% } %>
+                  <span
+                    class="gb-character-icon-empty<%= String(character.serverlist_icon_url || "").trim() ? " is-hidden" : "" %>"
+                    data-guestbook-character-icon-empty
+                  >Noch kein Icon</span>
+                </div>
+              </div>
+              <p class="gb-editor-helptext gb-character-icon-preview-caption">
+                Die Vorschau aktualisiert sich direkt. Danach mit <strong>Icon speichern</strong> &uuml;bernehmen.
+              </p>
+            </div>
+          </div>
+
+          <div class="serverlist-account-icon-sliders gb-character-icon-sliders">
+            <label class="serverlist-account-icon-field">
+              <span>Horizontal verschieben</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= Number(character.serverlist_icon_focus_x ?? 50) %>"
+                data-guestbook-character-icon-focus-x
+              />
+            </label>
+
+            <label class="serverlist-account-icon-field">
+              <span>Vertikal verschieben</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= Number(character.serverlist_icon_focus_y ?? 50) %>"
+                data-guestbook-character-icon-focus-y
+              />
+            </label>
+          </div>
+
+          <div class="gb-character-icon-actions">
+            <p class="serverlist-account-icon-status" data-guestbook-character-icon-status hidden></p>
+            <button type="button" class="btn" data-guestbook-character-icon-save>Icon speichern</button>
+          </div>
+        </div>
+      </div>
+    </details>
 
     <details class="gb-editor-fold" data-gb-editor-collapsible="design-basics">
       <summary class="gb-editor-fold-summary">

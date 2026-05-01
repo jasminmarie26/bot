@@ -49,6 +49,23 @@
   const collapsibleDetails = editorForm
     ? Array.from(editorForm.querySelectorAll("[data-gb-editor-collapsible]"))
     : [];
+  const guestbookCharacterIconRoot = editorForm?.querySelector("[data-guestbook-character-icon-root]") || null;
+  const guestbookCharacterIconUrlInput =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-url]") || null;
+  const guestbookCharacterIconFileInput =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-file]") || null;
+  const guestbookCharacterIconPreview =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-preview]") || null;
+  const guestbookCharacterIconEmptyState =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-empty]") || null;
+  const guestbookCharacterIconFocusXInput =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-focus-x]") || null;
+  const guestbookCharacterIconFocusYInput =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-focus-y]") || null;
+  const guestbookCharacterIconSaveButton =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-save]") || null;
+  const guestbookCharacterIconStatus =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-status]") || null;
 
   const readSessionValue = (key) => {
     if (!key) {
@@ -201,6 +218,314 @@
     removeSessionValue(collapsibleStorageKey);
     removeSessionValue(collapsiblePreserveKey);
   });
+
+  const initializeGuestbookCharacterIconEditor = () => {
+    if (
+      !guestbookCharacterIconRoot ||
+      !guestbookCharacterIconUrlInput ||
+      !guestbookCharacterIconFileInput ||
+      !guestbookCharacterIconPreview ||
+      !guestbookCharacterIconFocusXInput ||
+      !guestbookCharacterIconFocusYInput ||
+      !guestbookCharacterIconSaveButton ||
+      !guestbookCharacterIconStatus
+    ) {
+      return;
+    }
+
+    const characterId = Number.parseInt(guestbookCharacterIconRoot.dataset.characterId || editorCharacterId || "", 10);
+    if (!Number.isInteger(characterId) || characterId < 1) {
+      return;
+    }
+
+    const menuIconAnchors = Array.from(document.querySelectorAll("[data-serverlist-account-icon-anchor]"));
+    const modalForm = document.querySelector("[data-serverlist-account-icon-form]");
+    const maxUploadBytes = 4 * 1024 * 1024;
+    let activeFilePayload = null;
+    let savedImageUrl = String(guestbookCharacterIconRoot.dataset.currentImageUrl || "").trim();
+    let savedFocusX = 50;
+    let savedFocusY = 50;
+
+    const clampIconPercent = (value, fallback = 50) => {
+      const numericValue = Number.parseFloat(value);
+      if (!Number.isFinite(numericValue)) {
+        return fallback;
+      }
+
+      return Math.min(100, Math.max(0, numericValue));
+    };
+
+    const ensurePreviewImage = () => {
+      let imageNode = guestbookCharacterIconPreview.querySelector("[data-guestbook-character-icon-preview-image]");
+      if (imageNode instanceof HTMLImageElement) {
+        return imageNode;
+      }
+
+      imageNode = document.createElement("img");
+      imageNode.alt = "";
+      imageNode.setAttribute("data-guestbook-character-icon-preview-image", "");
+      guestbookCharacterIconPreview.appendChild(imageNode);
+      return imageNode;
+    };
+
+    const setIconStatus = (message = "", kind = "") => {
+      const normalizedMessage = String(message || "").trim();
+      guestbookCharacterIconStatus.hidden = !normalizedMessage;
+      guestbookCharacterIconStatus.textContent = normalizedMessage;
+      guestbookCharacterIconStatus.classList.toggle("is-error", kind === "error");
+      guestbookCharacterIconStatus.classList.toggle("is-success", kind === "success");
+    };
+
+    const togglePreviewEmptyState = (isVisible) => {
+      if (!(guestbookCharacterIconEmptyState instanceof HTMLElement)) {
+        return;
+      }
+
+      guestbookCharacterIconEmptyState.classList.toggle("is-hidden", !isVisible);
+    };
+
+    const attachPreviewErrorFallback = (imageNode) => {
+      if (!(imageNode instanceof HTMLImageElement)) {
+        return;
+      }
+
+      imageNode.addEventListener(
+        "error",
+        () => {
+          imageNode.remove();
+          togglePreviewEmptyState(true);
+        },
+        { once: true }
+      );
+    };
+
+    const setPreviewSource = (sourceUrl) => {
+      const resolvedSource = String(sourceUrl || "").trim();
+      const existingImage = guestbookCharacterIconPreview.querySelector("[data-guestbook-character-icon-preview-image]");
+      if (!resolvedSource) {
+        existingImage?.remove();
+        togglePreviewEmptyState(true);
+        return;
+      }
+
+      const previewImage = ensurePreviewImage();
+      previewImage.src = resolvedSource;
+      togglePreviewEmptyState(false);
+      attachPreviewErrorFallback(previewImage);
+    };
+
+    const syncFocusPreview = (focusXValue, focusYValue) => {
+      const nextFocusX = clampIconPercent(focusXValue, savedFocusX);
+      const nextFocusY = clampIconPercent(focusYValue, savedFocusY);
+      guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
+      guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+    };
+
+    const syncMenuIcons = (imageUrl, focusXValue, focusYValue) => {
+      const resolvedImageUrl = String(imageUrl || "").trim();
+      const nextFocusX = clampIconPercent(focusXValue, savedFocusX);
+      const nextFocusY = clampIconPercent(focusYValue, savedFocusY);
+
+      menuIconAnchors.forEach((anchor) => {
+        if (!(anchor instanceof HTMLElement)) {
+          return;
+        }
+
+        anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
+        anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+
+        const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");
+        if (!resolvedImageUrl) {
+          existingImage?.remove();
+          return;
+        }
+
+        let imageNode = existingImage;
+        if (!(imageNode instanceof HTMLImageElement)) {
+          imageNode = document.createElement("img");
+          imageNode.alt = "";
+          imageNode.setAttribute("data-serverlist-account-icon-image", "");
+          anchor.appendChild(imageNode);
+        }
+
+        imageNode.src = resolvedImageUrl;
+      });
+    };
+
+    const syncModalState = (imageUrl, focusXValue, focusYValue) => {
+      if (!(modalForm instanceof HTMLElement)) {
+        return;
+      }
+
+      modalForm.dataset.characterId = String(characterId);
+      modalForm.dataset.currentImageUrl = String(imageUrl || "").trim();
+      modalForm.dataset.currentFocusX = String(clampIconPercent(focusXValue, savedFocusX));
+      modalForm.dataset.currentFocusY = String(clampIconPercent(focusYValue, savedFocusY));
+    };
+
+    const readSelectedFile = async (file) => {
+      if (!(file instanceof File)) {
+        return null;
+      }
+
+      if (file.size > maxUploadBytes) {
+        throw new Error("Die Datei darf maximal 4 MB groß sein.");
+      }
+
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Die Bilddatei konnte nicht gelesen werden."));
+        reader.readAsDataURL(file);
+      });
+
+      const dimensions = await new Promise((resolve, reject) => {
+        const probeImage = new Image();
+        probeImage.onload = () => {
+          resolve({
+            width: Number(probeImage.naturalWidth || 0),
+            height: Number(probeImage.naturalHeight || 0)
+          });
+        };
+        probeImage.onerror = () => reject(new Error("Die Bilddatei konnte nicht geladen werden."));
+        probeImage.src = dataUrl;
+      });
+
+      return {
+        dataUrl,
+        mimeType: String(file.type || "").trim().toLowerCase(),
+        width: dimensions.width,
+        height: dimensions.height
+      };
+    };
+
+    const buildSubmitPayload = () => {
+      const payload = {
+        focusX: clampIconPercent(guestbookCharacterIconFocusXInput.value, savedFocusX),
+        focusY: clampIconPercent(guestbookCharacterIconFocusYInput.value, savedFocusY)
+      };
+
+      if (activeFilePayload?.dataUrl) {
+        return {
+          ...payload,
+          dataUrl: activeFilePayload.dataUrl,
+          mimeType: activeFilePayload.mimeType,
+          width: activeFilePayload.width,
+          height: activeFilePayload.height
+        };
+      }
+
+      return {
+        ...payload,
+        imageUrl: String(guestbookCharacterIconUrlInput.value || "").trim()
+      };
+    };
+
+    const applySavedState = () => {
+      guestbookCharacterIconUrlInput.value = savedImageUrl;
+      guestbookCharacterIconFileInput.value = "";
+      guestbookCharacterIconFocusXInput.value = String(savedFocusX);
+      guestbookCharacterIconFocusYInput.value = String(savedFocusY);
+      activeFilePayload = null;
+      setPreviewSource(savedImageUrl);
+      syncFocusPreview(savedFocusX, savedFocusY);
+    };
+
+    savedFocusX = clampIconPercent(guestbookCharacterIconRoot.dataset.currentFocusX, 50);
+    savedFocusY = clampIconPercent(guestbookCharacterIconRoot.dataset.currentFocusY, 50);
+    applySavedState();
+    syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
+    syncModalState(savedImageUrl, savedFocusX, savedFocusY);
+
+    guestbookCharacterIconUrlInput.addEventListener("input", () => {
+      setIconStatus("");
+      if (activeFilePayload?.dataUrl) {
+        activeFilePayload = null;
+        guestbookCharacterIconFileInput.value = "";
+      }
+
+      const typedUrl = String(guestbookCharacterIconUrlInput.value || "").trim();
+      setPreviewSource(typedUrl || savedImageUrl);
+    });
+
+    guestbookCharacterIconFileInput.addEventListener("change", async () => {
+      setIconStatus("");
+      const selectedFile = guestbookCharacterIconFileInput.files?.[0] || null;
+      if (!selectedFile) {
+        activeFilePayload = null;
+        setPreviewSource(String(guestbookCharacterIconUrlInput.value || "").trim() || savedImageUrl);
+        return;
+      }
+
+      try {
+        activeFilePayload = await readSelectedFile(selectedFile);
+        setPreviewSource(activeFilePayload?.dataUrl || "");
+      } catch (error) {
+        activeFilePayload = null;
+        guestbookCharacterIconFileInput.value = "";
+        setPreviewSource(String(guestbookCharacterIconUrlInput.value || "").trim() || savedImageUrl);
+        setIconStatus(
+          error instanceof Error ? error.message : "Die Bilddatei konnte nicht geladen werden.",
+          "error"
+        );
+      }
+    });
+
+    guestbookCharacterIconFocusXInput.addEventListener("input", () => {
+      syncFocusPreview(guestbookCharacterIconFocusXInput.value, guestbookCharacterIconFocusYInput.value);
+    });
+
+    guestbookCharacterIconFocusYInput.addEventListener("input", () => {
+      syncFocusPreview(guestbookCharacterIconFocusXInput.value, guestbookCharacterIconFocusYInput.value);
+    });
+
+    guestbookCharacterIconSaveButton.addEventListener("click", async () => {
+      setIconStatus("");
+
+      const payload = buildSubmitPayload();
+      const hasExistingImage = Boolean(savedImageUrl);
+      const hasRequestedImage = Boolean(payload.dataUrl || String(payload.imageUrl || "").trim());
+      if (!hasExistingImage && !hasRequestedImage) {
+        setIconStatus("Bitte ein Bild per URL oder vom PC auswählen.", "error");
+        return;
+      }
+
+      guestbookCharacterIconSaveButton.disabled = true;
+
+      try {
+        const response = await fetch(`/characters/${characterId}/serverlist-icon`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const responsePayload = await response.json().catch(() => ({}));
+        if (!response.ok || responsePayload?.ok !== true) {
+          throw new Error(String(responsePayload?.error || "Das Icon konnte nicht gespeichert werden."));
+        }
+
+        savedImageUrl = String(responsePayload.imageUrl || "").trim();
+        savedFocusX = clampIconPercent(responsePayload.focusX, savedFocusX);
+        savedFocusY = clampIconPercent(responsePayload.focusY, savedFocusY);
+        guestbookCharacterIconRoot.dataset.currentImageUrl = savedImageUrl;
+        guestbookCharacterIconRoot.dataset.currentFocusX = String(savedFocusX);
+        guestbookCharacterIconRoot.dataset.currentFocusY = String(savedFocusY);
+        applySavedState();
+        syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
+        syncModalState(savedImageUrl, savedFocusX, savedFocusY);
+        setIconStatus("Icon gespeichert.", "success");
+      } catch (error) {
+        setIconStatus(error instanceof Error ? error.message : "Das Icon konnte nicht gespeichert werden.", "error");
+      } finally {
+        guestbookCharacterIconSaveButton.disabled = false;
+      }
+    });
+  };
+
+  initializeGuestbookCharacterIconEditor();
 
   if (
     !colorRoot ||

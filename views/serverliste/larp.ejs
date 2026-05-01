@@ -67,28 +67,16 @@
       <% } else { %>
         <div class="character-mini-grid">
           <% larpCharacters.forEach((char) => { %>
-            <article class="character-mini-card has-character-icon-editor">
-              <div class="character-mini-primary">
-                <a
-                  class="character-mini-item"
-                  href="/characters/<%= char.id %>/home"
-                  title="<%= char.name %> LARP-Forum &ouml;ffnen"
-                  data-serverlist-larp-forum-entry="<%= hasLarpStaffAccess ? "false" : "true" %>"
-                  data-serverlist-character-name="<%= char.name %>"
-                >
-                  <span class="character-mini-name"><%= char.name %></span>
-                </a>
-                <button
-                  type="button"
-                  class="character-mini-icon-button"
-                  data-serverlist-account-icon-open
-                  data-character-id="<%= Number(char.id) %>"
-                  data-character-name="<%= char.name %>"
-                  data-current-image-url="<%= String(char.serverlist_icon_url || "") %>"
-                  data-current-focus-x="<%= Number(char.serverlist_icon_focus_x ?? 50) %>"
-                  data-current-focus-y="<%= Number(char.serverlist_icon_focus_y ?? 50) %>"
-                >Charakter Icon</button>
-              </div>
+            <article class="character-mini-card">
+              <a
+                class="character-mini-item"
+                href="/characters/<%= char.id %>/home"
+                title="<%= char.name %> LARP-Forum &ouml;ffnen"
+                data-serverlist-larp-forum-entry="<%= hasLarpStaffAccess ? "false" : "true" %>"
+                data-serverlist-character-name="<%= char.name %>"
+              >
+                <span class="character-mini-name"><%= char.name %></span>
+              </a>
               <div class="character-mini-actions">
                 <% if (char.can_dashboard_move) { %>
                   <form

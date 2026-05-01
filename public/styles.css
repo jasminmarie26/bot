@@ -3105,6 +3105,9 @@ body.page-chat .server-work-notice {
 }
 
 .serverlist-account-icon-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: min(12rem, 48vw);
   aspect-ratio: 1;
   border-radius: 999px;
@@ -3150,6 +3153,72 @@ body.page-chat .server-work-notice {
   gap: 0.65rem;
 }
 
+.gb-character-icon-card {
+  gap: 0.9rem;
+}
+
+.gb-character-icon-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.gb-character-icon-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gb-character-icon-preview-panel {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: center;
+  align-content: start;
+}
+
+.gb-character-icon-preview-caption {
+  margin: 0;
+  text-align: center;
+}
+
+.gb-character-icon-empty {
+  position: absolute;
+  inset: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--field-edge) 76%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 82%, transparent);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.gb-character-icon-empty.is-hidden {
+  display: none;
+}
+
+.gb-character-icon-sliders {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gb-character-icon-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.gb-character-icon-actions .serverlist-account-icon-status {
+  margin: 0;
+  min-height: 0;
+  flex: 1 1 14rem;
+}
+
 body.serverlist-account-icon-modal-open {
   overflow: hidden;
 }
@@ -3165,6 +3234,19 @@ body.serverlist-account-icon-modal-open {
   }
 
   .serverlist-account-icon-actions .btn {
+    width: 100%;
+  }
+
+  .gb-character-icon-layout,
+  .gb-character-icon-sliders {
+    grid-template-columns: 1fr;
+  }
+
+  .gb-character-icon-actions {
+    align-items: stretch;
+  }
+
+  .gb-character-icon-actions .btn {
     width: 100%;
   }
 }
@@ -12678,25 +12760,6 @@ body.gb-editor-fullscreen-open {
   max-width: 100%;
 }
 
-.character-mini-card.has-character-icon-editor {
-  align-items: flex-start;
-}
-
-.character-mini-primary {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.14rem;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.character-mini-primary .character-mini-item,
-.character-mini-primary .character-mini-placeholder {
-  min-width: 0;
-  max-width: 100%;
-}
-
 .character-mini-item {
   padding: 0;
   display: inline-flex;
@@ -12757,22 +12820,6 @@ body.gb-editor-fullscreen-open {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
-}
-
-.character-mini-icon-button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--accent) 62%, var(--muted) 38%);
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.character-mini-icon-button:hover,
-.character-mini-icon-button:focus-visible {
-  text-decoration: underline;
 }
 
 .backup-view-tabs {
