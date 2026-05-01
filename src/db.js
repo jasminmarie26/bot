@@ -86,6 +86,7 @@ db.exec(`
     serverlist_icon_url TEXT NOT NULL DEFAULT '',
     serverlist_icon_focus_x REAL NOT NULL DEFAULT 50,
     serverlist_icon_focus_y REAL NOT NULL DEFAULT 50,
+    serverlist_icon_zoom REAL NOT NULL DEFAULT 1,
     avatar_focus_x REAL NOT NULL DEFAULT 50,
     avatar_focus_y REAL NOT NULL DEFAULT 50,
     larp_profile_title_image_focus_x REAL NOT NULL DEFAULT 50,
@@ -1357,6 +1358,10 @@ if (!characterColumns.includes("serverlist_icon_focus_y")) {
   db.exec("ALTER TABLE characters ADD COLUMN serverlist_icon_focus_y REAL NOT NULL DEFAULT 50");
 }
 
+if (!characterColumns.includes("serverlist_icon_zoom")) {
+  db.exec("ALTER TABLE characters ADD COLUMN serverlist_icon_zoom REAL NOT NULL DEFAULT 1");
+}
+
 if (!characterColumns.includes("larp_profile_gender")) {
   db.exec("ALTER TABLE characters ADD COLUMN larp_profile_gender TEXT DEFAULT ''");
 }
@@ -1936,6 +1941,7 @@ db.prepare("UPDATE characters SET larp_profile_title_image_url = '' WHERE larp_p
 db.prepare("UPDATE characters SET serverlist_icon_url = '' WHERE serverlist_icon_url IS NULL").run();
 db.prepare("UPDATE characters SET serverlist_icon_focus_x = 50 WHERE serverlist_icon_focus_x IS NULL").run();
 db.prepare("UPDATE characters SET serverlist_icon_focus_y = 50 WHERE serverlist_icon_focus_y IS NULL").run();
+db.prepare("UPDATE characters SET serverlist_icon_zoom = 1 WHERE serverlist_icon_zoom IS NULL").run();
 db.prepare(`
   UPDATE characters
   SET serverlist_icon_url = (

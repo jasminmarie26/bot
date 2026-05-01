@@ -97,6 +97,7 @@
           data-current-image-url="<%= String(character.serverlist_icon_url || "") %>"
           data-current-focus-x="<%= Number(character.serverlist_icon_focus_x ?? 50) %>"
           data-current-focus-y="<%= Number(character.serverlist_icon_focus_y ?? 50) %>"
+          data-current-zoom="<%= Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1 %>"
         >
           <div class="gb-character-icon-layout">
             <div class="gb-character-icon-fields">
@@ -104,6 +105,9 @@
                 <span class="gb-editor-subheading">Sichtbarkeit</span>
                 <span class="gb-editor-helptext">
                   Dieses Bild ist &uuml;berall sichtbar, wenn du mit <strong><%= character.name %></strong> eingeloggt bist.
+                </span>
+                <span class="gb-editor-helptext">
+                  Das Bild bleibt in Originalqualit&auml;t erhalten. Zoom und Ausschnitt &auml;ndern nur die Anzeige, nicht die Datei selbst.
                 </span>
               </div>
 
@@ -135,7 +139,7 @@
                 <div
                   class="serverlist-account-icon-preview"
                   data-guestbook-character-icon-preview
-                  style="--serverlist-account-icon-focus-x: <%= Number(character.serverlist_icon_focus_x ?? 50) %>%; --serverlist-account-icon-focus-y: <%= Number(character.serverlist_icon_focus_y ?? 50) %>%"
+                  style="--serverlist-account-icon-focus-x: <%= Number(character.serverlist_icon_focus_x ?? 50) %>%; --serverlist-account-icon-focus-y: <%= Number(character.serverlist_icon_focus_y ?? 50) %>%; --serverlist-account-icon-zoom: <%= Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1 %>;"
                 >
                   <% if (String(character.serverlist_icon_url || "").trim()) { %>
                     <img
@@ -147,7 +151,7 @@
                   <span
                     class="gb-character-icon-empty<%= String(character.serverlist_icon_url || "").trim() ? " is-hidden" : "" %>"
                     data-guestbook-character-icon-empty
-                  >Noch kein Icon</span>
+                  >Design-Icon aktiv</span>
                 </div>
               </div>
               <p class="gb-editor-helptext gb-character-icon-preview-caption">
@@ -180,10 +184,23 @@
                 data-guestbook-character-icon-focus-y
               />
             </label>
+
+            <label class="serverlist-account-icon-field">
+              <span>Zoom</span>
+              <input
+                type="range"
+                min="1"
+                max="4"
+                step="0.01"
+                value="<%= Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1 %>"
+                data-guestbook-character-icon-zoom
+              />
+            </label>
           </div>
 
           <div class="gb-character-icon-actions">
             <p class="serverlist-account-icon-status" data-guestbook-character-icon-status hidden></p>
+            <button type="button" class="btn btn-secondary" data-guestbook-character-icon-clear>Icon l&ouml;schen</button>
             <button type="button" class="btn" data-guestbook-character-icon-save>Icon speichern</button>
           </div>
         </div>

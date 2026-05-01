@@ -5319,6 +5319,16 @@ function normalizeAvatarFocusInput(value, fallback = 50) {
   return Math.min(100, Math.max(0, numericValue));
 }
 
+function normalizeServerlistIconZoomInput(value, fallback = 1) {
+  const numericValue = Number(value);
+  const normalizedFallback = Number.isFinite(Number(fallback)) ? Number(fallback) : 1;
+  if (!Number.isFinite(numericValue)) {
+    return Math.min(4, Math.max(1, normalizedFallback));
+  }
+
+  return Math.min(4, Math.max(1, numericValue));
+}
+
 function normalizeAllowedOptionInput(value, allowedValues) {
   const normalizedValue = normalizeShortTextInput(value, 120);
   return allowedValues.includes(normalizedValue) ? normalizedValue : "";
@@ -6878,6 +6888,10 @@ function getDashboardFestplaysForUser(userId, serverId) {
           row.character_serverlist_icon_focus_y ?? row.linked_character_serverlist_icon_focus_y,
           50
         ),
+        serverlist_icon_zoom: normalizeServerlistIconZoomInput(
+          row.character_serverlist_icon_zoom ?? row.linked_character_serverlist_icon_zoom,
+          1
+        ),
         current_server_id: characterServerId,
         current_server_label: getServerLabel(characterServerId),
         is_on_festplay_server: characterServerId === normalizedServerId,
@@ -6900,6 +6914,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
               c.serverlist_icon_url AS character_serverlist_icon_url,
               c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
               c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
+              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
               c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplay_permissions fp
          JOIN festplays f ON f.id = fp.festplay_id
@@ -6930,6 +6945,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
               c.serverlist_icon_url AS character_serverlist_icon_url,
               c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
               c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
+              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
               c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplays f
          JOIN characters c
@@ -6977,6 +6993,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
               creator.serverlist_icon_url AS linked_character_serverlist_icon_url,
               creator.serverlist_icon_focus_x AS linked_character_serverlist_icon_focus_x,
               creator.serverlist_icon_focus_y AS linked_character_serverlist_icon_focus_y,
+              creator.serverlist_icon_zoom AS linked_character_serverlist_icon_zoom,
               creator.festplay_dashboard_mode AS linked_character_festplay_dashboard_mode
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
@@ -7003,6 +7020,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_url: row.linked_character_serverlist_icon_url,
           character_serverlist_icon_focus_x: row.linked_character_serverlist_icon_focus_x,
           character_serverlist_icon_focus_y: row.linked_character_serverlist_icon_focus_y,
+          character_serverlist_icon_zoom: row.linked_character_serverlist_icon_zoom,
           character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
         },
         row.creator_character_name
@@ -7030,6 +7048,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_url: fallbackCharacter.character_serverlist_icon_url,
           character_serverlist_icon_focus_x: fallbackCharacter.character_serverlist_icon_focus_x,
           character_serverlist_icon_focus_y: fallbackCharacter.character_serverlist_icon_focus_y,
+          character_serverlist_icon_zoom: fallbackCharacter.character_serverlist_icon_zoom,
           character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
         },
       row.creator_character_name
@@ -17338,6 +17357,7 @@ function getDashboardOwnCharacters(userId) {
               c.serverlist_icon_url,
               c.serverlist_icon_focus_x,
               c.serverlist_icon_focus_y,
+              c.serverlist_icon_zoom,
               c.festplay_dashboard_mode,
               f.name AS festplay_name
        FROM characters c
@@ -17426,7 +17446,8 @@ function getLarpCharactersForUser(userId) {
               updated_at,
               serverlist_icon_url,
               serverlist_icon_focus_x,
-              serverlist_icon_focus_y
+              serverlist_icon_focus_y,
+              serverlist_icon_zoom
        FROM characters
        WHERE user_id = ? AND server_id = ?
        ORDER BY lower(name) ASC, id ASC`
@@ -18283,13 +18304,23 @@ app.post(
 
     const previousIconUrl = String(character.serverlist_icon_url || "").trim();
     const requestedImageUrl = String(req.body?.imageUrl || "").trim();
+    const shouldClearIcon = Number(req.body?.clearIcon) === 1 || req.body?.clearIcon === true;
     const focusX = normalizeAvatarFocusInput(req.body?.focusX, character.serverlist_icon_focus_x);
     const focusY = normalizeAvatarFocusInput(req.body?.focusY, character.serverlist_icon_focus_y);
+    const zoom = normalizeServerlistIconZoomInput(req.body?.zoom, character.serverlist_icon_zoom);
     const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
     let nextIconUrl = previousIconUrl;
+    let nextFocusX = focusX;
+    let nextFocusY = focusY;
+    let nextZoom = zoom;
     let uploadedIconUrl = "";
 
-    if (parsedImageData) {
+    if (shouldClearIcon) {
+      nextIconUrl = "";
+      nextFocusX = 50;
+      nextFocusY = 50;
+      nextZoom = 1;
+    } else if (parsedImageData) {
       const mimeType = String(req.body?.mimeType || parsedImageData.mimeType).trim().toLowerCase();
       const fileExtension = SERVERLIST_ACCOUNT_ICON_ALLOWED_MIME_TYPES.get(mimeType);
       if (!fileExtension || mimeType !== parsedImageData.mimeType) {
@@ -18338,9 +18369,10 @@ app.post(
             SET serverlist_icon_url = ?,
                 serverlist_icon_focus_x = ?,
                 serverlist_icon_focus_y = ?,
+                serverlist_icon_zoom = ?,
                 updated_at = CURRENT_TIMESTAMP
           WHERE id = ?`
-      ).run(nextIconUrl, focusX, focusY, character.id);
+      ).run(nextIconUrl, nextFocusX, nextFocusY, nextZoom, character.id);
     } catch (error) {
       if (uploadedIconUrl) {
         removeManagedServerlistAccountIconFile(uploadedIconUrl);
@@ -18357,8 +18389,9 @@ app.post(
       ok: true,
       characterId: character.id,
       imageUrl: nextIconUrl,
-      focusX,
-      focusY
+      focusX: nextFocusX,
+      focusY: nextFocusY,
+      zoom: nextZoom
     });
   }
 );

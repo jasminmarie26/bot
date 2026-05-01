@@ -62,6 +62,10 @@
     guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-focus-x]") || null;
   const guestbookCharacterIconFocusYInput =
     guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-focus-y]") || null;
+  const guestbookCharacterIconZoomInput =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-zoom]") || null;
+  const guestbookCharacterIconClearButton =
+    guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-clear]") || null;
   const guestbookCharacterIconSaveButton =
     guestbookCharacterIconRoot?.querySelector("[data-guestbook-character-icon-save]") || null;
   const guestbookCharacterIconStatus =
@@ -227,6 +231,8 @@
       !guestbookCharacterIconPreview ||
       !guestbookCharacterIconFocusXInput ||
       !guestbookCharacterIconFocusYInput ||
+      !guestbookCharacterIconZoomInput ||
+      !guestbookCharacterIconClearButton ||
       !guestbookCharacterIconSaveButton ||
       !guestbookCharacterIconStatus
     ) {
@@ -245,6 +251,7 @@
     let savedImageUrl = String(guestbookCharacterIconRoot.dataset.currentImageUrl || "").trim();
     let savedFocusX = 50;
     let savedFocusY = 50;
+    let savedZoom = 1;
 
     const clampIconPercent = (value, fallback = 50) => {
       const numericValue = Number.parseFloat(value);
@@ -253,6 +260,15 @@
       }
 
       return Math.min(100, Math.max(0, numericValue));
+    };
+
+    const clampIconZoom = (value, fallback = 1) => {
+      const numericValue = Number.parseFloat(value);
+      if (!Number.isFinite(numericValue)) {
+        return fallback;
+      }
+
+      return Math.min(4, Math.max(1, numericValue));
     };
 
     const ensurePreviewImage = () => {
@@ -314,17 +330,20 @@
       attachPreviewErrorFallback(previewImage);
     };
 
-    const syncFocusPreview = (focusXValue, focusYValue) => {
+    const syncPreviewStyles = (focusXValue, focusYValue, zoomValue) => {
       const nextFocusX = clampIconPercent(focusXValue, savedFocusX);
       const nextFocusY = clampIconPercent(focusYValue, savedFocusY);
+      const nextZoom = clampIconZoom(zoomValue, savedZoom);
       guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+      guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
     };
 
-    const syncMenuIcons = (imageUrl, focusXValue, focusYValue) => {
+    const syncMenuIcons = (imageUrl, focusXValue, focusYValue, zoomValue) => {
       const resolvedImageUrl = String(imageUrl || "").trim();
       const nextFocusX = clampIconPercent(focusXValue, savedFocusX);
       const nextFocusY = clampIconPercent(focusYValue, savedFocusY);
+      const nextZoom = clampIconZoom(zoomValue, savedZoom);
 
       menuIconAnchors.forEach((anchor) => {
         if (!(anchor instanceof HTMLElement)) {
@@ -333,6 +352,7 @@
 
         anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
         anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+        anchor.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
 
         const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");
         if (!resolvedImageUrl) {
@@ -352,7 +372,7 @@
       });
     };
 
-    const syncModalState = (imageUrl, focusXValue, focusYValue) => {
+    const syncModalState = (imageUrl, focusXValue, focusYValue, zoomValue) => {
       if (!(modalForm instanceof HTMLElement)) {
         return;
       }
@@ -361,6 +381,7 @@
       modalForm.dataset.currentImageUrl = String(imageUrl || "").trim();
       modalForm.dataset.currentFocusX = String(clampIconPercent(focusXValue, savedFocusX));
       modalForm.dataset.currentFocusY = String(clampIconPercent(focusYValue, savedFocusY));
+      modalForm.dataset.currentZoom = String(clampIconZoom(zoomValue, savedZoom));
     };
 
     const readSelectedFile = async (file) => {
@@ -402,7 +423,8 @@
     const buildSubmitPayload = () => {
       const payload = {
         focusX: clampIconPercent(guestbookCharacterIconFocusXInput.value, savedFocusX),
-        focusY: clampIconPercent(guestbookCharacterIconFocusYInput.value, savedFocusY)
+        focusY: clampIconPercent(guestbookCharacterIconFocusYInput.value, savedFocusY),
+        zoom: clampIconZoom(guestbookCharacterIconZoomInput.value, savedZoom)
       };
 
       if (activeFilePayload?.dataUrl) {
@@ -426,16 +448,18 @@
       guestbookCharacterIconFileInput.value = "";
       guestbookCharacterIconFocusXInput.value = String(savedFocusX);
       guestbookCharacterIconFocusYInput.value = String(savedFocusY);
+      guestbookCharacterIconZoomInput.value = String(savedZoom);
       activeFilePayload = null;
       setPreviewSource(savedImageUrl);
-      syncFocusPreview(savedFocusX, savedFocusY);
+      syncPreviewStyles(savedFocusX, savedFocusY, savedZoom);
     };
 
     savedFocusX = clampIconPercent(guestbookCharacterIconRoot.dataset.currentFocusX, 50);
     savedFocusY = clampIconPercent(guestbookCharacterIconRoot.dataset.currentFocusY, 50);
+    savedZoom = clampIconZoom(guestbookCharacterIconRoot.dataset.currentZoom, 1);
     applySavedState();
-    syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
-    syncModalState(savedImageUrl, savedFocusX, savedFocusY);
+    syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
+    syncModalState(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
 
     guestbookCharacterIconUrlInput.addEventListener("input", () => {
       setIconStatus("");
@@ -472,11 +496,72 @@
     });
 
     guestbookCharacterIconFocusXInput.addEventListener("input", () => {
-      syncFocusPreview(guestbookCharacterIconFocusXInput.value, guestbookCharacterIconFocusYInput.value);
+      syncPreviewStyles(
+        guestbookCharacterIconFocusXInput.value,
+        guestbookCharacterIconFocusYInput.value,
+        guestbookCharacterIconZoomInput.value
+      );
     });
 
     guestbookCharacterIconFocusYInput.addEventListener("input", () => {
-      syncFocusPreview(guestbookCharacterIconFocusXInput.value, guestbookCharacterIconFocusYInput.value);
+      syncPreviewStyles(
+        guestbookCharacterIconFocusXInput.value,
+        guestbookCharacterIconFocusYInput.value,
+        guestbookCharacterIconZoomInput.value
+      );
+    });
+
+    guestbookCharacterIconZoomInput.addEventListener("input", () => {
+      syncPreviewStyles(
+        guestbookCharacterIconFocusXInput.value,
+        guestbookCharacterIconFocusYInput.value,
+        guestbookCharacterIconZoomInput.value
+      );
+    });
+
+    guestbookCharacterIconClearButton.addEventListener("click", async () => {
+      setIconStatus("");
+      guestbookCharacterIconClearButton.disabled = true;
+      guestbookCharacterIconSaveButton.disabled = true;
+
+      try {
+        const response = await fetch(`/characters/${characterId}/serverlist-icon`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          },
+          body: JSON.stringify({
+            clearIcon: 1,
+            focusX: 50,
+            focusY: 50,
+            zoom: 1
+          })
+        });
+
+        const responsePayload = await response.json().catch(() => ({}));
+        if (!response.ok || responsePayload?.ok !== true) {
+          throw new Error(String(responsePayload?.error || "Das Icon konnte nicht gelöscht werden."));
+        }
+
+        savedImageUrl = "";
+        savedFocusX = clampIconPercent(responsePayload.focusX, 50);
+        savedFocusY = clampIconPercent(responsePayload.focusY, 50);
+        savedZoom = clampIconZoom(responsePayload.zoom, 1);
+        guestbookCharacterIconRoot.dataset.currentImageUrl = "";
+        guestbookCharacterIconRoot.dataset.currentFocusX = String(savedFocusX);
+        guestbookCharacterIconRoot.dataset.currentFocusY = String(savedFocusY);
+        guestbookCharacterIconRoot.dataset.currentZoom = String(savedZoom);
+        applySavedState();
+        syncMenuIcons("", savedFocusX, savedFocusY, savedZoom);
+        syncModalState("", savedFocusX, savedFocusY, savedZoom);
+        setIconStatus("Icon gelöscht. Das normale Design-Icon ist wieder aktiv.", "success");
+      } catch (error) {
+        setIconStatus(error instanceof Error ? error.message : "Das Icon konnte nicht gelöscht werden.", "error");
+      } finally {
+        guestbookCharacterIconClearButton.disabled = false;
+        guestbookCharacterIconSaveButton.disabled = false;
+      }
     });
 
     guestbookCharacterIconSaveButton.addEventListener("click", async () => {
@@ -491,6 +576,7 @@
       }
 
       guestbookCharacterIconSaveButton.disabled = true;
+      guestbookCharacterIconClearButton.disabled = true;
 
       try {
         const response = await fetch(`/characters/${characterId}/serverlist-icon`, {
@@ -510,17 +596,20 @@
         savedImageUrl = String(responsePayload.imageUrl || "").trim();
         savedFocusX = clampIconPercent(responsePayload.focusX, savedFocusX);
         savedFocusY = clampIconPercent(responsePayload.focusY, savedFocusY);
+        savedZoom = clampIconZoom(responsePayload.zoom, savedZoom);
         guestbookCharacterIconRoot.dataset.currentImageUrl = savedImageUrl;
         guestbookCharacterIconRoot.dataset.currentFocusX = String(savedFocusX);
         guestbookCharacterIconRoot.dataset.currentFocusY = String(savedFocusY);
+        guestbookCharacterIconRoot.dataset.currentZoom = String(savedZoom);
         applySavedState();
-        syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
-        syncModalState(savedImageUrl, savedFocusX, savedFocusY);
+        syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
+        syncModalState(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
         setIconStatus("Icon gespeichert.", "success");
       } catch (error) {
         setIconStatus(error instanceof Error ? error.message : "Das Icon konnte nicht gespeichert werden.", "error");
       } finally {
         guestbookCharacterIconSaveButton.disabled = false;
+        guestbookCharacterIconClearButton.disabled = false;
       }
     });
   };

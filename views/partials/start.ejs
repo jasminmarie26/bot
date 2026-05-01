@@ -348,6 +348,9 @@
     <% const serverlistAccountIconFocusY = menuCharacter
       ? Number(menuCharacter.serverlist_icon_focus_y ?? 50)
       : 50; %>
+    <% const serverlistAccountIconZoom = menuCharacter && Number.isFinite(Number(menuCharacter.serverlist_icon_zoom))
+      ? Math.min(4, Math.max(1, Number(menuCharacter.serverlist_icon_zoom)))
+      : 1; %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const menuCharacterEditHref = menuCharacter
       ? (isLarpMenuContext
@@ -847,7 +850,7 @@
                     class="topbar-user-menu-toggle-icon"
                     aria-hidden="true"
                     data-serverlist-account-icon-anchor
-                    style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%"
+                    style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%; --serverlist-account-icon-zoom: <%= serverlistAccountIconZoom %>;"
                   >
                     <% if (serverlistAccountIconUrl) { %>
                       <img
@@ -1026,11 +1029,12 @@
                       data-current-image-url="<%= serverlistAccountIconUrl %>"
                       data-current-focus-x="<%= serverlistAccountIconFocusX %>"
                       data-current-focus-y="<%= serverlistAccountIconFocusY %>"
+                      data-current-zoom="<%= serverlistAccountIconZoom %>"
                     >
                       <div class="serverlist-account-icon-dialog-head">
                         <div>
                           <h2 id="serverlist-account-icon-title">Icon editieren</h2>
-                          <p data-serverlist-account-icon-copy>Dieses Icon gilt nur f&uuml;r <%= menuCharacter.name %>. Von URL oder vom PC ausw&auml;hlen, die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
+                          <p data-serverlist-account-icon-copy>Dieses Icon gilt nur f&uuml;r <%= menuCharacter.name %>. Von URL oder vom PC ausw&auml;hlen, scharf behalten und den Ausschnitt passend einstellen.</p>
                         </div>
                         <button
                           type="button"
@@ -1054,7 +1058,7 @@
                         <div
                           class="serverlist-account-icon-preview"
                           data-serverlist-account-icon-preview
-                          style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%"
+                          style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%; --serverlist-account-icon-zoom: <%= serverlistAccountIconZoom %>;"
                         >
                           <% if (serverlistAccountIconUrl) { %>
                             <img
@@ -1075,11 +1079,16 @@
                           <span>Oben / Unten</span>
                           <input type="range" name="focusY" min="0" max="100" step="1" value="<%= serverlistAccountIconFocusY %>" />
                         </label>
+                        <label class="serverlist-account-icon-field">
+                          <span>Zoom</span>
+                          <input type="range" name="zoom" min="1" max="4" step="0.01" value="<%= serverlistAccountIconZoom %>" />
+                        </label>
                       </div>
 
                       <p class="serverlist-account-icon-status" data-serverlist-account-icon-status hidden></p>
 
                       <div class="serverlist-account-icon-actions">
+                        <button type="button" class="btn btn-secondary" data-serverlist-account-icon-clear>Icon l&ouml;schen</button>
                         <button type="button" class="btn btn-secondary" data-serverlist-account-icon-close>Abbrechen</button>
                         <button type="submit" class="btn">Speichern</button>
                       </div>

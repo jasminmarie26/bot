@@ -2702,9 +2702,17 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/glass-aurora.svg");
 }
 
+.theme-glass-aurora .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/glass-aurora.svg");
+}
+
 .theme-glass-noir .topbar-user-menu-toggle-icon,
 .theme-glass-noir .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/glass-noir.svg");
+}
+
+.theme-glass-noir .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/glass-noir.svg");
 }
 
 .theme-glass-sunset .topbar-user-menu-toggle-icon,
@@ -2712,9 +2720,17 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/glass-sunset.svg");
 }
 
+.theme-glass-sunset .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/glass-sunset.svg");
+}
+
 .theme-future .topbar-user-menu-toggle-icon,
 .theme-future .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/future.svg");
+}
+
+.theme-future .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/future.svg");
 }
 
 .theme-paper-ink .topbar-user-menu-toggle-icon,
@@ -2722,9 +2738,17 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/paper-ink.svg");
 }
 
+.theme-paper-ink .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/paper-ink.svg");
+}
+
 .theme-windows-xp .topbar-user-menu-toggle-icon,
 .theme-windows-xp .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/windows-xp.svg");
+}
+
+.theme-windows-xp .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/windows-xp.svg");
 }
 
 .theme-atari .topbar-user-menu-toggle-icon,
@@ -2732,9 +2756,17 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/atari.svg");
 }
 
+.theme-atari .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/atari.svg");
+}
+
 .theme-sith .topbar-user-menu-toggle-icon,
 .theme-sith .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/sith.svg");
+}
+
+.theme-sith .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/sith.svg");
 }
 
 .theme-jedi .topbar-user-menu-toggle-icon,
@@ -2742,14 +2774,26 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/jedi.svg");
 }
 
+.theme-jedi .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/jedi.svg");
+}
+
 .theme-nature .topbar-user-menu-toggle-icon,
 .theme-nature .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/nature.svg");
 }
 
+.theme-nature .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/nature.svg");
+}
+
 .theme-larp .topbar-user-menu-toggle-icon,
 .theme-larp .rp-user-menu-toggle-icon {
   background-image: url("/theme-avatars/larp.svg");
+}
+
+.theme-larp .serverlist-account-icon-preview {
+  --serverlist-account-icon-theme-avatar: url("/theme-avatars/larp.svg");
 }
 
 .topbar-user-menu-toggle-icon[data-serverlist-account-icon-anchor],
@@ -2766,6 +2810,8 @@ body.page-chat .server-work-notice {
   border-radius: inherit;
   object-fit: cover;
   object-position: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
+  transform: scale(var(--serverlist-account-icon-zoom, 1));
+  transform-origin: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
 }
 
 .topbar-user-menu-panel,
@@ -3099,6 +3145,10 @@ body.page-chat .server-work-notice {
   width: 100%;
 }
 
+.serverlist-account-icon-field input[type="range"] {
+  width: 100%;
+}
+
 .serverlist-account-icon-preview-wrap {
   display: flex;
   justify-content: center;
@@ -3113,9 +3163,13 @@ body.page-chat .server-work-notice {
   border-radius: 999px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--link) 28%, var(--panel-edge));
-  background:
+  background-color: color-mix(in srgb, var(--field-bg) 86%, transparent);
+  background-image:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 58%),
-    color-mix(in srgb, var(--field-bg) 86%, transparent);
+    var(--serverlist-account-icon-theme-avatar, url("/theme-avatars/glass-aurora.svg"));
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: auto, cover;
   box-shadow: 0 24px 34px -26px var(--panel-shadow);
 }
 
@@ -3125,6 +3179,8 @@ body.page-chat .server-work-notice {
   display: block;
   object-fit: cover;
   object-position: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
+  transform: scale(var(--serverlist-account-icon-zoom, 1));
+  transform-origin: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
 }
 
 .serverlist-account-icon-sliders {
@@ -3202,7 +3258,7 @@ body.page-chat .server-work-notice {
 }
 
 .gb-character-icon-sliders {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .gb-character-icon-actions {
