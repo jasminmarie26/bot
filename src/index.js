@@ -5959,38 +5959,64 @@ function getChatCharacterUrlNumber(characterOrId) {
   }
 
   const getExistingNumber = db.prepare(
-    "SELECT short_number FROM character_chat_url_numbers WHERE character_id = ?"
+    `SELECT server_id, short_number
+       FROM character_chat_url_numbers
+      WHERE character_id = ?`
+  );
+  const isNumberTakenOnServer = db.prepare(
+    `SELECT 1
+       FROM character_chat_url_numbers
+      WHERE user_id = ?
+        AND server_id = ?
+        AND short_number = ?
+        AND character_id != ?
+      LIMIT 1`
+  );
+  const persistNumber = db.prepare(
+    `INSERT INTO character_chat_url_numbers (
+       user_id,
+       server_id,
+       character_id,
+       short_number
+     ) VALUES (?, ?, ?, ?)
+     ON CONFLICT(character_id) DO UPDATE SET
+       user_id = excluded.user_id,
+       server_id = excluded.server_id,
+       short_number = excluded.short_number`
   );
   const assignNumber = db.transaction(() => {
     const existing = getExistingNumber.get(characterId);
+    const existingServerId = String(existing?.server_id || "").trim().toLowerCase();
     const existingNumber = normalizeChatCharacterUrlNumber(existing?.short_number);
-    if (existingNumber) {
+    const canReuseExistingNumber = Boolean(
+      existingNumber &&
+      existingServerId === serverId &&
+      !isNumberTakenOnServer.get(userId, serverId, existingNumber, characterId)
+    );
+    if (canReuseExistingNumber) {
       return existingNumber;
     }
 
-    const maxNumber = Number(
-      db
-        .prepare(
-          `SELECT COALESCE(MAX(short_number), 0) AS max_number
-             FROM character_chat_url_numbers
-            WHERE user_id = ?
-              AND server_id = ?`
-        )
-        .get(userId, serverId)?.max_number || 0
-    );
-    const nextNumber = Number.isInteger(maxNumber) && maxNumber > 0 ? maxNumber + 1 : 1;
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO character_chat_url_numbers (
-           user_id,
-           server_id,
-           character_id,
-           short_number
-         ) VALUES (?, ?, ?, ?)`
-      )
-      .run(userId, serverId, characterId, nextNumber);
+    let nextNumber = existingNumber;
+    if (
+      !nextNumber ||
+      isNumberTakenOnServer.get(userId, serverId, nextNumber, characterId)
+    ) {
+      const maxNumber = Number(
+        db
+          .prepare(
+            `SELECT COALESCE(MAX(short_number), 0) AS max_number
+               FROM character_chat_url_numbers
+              WHERE user_id = ?
+                AND server_id = ?`
+          )
+          .get(userId, serverId)?.max_number || 0
+      );
+      nextNumber = Number.isInteger(maxNumber) && maxNumber > 0 ? maxNumber + 1 : 1;
+    }
 
-    return normalizeChatCharacterUrlNumber(getExistingNumber.get(characterId)?.short_number);
+    persistNumber.run(userId, serverId, characterId, nextNumber);
+    return normalizeChatCharacterUrlNumber(nextNumber);
   });
 
   return assignNumber();
@@ -21674,6 +21700,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
      SET server_id = ?, festplay_dashboard_mode = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
   ).run(nextServerId, nextDashboardMode, id);
+  getChatCharacterUrlNumber(id);
 
   const preferredMap = normalizePreferredCharacterMap(req.session.preferred_character_ids);
   if (Number(preferredMap[currentServerId]) === id) {
