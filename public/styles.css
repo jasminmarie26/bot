@@ -12678,6 +12678,25 @@ body.gb-editor-fullscreen-open {
   max-width: 100%;
 }
 
+.character-mini-card.has-character-icon-editor {
+  align-items: flex-start;
+}
+
+.character-mini-primary {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.14rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.character-mini-primary .character-mini-item,
+.character-mini-primary .character-mini-placeholder {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .character-mini-item {
   padding: 0;
   display: inline-flex;
@@ -12738,6 +12757,22 @@ body.gb-editor-fullscreen-open {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+}
+
+.character-mini-icon-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--accent) 62%, var(--muted) 38%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.character-mini-icon-button:hover,
+.character-mini-icon-button:focus-visible {
+  text-decoration: underline;
 }
 
 .backup-view-tabs {

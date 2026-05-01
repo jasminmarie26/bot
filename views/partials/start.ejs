@@ -875,13 +875,6 @@
 
                   <nav class="topbar-user-menu-links" aria-label="Kontomen&uuml;">
                     <a href="<%= accountMenuHref %>" target="_blank" rel="noopener noreferrer">Account</a>
-                    <% if (showServerlistAccountIconEditor) { %>
-                      <button
-                        type="button"
-                        class="topbar-user-menu-link-button"
-                        data-serverlist-account-icon-open
-                      >Icon editieren</button>
-                    <% } %>
                     <% if (menuCharacter) { %>
                       <% if (isLarpMenuContext) { %>
                         <section class="topbar-profile-settings-menu" aria-label="Profilbereiche">
@@ -1027,7 +1020,9 @@
                     <form
                       class="serverlist-account-icon-form"
                       data-serverlist-account-icon-form
+                      data-menu-character-id="<%= Number(menuCharacter?.id || 0) %>"
                       data-character-id="<%= Number(menuCharacter?.id || 0) %>"
+                      data-character-name="<%= menuCharacter?.name || "" %>"
                       data-current-image-url="<%= serverlistAccountIconUrl %>"
                       data-current-focus-x="<%= serverlistAccountIconFocusX %>"
                       data-current-focus-y="<%= serverlistAccountIconFocusY %>"
@@ -1035,7 +1030,7 @@
                       <div class="serverlist-account-icon-dialog-head">
                         <div>
                           <h2 id="serverlist-account-icon-title">Icon editieren</h2>
-                          <p>Dieses Icon gilt nur f&uuml;r <%= menuCharacter.name %>. Von URL oder vom PC ausw&auml;hlen, die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
+                          <p data-serverlist-account-icon-copy>Dieses Icon gilt nur f&uuml;r <%= menuCharacter.name %>. Von URL oder vom PC ausw&auml;hlen, die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
                         </div>
                         <button
                           type="button"

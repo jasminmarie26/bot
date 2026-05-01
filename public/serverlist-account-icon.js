@@ -18,6 +18,8 @@
   const closeButtons = Array.from(modal.querySelectorAll("[data-serverlist-account-icon-close]"));
   const preview = modal.querySelector("[data-serverlist-account-icon-preview]");
   const statusNode = modal.querySelector("[data-serverlist-account-icon-status]");
+  const titleNode = modal.querySelector("#serverlist-account-icon-title");
+  const copyNode = modal.querySelector("[data-serverlist-account-icon-copy]");
   const urlInput = form.elements.imageUrl;
   const fileInput = form.elements.iconFile;
   const focusXInput = form.elements.focusX;
@@ -25,7 +27,9 @@
   const userMenu = document.querySelector(".topbar-user-menu");
   const menuIconAnchors = Array.from(document.querySelectorAll("[data-serverlist-account-icon-anchor]"));
   const maxUploadBytes = 4 * 1024 * 1024;
-  const characterId = Number.parseInt(form.dataset.characterId || "", 10);
+  const menuCharacterId = Number.parseInt(form.dataset.menuCharacterId || form.dataset.characterId || "", 10);
+  let currentCharacterId = Number.parseInt(form.dataset.characterId || "", 10);
+  let currentCharacterName = String(form.dataset.characterName || "").trim();
   let activeFilePayload = null;
   let lastFocusedElement = null;
   let savedImageUrl = String(form.dataset.currentImageUrl || "").trim();
@@ -73,6 +77,10 @@
     preview.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
     preview.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
 
+    if (!Number.isInteger(menuCharacterId) || menuCharacterId < 1 || currentCharacterId !== menuCharacterId) {
+      return;
+    }
+
     menuIconAnchors.forEach((anchor) => {
       anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
@@ -93,6 +101,10 @@
   }
 
   function syncMenuIcons(imageUrl, focusXValue, focusYValue) {
+    if (!Number.isInteger(menuCharacterId) || menuCharacterId < 1 || currentCharacterId !== menuCharacterId) {
+      return;
+    }
+
     const resolvedImageUrl = String(imageUrl || "").trim();
     const nextFocusX = clampPercent(focusXValue, savedFocusX);
     const nextFocusY = clampPercent(focusYValue, savedFocusY);
@@ -120,6 +132,46 @@
     });
   }
 
+  function syncCharacterButtons(imageUrl, focusXValue, focusYValue) {
+    if (!Number.isInteger(currentCharacterId) || currentCharacterId < 1) {
+      return;
+    }
+
+    const selector = `[data-serverlist-account-icon-open][data-character-id="${currentCharacterId}"]`;
+    document.querySelectorAll(selector).forEach((button) => {
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+
+      button.dataset.currentImageUrl = String(imageUrl || "").trim();
+      button.dataset.currentFocusX = String(clampPercent(focusXValue, savedFocusX));
+      button.dataset.currentFocusY = String(clampPercent(focusYValue, savedFocusY));
+    });
+  }
+
+  function applyCharacterState(characterState = {}) {
+    currentCharacterId = Number.parseInt(characterState.characterId || form.dataset.menuCharacterId || "", 10);
+    currentCharacterName = String(characterState.characterName || form.dataset.characterName || "").trim();
+    savedImageUrl = String(characterState.imageUrl || "").trim();
+    savedFocusX = clampPercent(characterState.focusX, 50);
+    savedFocusY = clampPercent(characterState.focusY, 50);
+    form.dataset.characterId = Number.isInteger(currentCharacterId) ? String(currentCharacterId) : "";
+    form.dataset.characterName = currentCharacterName;
+    form.dataset.currentImageUrl = savedImageUrl;
+    form.dataset.currentFocusX = String(savedFocusX);
+    form.dataset.currentFocusY = String(savedFocusY);
+
+    if (titleNode instanceof HTMLElement) {
+      titleNode.textContent = "Icon editieren";
+    }
+
+    if (copyNode instanceof HTMLElement) {
+      copyNode.textContent = currentCharacterName
+        ? `Dieses Icon gilt nur für ${currentCharacterName}. Von URL oder vom PC auswählen, die Größe wird automatisch angepasst.`
+        : "Von URL oder vom PC auswählen, die Größe wird automatisch angepasst.";
+    }
+  }
+
   function resetFormToSavedState() {
     activeFilePayload = null;
     if (fileInput instanceof HTMLInputElement) {
@@ -139,7 +191,17 @@
     setStatus("");
   }
 
-  function openModal() {
+  function openModal(button = null) {
+    const buttonDataset = button?.dataset || {};
+    applyCharacterState({
+      characterId: buttonDataset.characterId || form.dataset.characterId,
+      characterName: buttonDataset.characterName || form.dataset.characterName,
+      imageUrl: Object.prototype.hasOwnProperty.call(buttonDataset, "currentImageUrl")
+        ? buttonDataset.currentImageUrl
+        : form.dataset.currentImageUrl,
+      focusX: buttonDataset.currentFocusX || form.dataset.currentFocusX,
+      focusY: buttonDataset.currentFocusY || form.dataset.currentFocusY
+    });
     lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     resetFormToSavedState();
     modal.hidden = false;
@@ -241,7 +303,7 @@
   }
 
   openButtons.forEach((button) => {
-    button.addEventListener("click", openModal);
+    button.addEventListener("click", () => openModal(button));
   });
 
   closeButtons.forEach((button) => {
@@ -279,7 +341,7 @@
     event.preventDefault();
     setStatus("");
 
-    if (!Number.isInteger(characterId) || characterId < 1) {
+    if (!Number.isInteger(currentCharacterId) || currentCharacterId < 1) {
       setStatus("Kein Charakter ausgewählt.", "error");
       return;
     }
@@ -298,7 +360,7 @@
     }
 
     try {
-      const response = await fetch(`/characters/${characterId}/serverlist-icon`, {
+      const response = await fetch(`/characters/${currentCharacterId}/serverlist-icon`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -318,6 +380,7 @@
       form.dataset.currentImageUrl = savedImageUrl;
       form.dataset.currentFocusX = String(savedFocusX);
       form.dataset.currentFocusY = String(savedFocusY);
+      syncCharacterButtons(savedImageUrl, savedFocusX, savedFocusY);
       syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
       setStatus("Icon gespeichert.", "success");
       closeModal();
@@ -330,5 +393,12 @@
     }
   });
 
+  applyCharacterState({
+    characterId: form.dataset.characterId,
+    characterName: form.dataset.characterName,
+    imageUrl: form.dataset.currentImageUrl,
+    focusX: form.dataset.currentFocusX,
+    focusY: form.dataset.currentFocusY
+  });
   syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
 })();

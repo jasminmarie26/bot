@@ -6869,6 +6869,15 @@ function getDashboardFestplaysForUser(userId, serverId) {
       festplay.characters.push({
         id: characterId,
         name: row.character_name,
+        serverlist_icon_url: row.character_serverlist_icon_url || row.linked_character_serverlist_icon_url || "",
+        serverlist_icon_focus_x: normalizeAvatarFocusInput(
+          row.character_serverlist_icon_focus_x ?? row.linked_character_serverlist_icon_focus_x,
+          50
+        ),
+        serverlist_icon_focus_y: normalizeAvatarFocusInput(
+          row.character_serverlist_icon_focus_y ?? row.linked_character_serverlist_icon_focus_y,
+          50
+        ),
         current_server_id: characterServerId,
         current_server_label: getServerLabel(characterServerId),
         is_on_festplay_server: characterServerId === normalizedServerId,
@@ -6888,6 +6897,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
               c.id AS character_id,
               c.name AS character_name,
               c.server_id AS character_server_id,
+              c.serverlist_icon_url AS character_serverlist_icon_url,
+              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
+              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
               c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplay_permissions fp
          JOIN festplays f ON f.id = fp.festplay_id
@@ -6915,6 +6927,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
               c.id AS character_id,
               c.name AS character_name,
               c.server_id AS character_server_id,
+              c.serverlist_icon_url AS character_serverlist_icon_url,
+              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
+              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
               c.festplay_dashboard_mode AS character_festplay_dashboard_mode
          FROM festplays f
          JOIN characters c
@@ -6959,6 +6974,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
               creator.name AS linked_character_name,
               creator.user_id AS linked_character_user_id,
               creator.server_id AS linked_character_server_id,
+              creator.serverlist_icon_url AS linked_character_serverlist_icon_url,
+              creator.serverlist_icon_focus_x AS linked_character_serverlist_icon_focus_x,
+              creator.serverlist_icon_focus_y AS linked_character_serverlist_icon_focus_y,
               creator.festplay_dashboard_mode AS linked_character_festplay_dashboard_mode
          FROM festplays f
          LEFT JOIN characters creator ON creator.id = f.creator_character_id
@@ -6982,6 +7000,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_id: linkedCharacterId,
           character_name: row.linked_character_name,
           character_server_id: row.linked_character_server_id,
+          character_serverlist_icon_url: row.linked_character_serverlist_icon_url,
+          character_serverlist_icon_focus_x: row.linked_character_serverlist_icon_focus_x,
+          character_serverlist_icon_focus_y: row.linked_character_serverlist_icon_focus_y,
           character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
         },
         row.creator_character_name
@@ -7006,6 +7027,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_id: fallbackCharacter.character_id,
           character_name: fallbackCharacter.character_name,
           character_server_id: fallbackCharacter.character_server_id,
+          character_serverlist_icon_url: fallbackCharacter.character_serverlist_icon_url,
+          character_serverlist_icon_focus_x: fallbackCharacter.character_serverlist_icon_focus_x,
+          character_serverlist_icon_focus_y: fallbackCharacter.character_serverlist_icon_focus_y,
           character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
         },
       row.creator_character_name
@@ -17311,6 +17335,9 @@ function getDashboardOwnCharacters(userId) {
               c.server_id,
               c.is_public,
               c.updated_at,
+              c.serverlist_icon_url,
+              c.serverlist_icon_focus_x,
+              c.serverlist_icon_focus_y,
               c.festplay_dashboard_mode,
               f.name AS festplay_name
        FROM characters c
@@ -17392,7 +17419,14 @@ function getLarpCharactersForUser(userId) {
 
   return db
     .prepare(
-      `SELECT id, user_id, name, server_id, updated_at
+      `SELECT id,
+              user_id,
+              name,
+              server_id,
+              updated_at,
+              serverlist_icon_url,
+              serverlist_icon_focus_x,
+              serverlist_icon_focus_y
        FROM characters
        WHERE user_id = ? AND server_id = ?
        ORDER BY lower(name) ASC, id ASC`

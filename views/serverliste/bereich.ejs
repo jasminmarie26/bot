@@ -55,10 +55,22 @@
       <% } else { %>
         <div class="character-mini-grid">
           <% serverSection.characters.forEach((char) => { %>
-            <article class="character-mini-card">
-              <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                <span class="character-mini-name"><%= char.name %></span>
-              </a>
+            <article class="character-mini-card has-character-icon-editor">
+              <div class="character-mini-primary">
+                <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                  <span class="character-mini-name"><%= char.name %></span>
+                </a>
+                <button
+                  type="button"
+                  class="character-mini-icon-button"
+                  data-serverlist-account-icon-open
+                  data-character-id="<%= Number(char.id) %>"
+                  data-character-name="<%= char.name %>"
+                  data-current-image-url="<%= String(char.serverlist_icon_url || "") %>"
+                  data-current-focus-x="<%= Number(char.serverlist_icon_focus_x ?? 50) %>"
+                  data-current-focus-y="<%= Number(char.serverlist_icon_focus_y ?? 50) %>"
+                >Charakter Icon</button>
+              </div>
               <div class="character-mini-actions">
                 <a
                   class="character-mini-guestbook-open-link"
@@ -169,8 +181,9 @@
                 <% const currentLocationLabel = isOnCurrentServer
                   ? (serverSection.dashboard_label || serverSection.label)
                   : (char.current_server_label || serverSection.dashboard_label || serverSection.label); %>
-                <article class="character-mini-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
-                  <% if (isInFestplayArea) { %>
+                <article class="character-mini-card has-character-icon-editor<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
+                  <div class="character-mini-primary">
+                    <% if (isInFestplayArea) { %>
                     <a
                       class="character-mini-item"
                       href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/rooms"
@@ -178,7 +191,7 @@
                     >
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
-                  <% } else { %>
+                    <% } else { %>
                     <span
                       class="character-mini-placeholder"
                       title="<%= isOnCurrentServer
@@ -187,7 +200,18 @@
                     >
                       <span class="character-mini-name"><%= char.name %></span>
                     </span>
-                  <% } %>
+                    <% } %>
+                    <button
+                      type="button"
+                      class="character-mini-icon-button"
+                      data-serverlist-account-icon-open
+                      data-character-id="<%= Number(char.id) %>"
+                      data-character-name="<%= char.name %>"
+                      data-current-image-url="<%= String(char.serverlist_icon_url || "") %>"
+                      data-current-focus-x="<%= Number(char.serverlist_icon_focus_x ?? 50) %>"
+                      data-current-focus-y="<%= Number(char.serverlist_icon_focus_y ?? 50) %>"
+                    >Charakter Icon</button>
+                  </div>
                   <div class="character-mini-actions">
                     <a
                       class="character-mini-guestbook-open-link"
