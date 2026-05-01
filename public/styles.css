@@ -2235,6 +2235,7 @@ body.page-chat .server-work-notice {
 }
 
 .social-panel .chat-whisper-panel-head {
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.42rem;
   margin-bottom: 0.42rem;
 }
