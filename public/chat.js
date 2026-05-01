@@ -2134,6 +2134,8 @@
     const nextEntries = Array.isArray(entries) ? entries.slice() : [];
     lastRenderedOnlineEntries = nextEntries;
     renderOnlineCharacters(nextEntries);
+    renderWhisperThreadList();
+    renderWhisperThread();
   });
   socket.on("chat:room-invite", handleRoomInvite);
   socket.on("chat:redirect", (payload) => {
@@ -3760,6 +3762,53 @@
     whisperThread.scrollTop = whisperThread.scrollHeight;
   }
 
+  function getWhisperThreadAfkNotice(thread) {
+    if (!thread || typeof thread !== "object") {
+      return null;
+    }
+
+    const currentOnlineEntry =
+      getOnlineEntryByThreadKey(thread.threadKey) ||
+      getOnlineEntryByUserId(thread.userId);
+    const messages = Array.isArray(thread.messages) ? thread.messages : [];
+    const latestOutgoing = messages
+      .slice()
+      .reverse()
+      .find((entry) => entry?.outgoing) || null;
+
+    if (currentOnlineEntry) {
+      if (currentOnlineEntry.isAfk === true) {
+        const reason = latestOutgoing?.whisper_target_is_afk
+          ? latestOutgoing.whisper_target_afk_reason
+          : "";
+        return {
+          text: getWhisperAfkNoteText(thread.name, true, reason),
+          color: latestOutgoing?.whisper_target_chat_text_color ||
+            currentOnlineEntry.chatTextColor ||
+            currentOnlineEntry.chat_text_color ||
+            ""
+        };
+      }
+      return null;
+    }
+
+    if (
+      latestOutgoing?.whisper_target_is_afk ||
+      String(latestOutgoing?.whisper_target_afk_reason || "").trim()
+    ) {
+      return {
+        text: getWhisperAfkNoteText(
+          latestOutgoing.whisper_target_afk_name || thread.name,
+          latestOutgoing.whisper_target_is_afk,
+          latestOutgoing.whisper_target_afk_reason
+        ),
+        color: latestOutgoing.whisper_target_chat_text_color || ""
+      };
+    }
+
+    return null;
+  }
+
   function renderWhisperThreadList() {
     if (!whisperList || !whisperListEmpty) return;
 
@@ -3778,6 +3827,7 @@
     threads.forEach((thread) => {
       const button = document.createElement("button");
       const name = document.createElement("strong");
+      const afkNotice = getWhisperThreadAfkNotice(thread);
       const unreadDot = document.createElement("span");
 
       button.type = "button";
@@ -3792,6 +3842,13 @@
       }
 
       button.appendChild(name);
+      if (afkNotice?.text) {
+        const afkNode = document.createElement("span");
+        afkNode.className = "chat-whisper-list-afk";
+        afkNode.textContent = afkNotice.text;
+        applyWhisperAfkNoteAppearance(afkNode, afkNotice.color, { panel: true });
+        button.appendChild(afkNode);
+      }
       button.addEventListener("click", () => {
         setActiveWhisperThreadKey(thread.threadKey);
         whisperUnreadThreadKeys.delete(thread.threadKey);
@@ -3879,24 +3936,8 @@
           actorRoleStyle: entry.from_role_style
         }
       );
-      const afkNoteText = entry.outgoing
-        ? getWhisperAfkNoteText(
-            entry.whisper_target_afk_name || thread.name,
-            entry.whisper_target_is_afk,
-            entry.whisper_target_afk_reason
-          )
-        : "";
-
       article.appendChild(meta);
       article.appendChild(body);
-
-      if (afkNoteText) {
-        const note = document.createElement("small");
-        note.className = "whisper-thread-note";
-        note.textContent = afkNoteText;
-        applyWhisperAfkNoteAppearance(note, entry?.whisper_target_chat_text_color, { panel: true });
-        article.appendChild(note);
-      }
 
       whisperThread.appendChild(article);
     });
@@ -4054,22 +4095,8 @@
     line.appendChild(actionNode);
     line.appendChild(toNode);
     line.appendChild(body);
-    const afkNoteText = msg?.outgoing
-      ? getWhisperAfkNoteText(
-          msg?.whisper_target_afk_name || msg?.to_name,
-          msg?.whisper_target_is_afk,
-          msg?.whisper_target_afk_reason
-        )
-      : "";
 
     article.appendChild(line);
-    if (afkNoteText) {
-      const note = document.createElement("small");
-      note.className = "chat-whisper-note";
-      note.textContent = afkNoteText;
-      applyWhisperAfkNoteAppearance(note, msg?.whisper_target_chat_text_color);
-      article.appendChild(note);
-    }
     chatFeed.appendChild(article);
 
     while (chatFeed.children.length > 150) {
@@ -4526,6 +4553,7 @@
             userId,
             characterId: Number.isInteger(characterId) && characterId > 0 ? characterId : null,
             name: displayName,
+            chatTextColor,
             showBirthdayCake,
             isAfk
           });

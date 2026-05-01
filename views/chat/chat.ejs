@@ -667,6 +667,17 @@
         <h3>Fl&uuml;stern</h3>
         <p class="muted chat-whisper-panel-tip">Shift + Enter macht eine neue Zeile.</p>
       </div>
+      <div class="chat-whisper-thread-head">
+        <h4 id="chat-whisper-thread-title">Fl&uuml;stern</h4>
+        <button
+          id="chat-whisper-thread-clear-btn"
+          type="button"
+          class="chat-whisper-thread-clear-btn"
+          aria-label="Fl&uuml;sterverlauf entfernen"
+          title="Verlauf entfernen"
+          hidden
+        >&times;</button>
+      </div>
       <button id="chat-whisper-close-btn" type="button" class="chat-whisper-close-btn" aria-label="Schlie&szlig;en">
         &times;
       </button>
@@ -681,17 +692,6 @@
         <p id="chat-whisper-placeholder" class="muted chat-whisper-placeholder">W&auml;hle links ein Gespr&auml;ch aus oder starte eines &uuml;ber einen Namen im Chat.</p>
 
         <div id="chat-whisper-thread-shell" class="whisper-thread-shell" hidden>
-          <div class="chat-whisper-thread-head">
-            <h4 id="chat-whisper-thread-title">Fl&uuml;stern</h4>
-            <button
-              id="chat-whisper-thread-clear-btn"
-              type="button"
-              class="chat-whisper-thread-clear-btn"
-              aria-label="Fl&uuml;sterverlauf entfernen"
-              title="Verlauf entfernen"
-              hidden
-            >&times;</button>
-          </div>
           <p id="whisper-thread-empty" class="muted whisper-thread-empty">Noch keine Fl&uuml;sternachrichten.</p>
           <div id="whisper-thread" class="whisper-thread" aria-live="polite"></div>
         </div>
