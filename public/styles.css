@@ -2217,7 +2217,7 @@ body.page-chat .server-work-notice {
   color: #7fbf87;
 }
 
-.social-panel {
+.chat-whisper-panel.social-panel {
   width: min(560px, calc(100vw - 0.85rem));
 }
 
