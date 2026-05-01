@@ -16698,8 +16698,8 @@ app.get("/guestbook/notifications/recipient-suggestions", requireAuth, (req, res
       if (serverLabel) {
         metaParts.push(serverLabel);
       }
-      if (ownerUsername) {
-        metaParts.push(canViewOwnerAccount ? `Account: ${ownerUsername}` : `@${ownerUsername}`);
+      if (ownerUsername && canViewOwnerAccount) {
+        metaParts.push(`Account: ${ownerUsername}`);
       }
       return {
         value: characterName,
