@@ -14,6 +14,12 @@
       : (currentHeaderCharacter ? "" : (currentUserDisplayRoleStyle || "")); %>
   <% const roomlistIdentityName = currentHeaderCharacter?.name || roomlistDisplayName; %>
   <% const roomlistIdentityColor = currentHeaderCharacter?.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const roomlistMenuIconUrl = currentHeaderCharacter ? String(currentHeaderCharacter.serverlist_icon_url || "").trim() : ""; %>
+  <% const roomlistMenuIconFocusX = currentHeaderCharacter ? Number(currentHeaderCharacter.serverlist_icon_focus_x ?? 50) : 50; %>
+  <% const roomlistMenuIconFocusY = currentHeaderCharacter ? Number(currentHeaderCharacter.serverlist_icon_focus_y ?? 50) : 50; %>
+  <% const roomlistMenuIconZoom = currentHeaderCharacter && Number.isFinite(Number(currentHeaderCharacter.serverlist_icon_zoom))
+    ? Math.min(4, Math.max(1, Number(currentHeaderCharacter.serverlist_icon_zoom)))
+    : 1; %>
   <% const roomlistThemeCharacter = currentHeaderCharacter || character; %>
   <% const roomlistCharacterTheme = roomlistThemeCharacter?.theme ? String(roomlistThemeCharacter.theme || "").trim().toLowerCase() : ""; %>
   <% const roomlistActiveTheme =
@@ -143,7 +149,12 @@
             aria-label="Benutzermen&uuml; &ouml;ffnen"
             title="Benutzermen&uuml;"
           >
-            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+            <span
+              class="rp-user-menu-toggle-icon<%= roomlistMenuIconUrl ? ' has-custom-icon' : '' %>"
+              aria-hidden="true"
+              data-serverlist-account-icon-anchor
+              style="--serverlist-account-icon-focus-x: <%= roomlistMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomlistMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomlistMenuIconZoom %>;"
+            ><% if (roomlistMenuIconUrl) { %><img src="<%= roomlistMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
@@ -309,15 +320,21 @@
                     >
                       <% if (activeUsers.length) { %>
                         <% activeUsers.forEach((entry, index) => { %>
+                          <% const roomEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                          <% const roomEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                          <% const roomEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                          <% const roomEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                            ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                            : 1; %>
                           <% if (entry.character_id) { %>
                             <a
                               class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                               href="/characters/<%= entry.character_id %>/guestbook"
-                            ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
+                            ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
                           <% } else { %>
                             <span
                               class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                            ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
+                            ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
                           <% } %>
                           <% if (index < activeUsers.length - 1) { %>
                             <span class="rp-room-occupant-separator">, </span>
@@ -398,15 +415,21 @@
                 >
                   <% if (visibleUsers.length) { %>
                     <% visibleUsers.forEach((entry, index) => { %>
+                      <% const roomEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                      <% const roomEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                      <% const roomEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                      <% const roomEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                        ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                        : 1; %>
                       <% if (entry.character_id) { %>
                         <a
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                           href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
                       <% } else { %>
                         <span
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
                       <% } %>
                       <% if (index < visibleUsers.length - 1) { %>
                         <span class="rp-room-occupant-separator">, </span>
@@ -475,15 +498,21 @@
                 >
                   <% if (visibleUsers.length) { %>
                     <% visibleUsers.forEach((entry, index) => { %>
+                      <% const roomEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                      <% const roomEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                      <% const roomEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                      <% const roomEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                        ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                        : 1; %>
                       <% if (entry.character_id) { %>
                         <a
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                           href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
                       <% } else { %>
                         <span
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
                       <% } %>
                       <% if (index < visibleUsers.length - 1) { %>
                         <span class="rp-room-occupant-separator">, </span>
@@ -552,15 +581,21 @@
                 >
                   <% if (visibleUsers.length) { %>
                     <% visibleUsers.forEach((entry, index) => { %>
+                      <% const roomEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                      <% const roomEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                      <% const roomEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                      <% const roomEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                        ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                        : 1; %>
                       <% if (entry.character_id) { %>
                         <a
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                           href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></a>
                       <% } else { %>
                         <span
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= roomEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= roomEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomEntryIconZoom %>;"><% if (roomEntryIconUrl) { %><img src="<%= roomEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatRoomlistBirthdayName(entry) %></span>
                       <% } %>
                       <% if (index < visibleUsers.length - 1) { %>
                         <span class="rp-room-occupant-separator">, </span>

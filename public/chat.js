@@ -57,6 +57,7 @@
   const roomInviteDeclineBtn = document.getElementById("room-invite-decline");
   const headerIdentity = document.querySelector("[data-header-identity]");
   const userMenuIdentity = document.querySelector("[data-chat-user-menu-identity]");
+  const userMenuIcon = document.querySelector(".rp-user-menu-toggle-icon");
   const chatUserMenus = Array.from(document.querySelectorAll(".rp-user-menu"));
   const chatRoomListLink = document.querySelector("[data-chat-roomlist-link]");
   const chatRpBoardLinks = Array.from(document.querySelectorAll("[data-rp-board-link-root]"));
@@ -774,6 +775,95 @@
     node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-cerberus-flame", /^cerberus(?:\b|\s|\[|\()/i.test(label));
+  }
+
+  function normalizeServerlistIconFocus(value, fallback = 50) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(100, Math.max(0, numericValue));
+  }
+
+  function normalizeServerlistIconZoom(value, fallback = 1) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(4, Math.max(1, numericValue));
+  }
+
+  function attachServerlistIconFallback(imageNode) {
+    if (!(imageNode instanceof HTMLImageElement)) {
+      return;
+    }
+
+    imageNode.addEventListener(
+      "error",
+      () => {
+        imageNode.remove();
+        imageNode.parentElement?.classList?.remove("has-custom-icon");
+      },
+      { once: true }
+    );
+  }
+
+  function applyServerlistAccountIcon(anchor, iconData) {
+    if (!(anchor instanceof HTMLElement)) {
+      return;
+    }
+
+    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
+    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
+    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
+    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
+
+    anchor.setAttribute("data-serverlist-account-icon-anchor", "");
+    anchor.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
+    anchor.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
+    anchor.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
+    anchor.classList.toggle("has-custom-icon", Boolean(imageUrl));
+
+    let imageNode = anchor.querySelector("[data-serverlist-account-icon-image]");
+    if (!imageUrl) {
+      imageNode?.remove();
+      return;
+    }
+
+    if (!(imageNode instanceof HTMLImageElement)) {
+      imageNode = document.createElement("img");
+      imageNode.alt = "";
+      imageNode.setAttribute("data-serverlist-account-icon-image", "");
+      anchor.appendChild(imageNode);
+    }
+
+    imageNode.src = imageUrl;
+    attachServerlistIconFallback(imageNode);
+  }
+
+  function createCharacterInlineIcon(iconData) {
+    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
+    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
+    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
+    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
+    const icon = document.createElement("span");
+    icon.className = `serverlist-account-icon-preview character-inline-icon${imageUrl ? " has-custom-icon" : ""}`;
+    icon.setAttribute("aria-hidden", "true");
+    icon.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
+    icon.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
+    icon.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
+
+    if (imageUrl) {
+      const imageNode = document.createElement("img");
+      imageNode.alt = "";
+      imageNode.src = imageUrl;
+      attachServerlistIconFallback(imageNode);
+      icon.appendChild(imageNode);
+    }
+
+    return icon;
   }
 
   function readSessionStorage(key) {
@@ -1572,6 +1662,10 @@
       show_birthday_cake: String(node.dataset.showBirthdayCake || "").trim() === "1",
       role_style: String(node.dataset.roleStyle || "").trim(),
       chat_text_color: String(node.dataset.chatTextColor || "").trim(),
+      serverlist_icon_url: String(node.dataset.serverlistIconUrl || "").trim(),
+      serverlist_icon_focus_x: normalizeServerlistIconFocus(node.dataset.serverlistIconFocusX, 50),
+      serverlist_icon_focus_y: normalizeServerlistIconFocus(node.dataset.serverlistIconFocusY, 50),
+      serverlist_icon_zoom: normalizeServerlistIconZoom(node.dataset.serverlistIconZoom, 1),
       is_afk: node.querySelector(".chat-afk-clock") != null,
       is_npc: node.classList.contains("is-npc")
     }));
@@ -1805,6 +1899,7 @@
     updateCurrentPresenceIdentity(payload);
     applyCharacterBackgroundAppearance(payload);
     applyAfkPreferences(payload);
+    applyServerlistAccountIcon(userMenuIcon, payload);
     const nextName = String(payload?.name || "").trim();
     const nextRoleStyle = String(payload?.role_style || "").trim().toLowerCase();
     const nextColor = String(payload?.chat_text_color || "").trim();
@@ -4514,6 +4609,10 @@
       const showBirthdayCake = entry?.show_birthday_cake === true;
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
+      const serverlistIconUrl = String(entry?.serverlist_icon_url || "").trim();
+      const serverlistIconFocusX = normalizeServerlistIconFocus(entry?.serverlist_icon_focus_x, 50);
+      const serverlistIconFocusY = normalizeServerlistIconFocus(entry?.serverlist_icon_focus_y, 50);
+      const serverlistIconZoom = normalizeServerlistIconZoom(entry?.serverlist_icon_zoom, 1);
       const isAfk = entry?.is_afk === true;
       const isNpc = entry?.is_npc === true;
       const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
@@ -4566,12 +4665,19 @@
       node.dataset.showBirthdayCake = showBirthdayCake ? "1" : "0";
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
+      node.dataset.serverlistIconUrl = serverlistIconUrl;
+      node.dataset.serverlistIconFocusX = String(serverlistIconFocusX);
+      node.dataset.serverlistIconFocusY = String(serverlistIconFocusY);
+      node.dataset.serverlistIconZoom = String(serverlistIconZoom);
       afkClockNode.className = "chat-afk-clock";
       afkClockNode.setAttribute("aria-hidden", "true");
       afkClockNode.textContent = "\u25F7";
       applyChatTextColor(textNode, chatTextColor);
       textNode.textContent = displayNameWithBirthdayCake;
       applySpecialNameDecor(textNode, displayName);
+      if (!isNpc) {
+        contentNode.appendChild(createCharacterInlineIcon(entry));
+      }
       if (isAfk) {
         contentNode.appendChild(afkClockNode);
       }

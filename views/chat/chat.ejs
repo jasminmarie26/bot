@@ -340,13 +340,24 @@
             </div>
           </div>
         </div>
+        <% const chatMenuIconUrl = activeCharacter ? String(activeCharacter.serverlist_icon_url || "").trim() : ""; %>
+        <% const chatMenuIconFocusX = activeCharacter ? Number(activeCharacter.serverlist_icon_focus_x ?? 50) : 50; %>
+        <% const chatMenuIconFocusY = activeCharacter ? Number(activeCharacter.serverlist_icon_focus_y ?? 50) : 50; %>
+        <% const chatMenuIconZoom = activeCharacter && Number.isFinite(Number(activeCharacter.serverlist_icon_zoom))
+          ? Math.min(4, Math.max(1, Number(activeCharacter.serverlist_icon_zoom)))
+          : 1; %>
         <details class="rp-user-menu">
           <summary
             class="rp-user-menu-toggle"
             aria-label="Benutzermen&uuml; &ouml;ffnen"
             title="Benutzermen&uuml;"
           >
-            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+            <span
+              class="rp-user-menu-toggle-icon<%= chatMenuIconUrl ? ' has-custom-icon' : '' %>"
+              aria-hidden="true"
+              data-serverlist-account-icon-anchor
+              style="--serverlist-account-icon-focus-x: <%= chatMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= chatMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= chatMenuIconZoom %>;"
+            ><% if (chatMenuIconUrl) { %><img src="<%= chatMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
@@ -464,6 +475,12 @@
                 <% const onlineEntryDisplayName = formatChatRoleName(entry.name, entry.role_style); %>
                 <% const onlineEntryBirthdayDisplayName = formatBirthdayCakeLabel(onlineEntryDisplayName, entry.show_birthday_cake); %>
                 <% const onlineEntrySpecialClass = getChatSpecialNameClass(onlineEntryDisplayName); %>
+                <% const onlineEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                <% const onlineEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                <% const onlineEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                <% const onlineEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                  ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                  : 1; %>
                 <% if (entry.is_npc) { %>
                   <div
                     class="chat-online-item is-npc"
@@ -492,8 +509,17 @@
                     data-show-birthday-cake="<%= entry.show_birthday_cake ? '1' : '0' %>"
                     data-role-style="<%= entry.role_style || '' %>"
                     data-chat-text-color="<%= entry.chat_text_color || '' %>"
+                    data-serverlist-icon-url="<%= onlineEntryIconUrl %>"
+                    data-serverlist-icon-focus-x="<%= onlineEntryIconFocusX %>"
+                    data-serverlist-icon-focus-y="<%= onlineEntryIconFocusY %>"
+                    data-serverlist-icon-zoom="<%= onlineEntryIconZoom %>"
                   >
                     <span class="chat-online-content">
+                      <span
+                        class="serverlist-account-icon-preview character-inline-icon<%= onlineEntryIconUrl ? ' has-custom-icon' : '' %>"
+                        aria-hidden="true"
+                        style="--serverlist-account-icon-focus-x: <%= onlineEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= onlineEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= onlineEntryIconZoom %>;"
+                      ><% if (onlineEntryIconUrl) { %><img src="<%= onlineEntryIconUrl %>" alt="" /><% } %></span>
                       <% if (entry.is_afk) { %>
                         <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
                       <% } %>

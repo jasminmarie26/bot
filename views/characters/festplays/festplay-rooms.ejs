@@ -10,6 +10,12 @@
       : (currentUserDisplayRoleStyle || ""); %>
   <% const festplayRoomIdentityName = character.name || festplayRoomDisplayName; %>
   <% const festplayRoomIdentityColor = character.chat_text_color || currentUser?.display_chat_text_color || ""; %>
+  <% const festplayRoomMenuIconUrl = String(character.serverlist_icon_url || "").trim(); %>
+  <% const festplayRoomMenuIconFocusX = Number(character.serverlist_icon_focus_x ?? 50); %>
+  <% const festplayRoomMenuIconFocusY = Number(character.serverlist_icon_focus_y ?? 50); %>
+  <% const festplayRoomMenuIconZoom = Number.isFinite(Number(character.serverlist_icon_zoom))
+    ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom)))
+    : 1; %>
   <% const festplayRoomLiveUpdatesInitialRevision = String(latestSiteUpdateRevisionToken || "").trim(); %>
   <% const festplayRoomLiveUpdatesInitialRevisions = Array.isArray(recentSiteUpdateRevisions) ? recentSiteUpdateRevisions : []; %>
   <% const festplayRoomChatCharacterUrlNumber = Number(typeof chatCharacterUrlNumber !== "undefined" ? chatCharacterUrlNumber : character.id) || character.id; %>
@@ -114,7 +120,12 @@
             aria-label="Benutzermen&uuml; &ouml;ffnen"
             title="Benutzermen&uuml;"
           >
-            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+            <span
+              class="rp-user-menu-toggle-icon<%= festplayRoomMenuIconUrl ? ' has-custom-icon' : '' %>"
+              aria-hidden="true"
+              data-serverlist-account-icon-anchor
+              style="--serverlist-account-icon-focus-x: <%= festplayRoomMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayRoomMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayRoomMenuIconZoom %>;"
+            ><% if (festplayRoomMenuIconUrl) { %><img src="<%= festplayRoomMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
@@ -227,15 +238,21 @@
               >
                 <% if (activeUsers.length) { %>
                   <% activeUsers.forEach((entry, index) => { %>
+                    <% const festplayEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                    <% const festplayEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                    <% const festplayEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                    <% const festplayEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                      ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                      : 1; %>
                     <% if (entry.character_id) { %>
-                        <a
+                      <a
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                           href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></a>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= festplayEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= festplayEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayEntryIconZoom %>;"><% if (festplayEntryIconUrl) { %><img src="<%= festplayEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></a>
                       <% } else { %>
                         <span
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></span>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= festplayEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= festplayEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayEntryIconZoom %>;"><% if (festplayEntryIconUrl) { %><img src="<%= festplayEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></span>
                       <% } %>
                     <% if (index < activeUsers.length - 1) { %>
                       <span class="rp-room-occupant-separator">, </span>
@@ -327,15 +344,21 @@
               >
                 <% if (activeUsers.length) { %>
                   <% activeUsers.forEach((entry, index) => { %>
+                    <% const festplayEntryIconUrl = String(entry.serverlist_icon_url || "").trim(); %>
+                    <% const festplayEntryIconFocusX = Number(entry.serverlist_icon_focus_x ?? 50); %>
+                    <% const festplayEntryIconFocusY = Number(entry.serverlist_icon_focus_y ?? 50); %>
+                    <% const festplayEntryIconZoom = Number.isFinite(Number(entry.serverlist_icon_zoom))
+                      ? Math.min(4, Math.max(1, Number(entry.serverlist_icon_zoom)))
+                      : 1; %>
                     <% if (entry.character_id) { %>
-                        <a
+                      <a
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
                           href="/characters/<%= entry.character_id %>/guestbook"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></a>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= festplayEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= festplayEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayEntryIconZoom %>;"><% if (festplayEntryIconUrl) { %><img src="<%= festplayEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></a>
                       <% } else { %>
                         <span
                           class="rp-room-occupant <%= entry.has_room_rights ? 'has-room-rights ' : '' %><%= entry.role_style ? `role-name-${entry.role_style}` : '' %><%= entry.is_afk ? ' is-afk' : '' %>"
-                        ><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></span>
+                        ><span class="serverlist-account-icon-preview character-inline-icon<%= festplayEntryIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= festplayEntryIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayEntryIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayEntryIconZoom %>;"><% if (festplayEntryIconUrl) { %><img src="<%= festplayEntryIconUrl %>" alt="" /><% } %></span><% if (entry.is_afk) { %><span class="rp-room-afk-clock" aria-hidden="true">&#9687;</span><% } %><%= formatFestplayBirthdayName(entry) %></span>
                       <% } %>
                     <% if (index < activeUsers.length - 1) { %>
                       <span class="rp-room-occupant-separator">, </span>

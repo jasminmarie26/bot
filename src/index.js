@@ -19742,7 +19742,11 @@ app.get("/characters/:id", requireAuth, (req, res) => {
         name: character.name,
         server_id: character.server_id,
         theme: character.theme,
-        chat_text_color: character.chat_text_color
+        chat_text_color: character.chat_text_color,
+        serverlist_icon_url: character.serverlist_icon_url,
+        serverlist_icon_focus_x: character.serverlist_icon_focus_x,
+        serverlist_icon_focus_y: character.serverlist_icon_focus_y,
+        serverlist_icon_zoom: character.serverlist_icon_zoom
       }
     : (getPreferredCharacterForUser(
         req.session.user.id,
@@ -26084,6 +26088,21 @@ function emitUserDisplayProfileToSocket(memberSocket) {
     server_id: normalizedServerId,
     character_id: getSocketPreferredCharacterId(memberSocket, normalizedServerId),
     character_url_number: getChatCharacterUrlNumberById(selectedCharacterId),
+    serverlist_icon_url: String(
+      selectedCharacterAppearance?.serverlist_icon_url || selectedCharacter?.serverlist_icon_url || ""
+    ).trim(),
+    serverlist_icon_focus_x: normalizeAvatarFocusInput(
+      selectedCharacterAppearance?.serverlist_icon_focus_x ?? selectedCharacter?.serverlist_icon_focus_x,
+      50
+    ),
+    serverlist_icon_focus_y: normalizeAvatarFocusInput(
+      selectedCharacterAppearance?.serverlist_icon_focus_y ?? selectedCharacter?.serverlist_icon_focus_y,
+      50
+    ),
+    serverlist_icon_zoom: normalizeServerlistIconZoomInput(
+      selectedCharacterAppearance?.serverlist_icon_zoom ?? selectedCharacter?.serverlist_icon_zoom,
+      1
+    ),
     chat_background_url: String(selectedCharacterAppearance?.chat_background_url || "").trim(),
     chat_background_color: normalizeChatBackgroundColor(selectedCharacterAppearance?.chat_background_color),
     chat_background_image_opacity: normalizeGuestbookOpacity(
@@ -28585,6 +28604,10 @@ function getOnlineCharactersForChannel(roomId, serverId = DEFAULT_SERVER_ID, sta
       show_birthday_cake: showBirthdayCake,
       role_style: displayProfile.role_style || "",
       chat_text_color: displayProfile.chat_text_color || "",
+      serverlist_icon_url: String(chosenCharacter?.serverlist_icon_url || "").trim(),
+      serverlist_icon_focus_x: normalizeAvatarFocusInput(chosenCharacter?.serverlist_icon_focus_x, 50),
+      serverlist_icon_focus_y: normalizeAvatarFocusInput(chosenCharacter?.serverlist_icon_focus_y, 50),
+      serverlist_icon_zoom: normalizeServerlistIconZoomInput(chosenCharacter?.serverlist_icon_zoom, 1),
       has_room_rights: room ? canBypassRoomLock(user, room) : false,
       is_afk: Boolean(
         getChatAfkState(

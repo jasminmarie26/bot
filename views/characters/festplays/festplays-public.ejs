@@ -92,13 +92,24 @@
       </form>
       <div class="rp-topline-quick-actions">
         <%- include("../../partials/guestbook-notification-link") %>
+        <% const festplaysMenuIconUrl = String(character.serverlist_icon_url || "").trim(); %>
+        <% const festplaysMenuIconFocusX = Number(character.serverlist_icon_focus_x ?? 50); %>
+        <% const festplaysMenuIconFocusY = Number(character.serverlist_icon_focus_y ?? 50); %>
+        <% const festplaysMenuIconZoom = Number.isFinite(Number(character.serverlist_icon_zoom))
+          ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom)))
+          : 1; %>
         <details class="rp-user-menu">
           <summary
             class="rp-user-menu-toggle"
             aria-label="Benutzermen&uuml; &ouml;ffnen"
             title="Benutzermen&uuml;"
           >
-            <span class="rp-user-menu-toggle-icon" aria-hidden="true">&#128100;</span>
+            <span
+              class="rp-user-menu-toggle-icon<%= festplaysMenuIconUrl ? ' has-custom-icon' : '' %>"
+              aria-hidden="true"
+              data-serverlist-account-icon-anchor
+              style="--serverlist-account-icon-focus-x: <%= festplaysMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplaysMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplaysMenuIconZoom %>;"
+            ><% if (festplaysMenuIconUrl) { %><img src="<%= festplaysMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">

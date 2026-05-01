@@ -5,6 +5,9 @@
   const userMenuIdentityTargets = Array.from(
     document.querySelectorAll(".topbar-user-menu-meta > strong, .rp-user-menu-meta > strong")
   );
+  const userMenuIconTargets = Array.from(
+    document.querySelectorAll(".topbar-user-menu-toggle-icon, .rp-user-menu-toggle-icon")
+  );
   const liveCharacterLinkTargets = Array.from(document.querySelectorAll("[data-live-character-href-template]"));
   const liveCharacterNameTargets = Array.from(document.querySelectorAll("[data-live-character-name]"));
   const liveCharacterServerLabelTargets = Array.from(
@@ -97,6 +100,95 @@
     node.classList.toggle("has-noctra-wings", /^noctra(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-crescentia-moons", /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i.test(label));
     node.classList.toggle("has-cerberus-flame", /^cerberus(?:\b|\s|\[|\()/i.test(label));
+  }
+
+  function normalizeServerlistIconFocus(value, fallback = 50) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(100, Math.max(0, numericValue));
+  }
+
+  function normalizeServerlistIconZoom(value, fallback = 1) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(4, Math.max(1, numericValue));
+  }
+
+  function attachServerlistIconFallback(imageNode) {
+    if (!(imageNode instanceof HTMLImageElement)) {
+      return;
+    }
+
+    imageNode.addEventListener(
+      "error",
+      () => {
+        imageNode.remove();
+        imageNode.parentElement?.classList?.remove("has-custom-icon");
+      },
+      { once: true }
+    );
+  }
+
+  function applyServerlistAccountIcon(anchor, iconData) {
+    if (!(anchor instanceof HTMLElement)) {
+      return;
+    }
+
+    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
+    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
+    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
+    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
+
+    anchor.setAttribute("data-serverlist-account-icon-anchor", "");
+    anchor.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
+    anchor.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
+    anchor.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
+    anchor.classList.toggle("has-custom-icon", Boolean(imageUrl));
+
+    let imageNode = anchor.querySelector("[data-serverlist-account-icon-image]");
+    if (!imageUrl) {
+      imageNode?.remove();
+      return;
+    }
+
+    if (!(imageNode instanceof HTMLImageElement)) {
+      imageNode = document.createElement("img");
+      imageNode.alt = "";
+      imageNode.setAttribute("data-serverlist-account-icon-image", "");
+      anchor.appendChild(imageNode);
+    }
+
+    imageNode.src = imageUrl;
+    attachServerlistIconFallback(imageNode);
+  }
+
+  function createCharacterInlineIcon(iconData) {
+    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
+    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
+    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
+    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
+    const icon = document.createElement("span");
+    icon.className = `serverlist-account-icon-preview character-inline-icon${imageUrl ? " has-custom-icon" : ""}`;
+    icon.setAttribute("aria-hidden", "true");
+    icon.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
+    icon.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
+    icon.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
+
+    if (imageUrl) {
+      const imageNode = document.createElement("img");
+      imageNode.alt = "";
+      imageNode.src = imageUrl;
+      attachServerlistIconFallback(imageNode);
+      icon.appendChild(imageNode);
+    }
+
+    return icon;
   }
 
   function getBirthdayCakeLabel(label, showBirthdayCake) {
@@ -218,6 +310,9 @@
     }
 
     syncLiveCharacterLinks(nextCharacterId, nextServerId);
+    userMenuIconTargets.forEach((node) => {
+      applyServerlistAccountIcon(node, payload);
+    });
 
     if (nextName) {
       setIdentityNodeAppearance(headerIdentity, nextName, {
@@ -266,6 +361,7 @@
     }
     nameNode.textContent = displayNameWithBirthdayCake;
     function appendOccupantContent(target) {
+      target.appendChild(createCharacterInlineIcon(entry));
       if (isAfk) {
         const icon = document.createElement("span");
         icon.className = "rp-room-afk-clock";
