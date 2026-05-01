@@ -36,6 +36,10 @@
   margin-top: 0.45rem;
 }
 
+.serverlist-role-link-wide {
+  grid-column: 1 / -1;
+}
+
 .serverlist-role-link {
   display: flex;
   align-items: center;
@@ -277,6 +281,69 @@
   border-radius: 0;
 }
 
+.serverlist-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.serverlist-overview-column {
+  margin-top: 0;
+}
+
+.serverlist-overview-column-header {
+  padding-right: 0.7rem;
+}
+
+.serverlist-overview-open-btn {
+  font-size: 0.74rem;
+  padding: 0.34rem 0.6rem;
+  white-space: nowrap;
+}
+
+.serverlist-overview-column-body {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.serverlist-overview-column-body > .muted {
+  margin: 0;
+}
+
+.serverlist-overview-character-grid {
+  align-items: flex-start;
+  gap: 0.7rem 0.9rem;
+}
+
+.serverlist-overview-character-card {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.serverlist-overview-character-card .character-mini-item {
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 0.35rem;
+}
+
+.serverlist-overview-character-card .character-mini-actions {
+  flex: 0 0 auto;
+}
+
+.serverlist-character-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.34rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 82%, transparent);
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .serverlist-section-copy {
   margin: 0.14rem 0 0;
   max-width: 30rem;
@@ -463,6 +530,10 @@
     grid-template-columns: 1fr;
   }
 
+  .serverlist-role-link-wide {
+    grid-column: auto;
+  }
+
   .serverlist-festplay-overview-header {
     padding: 0.85rem 0.9rem;
   }
@@ -470,5 +541,14 @@
   .serverlist-larp-access-main {
     display: grid;
     gap: 0.18rem;
+  }
+
+  .serverlist-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .serverlist-overview-column-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

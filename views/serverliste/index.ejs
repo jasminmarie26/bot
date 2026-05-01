@@ -6,7 +6,7 @@
 <section class="header-line serverlist-page-header">
   <div>
     <h1>Serverliste</h1>
-    <p class="muted">Hier &ouml;ffnest du Free RP oder Erotik direkt im selben Fenster.</p>
+    <p class="muted">Hier &ouml;ffnest du Free RP, Erotik oder die gemeinsame Charakter&uuml;bersicht direkt im selben Fenster.</p>
   </div>
 </section>
 
@@ -15,7 +15,7 @@
     <summary class="serverlist-accordion-summary">
       <div class="serverlist-accordion-copy">
         <h2>Rollenspiel</h2>
-        <p class="muted">W&auml;hle Free RP oder Erotik. Die jeweilige &Uuml;bersicht &ouml;ffnet sich direkt im selben Fenster.</p>
+        <p class="muted">W&auml;hle Free RP, Erotik oder die Charakter&uuml;bersicht. Die jeweilige &Uuml;bersicht &ouml;ffnet sich direkt im selben Fenster.</p>
       </div>
       <span class="serverlist-accordion-icon" aria-hidden="true"></span>
     </summary>
@@ -30,6 +30,12 @@
             <span class="serverlist-role-tab-title"><%= section.dashboard_area_title %></span>
           </a>
         <% }) %>
+        <a
+          class="serverlist-role-link serverlist-role-link-wide"
+          href="/dashboard/areas/overview"
+        >
+          <span class="serverlist-role-tab-title">Charakter&uuml;bersicht Free RP &amp; ERP</span>
+        </a>
       </div>
     </div>
   </details>

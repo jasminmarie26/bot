@@ -17514,40 +17514,58 @@ function buildDashboardServerSection(server, ownCharacters, userId) {
       ? "Charaktere und Festspiele für offene Geschichten und lockere Begegnungen."
       : "Charaktere und Festspiele für intensivere Szenen und feste Dynamiken.",
     festplays,
-    characters: ownCharacters
-      .filter((character) => {
-        if (normalizeCharacterServerId(character.server_id) !== server.id) {
-          return false;
-        }
-
-        const dashboardPosition = getCharacterDashboardPlacement(
-          character.server_id,
-          character.festplay_home_server_id,
-          character.festplay_dashboard_mode
-        );
-
-        return dashboardPosition === "main";
-      })
-      .map((character) => ({
-        ...character,
-        dashboard_position: getCharacterDashboardPlacement(
-          character.server_id,
-          character.festplay_home_server_id,
-          character.festplay_dashboard_mode
-        ),
-        can_dashboard_move: true
-      }))
-      .sort((left, right) => {
-        const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
-          sensitivity: "base"
-        });
-        if (nameCompare !== 0) {
-          return nameCompare;
-        }
-
-        return Number(left.id) - Number(right.id);
-      })
+    characters: buildDashboardServerCharacterItems(ownCharacters, server.id, {
+      onlyMainArea: true
+    })
   };
+}
+
+function buildDashboardServerCharacterItems(ownCharacters, serverId, options = {}) {
+  const normalizedServerId = normalizeServer(serverId);
+  const onlyMainArea = options.onlyMainArea === true;
+
+  return ownCharacters
+    .filter((character) => normalizeCharacterServerId(character.server_id) === normalizedServerId)
+    .map((character) => {
+      const dashboardPosition = getCharacterDashboardPlacement(
+        character.server_id,
+        character.festplay_home_server_id,
+        character.festplay_dashboard_mode
+      );
+
+      return {
+        ...character,
+        dashboard_position: dashboardPosition,
+        can_dashboard_move: true
+      };
+    })
+    .filter((character) => !onlyMainArea || character.dashboard_position === "main")
+    .sort((left, right) => {
+      const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
+        sensitivity: "base"
+      });
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(left.id) - Number(right.id);
+    });
+}
+
+function getDashboardCharacterOverviewSections(userId) {
+  const ownCharacters = getDashboardOwnCharacters(userId);
+  return SERVER_OPTIONS.map((server) => {
+    const isFreeRp = server.id === "free-rp";
+    return {
+      ...server,
+      overview_title: isFreeRp ? "Free RP" : "ERP",
+      overview_description: isFreeRp
+        ? "Alle Charaktere, die aktuell auf Free RP liegen."
+        : "Alle Charaktere, die aktuell auf ERP liegen.",
+      dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
+      characters: buildDashboardServerCharacterItems(ownCharacters, server.id)
+    };
+  });
 }
 
 function getLarpCharactersForUser(userId) {
@@ -18384,10 +18402,36 @@ app.get("/dashboard/larp", requireAuth, (req, res) => {
   });
 });
 
+app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
+  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+
+  return res.render("serverliste/overview", {
+    title: "Charakterübersicht Free RP & ERP",
+    overviewSections,
+    erpMoveAllowed,
+    ...getServerListPageAssets(["/serverliste-area.js"])
+  });
+});
+
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
   const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
   if (!serverSection) {
     return res.redirect("/dashboard");
+  }
+
+  const requestedCharacterId = Number(req.query.character_id);
+  if (Number.isInteger(requestedCharacterId) && requestedCharacterId > 0) {
+    const requestedCharacter = getCharacterById(requestedCharacterId);
+    if (
+      requestedCharacter &&
+      Number(requestedCharacter.user_id) === Number(req.session.user.id) &&
+      normalizeCharacterServerId(requestedCharacter.server_id) === serverSection.id
+    ) {
+      rememberPreferredCharacter(req, requestedCharacter);
+    }
   }
 
   const accountUser = getAccountUserById(req.session.user.id);
