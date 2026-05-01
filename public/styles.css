@@ -14004,12 +14004,22 @@ body.page-guestbook-view .guestbook-entry-heading {
   height: 100%;
 }
 
-.character-notes-panel {
+.chat-whisper-panel.character-notes-panel {
   width: min(430px, calc(100vw - 2rem));
+  bottom: auto;
+  max-height: calc(100dvh - 2rem);
 }
 
-.character-notes-panel-card {
+.chat-whisper-panel-card.character-notes-panel-card {
   display: block;
+  height: auto;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+.character-notes-panel-card .chat-whisper-panel-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
 }
 
 .character-notes-form {
