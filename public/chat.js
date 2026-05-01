@@ -3797,13 +3797,6 @@
         article.appendChild(note);
       }
 
-      if (entry.created_at) {
-        const time = document.createElement("small");
-        time.className = "whisper-thread-time";
-        time.textContent = String(entry.created_at);
-        article.appendChild(time);
-      }
-
       whisperThread.appendChild(article);
     });
 
@@ -3936,6 +3929,7 @@
     const actionNode = document.createElement("strong");
     const toNode = createStyledChatNameNode(toName, toRoleStyle, toChatTextColor);
     const body = document.createElement("span");
+    const messageTimeLabel = showChatMessageTimestamps ? getMessageTimeLabel(msg) : "";
 
     actionNode.textContent = " flüstert an ";
     setChatColorSource(actionNode, fromChatTextColor);
@@ -3947,6 +3941,14 @@
       actorRoleStyle: fromRoleStyle,
       useChatColor: true
     });
+    if (messageTimeLabel) {
+      const timePrefix = document.createElement("span");
+      timePrefix.className = "chat-own-message-time";
+      timePrefix.dataset.chatTimeSourceColor = fromChatTextColor || "";
+      timePrefix.textContent = `[${messageTimeLabel}] `;
+      applyStoredChatTextColor(timePrefix, fromChatTextColor, { allowGradient: false });
+      line.appendChild(timePrefix);
+    }
     line.appendChild(fromNode);
     line.appendChild(actionNode);
     line.appendChild(toNode);
