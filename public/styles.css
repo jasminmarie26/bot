@@ -3189,24 +3189,6 @@ body.page-chat .server-work-notice {
   transform-origin: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
 }
 
-.serverlist-account-icon-preview.character-inline-icon {
-  width: 1.1rem;
-  min-width: 1.1rem;
-  box-shadow: none;
-}
-
-.character-mini-item .character-inline-icon,
-.character-mini-placeholder .character-inline-icon {
-  width: 1.28rem;
-  min-width: 1.28rem;
-}
-
-.chat-online-content .character-inline-icon,
-.rp-room-occupant .character-inline-icon {
-  width: 1rem;
-  min-width: 1rem;
-}
-
 .serverlist-account-icon-sliders {
   display: grid;
   gap: 0.7rem;
@@ -12844,7 +12826,6 @@ body.gb-editor-fullscreen-open {
   padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.42rem;
   min-width: 0;
   max-width: 100%;
   background: transparent;
@@ -12875,7 +12856,6 @@ body.gb-editor-fullscreen-open {
 .character-mini-placeholder {
   display: inline-flex;
   align-items: center;
-  gap: 0.42rem;
   min-width: 0;
   max-width: 100%;
   color: color-mix(in srgb, var(--muted) 82%, white 18%);

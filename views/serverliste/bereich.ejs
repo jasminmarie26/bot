@@ -55,15 +55,8 @@
       <% } else { %>
         <div class="character-mini-grid">
           <% serverSection.characters.forEach((char) => { %>
-            <% const charIconUrl = String(char.serverlist_icon_url || "").trim(); %>
-            <% const charIconFocusX = Number(char.serverlist_icon_focus_x ?? 50); %>
-            <% const charIconFocusY = Number(char.serverlist_icon_focus_y ?? 50); %>
-            <% const charIconZoom = Number.isFinite(Number(char.serverlist_icon_zoom))
-              ? Math.min(4, Math.max(1, Number(char.serverlist_icon_zoom)))
-              : 1; %>
             <article class="character-mini-card">
               <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
-                <span class="serverlist-account-icon-preview character-inline-icon<%= charIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= charIconFocusX %>%; --serverlist-account-icon-focus-y: <%= charIconFocusY %>%; --serverlist-account-icon-zoom: <%= charIconZoom %>;"><% if (charIconUrl) { %><img src="<%= charIconUrl %>" alt="" /><% } %></span>
                 <span class="character-mini-name"><%= char.name %></span>
               </a>
               <div class="character-mini-actions">
@@ -177,19 +170,12 @@
                   ? (serverSection.dashboard_label || serverSection.label)
                   : (char.current_server_label || serverSection.dashboard_label || serverSection.label); %>
                 <article class="character-mini-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
-                  <% const charIconUrl = String(char.serverlist_icon_url || "").trim(); %>
-                  <% const charIconFocusX = Number(char.serverlist_icon_focus_x ?? 50); %>
-                  <% const charIconFocusY = Number(char.serverlist_icon_focus_y ?? 50); %>
-                  <% const charIconZoom = Number.isFinite(Number(char.serverlist_icon_zoom))
-                    ? Math.min(4, Math.max(1, Number(char.serverlist_icon_zoom)))
-                    : 1; %>
                   <% if (isInFestplayArea) { %>
                     <a
                       class="character-mini-item"
                       href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/rooms"
                       title="Festspiel-Räume mit <%= char.name %> öffnen"
                     >
-                      <span class="serverlist-account-icon-preview character-inline-icon<%= charIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= charIconFocusX %>%; --serverlist-account-icon-focus-y: <%= charIconFocusY %>%; --serverlist-account-icon-zoom: <%= charIconZoom %>;"><% if (charIconUrl) { %><img src="<%= charIconUrl %>" alt="" /><% } %></span>
                       <span class="character-mini-name"><%= char.name %></span>
                     </a>
                   <% } else { %>
@@ -199,7 +185,6 @@
                         ? `${char.name} liegt aktuell oben in ${currentLocationLabel}.`
                         : `${char.name} ist aktuell auf ${currentLocationLabel}.` %>"
                     >
-                      <span class="serverlist-account-icon-preview character-inline-icon<%= charIconUrl ? ' has-custom-icon' : '' %>" aria-hidden="true" style="--serverlist-account-icon-focus-x: <%= charIconFocusX %>%; --serverlist-account-icon-focus-y: <%= charIconFocusY %>%; --serverlist-account-icon-zoom: <%= charIconZoom %>;"><% if (charIconUrl) { %><img src="<%= charIconUrl %>" alt="" /><% } %></span>
                       <span class="character-mini-name"><%= char.name %></span>
                     </span>
                   <% } %>

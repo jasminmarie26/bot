@@ -168,29 +168,6 @@
     attachServerlistIconFallback(imageNode);
   }
 
-  function createCharacterInlineIcon(iconData) {
-    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
-    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
-    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
-    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
-    const icon = document.createElement("span");
-    icon.className = `serverlist-account-icon-preview character-inline-icon${imageUrl ? " has-custom-icon" : ""}`;
-    icon.setAttribute("aria-hidden", "true");
-    icon.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
-    icon.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
-    icon.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
-
-    if (imageUrl) {
-      const imageNode = document.createElement("img");
-      imageNode.alt = "";
-      imageNode.src = imageUrl;
-      attachServerlistIconFallback(imageNode);
-      icon.appendChild(imageNode);
-    }
-
-    return icon;
-  }
-
   function getBirthdayCakeLabel(label, showBirthdayCake) {
     const nextLabel = String(label || "").trim();
     if (!nextLabel) {
@@ -361,7 +338,6 @@
     }
     nameNode.textContent = displayNameWithBirthdayCake;
     function appendOccupantContent(target) {
-      target.appendChild(createCharacterInlineIcon(entry));
       if (isAfk) {
         const icon = document.createElement("span");
         icon.className = "rp-room-afk-clock";

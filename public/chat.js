@@ -843,29 +843,6 @@
     attachServerlistIconFallback(imageNode);
   }
 
-  function createCharacterInlineIcon(iconData) {
-    const imageUrl = String(iconData?.serverlist_icon_url || "").trim();
-    const focusX = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_x, 50);
-    const focusY = normalizeServerlistIconFocus(iconData?.serverlist_icon_focus_y, 50);
-    const zoom = normalizeServerlistIconZoom(iconData?.serverlist_icon_zoom, 1);
-    const icon = document.createElement("span");
-    icon.className = `serverlist-account-icon-preview character-inline-icon${imageUrl ? " has-custom-icon" : ""}`;
-    icon.setAttribute("aria-hidden", "true");
-    icon.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
-    icon.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
-    icon.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
-
-    if (imageUrl) {
-      const imageNode = document.createElement("img");
-      imageNode.alt = "";
-      imageNode.src = imageUrl;
-      attachServerlistIconFallback(imageNode);
-      icon.appendChild(imageNode);
-    }
-
-    return icon;
-  }
-
   function readSessionStorage(key) {
     try {
       return window.sessionStorage.getItem(key);
@@ -1662,10 +1639,6 @@
       show_birthday_cake: String(node.dataset.showBirthdayCake || "").trim() === "1",
       role_style: String(node.dataset.roleStyle || "").trim(),
       chat_text_color: String(node.dataset.chatTextColor || "").trim(),
-      serverlist_icon_url: String(node.dataset.serverlistIconUrl || "").trim(),
-      serverlist_icon_focus_x: normalizeServerlistIconFocus(node.dataset.serverlistIconFocusX, 50),
-      serverlist_icon_focus_y: normalizeServerlistIconFocus(node.dataset.serverlistIconFocusY, 50),
-      serverlist_icon_zoom: normalizeServerlistIconZoom(node.dataset.serverlistIconZoom, 1),
       is_afk: node.querySelector(".chat-afk-clock") != null,
       is_npc: node.classList.contains("is-npc")
     }));
@@ -4609,10 +4582,6 @@
       const showBirthdayCake = entry?.show_birthday_cake === true;
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
-      const serverlistIconUrl = String(entry?.serverlist_icon_url || "").trim();
-      const serverlistIconFocusX = normalizeServerlistIconFocus(entry?.serverlist_icon_focus_x, 50);
-      const serverlistIconFocusY = normalizeServerlistIconFocus(entry?.serverlist_icon_focus_y, 50);
-      const serverlistIconZoom = normalizeServerlistIconZoom(entry?.serverlist_icon_zoom, 1);
       const isAfk = entry?.is_afk === true;
       const isNpc = entry?.is_npc === true;
       const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
@@ -4665,19 +4634,12 @@
       node.dataset.showBirthdayCake = showBirthdayCake ? "1" : "0";
       node.dataset.roleStyle = roleStyle;
       node.dataset.chatTextColor = chatTextColor;
-      node.dataset.serverlistIconUrl = serverlistIconUrl;
-      node.dataset.serverlistIconFocusX = String(serverlistIconFocusX);
-      node.dataset.serverlistIconFocusY = String(serverlistIconFocusY);
-      node.dataset.serverlistIconZoom = String(serverlistIconZoom);
       afkClockNode.className = "chat-afk-clock";
       afkClockNode.setAttribute("aria-hidden", "true");
       afkClockNode.textContent = "\u25F7";
       applyChatTextColor(textNode, chatTextColor);
       textNode.textContent = displayNameWithBirthdayCake;
       applySpecialNameDecor(textNode, displayName);
-      if (!isNpc) {
-        contentNode.appendChild(createCharacterInlineIcon(entry));
-      }
       if (isAfk) {
         contentNode.appendChild(afkClockNode);
       }
