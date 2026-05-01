@@ -1248,8 +1248,8 @@ function getConnectedChatCharacterIds() {
       continue;
     }
 
-    const characterId = Number(socket?.data?.activeCharacterId);
     const serverId = getSocketChatServerId(socket);
+    const characterId = serverId ? Number(getSocketPreferredCharacterId(socket, serverId)) : NaN;
     if (!Number.isInteger(characterId) || characterId < 1 || !serverId) {
       continue;
     }
@@ -1294,8 +1294,8 @@ function normalizeStaffOnlineName(name, role) {
 function getSocketStaffOnlineEntry(socket) {
   const user = socket?.data?.user;
   const userId = Number(user?.id);
-  const activeCharacterId = Number(socket?.data?.activeCharacterId);
   const serverId = getSocketChatServerId(socket) || getSocketPresenceServerId(socket);
+  const activeCharacterId = serverId ? Number(getSocketPreferredCharacterId(socket, serverId)) : NaN;
 
   if (
     !Number.isInteger(userId) ||
@@ -21709,6 +21709,7 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   preferredMap[nextServerId] = id;
   req.session.preferred_character_ids = preferredMap;
   req.session.preferred_character_server_id = nextServerId;
+  refreshConnectedUserDisplay(req.session.user.id);
 
   emitHomeStatsUpdate();
   let successMessage = `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`;
@@ -25130,6 +25131,44 @@ function getPreferredCharacterForUser(
   return getPreferredCharacterForUserFallbackStatement.get(parsedUserId, normalizedServerId);
 }
 
+function resolveSocketCharacterForServer(
+  socket,
+  serverId = DEFAULT_SERVER_ID,
+  { syncSocketState = true } = {}
+) {
+  const parsedUserId = Number(socket?.data?.user?.id);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return null;
+  }
+
+  const normalizedServerId = normalizeCharacterServerId(serverId);
+  const rawActiveCharacterId = normalizePresenceCharacterId(socket?.data?.activeCharacterId);
+  if (rawActiveCharacterId) {
+    const activeCharacter = getCharacterById(rawActiveCharacterId);
+    if (
+      activeCharacter &&
+      Number(activeCharacter.user_id) === parsedUserId &&
+      normalizeCharacterServerId(activeCharacter.server_id) === normalizedServerId
+    ) {
+      return activeCharacter;
+    }
+  }
+
+  const preferredMap = normalizePreferredCharacterMap(socket?.data?.preferredCharacterIds);
+  const preferredCharacterId = normalizePresenceCharacterId(preferredMap[normalizedServerId]);
+  const fallbackCharacter = getPreferredCharacterForUser(
+    parsedUserId,
+    normalizedServerId,
+    preferredCharacterId
+  );
+
+  if (syncSocketState) {
+    socket.data.activeCharacterId = fallbackCharacter?.id ? Number(fallbackCharacter.id) : null;
+  }
+
+  return fallbackCharacter || null;
+}
+
 function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, rawName = "") {
   const parsedUserId = Number(userId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
@@ -26068,11 +26107,9 @@ function getSocketHeaderDisplayProfile(memberSocket) {
     : ALLOWED_SERVER_IDS.has(String(memberSocket?.data?.presenceServerId || "").trim().toLowerCase())
       ? normalizeServer(memberSocket.data.presenceServerId)
       : DEFAULT_SERVER_ID;
-  const activeCharacterId = Number(memberSocket?.data?.activeCharacterId);
-  return getCurrentChannelDisplayProfile(
+  return getUserDisplayProfile(
     memberSocket?.data?.user,
-    normalizedServerId,
-    Number.isInteger(activeCharacterId) && activeCharacterId > 0 ? activeCharacterId : null
+    resolveSocketCharacterForServer(memberSocket, normalizedServerId)
   );
 }
 
@@ -28505,21 +28542,13 @@ function emitSystemChatMessage(roomId, serverId, content, options = {}, standard
 
 function getSocketPreferredCharacterId(socket, serverId = DEFAULT_SERVER_ID) {
   const normalizedServerId = normalizeServer(serverId);
-  const activeCharacterId = Number(socket?.data?.activeCharacterId);
-  if (Number.isInteger(activeCharacterId) && activeCharacterId > 0) {
-    return activeCharacterId;
-  }
-
-  const preferredMap = normalizePreferredCharacterMap(socket?.data?.preferredCharacterIds);
-  return preferredMap[normalizedServerId] || null;
+  return resolveSocketCharacterForServer(socket, normalizedServerId)?.id || null;
 }
 
 function getSocketDisplayProfile(socket, serverId = DEFAULT_SERVER_ID) {
-  const user = socket?.data?.user;
-  return getCurrentChannelDisplayProfile(
-    user,
-    serverId,
-    getSocketPreferredCharacterId(socket, serverId)
+  return getUserDisplayProfile(
+    socket?.data?.user,
+    resolveSocketCharacterForServer(socket, serverId)
   );
 }
 
