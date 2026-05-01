@@ -254,11 +254,13 @@
           </button>
           <div id="chat-sound-panel" class="chat-sound-panel" hidden>
             <p class="chat-sound-panel-title">Ton-Einstellungen</p>
-            <label class="chat-sound-option" for="chat-entry-sound-toggle">
+            <div class="chat-sound-option">
               <input id="chat-entry-sound-toggle" type="checkbox" />
               <span class="chat-sound-option-copy">
-                <strong>Beitrittssound aktivieren</strong>
-                <small>Du hörst einen Ton, wenn jemand den Raum betritt.</small>
+                <label class="chat-sound-option-label" for="chat-entry-sound-toggle">
+                  <strong>Beitrittssound aktivieren</strong>
+                  <small>Du hörst einen Ton, wenn jemand den Raum betritt.</small>
+                </label>
                 <span class="chat-sound-select-label">
                   <span>Ton</span>
                   <select id="chat-entry-sound-select" class="chat-sound-select">
@@ -293,12 +295,14 @@
                   />
                 </span>
               </span>
-            </label>
-            <label class="chat-sound-option" for="chat-message-sound-toggle">
+            </div>
+            <div class="chat-sound-option">
               <input id="chat-message-sound-toggle" type="checkbox" />
               <span class="chat-sound-option-copy">
-                <strong>Chatsound</strong>
-                <small>Du hörst einen anderen Ton, wenn jemand schreibt.</small>
+                <label class="chat-sound-option-label" for="chat-message-sound-toggle">
+                  <strong>Chatsound</strong>
+                  <small>Du hörst einen anderen Ton, wenn jemand schreibt.</small>
+                </label>
                 <span class="chat-sound-select-label">
                   <span>Ton</span>
                   <select id="chat-message-sound-select" class="chat-sound-select">
@@ -333,7 +337,7 @@
                   />
                 </span>
               </span>
-            </label>
+            </div>
           </div>
         </div>
         <details class="rp-user-menu">

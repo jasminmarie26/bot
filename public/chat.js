@@ -4940,8 +4940,12 @@
 
   const handleChatViewportResize = () => {
     const shouldKeepBottom = isChatNearBottom();
+    const activeElement = document.activeElement;
+    const keepSoundPanelOpen = activeElement instanceof Element && Boolean(activeElement.closest(".chat-sound-menu"));
     closeOnlineMenu();
-    closeSoundPanel();
+    if (!keepSoundPanelOpen) {
+      closeSoundPanel();
+    }
     if (shouldKeepBottom) {
       window.requestAnimationFrame(() => {
         scrollChatToBottom();
@@ -4953,9 +4957,13 @@
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", handleChatViewportResize);
   }
-  window.addEventListener("scroll", () => {
+  window.addEventListener("scroll", (event) => {
+    const target = event.target;
+    const scrolledInsideSoundPanel = target instanceof Element && Boolean(target.closest(".chat-sound-menu"));
     closeOnlineMenu();
-    closeSoundPanel();
+    if (!scrolledInsideSoundPanel) {
+      closeSoundPanel();
+    }
   }, true);
 
   function handleWhisperMessage(payload) {
