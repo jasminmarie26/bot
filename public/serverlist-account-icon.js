@@ -25,6 +25,7 @@
   const userMenu = document.querySelector(".topbar-user-menu");
   const menuIconAnchors = Array.from(document.querySelectorAll("[data-serverlist-account-icon-anchor]"));
   const maxUploadBytes = 4 * 1024 * 1024;
+  const characterId = Number.parseInt(form.dataset.characterId || "", 10);
   let activeFilePayload = null;
   let lastFocusedElement = null;
   let savedImageUrl = String(form.dataset.currentImageUrl || "").trim();
@@ -278,6 +279,11 @@
     event.preventDefault();
     setStatus("");
 
+    if (!Number.isInteger(characterId) || characterId < 1) {
+      setStatus("Kein Charakter ausgewählt.", "error");
+      return;
+    }
+
     const payload = getSubmitPayload();
     const hasExistingImage = Boolean(savedImageUrl);
     const hasRequestedImage = Boolean(payload.dataUrl || String(payload.imageUrl || "").trim());
@@ -292,7 +298,7 @@
     }
 
     try {
-      const response = await fetch("/serverliste/account-icon", {
+      const response = await fetch(`/characters/${characterId}/serverlist-icon`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

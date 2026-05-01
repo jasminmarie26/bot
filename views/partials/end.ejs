@@ -7,6 +7,7 @@
     <script src="/rp-board.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
     <% if (currentUser) { %>
+      <script src="/serverlist-account-icon.js?v=<%= staticAssetVersion %>"></script>
       <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
     <% } %>
     <% if (Array.isArray(pageScripts)) { %>

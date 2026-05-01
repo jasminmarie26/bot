@@ -2752,6 +2752,22 @@ body.page-chat .server-work-notice {
   background-image: url("/theme-avatars/larp.svg");
 }
 
+.topbar-user-menu-toggle-icon[data-serverlist-account-icon-anchor],
+.rp-user-menu-toggle-icon[data-serverlist-account-icon-anchor] {
+  position: relative;
+  overflow: hidden;
+}
+
+.topbar-user-menu-toggle-icon img[data-serverlist-account-icon-image],
+.rp-user-menu-toggle-icon img[data-serverlist-account-icon-image] {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  object-fit: cover;
+  object-position: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
+}
+
 .topbar-user-menu-panel,
 .rp-user-menu-panel {
   position: absolute;
@@ -2832,6 +2848,28 @@ body.page-chat .server-work-notice {
 .topbar-user-menu-links a:hover,
 .rp-user-menu-links a:hover {
   text-decoration: none;
+  background: color-mix(in srgb, var(--field-bg) 68%, white 32%);
+  border-color: var(--field-edge);
+}
+
+.topbar-user-menu-link-button,
+.rp-user-menu-link-button {
+  display: block;
+  width: 100%;
+  padding: 0.42rem 0.56rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--text);
+  text-align: left;
+  background: color-mix(in srgb, var(--field-bg) 82%, transparent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.topbar-user-menu-link-button:hover,
+.topbar-user-menu-link-button:focus-visible,
+.rp-user-menu-link-button:hover,
+.rp-user-menu-link-button:focus-visible {
   background: color-mix(in srgb, var(--field-bg) 68%, white 32%);
   border-color: var(--field-edge);
 }
@@ -2973,6 +3011,162 @@ body.page-chat .server-work-notice {
 .topbar-user-menu-logout:hover,
 .rp-user-menu-logout:hover {
   background: color-mix(in srgb, var(--field-bg) 65%, white 35%);
+}
+
+.serverlist-account-icon-modal[hidden] {
+  display: none !important;
+}
+
+.serverlist-account-icon-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.serverlist-account-icon-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 8, 8, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.serverlist-account-icon-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(29rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border-radius: 22px;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.serverlist-account-icon-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.serverlist-account-icon-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.serverlist-account-icon-dialog-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.serverlist-account-icon-dialog-head p {
+  margin: 0.28rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.serverlist-account-icon-close {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--field-edge);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 84%, transparent);
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.serverlist-account-icon-close:hover,
+.serverlist-account-icon-close:focus-visible {
+  background: color-mix(in srgb, var(--field-bg) 68%, white 32%);
+}
+
+.serverlist-account-icon-field {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.serverlist-account-icon-field > span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.serverlist-account-icon-field input[type="url"],
+.serverlist-account-icon-field input[type="file"] {
+  width: 100%;
+}
+
+.serverlist-account-icon-preview-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.serverlist-account-icon-preview {
+  width: min(12rem, 48vw);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--link) 28%, var(--panel-edge));
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 58%),
+    color-mix(in srgb, var(--field-bg) 86%, transparent);
+  box-shadow: 0 24px 34px -26px var(--panel-shadow);
+}
+
+.serverlist-account-icon-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: var(--serverlist-account-icon-focus-x, 50%) var(--serverlist-account-icon-focus-y, 50%);
+}
+
+.serverlist-account-icon-sliders {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.serverlist-account-icon-status {
+  margin: 0;
+  min-height: 1.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.serverlist-account-icon-status.is-error {
+  color: #ffb6b6;
+}
+
+.serverlist-account-icon-status.is-success {
+  color: #bde6af;
+}
+
+.serverlist-account-icon-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+body.serverlist-account-icon-modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .serverlist-account-icon-dialog {
+    width: min(100%, calc(100vw - 1.2rem));
+    padding: 0.9rem;
+  }
+
+  .serverlist-account-icon-actions {
+    flex-direction: column-reverse;
+  }
+
+  .serverlist-account-icon-actions .btn {
+    width: 100%;
+  }
 }
 
 .container {

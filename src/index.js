@@ -5562,13 +5562,13 @@ function buildCharacterAvatarUploadDestination(characterId, fileExtension) {
   };
 }
 
-function buildServerlistAccountIconUploadDestination(userId, fileExtension) {
-  const normalizedUserId = Number(userId);
+function buildServerlistAccountIconUploadDestination(characterId, fileExtension) {
+  const normalizedCharacterId = Number(characterId);
   const safeExtension = String(fileExtension || "")
     .trim()
     .replace(/[^.a-z0-9]/gi, "")
     .toLowerCase();
-  const fileName = `user-${normalizedUserId}-${Date.now()}-${crypto.randomUUID()}${safeExtension}`;
+  const fileName = `character-${normalizedCharacterId}-${Date.now()}-${crypto.randomUUID()}${safeExtension}`;
 
   return {
     absolutePath: path.join(SERVERLIST_ACCOUNT_ICON_UPLOAD_ROOT, fileName),
@@ -18012,12 +18012,10 @@ function getDashboardLarpSection() {
 }
 
 function getServerListPageAssets(scriptPaths = []) {
-  const resolvedScriptPaths = Array.from(new Set(["/serverlist-account-icon.js", ...scriptPaths]));
   return {
     pageClass: "page-serverliste",
-    serverlistAccountIconEditorEnabled: true,
     pageStyles: ["/serverliste.css?v=" + STATIC_ASSET_VERSION],
-    pageScripts: resolvedScriptPaths.map((scriptPath) => scriptPath + "?v=" + STATIC_ASSET_VERSION)
+    pageScripts: scriptPaths.map((scriptPath) => scriptPath + "?v=" + STATIC_ASSET_VERSION)
   };
 }
 
@@ -18079,25 +18077,28 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
 });
 
 app.post(
-  "/serverliste/account-icon",
+  "/characters/:id/serverlist-icon",
   requireAuth,
   express.json({ limit: SERVERLIST_ACCOUNT_ICON_UPLOAD_JSON_LIMIT }),
   (req, res) => {
-    const userId = Number(req.session.user?.id);
-    if (!Number.isInteger(userId) || userId < 1) {
-      return res.status(403).json({ ok: false, error: "Bitte melde dich erneut an." });
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
     }
 
-    const user = getUserForSessionById(userId);
-    if (!user) {
-      req.session.user = null;
-      return res.status(404).json({ ok: false, error: "Benutzer nicht gefunden." });
+    const character = getCharacterById(id);
+    if (!character) {
+      return res.status(404).json({ ok: false, error: "Nicht gefunden." });
     }
 
-    const previousIconUrl = String(user.serverlist_icon_url || "").trim();
+    if (Number(req.session.user?.id) !== Number(character.user_id)) {
+      return res.status(403).json({ ok: false, error: "Kein Zugriff auf diesen Charakter." });
+    }
+
+    const previousIconUrl = String(character.serverlist_icon_url || "").trim();
     const requestedImageUrl = String(req.body?.imageUrl || "").trim();
-    const focusX = normalizeAvatarFocusInput(req.body?.focusX, user.serverlist_icon_focus_x);
-    const focusY = normalizeAvatarFocusInput(req.body?.focusY, user.serverlist_icon_focus_y);
+    const focusX = normalizeAvatarFocusInput(req.body?.focusX, character.serverlist_icon_focus_x);
+    const focusY = normalizeAvatarFocusInput(req.body?.focusY, character.serverlist_icon_focus_y);
     const parsedImageData = parseBase64ImageDataUrl(req.body?.dataUrl);
     let nextIconUrl = previousIconUrl;
     let uploadedIconUrl = "";
@@ -18124,7 +18125,7 @@ app.post(
         return res.status(400).json({ ok: false, error: "Die Datei darf maximal 4 MB groß sein." });
       }
 
-      const uploadDestination = buildServerlistAccountIconUploadDestination(userId, fileExtension);
+      const uploadDestination = buildServerlistAccountIconUploadDestination(character.id, fileExtension);
 
       try {
         fs.writeFileSync(uploadDestination.absolutePath, fileBuffer);
@@ -18147,17 +18148,18 @@ app.post(
 
     try {
       db.prepare(
-        `UPDATE users
+        `UPDATE characters
             SET serverlist_icon_url = ?,
                 serverlist_icon_focus_x = ?,
-                serverlist_icon_focus_y = ?
+                serverlist_icon_focus_y = ?,
+                updated_at = CURRENT_TIMESTAMP
           WHERE id = ?`
-      ).run(nextIconUrl, focusX, focusY, userId);
+      ).run(nextIconUrl, focusX, focusY, character.id);
     } catch (error) {
       if (uploadedIconUrl) {
         removeManagedServerlistAccountIconFile(uploadedIconUrl);
       }
-      console.error("Serverlisten-Icon konnte nicht dem Benutzer zugeordnet werden:", error);
+      console.error("Serverlisten-Icon konnte nicht dem Charakter zugeordnet werden:", error);
       return res.status(500).json({ ok: false, error: "Das Bild konnte nicht gespeichert werden." });
     }
 
@@ -18165,13 +18167,9 @@ app.post(
       removeManagedServerlistAccountIconFile(previousIconUrl);
     }
 
-    const refreshedUser = getUserForSessionById(userId);
-    if (refreshedUser) {
-      req.session.user = toSessionUser(refreshedUser);
-    }
-
     return res.json({
       ok: true,
+      characterId: character.id,
       imageUrl: nextIconUrl,
       focusX,
       focusY

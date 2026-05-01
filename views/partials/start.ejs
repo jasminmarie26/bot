@@ -336,17 +336,17 @@
       currentUserAccountName || (currentUser ? currentUser.username : ""); %>
     <% const showServerlistAccountIconEditor = Boolean(
       currentUser &&
-      typeof serverlistAccountIconEditorEnabled !== "undefined" &&
-      serverlistAccountIconEditorEnabled
+      menuCharacter &&
+      canEditMenuCharacter
     ); %>
-    <% const serverlistAccountIconUrl = showServerlistAccountIconEditor
-      ? String(currentUser.serverlist_icon_url || "").trim()
+    <% const serverlistAccountIconUrl = menuCharacter
+      ? String(menuCharacter.serverlist_icon_url || "").trim()
       : ""; %>
-    <% const serverlistAccountIconFocusX = showServerlistAccountIconEditor
-      ? Number(currentUser.serverlist_icon_focus_x ?? 50)
+    <% const serverlistAccountIconFocusX = menuCharacter
+      ? Number(menuCharacter.serverlist_icon_focus_x ?? 50)
       : 50; %>
-    <% const serverlistAccountIconFocusY = showServerlistAccountIconEditor
-      ? Number(currentUser.serverlist_icon_focus_y ?? 50)
+    <% const serverlistAccountIconFocusY = menuCharacter
+      ? Number(menuCharacter.serverlist_icon_focus_y ?? 50)
       : 50; %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const menuCharacterEditHref = menuCharacter
@@ -880,7 +880,7 @@
                         type="button"
                         class="topbar-user-menu-link-button"
                         data-serverlist-account-icon-open
-                      >Icon bearbeiten</button>
+                      >Icon editieren</button>
                     <% } %>
                     <% if (menuCharacter) { %>
                       <% if (isLarpMenuContext) { %>
@@ -1027,14 +1027,15 @@
                     <form
                       class="serverlist-account-icon-form"
                       data-serverlist-account-icon-form
+                      data-character-id="<%= Number(menuCharacter?.id || 0) %>"
                       data-current-image-url="<%= serverlistAccountIconUrl %>"
                       data-current-focus-x="<%= serverlistAccountIconFocusX %>"
                       data-current-focus-y="<%= serverlistAccountIconFocusY %>"
                     >
                       <div class="serverlist-account-icon-dialog-head">
                         <div>
-                          <h2 id="serverlist-account-icon-title">Icon bearbeiten</h2>
-                          <p>Von URL oder vom PC ausw&auml;hlen. Die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
+                          <h2 id="serverlist-account-icon-title">Icon editieren</h2>
+                          <p>Dieses Icon gilt nur f&uuml;r <%= menuCharacter.name %>. Von URL oder vom PC ausw&auml;hlen, die Gr&ouml;&szlig;e wird automatisch angepasst.</p>
                         </div>
                         <button
                           type="button"
