@@ -2802,6 +2802,12 @@ body.page-chat .server-work-notice {
   overflow: hidden;
 }
 
+.topbar-user-menu-toggle-icon.has-custom-icon,
+.rp-user-menu-toggle-icon.has-custom-icon,
+.serverlist-account-icon-preview.has-custom-icon {
+  background-image: none;
+}
+
 .topbar-user-menu-toggle-icon img[data-serverlist-account-icon-image],
 .rp-user-menu-toggle-icon img[data-serverlist-account-icon-image] {
   width: 100%;

@@ -293,6 +293,10 @@
           : typeof character !== "undefined" && character
             ? character
             : null; %>
+    <% const resolvedTopbarIconCharacter =
+      typeof topbarIconCharacter !== "undefined" && topbarIconCharacter
+        ? topbarIconCharacter
+        : menuCharacter; %>
     <% const themeCharacter =
       menuCharacter ||
       (typeof activeThemeCharacter !== "undefined" && activeThemeCharacter
@@ -339,18 +343,19 @@
       menuCharacter &&
       canEditMenuCharacter
     ); %>
-    <% const serverlistAccountIconUrl = menuCharacter
-      ? String(menuCharacter.serverlist_icon_url || "").trim()
+    <% const serverlistAccountIconUrl = resolvedTopbarIconCharacter
+      ? String(resolvedTopbarIconCharacter.serverlist_icon_url || "").trim()
       : ""; %>
-    <% const serverlistAccountIconFocusX = menuCharacter
-      ? Number(menuCharacter.serverlist_icon_focus_x ?? 50)
+    <% const serverlistAccountIconFocusX = resolvedTopbarIconCharacter
+      ? Number(resolvedTopbarIconCharacter.serverlist_icon_focus_x ?? 50)
       : 50; %>
-    <% const serverlistAccountIconFocusY = menuCharacter
-      ? Number(menuCharacter.serverlist_icon_focus_y ?? 50)
+    <% const serverlistAccountIconFocusY = resolvedTopbarIconCharacter
+      ? Number(resolvedTopbarIconCharacter.serverlist_icon_focus_y ?? 50)
       : 50; %>
-    <% const serverlistAccountIconZoom = menuCharacter && Number.isFinite(Number(menuCharacter.serverlist_icon_zoom))
-      ? Math.min(4, Math.max(1, Number(menuCharacter.serverlist_icon_zoom)))
+    <% const serverlistAccountIconZoom = resolvedTopbarIconCharacter && Number.isFinite(Number(resolvedTopbarIconCharacter.serverlist_icon_zoom))
+      ? Math.min(4, Math.max(1, Number(resolvedTopbarIconCharacter.serverlist_icon_zoom)))
       : 1; %>
+    <% const hasServerlistAccountIcon = Boolean(serverlistAccountIconUrl); %>
     <% const isLarpMenuContext = Boolean(menuCharacter && menuCharacter.server_id === "larp"); %>
     <% const menuCharacterEditHref = menuCharacter
       ? (isLarpMenuContext
@@ -847,7 +852,7 @@
                   title="Benutzermen&uuml;"
                 >
                   <span
-                    class="topbar-user-menu-toggle-icon"
+                    class="topbar-user-menu-toggle-icon<%= hasServerlistAccountIcon ? ' has-custom-icon' : '' %>"
                     aria-hidden="true"
                     data-serverlist-account-icon-anchor
                     style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%; --serverlist-account-icon-zoom: <%= serverlistAccountIconZoom %>;"
@@ -1056,7 +1061,7 @@
 
                       <div class="serverlist-account-icon-preview-wrap">
                         <div
-                          class="serverlist-account-icon-preview"
+                          class="serverlist-account-icon-preview<%= hasServerlistAccountIcon ? ' has-custom-icon' : '' %>"
                           data-serverlist-account-icon-preview
                           style="--serverlist-account-icon-focus-x: <%= serverlistAccountIconFocusX %>%; --serverlist-account-icon-focus-y: <%= serverlistAccountIconFocusY %>%; --serverlist-account-icon-zoom: <%= serverlistAccountIconZoom %>;"
                         >
