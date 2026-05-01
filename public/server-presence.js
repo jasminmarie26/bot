@@ -128,8 +128,9 @@
     imageNode.addEventListener(
       "error",
       () => {
+        const parentNode = imageNode.parentElement;
+        parentNode?.classList?.remove("has-custom-icon");
         imageNode.remove();
-        imageNode.parentElement?.classList?.remove("has-custom-icon");
       },
       { once: true }
     );

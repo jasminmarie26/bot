@@ -320,14 +320,15 @@
         return;
       }
 
-      imageNode.addEventListener(
-        "error",
-        () => {
-          imageNode.remove();
-          imageNode.parentElement?.classList?.remove("has-custom-icon");
-        },
-        { once: true }
-      );
+    imageNode.addEventListener(
+      "error",
+      () => {
+        const parentNode = imageNode.parentElement;
+        parentNode?.classList?.remove("has-custom-icon");
+        imageNode.remove();
+      },
+      { once: true }
+    );
     };
 
     const setPreviewSource = (sourceUrl) => {

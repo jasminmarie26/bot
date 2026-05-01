@@ -109,7 +109,7 @@
               aria-hidden="true"
               data-serverlist-account-icon-anchor
               style="--serverlist-account-icon-focus-x: <%= festplaysMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplaysMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplaysMenuIconZoom %>;"
-            ><% if (festplaysMenuIconUrl) { %><img src="<%= festplaysMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.remove(); this.parentElement && this.parentElement.classList.remove('has-custom-icon');" /><% } %></span>
+            ><% if (festplaysMenuIconUrl) { %><img src="<%= festplaysMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">

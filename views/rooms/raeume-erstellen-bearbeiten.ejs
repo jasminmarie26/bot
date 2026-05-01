@@ -101,7 +101,7 @@
               aria-hidden="true"
               data-serverlist-account-icon-anchor
               style="--serverlist-account-icon-focus-x: <%= roomcreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomcreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomcreateMenuIconZoom %>;"
-            ><% if (roomcreateMenuIconUrl) { %><img src="<%= roomcreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.remove(); this.parentElement && this.parentElement.classList.remove('has-custom-icon');" /><% } %></span>
+            ><% if (roomcreateMenuIconUrl) { %><img src="<%= roomcreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">

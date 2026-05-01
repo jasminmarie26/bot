@@ -899,7 +899,7 @@
                         src="<%= serverlistAccountIconUrl %>"
                         alt=""
                         data-serverlist-account-icon-image
-                        onerror="this.remove(); this.parentElement && this.parentElement.classList.remove('has-custom-icon');"
+                        onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();"
                       />
                     <% } %>
                   </span>
