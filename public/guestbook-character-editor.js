@@ -315,6 +315,21 @@
       );
     };
 
+    const attachMenuIconErrorFallback = (imageNode) => {
+      if (!(imageNode instanceof HTMLImageElement)) {
+        return;
+      }
+
+      imageNode.addEventListener(
+        "error",
+        () => {
+          imageNode.remove();
+          imageNode.parentElement?.classList?.remove("has-custom-icon");
+        },
+        { once: true }
+      );
+    };
+
     const setPreviewSource = (sourceUrl) => {
       const resolvedSource = String(sourceUrl || "").trim();
       const existingImage = guestbookCharacterIconPreview.querySelector("[data-guestbook-character-icon-preview-image]");
@@ -353,6 +368,7 @@
         anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
         anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
         anchor.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+        anchor.classList.toggle("has-custom-icon", Boolean(resolvedImageUrl));
 
         const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");
         if (!resolvedImageUrl) {
@@ -369,6 +385,7 @@
         }
 
         imageNode.src = resolvedImageUrl;
+        attachMenuIconErrorFallback(imageNode);
       });
     };
 

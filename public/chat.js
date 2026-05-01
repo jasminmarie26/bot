@@ -810,6 +810,10 @@
     );
   }
 
+  Array.from(document.querySelectorAll("[data-serverlist-account-icon-image]")).forEach((imageNode) => {
+    attachServerlistIconFallback(imageNode);
+  });
+
   function applyServerlistAccountIcon(anchor, iconData) {
     if (!(anchor instanceof HTMLElement)) {
       return;

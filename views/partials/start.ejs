@@ -202,6 +202,40 @@
           ".guestbook-item-authorline > strong",
           ".rp-room-occupant"
         ].join(", ");
+        const SERVERLIST_ICON_IMAGE_SELECTOR = "[data-serverlist-account-icon-image]";
+
+        const bindServerlistIconFallback = (root = document) => {
+          const targets = [];
+          if (root instanceof HTMLImageElement && root.matches(SERVERLIST_ICON_IMAGE_SELECTOR)) {
+            targets.push(root);
+          }
+          if (root instanceof Element && root.matches("[data-serverlist-account-icon-anchor]")) {
+            const ownImage = root.querySelector(SERVERLIST_ICON_IMAGE_SELECTOR);
+            if (ownImage instanceof HTMLImageElement) {
+              targets.push(ownImage);
+            }
+          }
+          if (root?.querySelectorAll) {
+            targets.push(...root.querySelectorAll(SERVERLIST_ICON_IMAGE_SELECTOR));
+          }
+
+          targets.forEach((imageNode) => {
+            if (!(imageNode instanceof HTMLImageElement) || imageNode.dataset.serverlistIconFallbackBound === "1") {
+              return;
+            }
+
+            imageNode.dataset.serverlistIconFallbackBound = "1";
+            imageNode.addEventListener(
+              "error",
+              () => {
+                const anchor = imageNode.parentElement;
+                imageNode.remove();
+                anchor?.classList?.remove("has-custom-icon");
+              },
+              { once: true }
+            );
+          });
+        };
 
         const syncSpecialNameDecor = (root = document) => {
           const targets = [];
@@ -226,6 +260,7 @@
 
         const boot = () => {
           syncSpecialNameDecor(document);
+          bindServerlistIconFallback(document);
 
           if (!document.body || typeof MutationObserver !== "function") {
             return;
@@ -241,11 +276,13 @@
               mutation.addedNodes.forEach((node) => {
                 if (node instanceof Element) {
                   syncSpecialNameDecor(node);
+                  bindServerlistIconFallback(node);
                 }
               });
 
               if (mutation.target instanceof Element) {
                 syncSpecialNameDecor(mutation.target);
+                bindServerlistIconFallback(mutation.target);
               }
             });
           });

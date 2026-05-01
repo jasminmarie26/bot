@@ -58,6 +58,7 @@
       "error",
       () => {
         imageNode.remove();
+        imageNode.parentElement?.classList?.remove("has-custom-icon");
       },
       { once: true }
     );
@@ -112,6 +113,7 @@
     menuIconAnchors.forEach((anchor) => {
       anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+      anchor.classList.toggle("has-custom-icon", Boolean(resolvedImageUrl));
 
       const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");
       if (!resolvedImageUrl) {
