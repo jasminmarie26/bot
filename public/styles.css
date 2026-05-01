@@ -1977,15 +1977,30 @@ body.page-chat .server-work-notice {
   color: var(--muted);
 }
 
-.chat-sound-select-label {
+.chat-sound-select-label,
+.chat-sound-volume-control {
   display: grid;
   gap: 0.22rem;
   margin-top: 0.26rem;
 }
 
-.chat-sound-select-label > span {
+.chat-sound-select-label > span,
+.chat-sound-volume-heading {
   font-size: 0.69rem;
   color: var(--muted);
+}
+
+.chat-sound-volume-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.chat-sound-volume-heading strong {
+  color: var(--text);
+  font-size: 0.69rem;
+  font-weight: 700;
 }
 
 .chat-sound-select {
@@ -2002,6 +2017,17 @@ body.page-chat .server-work-notice {
 .chat-sound-select:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 58%, white 42%);
   outline-offset: 1px;
+}
+
+.chat-sound-option input.chat-sound-volume {
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.chat-sound-volume:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 58%, white 42%);
+  outline-offset: 3px;
 }
 
 .guestbook-notification-link,

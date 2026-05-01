@@ -33,6 +33,10 @@
   const messageSoundCheckbox = document.getElementById("chat-message-sound-toggle");
   const entrySoundSelect = document.getElementById("chat-entry-sound-select");
   const messageSoundSelect = document.getElementById("chat-message-sound-select");
+  const entrySoundVolumeInput = document.getElementById("chat-entry-sound-volume");
+  const messageSoundVolumeInput = document.getElementById("chat-message-sound-volume");
+  const entrySoundVolumeValue = document.getElementById("chat-entry-sound-volume-value");
+  const messageSoundVolumeValue = document.getElementById("chat-message-sound-volume-value");
   const whisperPanel = document.getElementById("chat-whisper-panel");
   const whisperPanelCloseBtn = document.getElementById("chat-whisper-close-btn");
   const whisperList = document.getElementById("chat-whisper-list");
@@ -153,6 +157,8 @@
   const messageSoundPreferenceKey = "chat-room-message-sound-enabled";
   const entrySoundTonePreferenceKey = "chat-room-entry-sound-tone";
   const messageSoundTonePreferenceKey = "chat-room-message-sound-tone";
+  const entrySoundVolumePreferenceKey = "chat-room-entry-sound-volume";
+  const messageSoundVolumePreferenceKey = "chat-room-message-sound-volume";
   const notificationToneConfigs = {
     aurora: {
       label: "Aurora",
@@ -385,6 +391,8 @@
   const notificationToneIdSet = new Set(notificationToneIds);
   const defaultEntryToneId = "aurora";
   const defaultMessageToneId = "pulse";
+  const defaultEntrySoundVolume = 0.98;
+  const defaultMessageSoundVolume = 0.92;
   const chatInputHistoryLimit = 50;
   const chatMessageRestoreLimit = 150;
   const whisperThreadMessageRestoreLimit = 80;
@@ -400,6 +408,8 @@
   let messageSoundEnabled = true;
   let selectedEntryToneId = defaultEntryToneId;
   let selectedMessageToneId = defaultMessageToneId;
+  let entrySoundVolume = defaultEntrySoundVolume;
+  let messageSoundVolume = defaultMessageSoundVolume;
   let isSoundPanelOpen = false;
   const activeNotificationAudios = new Set();
   const notificationToneDataUrls = Object.create(null);
@@ -2206,6 +2216,24 @@
     selectedMessageToneId = defaultMessageToneId;
   }
 
+  try {
+    entrySoundVolume = normalizeNotificationVolume(
+      window.localStorage.getItem(entrySoundVolumePreferenceKey),
+      defaultEntrySoundVolume
+    );
+  } catch (_error) {
+    entrySoundVolume = defaultEntrySoundVolume;
+  }
+
+  try {
+    messageSoundVolume = normalizeNotificationVolume(
+      window.localStorage.getItem(messageSoundVolumePreferenceKey),
+      defaultMessageSoundVolume
+    );
+  } catch (_error) {
+    messageSoundVolume = defaultMessageSoundVolume;
+  }
+
   function clampNotificationSample(value) {
     return Math.max(-1, Math.min(1, Number(value) || 0));
   }
@@ -2565,6 +2593,40 @@
     return entrySoundEnabled || messageSoundEnabled;
   }
 
+  function normalizeNotificationVolume(value, fallback = 1) {
+    const fallbackNumber = Number(fallback);
+    const fallbackVolume = Math.max(0, Math.min(1, Number.isFinite(fallbackNumber) ? fallbackNumber : 1));
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue) {
+      return fallbackVolume;
+    }
+
+    let parsedValue = Number(rawValue);
+    if (!Number.isFinite(parsedValue)) {
+      return fallbackVolume;
+    }
+    if (parsedValue > 1) {
+      parsedValue /= 100;
+    }
+
+    return Math.max(0, Math.min(1, parsedValue));
+  }
+
+  function getNotificationVolumePercent(volume) {
+    return Math.round(normalizeNotificationVolume(volume, 1) * 100);
+  }
+
+  function syncNotificationVolumeControl(input, valueNode, volume) {
+    const volumePercent = getNotificationVolumePercent(volume);
+    if (input) {
+      input.value = String(volumePercent);
+      input.setAttribute("aria-valuetext", `${volumePercent}%`);
+    }
+    if (valueNode) {
+      valueNode.textContent = `${volumePercent}%`;
+    }
+  }
+
   function updateSoundToggle() {
     if (soundToggle) {
       soundToggle.classList.toggle("is-open", isSoundPanelOpen);
@@ -2595,6 +2657,9 @@
     if (messageSoundSelect) {
       messageSoundSelect.value = selectedMessageToneId;
     }
+
+    syncNotificationVolumeControl(entrySoundVolumeInput, entrySoundVolumeValue, entrySoundVolume);
+    syncNotificationVolumeControl(messageSoundVolumeInput, messageSoundVolumeValue, messageSoundVolume);
   }
 
   function openSoundPanel() {
@@ -2626,12 +2691,14 @@
     openSoundPanel();
   }
 
-  async function persistSoundPreferences() {
+  async function persistSoundPreferences({ unlockAudio = true } = {}) {
     try {
       window.localStorage.setItem(entrySoundPreferenceKey, entrySoundEnabled ? "1" : "0");
       window.localStorage.setItem(messageSoundPreferenceKey, messageSoundEnabled ? "1" : "0");
       window.localStorage.setItem(entrySoundTonePreferenceKey, selectedEntryToneId);
       window.localStorage.setItem(messageSoundTonePreferenceKey, selectedMessageToneId);
+      window.localStorage.setItem(entrySoundVolumePreferenceKey, String(getNotificationVolumePercent(entrySoundVolume)));
+      window.localStorage.setItem(messageSoundVolumePreferenceKey, String(getNotificationVolumePercent(messageSoundVolume)));
     } catch (_error) {
       // Ignore storage failures; the toggles still work for the current session.
     }
@@ -2640,7 +2707,7 @@
     if (!isAnySoundEnabled()) {
       stopActiveNotificationAudios();
     }
-    if (isAnySoundEnabled()) {
+    if (unlockAudio && isAnySoundEnabled()) {
       await unlockNotificationAudio();
     }
   }
@@ -2668,11 +2735,12 @@
       return;
     }
 
-    if (await playNotificationAudioElement("entry", selectedEntryToneId, { volume: 0.98 })) {
+    const volume = normalizeNotificationVolume(entrySoundVolume, defaultEntrySoundVolume);
+    if (await playNotificationAudioElement("entry", selectedEntryToneId, { volume })) {
       return;
     }
 
-    await playNotificationOscillatorTone("entry", selectedEntryToneId, { volume: 0.98 });
+    await playNotificationOscillatorTone("entry", selectedEntryToneId, { volume });
   }
 
   async function playChatTone() {
@@ -2680,11 +2748,12 @@
       return;
     }
 
-    if (await playNotificationAudioElement("chat", selectedMessageToneId, { volume: 0.92 })) {
+    const volume = normalizeNotificationVolume(messageSoundVolume, defaultMessageSoundVolume);
+    if (await playNotificationAudioElement("chat", selectedMessageToneId, { volume })) {
       return;
     }
 
-    await playNotificationOscillatorTone("chat", selectedMessageToneId, { volume: 0.92 });
+    await playNotificationOscillatorTone("chat", selectedMessageToneId, { volume });
   }
 
   if (soundToggle) {
@@ -2735,6 +2804,38 @@
         messageSoundSelect.value,
         defaultMessageToneId
       );
+      await persistSoundPreferences();
+      if (messageSoundEnabled) {
+        await playChatTone();
+      }
+    });
+  }
+
+  if (entrySoundVolumeInput) {
+    entrySoundVolumeInput.addEventListener("input", () => {
+      entrySoundVolume = normalizeNotificationVolume(entrySoundVolumeInput.value, entrySoundVolume);
+      syncNotificationVolumeControl(entrySoundVolumeInput, entrySoundVolumeValue, entrySoundVolume);
+      persistSoundPreferences({ unlockAudio: false });
+    });
+
+    entrySoundVolumeInput.addEventListener("change", async () => {
+      entrySoundVolume = normalizeNotificationVolume(entrySoundVolumeInput.value, entrySoundVolume);
+      await persistSoundPreferences();
+      if (entrySoundEnabled) {
+        await playEntryTone();
+      }
+    });
+  }
+
+  if (messageSoundVolumeInput) {
+    messageSoundVolumeInput.addEventListener("input", () => {
+      messageSoundVolume = normalizeNotificationVolume(messageSoundVolumeInput.value, messageSoundVolume);
+      syncNotificationVolumeControl(messageSoundVolumeInput, messageSoundVolumeValue, messageSoundVolume);
+      persistSoundPreferences({ unlockAudio: false });
+    });
+
+    messageSoundVolumeInput.addEventListener("change", async () => {
+      messageSoundVolume = normalizeNotificationVolume(messageSoundVolumeInput.value, messageSoundVolume);
       await persistSoundPreferences();
       if (messageSoundEnabled) {
         await playChatTone();
