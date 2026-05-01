@@ -467,7 +467,100 @@ const REGISTRATION_MAX_REQUESTS_PER_10_MINUTES = 8;
 const REGISTRATION_MAX_ATTEMPTS_PER_HOUR = 6;
 const REGISTRATION_MAX_SUCCESSES_PER_DAY = 3;
 const PASSWORD_RESET_TOKEN_LIFETIME_HOURS = 2;
-const STATIC_ASSET_VERSION = Date.now().toString(36);
+const SERVER_INSTANCE_ID = Date.now().toString(36);
+const STATIC_ASSET_VERSIONED_EXTENSIONS = new Set([".css", ".js", ".ico", ".png", ".svg"]);
+const STATIC_ASSET_IMMUTABLE_EXTENSIONS = new Set([".css", ".js", ".ico"]);
+const STATIC_ASSET_MEDIA_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]);
+const STATIC_ASSET_FONT_EXTENSIONS = new Set([".woff", ".woff2", ".ttf", ".otf", ".eot"]);
+
+function buildStaticAssetVersion() {
+  const assetRoot = path.join(__dirname, "..", "public");
+  const uploadsRoot = path.join(assetRoot, "uploads").toLowerCase();
+  const hash = crypto.createHash("sha1");
+  const pendingPaths = [assetRoot];
+  let includedFileCount = 0;
+
+  while (pendingPaths.length) {
+    const currentPath = pendingPaths.pop();
+    let entries = [];
+
+    try {
+      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    } catch (error) {
+      continue;
+    }
+
+    entries
+      .sort((left, right) => left.name.localeCompare(right.name, "en"))
+      .forEach((entry) => {
+        const fullPath = path.join(currentPath, entry.name);
+        const normalizedFullPath = fullPath.toLowerCase();
+
+        if (entry.isDirectory()) {
+          if (normalizedFullPath !== uploadsRoot) {
+            pendingPaths.push(fullPath);
+          }
+          return;
+        }
+
+        if (!entry.isFile()) {
+          return;
+        }
+
+        const extension = path.extname(entry.name).toLowerCase();
+        if (!STATIC_ASSET_VERSIONED_EXTENSIONS.has(extension)) {
+          return;
+        }
+
+        try {
+          const stats = fs.statSync(fullPath);
+          hash.update(path.relative(assetRoot, fullPath));
+          hash.update(":");
+          hash.update(String(stats.size));
+          hash.update(":");
+          hash.update(String(Math.trunc(stats.mtimeMs)));
+          hash.update("\n");
+          includedFileCount += 1;
+        } catch (error) {
+          // Ignore transient files so startup keeps working.
+        }
+      });
+  }
+
+  return includedFileCount > 0
+    ? hash.digest("hex").slice(0, 12)
+    : Date.now().toString(36);
+}
+
+function setPublicAssetCacheHeaders(res, filePath) {
+  const normalizedFilePath = String(filePath || "").toLowerCase();
+  const uploadsRoot = path.join(__dirname, "..", "public", "uploads").toLowerCase();
+  const extension = path.extname(normalizedFilePath);
+
+  if (normalizedFilePath.startsWith(uploadsRoot)) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return;
+  }
+
+  if (STATIC_ASSET_IMMUTABLE_EXTENSIONS.has(extension)) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return;
+  }
+
+  if (STATIC_ASSET_FONT_EXTENSIONS.has(extension)) {
+    res.setHeader("Cache-Control", "public, max-age=2592000");
+    return;
+  }
+
+  if (STATIC_ASSET_MEDIA_EXTENSIONS.has(extension)) {
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return;
+  }
+
+  res.setHeader("Cache-Control", "public, max-age=3600");
+}
+
+const STATIC_ASSET_VERSION = buildStaticAssetVersion();
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "10minutemail.com",
   "10minutemail.net",
@@ -887,8 +980,22 @@ for (const acmeChallengeRoot of ACME_CHALLENGE_ROOTS) {
     })
   );
 }
-app.use(express.static(publicDir));
-app.use("/bbcode-font-cache", express.static(BBCODE_1001FREEFONTS_CACHE_ROOT));
+app.use(
+  express.static(publicDir, {
+    etag: true,
+    lastModified: true,
+    setHeaders: setPublicAssetCacheHeaders
+  })
+);
+app.use(
+  "/bbcode-font-cache",
+  express.static(BBCODE_1001FREEFONTS_CACHE_ROOT, {
+    etag: true,
+    lastModified: true,
+    immutable: true,
+    maxAge: "30d"
+  })
+);
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
   if (req.method === "POST" && req.path === "/session/touch" && req.session?.user) {
@@ -5073,18 +5180,18 @@ function getUserForSessionByUsername(username) {
     .get(username);
 }
 
+const getAccountUserByIdStatement = db.prepare(
+  `SELECT id, username, email, birth_date, public_birth_show_age, public_birth_show_day_month,
+          public_birth_show_year, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
+          guestbook_music_enabled,
+          room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at,
+          oauth_password_pending
+   FROM users
+   WHERE id = ?`
+);
+
 function getAccountUserById(userId) {
-  return db
-    .prepare(
-      `SELECT id, username, email, birth_date, public_birth_show_age, public_birth_show_day_month,
-              public_birth_show_year, afk_timeout_minutes, auto_afk_enabled, show_own_chat_time,
-              guestbook_music_enabled,
-              room_log_email_enabled, is_admin, is_moderator, created_at, username_changed_at,
-              oauth_password_pending
-       FROM users
-       WHERE id = ?`
-    )
-    .get(userId);
+  return getAccountUserByIdStatement.get(userId);
 }
 
 function getPublicBirthdayDisplayForUser(userId, referenceDate = new Date()) {
@@ -11562,17 +11669,47 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
   };
 }
 
+const selectGuestbookPagesByCharacterStatement = db.prepare(
+  `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
+          inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
+          background_color, surround_color, page_style, theme_style, created_at, updated_at
+   FROM guestbook_pages
+   WHERE character_id = ?
+   ORDER BY page_number ASC, id ASC`
+);
+const insertDefaultGuestbookPageStatement = db.prepare(
+  `INSERT INTO guestbook_pages (
+     character_id,
+     page_number,
+     title,
+     content,
+     image_url,
+     inner_image_url,
+     outer_image_url,
+     inner_image_opacity,
+     outer_image_opacity,
+     inner_image_repeat,
+     outer_image_repeat,
+     frame_color,
+     background_color,
+     surround_color,
+     page_style,
+     theme_style
+   )
+   VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+);
+const selectGuestbookSettingsByCharacterStatement = db.prepare(
+  `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
+   FROM guestbook_settings
+   WHERE character_id = ?`
+);
+const insertGuestbookSettingsStatement = db.prepare(
+  `INSERT INTO guestbook_settings (character_id)
+   VALUES (?)`
+);
+
 function ensureGuestbookPages(characterId) {
-  const existingPages = db
-    .prepare(
-      `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
-              inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
-              background_color, surround_color, page_style, theme_style, created_at, updated_at
-       FROM guestbook_pages
-       WHERE character_id = ?
-       ORDER BY page_number ASC, id ASC`
-    )
-    .all(characterId);
+  const existingPages = selectGuestbookPagesByCharacterStatement.all(characterId);
 
   if (existingPages.length) {
     return existingPages;
@@ -11581,27 +11718,7 @@ function ensureGuestbookPages(characterId) {
   const currentSettings = getOrCreateGuestbookSettings(characterId);
   const defaultSettings = buildGuestbookPageSettings(currentSettings, currentSettings);
 
-  db.prepare(
-    `INSERT INTO guestbook_pages (
-       character_id,
-       page_number,
-       title,
-       content,
-       image_url,
-       inner_image_url,
-       outer_image_url,
-       inner_image_opacity,
-       outer_image_opacity,
-       inner_image_repeat,
-       outer_image_repeat,
-       frame_color,
-       background_color,
-       surround_color,
-       page_style,
-       theme_style
-     )
-     VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
+  insertDefaultGuestbookPageStatement.run(
     characterId,
     defaultSettings.image_url,
     defaultSettings.inner_image_url,
@@ -11617,16 +11734,7 @@ function ensureGuestbookPages(characterId) {
     defaultSettings.theme_style
   );
 
-  return db
-    .prepare(
-      `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
-              inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
-              background_color, surround_color, page_style, theme_style, created_at, updated_at
-       FROM guestbook_pages
-       WHERE character_id = ?
-       ORDER BY page_number ASC, id ASC`
-    )
-    .all(characterId);
+  return selectGuestbookPagesByCharacterStatement.all(characterId);
 }
 
 function orderGuestbookPages(pages) {
@@ -11702,26 +11810,11 @@ function renumberGuestbookPages(characterId) {
 }
 
 function getOrCreateGuestbookSettings(characterId) {
-  let settings = db
-    .prepare(
-      `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
-       FROM guestbook_settings
-       WHERE character_id = ?`
-    )
-    .get(characterId);
+  let settings = selectGuestbookSettingsByCharacterStatement.get(characterId);
 
   if (!settings) {
-    db.prepare(
-      `INSERT INTO guestbook_settings (character_id)
-       VALUES (?)`
-    ).run(characterId);
-    settings = db
-      .prepare(
-        `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
-         FROM guestbook_settings
-         WHERE character_id = ?`
-      )
-      .get(characterId);
+    insertGuestbookSettingsStatement.run(characterId);
+    settings = selectGuestbookSettingsByCharacterStatement.get(characterId);
   }
 
   return settings;
@@ -12234,32 +12327,57 @@ function buildMemberDiscoveryTagGroups(members = []) {
   };
 }
 
+const getGuestbookEntriesCountForViewerStatement = db.prepare(
+  `SELECT COUNT(*) AS total
+   FROM guestbook_entries ge
+   WHERE ge.character_id = ?
+     AND ge.guestbook_page_id = ?
+     AND (
+       ge.is_private = 0
+       OR ge.author_id = ?
+       OR ? = 1
+       OR ? = 1
+     )`
+);
+const getGuestbookEntriesForViewerStatement = db.prepare(
+  `SELECT ge.id,
+          ge.character_id,
+          ge.author_id,
+          ge.author_character_id,
+          ge.author_name,
+          ge.content,
+          ge.is_private,
+          ge.created_at,
+          ge.updated_at,
+          author_character.name AS author_character_name
+   FROM guestbook_entries ge
+   LEFT JOIN characters author_character ON author_character.id = ge.author_character_id
+   WHERE ge.character_id = ?
+     AND ge.guestbook_page_id = ?
+     AND (
+       ge.is_private = 0
+       OR ge.author_id = ?
+       OR ? = 1
+       OR ? = 1
+     )
+   ORDER BY ge.created_at DESC, ge.id DESC
+   LIMIT ?
+   OFFSET ?`
+);
+
 function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, accessState) {
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
   const viewerIsOwner = Boolean(accessState?.isOwner);
   const viewerIsStaff = Boolean(accessState?.isStaffView);
 
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS total
-       FROM guestbook_entries ge
-       WHERE ge.character_id = ?
-         AND ge.guestbook_page_id = ?
-         AND (
-           ge.is_private = 0
-           OR ge.author_id = ?
-           OR ? = 1
-           OR ? = 1
-         )`
-    )
-    .get(
-      character.id,
-      pageId,
-      viewerUserId,
-      viewerIsOwner ? 1 : 0,
-      viewerIsAdmin || viewerIsStaff ? 1 : 0
-    );
+  const row = getGuestbookEntriesCountForViewerStatement.get(
+    character.id,
+    pageId,
+    viewerUserId,
+    viewerIsOwner ? 1 : 0,
+    viewerIsAdmin || viewerIsStaff ? 1 : 0
+  );
 
   return Number(row?.total || 0);
 }
@@ -12272,32 +12390,7 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
   const normalizedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(entriesPageNumber);
   const offset = (normalizedEntriesPageNumber - 1) * GUESTBOOK_PAGE_SIZE;
 
-  return db
-    .prepare(
-      `SELECT ge.id,
-              ge.character_id,
-              ge.author_id,
-              ge.author_character_id,
-              ge.author_name,
-              ge.content,
-              ge.is_private,
-              ge.created_at,
-              ge.updated_at,
-              author_character.name AS author_character_name
-       FROM guestbook_entries ge
-       LEFT JOIN characters author_character ON author_character.id = ge.author_character_id
-       WHERE ge.character_id = ?
-         AND ge.guestbook_page_id = ?
-         AND (
-           ge.is_private = 0
-           OR ge.author_id = ?
-           OR ? = 1
-           OR ? = 1
-         )
-       ORDER BY ge.created_at DESC, ge.id DESC
-       LIMIT ?
-       OFFSET ?`
-    )
+  return getGuestbookEntriesForViewerStatement
     .all(
       character.id,
       pageId,
@@ -13528,22 +13621,22 @@ function deleteGuestbookNotificationsForCharacter(characterId) {
   ).run(parsedCharacterId);
 }
 
+const getRoomWithCharacterStatement = db.prepare(
+  `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id,
+          COALESCE(r.is_festplay_chat, 0) AS is_festplay_chat,
+          COALESCE(r.is_manual_festplay_room, 0) AS is_manual_festplay_room,
+          r.festplay_id,
+          c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
+          u.username AS room_owner_name
+   FROM chat_rooms r
+   JOIN characters c ON c.id = r.character_id
+   JOIN users u ON u.id = r.created_by_user_id
+   WHERE r.id = ?`
+);
+
 function getRoomWithCharacter(roomId) {
   if (!Number.isInteger(roomId) || roomId < 1) return null;
-  return db
-    .prepare(
-        `SELECT r.id, r.name, r.description, r.teaser, r.character_id, r.created_by_user_id, r.created_at, r.image_url, r.email_log_enabled, r.is_locked, r.is_public_room, r.is_saved_room, r.server_id,
-                COALESCE(r.is_festplay_chat, 0) AS is_festplay_chat,
-                COALESCE(r.is_manual_festplay_room, 0) AS is_manual_festplay_room,
-                r.festplay_id,
-                c.user_id AS character_owner_id, c.is_public AS character_is_public, c.name AS character_name, c.server_id AS character_server_id,
-                 u.username AS room_owner_name
-         FROM chat_rooms r
-       JOIN characters c ON c.id = r.character_id
-       JOIN users u ON u.id = r.created_by_user_id
-       WHERE r.id = ?`
-    )
-    .get(roomId);
+  return getRoomWithCharacterStatement.get(roomId);
 }
 
 function resolveCuratedPublicRoomAnchor(serverId) {
@@ -24949,6 +25042,39 @@ function buildChatCharacterSwitchMessage(nextDisplayName) {
   };
 }
 
+const getPreferredCharacterForUserByIdStatement = db.prepare(
+  `SELECT c.id,
+          c.name,
+          c.server_id,
+          c.theme,
+          c.chat_background_url,
+          c.chat_background_color,
+          c.chat_background_image_opacity,
+          c.chat_input_background_color,
+          c.chat_online_list_background_color,
+          COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+   FROM characters c
+   LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+   WHERE c.id = ? AND c.user_id = ? AND c.server_id = ?`
+);
+const getPreferredCharacterForUserFallbackStatement = db.prepare(
+  `SELECT c.id,
+          c.name,
+          c.server_id,
+          c.theme,
+          c.chat_background_url,
+          c.chat_background_color,
+          c.chat_background_image_opacity,
+          c.chat_input_background_color,
+          c.chat_online_list_background_color,
+          COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
+   FROM characters c
+   LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
+   WHERE c.user_id = ? AND c.server_id = ?
+   ORDER BY lower(c.name) ASC, c.id ASC
+   LIMIT 1`
+);
+
 function getPreferredCharacterForUser(
   userId,
   serverId = DEFAULT_SERVER_ID,
@@ -24960,47 +25086,17 @@ function getPreferredCharacterForUser(
   const normalizedServerId = normalizeCharacterServerId(serverId);
   const parsedPreferredCharacterId = Number(preferredCharacterId);
   if (Number.isInteger(parsedPreferredCharacterId) && parsedPreferredCharacterId > 0) {
-    const preferredCharacter = db
-      .prepare(
-        `SELECT c.id,
-                c.name,
-                c.server_id,
-                c.theme,
-                c.chat_background_url,
-                c.chat_background_color,
-                c.chat_background_image_opacity,
-                c.chat_input_background_color,
-                c.chat_online_list_background_color,
-                COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
-         FROM characters c
-         LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
-         WHERE c.id = ? AND c.user_id = ? AND c.server_id = ?`
-      )
-      .get(parsedPreferredCharacterId, parsedUserId, normalizedServerId);
+    const preferredCharacter = getPreferredCharacterForUserByIdStatement.get(
+      parsedPreferredCharacterId,
+      parsedUserId,
+      normalizedServerId
+    );
     if (preferredCharacter) {
       return preferredCharacter;
     }
   }
 
-  return db
-    .prepare(
-      `SELECT c.id,
-              c.name,
-              c.server_id,
-              c.theme,
-              c.chat_background_url,
-              c.chat_background_color,
-              c.chat_background_image_opacity,
-              c.chat_input_background_color,
-              c.chat_online_list_background_color,
-              COALESCE(gs.chat_text_color, '#AEE7B7') AS chat_text_color
-       FROM characters c
-       LEFT JOIN guestbook_settings gs ON gs.character_id = c.id
-       WHERE c.user_id = ? AND c.server_id = ?
-       ORDER BY lower(c.name) ASC, c.id ASC
-       LIMIT 1`
-    )
-    .get(parsedUserId, normalizedServerId);
+  return getPreferredCharacterForUserFallbackStatement.get(parsedUserId, normalizedServerId);
 }
 
 function findOwnedChatCharactersByName(userId, serverId = DEFAULT_SERVER_ID, rawName = "") {
@@ -29384,7 +29480,7 @@ setInterval(() => {
 io.on("connection", (socket) => {
   const emitServerInstanceToSocket = () => {
     socket.emit("app:server-instance", {
-      instanceId: STATIC_ASSET_VERSION
+      instanceId: SERVER_INSTANCE_ID
     });
   };
 
