@@ -13789,6 +13789,7 @@ body.page-guestbook-view .guestbook-entry-heading {
   border-radius: 0;
   background: transparent;
   padding: 0;
+  align-self: stretch;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.55rem;
@@ -13800,14 +13801,16 @@ body.page-guestbook-view .guestbook-entry-heading {
 
 .whisper-thread {
   min-height: 0;
+  height: 100%;
   max-height: none;
   overflow-y: auto;
   display: grid;
   align-content: start;
-  gap: 0.48rem;
+  gap: 0;
   border-radius: 10px;
   background: color-mix(in srgb, var(--field-bg) 82%, var(--panel-bg) 18%);
   padding: 0.75rem;
+  box-sizing: border-box;
 }
 
 .whisper-thread-empty {
@@ -13818,10 +13821,15 @@ body.page-guestbook-view .guestbook-entry-heading {
 .whisper-thread-message {
   display: grid;
   gap: 0.12rem;
-  padding: 0.18rem 0.2rem 0.42rem;
+  padding: 0.2rem 0.2rem 0.7rem;
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.whisper-thread-message + .whisper-thread-message {
+  border-top: 1px solid color-mix(in srgb, var(--field-edge) 56%, transparent);
+  padding-top: 0.7rem;
 }
 
 .whisper-thread-message.is-outgoing {
