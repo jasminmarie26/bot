@@ -2218,11 +2218,18 @@ body.page-chat .server-work-notice {
 }
 
 .chat-whisper-panel.social-panel {
-  width: min(560px, calc(100vw - 0.85rem));
+  top: calc(var(--topbar-bottom-offset, 72px) + 0.4rem);
+  right: 1rem;
+  bottom: auto;
+  width: min(560px, calc(100vw - 2rem));
+  height: auto;
+  max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.75rem);
 }
 
 .social-panel .chat-whisper-panel-card {
   padding: 0.5rem;
+  height: auto;
+  max-height: min(72vh, calc(100dvh - var(--topbar-bottom-offset, 72px) - 1.2rem));
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -2246,6 +2253,7 @@ body.page-chat .server-work-notice {
 .social-panel-grid {
   display: grid;
   gap: 0.42rem;
+  min-height: 0;
 }
 
 .social-panel-section {
@@ -2268,17 +2276,56 @@ body.page-chat .server-work-notice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.34rem;
+  align-items: center;
 }
 
 .social-panel-add-form input {
   min-width: 0;
-  min-height: 2.2rem;
+  min-height: 0;
+  height: 2.45rem;
+  padding: 0.48rem 0.72rem;
   font-size: 0.82rem;
 }
 
 .social-panel-add-form .btn {
+  min-height: 2.45rem;
   padding: 0.42rem 0.82rem;
   font-size: 0.8rem;
+}
+
+.social-panel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+.social-panel-tab-btn {
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--field-edge));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 24%, var(--panel-bg) 76%);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text) 30%);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.32rem 0.72rem;
+  cursor: pointer;
+}
+
+.social-panel-tab-btn:hover,
+.social-panel-tab-btn:focus-visible,
+.social-panel-tab-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 72%, var(--panel-bg) 28%);
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--field-edge) 28%);
+}
+
+.social-panel-tab-panel {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.social-panel-tab-panel[hidden] {
+  display: none !important;
 }
 
 .social-panel-table {
@@ -2390,6 +2437,45 @@ body.page-chat .server-work-notice {
   background: color-mix(in srgb, var(--link) 12%, var(--panel-bg) 88%);
 }
 
+.social-panel-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  padding-top: 0.06rem;
+}
+
+.social-panel-pager-btn {
+  min-width: 1.9rem;
+  height: 1.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--field-edge));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 24%, var(--panel-bg) 76%);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text) 30%);
+  font: inherit;
+  cursor: pointer;
+}
+
+.social-panel-pager-btn:hover,
+.social-panel-pager-btn:focus-visible {
+  background: color-mix(in srgb, var(--accent) 72%, var(--panel-bg) 28%);
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--field-edge) 28%);
+}
+
+.social-panel-pager-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.social-panel-pager-label {
+  min-width: 2.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .social-panel-status-dot {
   width: 0.58rem;
   height: 0.58rem;
@@ -2432,6 +2518,15 @@ body.page-chat .server-work-notice {
 }
 
 @media (max-width: 640px) {
+  .chat-whisper-panel.social-panel {
+    top: calc(var(--topbar-bottom-offset, 72px) + 0.4rem);
+    right: 0.5rem;
+    left: 0.5rem;
+    bottom: auto;
+    width: auto;
+    max-height: calc(100dvh - var(--topbar-bottom-offset, 72px) - 0.65rem);
+  }
+
   .social-panel-list-head {
     display: none;
   }
@@ -16253,7 +16348,9 @@ body.page-home-screen .home-hero-actions {
     margin-bottom: 0.55rem;
   }
 
-  .social-panel {
+  .chat-whisper-panel.social-panel {
+    right: 0.5rem;
+    left: 0.5rem;
     width: auto;
   }
 }
