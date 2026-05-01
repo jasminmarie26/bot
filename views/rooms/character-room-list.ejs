@@ -154,7 +154,7 @@
               aria-hidden="true"
               data-serverlist-account-icon-anchor
               style="--serverlist-account-icon-focus-x: <%= roomlistMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomlistMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomlistMenuIconZoom %>;"
-            ><% if (roomlistMenuIconUrl) { %><img src="<%= roomlistMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
+            ><% if (roomlistMenuIconUrl) { %><img src="<%= roomlistMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.remove(); this.parentElement && this.parentElement.classList.remove('has-custom-icon');" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">

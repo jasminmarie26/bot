@@ -111,7 +111,7 @@
               aria-hidden="true"
               data-serverlist-account-icon-anchor
               style="--serverlist-account-icon-focus-x: <%= festplayCreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayCreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayCreateMenuIconZoom %>;"
-            ><% if (festplayCreateMenuIconUrl) { %><img src="<%= festplayCreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image /><% } %></span>
+            ><% if (festplayCreateMenuIconUrl) { %><img src="<%= festplayCreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.remove(); this.parentElement && this.parentElement.classList.remove('has-custom-icon');" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
         <div class="rp-user-menu-meta">
