@@ -13,17 +13,45 @@
 </section>
 
 <section class="serverlist-block">
-  <div class="serverlist-overview-grid">
+  <div class="serverlist-overview-grid" data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>">
     <% overviewSections.forEach((section) => { %>
-      <section class="serverlist-festplay-overview serverlist-overview-column">
+      <% const canCreateInOverviewSection = section.id !== "erp" || erpMoveAllowed; %>
+      <section
+        class="serverlist-festplay-overview serverlist-overview-column"
+        data-serverlist-drop-zone
+        data-serverlist-server-id="<%= section.id %>"
+        data-serverlist-server-label="<%= section.overview_title %>"
+      >
         <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= section.characters.length %>)</span>
           </div>
-          <a class="btn btn-secondary serverlist-overview-open-btn" href="/dashboard/areas/<%= section.id %>">
-            Bereich &ouml;ffnen
-          </a>
+          <div class="serverlist-overview-header-actions">
+            <% if (canCreateInOverviewSection) { %>
+              <a
+                class="btn serverlist-add-character-btn"
+                href="/characters/new?server=<%= section.id %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+                aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+                title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+              >
+                +
+              </a>
+            <% } else { %>
+              <button
+                type="button"
+                class="btn serverlist-add-character-btn"
+                aria-label="ERP erst ab 18 Jahren verf&uuml;gbar"
+                title="ERP ist erst ab 18 Jahren verf&uuml;gbar"
+                disabled
+              >
+                +
+              </button>
+            <% } %>
+            <a class="btn btn-secondary serverlist-overview-open-btn" href="/dashboard/areas/<%= section.id %>">
+              Bereich &ouml;ffnen
+            </a>
+          </div>
         </div>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
@@ -35,11 +63,17 @@
             <div class="character-mini-grid serverlist-overview-character-grid">
               <% section.characters.forEach((char) => { %>
                 <% const isFestplayCharacter = char.dashboard_position === "festplay"; %>
-                <article class="character-mini-card serverlist-overview-character-card">
+                <article
+                  class="character-mini-card serverlist-overview-character-card"
+                  draggable="true"
+                  data-serverlist-draggable-character
+                  data-serverlist-character-id="<%= char.id %>"
+                >
                   <a
                     class="character-mini-item"
                     href="/dashboard/areas/<%= section.id %>?character_id=<%= char.id %>"
                     title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
+                    draggable="false"
                   >
                     <span class="character-mini-name"><%= char.name %></span>
                     <% if (isFestplayCharacter) { %>
@@ -74,24 +108,17 @@
                     <form
                       method="POST"
                       action="/characters/<%= char.id %>/move"
-                      class="character-mini-move-form"
+                      class="character-mini-move-form serverlist-overview-move-form"
                       data-serverlist-area-move-confirm
                       data-serverlist-character-name="<%= char.name %>"
                       data-serverlist-current-server="<%= char.server_id %>"
                       data-serverlist-home-server="<%= char.festplay_home_server_id || "" %>"
                       data-serverlist-position="<%= char.dashboard_position || "main" %>"
+                      hidden
                     >
                       <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
                       <input type="hidden" name="target_server_id" value="">
                       <input type="hidden" name="target_dashboard_mode" value="">
-                      <button
-                        type="submit"
-                        class="character-mini-move-btn"
-                        aria-label="Charakter verschieben"
-                        title="Zielserver ausw&auml;hlen"
-                      >
-                        &harr;
-                      </button>
                     </form>
                     <form
                       method="POST"
