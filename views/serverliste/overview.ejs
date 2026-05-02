@@ -7,7 +7,7 @@
     <span class="serverlist-kicker">Rollenspiel</span>
     <h1>Charakter&uuml;bersicht Free RP &amp; ERP</h1>
     <p class="muted">
-      Links findest du alle Free-RP-Charaktere, rechts alle ERP-Charaktere. Ein Klick auf den Namen &ouml;ffnet direkt den passenden Bereich im selben Fenster.
+      Links findest du alle Free-RP-Charaktere, rechts alle ERP-Charaktere. Ein Klick auf den Namen loggt dich mit dem Charakter im passenden Bereich ein.
     </p>
   </div>
 </section>
@@ -48,9 +48,6 @@
                 +
               </button>
             <% } %>
-            <a class="btn btn-secondary serverlist-overview-open-btn" href="/dashboard/areas/<%= section.id %>">
-              Bereich &ouml;ffnen
-            </a>
           </div>
         </div>
 
@@ -72,7 +69,7 @@
                   <a
                     class="character-mini-item"
                     href="/dashboard/areas/<%= section.id %>?character_id=<%= char.id %>"
-                    title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
+                    title="Mit <%= char.name %> in <%= section.overview_title %> einloggen"
                     draggable="false"
                   >
                     <span class="character-mini-name"><%= char.name %></span>
