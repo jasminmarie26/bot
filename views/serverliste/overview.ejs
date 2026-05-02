@@ -7,7 +7,7 @@
     <span class="serverlist-kicker">Rollenspiel</span>
     <h1>Charakter&uuml;bersicht Free RP &amp; ERP</h1>
     <p class="muted">
-      Links findest du alle Free-RP-Charaktere, rechts alle ERP-Charaktere. Ein Klick auf den Namen loggt dich mit dem Charakter im passenden Bereich ein.
+      Links findest du alle Free-RP-Charaktere, rechts alle ERP-Charaktere. Ein Klick auf den Namen loggt dich mit dem Charakter in die Raum&uuml;bersicht ein.
     </p>
   </div>
 </section>
@@ -68,8 +68,8 @@
                 >
                   <a
                     class="character-mini-item"
-                    href="/dashboard/areas/<%= section.id %>?character_id=<%= char.id %>"
-                    title="Mit <%= char.name %> in <%= section.overview_title %> einloggen"
+                    href="/chat/rooms?c=<%= encodeURIComponent(String(char.chat_character_url_number || char.id)) %>"
+                    title="Mit <%= char.name %> zur Raum&uuml;bersicht"
                     draggable="false"
                   >
                     <span class="character-mini-name"><%= char.name %></span>

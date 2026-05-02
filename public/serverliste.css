@@ -313,61 +313,38 @@
 
 .serverlist-overview-character-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  gap: 0.48rem;
-  padding: 0.08rem 0 0.02rem;
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--panel-edge) 70%, var(--accent) 30%) 14%,
-      color-mix(in srgb, var(--panel-edge) 70%, var(--accent) 30%) 86%,
-      transparent
-    ) top / 100% 1px no-repeat;
+  gap: 0 1rem;
+  padding: 0;
+  background: none;
 }
 
 .serverlist-overview-character-card {
-  min-height: 2rem;
-  padding: 0.3rem 0.36rem 0.3rem 0.46rem;
+  min-height: 2.15rem;
+  padding: 0.35rem 0;
   justify-content: space-between;
   gap: 0.42rem;
-  border: 1px solid color-mix(in srgb, var(--panel-edge) 54%, transparent);
-  border-radius: 8px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--field-bg) 78%, transparent),
-      color-mix(in srgb, var(--panel-bg) 76%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 9%, transparent),
-    0 10px 20px -22px var(--panel-shadow);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   cursor: grab;
-  transition: border-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease, transform 140ms ease;
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 
 .serverlist-overview-character-card::before {
-  content: "";
-  width: 2px;
-  align-self: stretch;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    color-mix(in srgb, var(--accent) 72%, white 12%),
-    transparent
-  );
-  opacity: 0.62;
+  content: none;
+}
+
+.serverlist-overview-character-card:nth-child(n + 3) {
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 64%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .serverlist-overview-character-card:hover,
 .serverlist-overview-character-card:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--panel-edge) 58%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
-    0 14px 26px -22px var(--panel-shadow);
+  transform: translateY(-1px);
 }
 
 .serverlist-overview-character-card:active {
@@ -623,6 +600,15 @@
 
   .serverlist-overview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .serverlist-overview-character-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .serverlist-overview-character-card:nth-child(n + 2) {
+    border-top: 1px solid color-mix(in srgb, var(--panel-edge) 64%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
   .serverlist-overview-column-header {

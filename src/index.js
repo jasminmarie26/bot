@@ -17489,6 +17489,7 @@ function getDashboardOwnCharacters(userId) {
       const festplayHomeServerId = getCharacterFestplayHomeServer(character.id);
       return {
         ...character,
+        chat_character_url_number: getChatCharacterRouteNumber(character),
         festplay_home_server_id: festplayHomeServerId,
         festplay_home_server_label: getServerLabel(festplayHomeServerId)
       };
