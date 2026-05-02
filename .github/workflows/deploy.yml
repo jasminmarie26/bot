@@ -118,6 +118,23 @@ jobs:
               "$PM2_BIN" jlist 2>/dev/null | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{try{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(JSON.stringify({status:app?.pm2_env?.status||'missing',script:app?.pm2_env?.pm_exec_path||''}));}catch(_error){process.stdout.write(JSON.stringify({status:'missing',script:''}));}});"
             }
 
+            is_port_open() {
+              /usr/bin/node -e "const net=require('net');const port=Number(process.argv[1]);const socket=net.connect({host:'127.0.0.1',port},()=>{socket.destroy();process.exit(0);});socket.on('error',()=>process.exit(1));setTimeout(()=>{socket.destroy();process.exit(1);},1000);" "$1"
+            }
+
+            wait_for_port_free() {
+              PORT_TO_CHECK="$1"
+              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+                if ! is_port_open "$PORT_TO_CHECK"; then
+                  echo "Port ${PORT_TO_CHECK} is free."
+                  return 0
+                fi
+                echo "Waiting for port ${PORT_TO_CHECK} to become free (${i}/15)."
+                sleep 1
+              done
+              return 1
+            }
+
             echo "Reading PM2 state."
             APP_STATE="$(read_pm2_app_state)"
             APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
@@ -131,10 +148,27 @@ jobs:
             else
               if [ "$APP_STATUS" != "missing" ] && [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
                 echo "Existing rp-chat uses ${APP_SCRIPT:-unknown}; deleting it before runtime proxy migration."
+                "$PM2_BIN" stop rp-chat || true
                 "$PM2_BIN" delete rp-chat || true
+                wait_for_port_free 3000
+                echo "Starting PM2 runtime proxy from $PM2_CONFIG."
+                "$PM2_BIN" start "$PM2_CONFIG" --only rp-chat --update-env
+              else
+                echo "Starting or reloading PM2 runtime proxy from $PM2_CONFIG."
+                "$PM2_BIN" startOrReload "$PM2_CONFIG" --only rp-chat --update-env
               fi
-              echo "Starting or reloading PM2 runtime proxy."
-              "$PM2_BIN" startOrReload "$PM2_CONFIG" --update-env
+            fi
+
+            APP_STATE="$(read_pm2_app_state)"
+            APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
+            APP_SCRIPT="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.script||'');" "$APP_STATE")"
+            echo "PM2 state after start: status=${APP_STATUS}, script=${APP_SCRIPT:-none}."
+            if [ "$APP_STATUS" != "online" ] || [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
+              echo "PM2 did not migrate rp-chat to runtime proxy."
+              "$PM2_BIN" status || true
+              "$PM2_BIN" describe rp-chat || true
+              "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
+              exit 1
             fi
             "$PM2_BIN" save
 

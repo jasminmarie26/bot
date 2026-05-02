@@ -410,11 +410,23 @@ proxyServer.on("upgrade", proxyUpgradeRequest);
 
 function onProxyListening() {
   console.log(`[runtime-proxy] Listening on port ${PUBLIC_PORT}`);
-  void queueReplacement("startup").then(() => {
-    if (typeof process.send === "function") {
-      process.send("ready");
-    }
-  });
+  void replaceActiveChild("startup")
+    .then(() => {
+      if (!isChildAlive(activeTarget)) {
+        throw new Error("Startup child is not active after replacement");
+      }
+      if (typeof process.send === "function") {
+        process.send("ready");
+      }
+    })
+    .catch((error) => {
+      lastError = error?.stack || error?.message || String(error);
+      console.error("[runtime-proxy] Startup failed:", error);
+      proxyServer.close(() => {
+        process.exit(1);
+      });
+      setTimeout(() => process.exit(1), 1000).unref();
+    });
 }
 
 if (PUBLIC_HOST) {
