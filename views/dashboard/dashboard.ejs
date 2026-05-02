@@ -15,21 +15,19 @@
     <summary class="dashboard-accordion-summary">
       <div class="dashboard-accordion-copy">
         <h2>Rollenspiel</h2>
-        <p class="muted">W&auml;hle Free RP oder Erotik. Die jeweilige &Uuml;bersicht &ouml;ffnet sich direkt im selben Fenster.</p>
+        <p class="muted">Deine Charaktere f&uuml;r Free-RP und Erotik &ouml;ffnen sich direkt im selben Fenster.</p>
       </div>
       <span class="dashboard-accordion-icon" aria-hidden="true"></span>
     </summary>
 
     <div class="dashboard-accordion-body">
       <div class="dashboard-role-switch" aria-label="Rollenspiel-Bereiche">
-        <% serverSections.forEach((section) => { %>
-          <a
-            class="dashboard-role-link"
-            href="/dashboard/areas/<%= section.id %>"
-          >
-            <span class="dashboard-role-tab-title"><%= section.dashboard_area_title %></span>
-          </a>
-        <% }) %>
+        <a
+          class="dashboard-role-link dashboard-role-link-wide"
+          href="/dashboard/areas/overview"
+        >
+          <span class="dashboard-role-tab-title">Zu deinen Rollenspiel Charakteren im Free-RP &amp; Erotik Bereich</span>
+        </a>
       </div>
     </div>
   </details>
