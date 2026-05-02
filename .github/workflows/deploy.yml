@@ -104,7 +104,11 @@ jobs:
             RUNTIME_STATE="${LIVE_DIR}/.runtime-release.json"
             /usr/bin/node -e "const fs=require('fs');fs.writeFileSync(process.argv[1],JSON.stringify({releaseId:process.argv[2],releaseDir:process.argv[3],updatedAt:new Date().toISOString()})+'\n');" "$RUNTIME_STATE" "$RELEASE_ID" "$LIVE_DIR"
 
-            APP_STATE="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(JSON.stringify({status:app?.pm2_env?.status||'missing',script:app?.pm2_env?.pm_exec_path||''}));});")"
+            read_pm2_app_state() {
+              "$PM2_BIN" jlist 2>/dev/null | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{try{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(JSON.stringify({status:app?.pm2_env?.status||'missing',script:app?.pm2_env?.pm_exec_path||''}));}catch(_error){process.stdout.write(JSON.stringify({status:'missing',script:''}));}});"
+            }
+
+            APP_STATE="$(read_pm2_app_state)"
             APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
             APP_SCRIPT="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.script||'');" "$APP_STATE")"
             EXPECTED_SCRIPT="${LIVE_DIR}/src/runtime-proxy.js"
@@ -128,7 +132,8 @@ jobs:
               sleep 1
             done
 
-            APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
+            APP_STATE="$(read_pm2_app_state)"
+            APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
             if [ "$APP_STATUS" != "online" ] || [ "$HEALTH_OK" -ne 1 ]; then
               echo "New release unhealthy. Rolling back node_modules."
               echo "rp-chat status is $APP_STATUS"
