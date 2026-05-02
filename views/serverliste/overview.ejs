@@ -162,35 +162,4 @@
   </div>
 </section>
 
-<div
-  id="serverlist-area-move-modal"
-  class="serverlist-confirm-modal"
-  data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>"
-  hidden
->
-  <div class="serverlist-confirm-backdrop" data-serverlist-area-close></div>
-  <section
-    class="serverlist-confirm-card panel"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="serverlist-area-move-title"
-  >
-    <h2 id="serverlist-area-move-title">Charakter verschieben</h2>
-    <p class="muted serverlist-confirm-note">
-      Freischaltungen an Festspielen bleiben dabei erhalten.
-    </p>
-    <div class="serverlist-confirm-actions">
-      <button type="button" class="btn btn-secondary" data-serverlist-area-close>
-        Abbrechen
-      </button>
-      <button type="button" class="btn btn-secondary" id="serverlist-area-move-free">
-        Free RP
-      </button>
-      <button type="button" class="btn" id="serverlist-area-move-erp">
-        ERP
-      </button>
-    </div>
-  </section>
-</div>
-
 <%- include("../partials/end") %>
