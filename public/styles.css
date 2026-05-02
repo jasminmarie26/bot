@@ -9769,6 +9769,7 @@ body.theme-atari .guestbook-entry-panel {
 .bb-block {
   display: block;
   text-align: justify;
+  text-align-last: left;
   text-justify: inter-word;
   hyphens: none;
   overflow-wrap: normal;
