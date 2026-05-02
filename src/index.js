@@ -19209,6 +19209,15 @@ app.get("/characters/new", requireAuth, (req, res) => {
     fallbackReturnTarget
   );
 
+  if (requestedServer === "erp") {
+    const accountUser = getAccountUserById(req.session.user.id);
+    const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+    if (viewerAge === null || viewerAge < 18) {
+      setFlash(req, "error", "ERP ist erst ab 18 Jahren verf\u00fcgbar.");
+      return res.redirect(returnTarget || "/dashboard/areas/overview");
+    }
+  }
+
   if (requestedServer === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
     setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
     return res.redirect("/dashboard/larp");
@@ -19270,6 +19279,13 @@ app.post("/characters", requireAuth, (req, res) => {
       accountBirthDate,
       character: payload
     });
+
+  if (payload.server_id === "erp") {
+    const viewerAge = getAgeFromBirthDate(accountBirthDate);
+    if (viewerAge === null || viewerAge < 18) {
+      return renderCharacterCreateFormError("ERP ist erst ab 18 Jahren verf\u00fcgbar.");
+    }
+  }
 
   if (payload.server_id === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
     setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
@@ -31636,4 +31652,53 @@ server.listen(port, () => {
       });
   }, FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
+  if (typeof process.send === "function") {
+    process.send({
+      type: "ready",
+      port,
+      releaseId: String(process.env.HR_RELEASE_ID || "")
+    });
+  }
+});
+
+let isServerShuttingDown = false;
+
+function shutdownServer(signal) {
+  if (isServerShuttingDown) {
+    return;
+  }
+
+  isServerShuttingDown = true;
+  console.log(`${signal} erhalten, Server wird beendet.`);
+
+  const forceExitTimer = setTimeout(() => {
+    if (typeof server.closeAllConnections === "function") {
+      server.closeAllConnections();
+    }
+    process.exit(0);
+  }, 10000);
+  forceExitTimer.unref();
+
+  try {
+    io.close();
+  } catch (error) {
+    console.error("Socket.IO konnte beim Beenden nicht sauber geschlossen werden:", error);
+  }
+
+  server.close((error) => {
+    clearTimeout(forceExitTimer);
+    if (error && error.code !== "ERR_SERVER_NOT_RUNNING") {
+      console.error("Server konnte nicht sauber beendet werden:", error);
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+}
+
+process.on("SIGINT", () => shutdownServer("SIGINT"));
+process.on("SIGTERM", () => shutdownServer("SIGTERM"));
+process.on("message", (message) => {
+  if (message === "shutdown") {
+    shutdownServer("shutdown message");
+  }
 });
