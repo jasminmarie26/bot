@@ -95,28 +95,37 @@ jobs:
               sleep 2
             done
 
-            rm -rf "$PREV_NODE_MODULES"
+            echo "Dependency build complete; swapping node_modules."
+            rm -rf "$PREV_NODE_MODULES" || true
             if [ -d "$LIVE_DIR/node_modules" ]; then
+              echo "Moving current node_modules to $PREV_NODE_MODULES."
               mv "$LIVE_DIR/node_modules" "$PREV_NODE_MODULES"
             fi
+            echo "Activating freshly built node_modules."
             mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
             rm -rf "$STAGE_DIR"
+            echo "node_modules swap complete."
 
             RUNTIME_STATE="${LIVE_DIR}/.runtime-release.json"
+            echo "Writing runtime release state for $RELEASE_ID."
             /usr/bin/node -e "const fs=require('fs');fs.writeFileSync(process.argv[1],JSON.stringify({releaseId:process.argv[2],releaseDir:process.argv[3],updatedAt:new Date().toISOString()})+'\n');" "$RUNTIME_STATE" "$RELEASE_ID" "$LIVE_DIR"
 
             read_pm2_app_state() {
               "$PM2_BIN" jlist 2>/dev/null | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{try{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(JSON.stringify({status:app?.pm2_env?.status||'missing',script:app?.pm2_env?.pm_exec_path||''}));}catch(_error){process.stdout.write(JSON.stringify({status:'missing',script:''}));}});"
             }
 
+            echo "Reading PM2 state."
             APP_STATE="$(read_pm2_app_state)"
             APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
             APP_SCRIPT="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.script||'');" "$APP_STATE")"
             EXPECTED_SCRIPT="${LIVE_DIR}/src/runtime-proxy.js"
+            echo "PM2 state: status=${APP_STATUS}, script=${APP_SCRIPT:-none}."
 
             if [ "$APP_STATUS" = "online" ] && [ "$APP_SCRIPT" = "$EXPECTED_SCRIPT" ]; then
+              echo "Runtime proxy already active; signaling child replacement."
               "$PM2_BIN" sendSignal SIGUSR2 rp-chat
             else
+              echo "Starting or reloading PM2 runtime proxy."
               "$PM2_BIN" startOrReload "$PM2_CONFIG" --update-env
             fi
             "$PM2_BIN" save
