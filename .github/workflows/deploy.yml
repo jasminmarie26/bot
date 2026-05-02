@@ -125,6 +125,10 @@ jobs:
               echo "Runtime proxy already active; signaling child replacement."
               "$PM2_BIN" sendSignal SIGUSR2 rp-chat
             else
+              if [ "$APP_STATUS" != "missing" ] && [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
+                echo "Existing rp-chat uses ${APP_SCRIPT:-unknown}; deleting it before runtime proxy migration."
+                "$PM2_BIN" delete rp-chat || true
+              fi
               echo "Starting or reloading PM2 runtime proxy."
               "$PM2_BIN" startOrReload "$PM2_CONFIG" --update-env
             fi
