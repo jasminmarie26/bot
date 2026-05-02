@@ -9675,7 +9675,6 @@ body.theme-atari .guestbook-entry-panel {
 .guestbook-entry-body::after {
   content: "";
   display: block;
-  clear: both;
 }
 
 .guestbook-entry-body h1,
