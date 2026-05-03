@@ -18430,7 +18430,7 @@ function getDashboardLarpSection() {
 }
 
 function getServerListPageAssets(scriptPaths = []) {
-  const allScriptPaths = ["/serverliste-accordion.js", ...scriptPaths].filter(Boolean);
+  const allScriptPaths = ["/serverliste-accordion.js", "/serverliste-character-rows.js", ...scriptPaths].filter(Boolean);
   return {
     pageClass: "page-serverliste",
     pageStyles: ["/serverliste.css?v=" + STATIC_ASSET_VERSION],
