@@ -356,10 +356,9 @@
 }
 
 .serverlist-overview-character-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 12rem));
-  justify-content: start;
-  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 1rem;
   padding: 0;
   background: none;
@@ -374,7 +373,9 @@
 
 .serverlist-overview-character-card {
   display: flex;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  flex: 0 1 auto;
   min-height: 2.15rem;
   padding: 0.35rem 0;
   justify-content: flex-start;
@@ -661,7 +662,13 @@
   }
 
   .serverlist-overview-character-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .serverlist-overview-character-card {
+    width: 100%;
+    max-width: none;
   }
 
   .serverlist-overview-character-card:nth-child(n + 2) {
