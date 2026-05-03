@@ -20095,10 +20095,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.status(403).render("errors/error", {
-      title: "Kein Zugriff",
-      message: "Nur der Besitzer darf diesen Festspiel-Chat mit dem Charakter betreten."
-    });
+    return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
   }
 
   const festplay = getFestplayById(festplayId);
