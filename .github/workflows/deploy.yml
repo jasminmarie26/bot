@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: auto-deploy-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -143,8 +143,8 @@ jobs:
             echo "PM2 state: status=${APP_STATUS}, script=${APP_SCRIPT:-none}."
 
             if [ "$APP_STATUS" = "online" ] && [ "$APP_SCRIPT" = "$EXPECTED_SCRIPT" ]; then
-              echo "Runtime proxy already active; signaling child replacement."
-              "$PM2_BIN" sendSignal SIGUSR2 rp-chat
+              echo "Runtime proxy already active; restarting it so deploy-time proxy fixes are loaded."
+              "$PM2_BIN" restart "$PM2_CONFIG" --only rp-chat --update-env
             else
               if [ "$APP_STATUS" != "missing" ] && [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
                 echo "Existing rp-chat uses ${APP_SCRIPT:-unknown}; deleting it before runtime proxy migration."
