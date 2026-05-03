@@ -11,7 +11,11 @@
 </section>
 
 <section class="serverlist-block serverlist-accordion-stack">
-  <details class="serverlist-accordion" <%= openLarpSection ? "" : "open" %>>
+  <details
+    class="serverlist-accordion"
+    data-serverlist-exclusive-section="serverlist-home"
+    <%= openLarpSection ? "" : "open" %>
+  >
     <summary class="serverlist-accordion-summary">
       <div class="serverlist-accordion-copy">
         <h2>Rollenspiel</h2>
@@ -40,7 +44,11 @@
     </div>
   </details>
 
-  <details class="serverlist-accordion" <%= openLarpSection ? "open" : "" %>>
+  <details
+    class="serverlist-accordion"
+    data-serverlist-exclusive-section="serverlist-home"
+    <%= openLarpSection ? "open" : "" %>
+  >
     <summary class="serverlist-accordion-summary">
       <div class="serverlist-accordion-copy">
         <h2>LARP BEREICH</h2>

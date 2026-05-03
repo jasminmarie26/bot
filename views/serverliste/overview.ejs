@@ -7,7 +7,7 @@
     <span class="serverlist-kicker">Rollenspiel</span>
     <h1>Charakter&uuml;bersicht Free RP, ERP &amp; Festspiele</h1>
     <p class="muted">
-      Oben findest du deine Free-RP- und ERP-Charaktere, darunter alle Festspiel-Charaktere. Ein Klick auf den Namen bringt dich direkt mit dem jeweiligen Charakter weiter.
+      Free RP, ERP und Festspiele direkt im selben Fenster.
     </p>
   </div>
 </section>
@@ -20,7 +20,8 @@
       <details
         class="serverlist-festplay-overview serverlist-overview-column<%= isFestplaySection ? " serverlist-overview-column-wide" : "" %>"
         <%= isFestplaySection ? "" : `data-serverlist-drop-zone data-serverlist-server-id="${section.id}" data-serverlist-server-label="${section.overview_title}"` %>
-        open
+        data-serverlist-exclusive-section="serverlist-overview"
+        <%= section.id === "free-rp" ? "open" : "" %>
       >
         <summary class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">

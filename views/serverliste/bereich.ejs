@@ -42,7 +42,11 @@
 </section>
 
 <section class="serverlist-block">
-  <details class="serverlist-festplay-overview serverlist-character-overview" open>
+  <details
+    class="serverlist-festplay-overview serverlist-character-overview"
+    data-serverlist-exclusive-section="serverlist-area"
+    open
+  >
     <summary class="serverlist-festplay-overview-header">
       <div class="serverlist-festplay-overview-title">
         <h3>Meine Charaktere</h3>
@@ -146,7 +150,10 @@
   </details>
 
   <% if (serverSection.festplays && serverSection.festplays.length) { %>
-    <details class="serverlist-festplay-overview" open>
+    <details
+      class="serverlist-festplay-overview"
+      data-serverlist-exclusive-section="serverlist-area"
+    >
       <summary class="serverlist-festplay-overview-header">
         <div class="serverlist-festplay-overview-title">
           <h3>Meine Festspiele</h3>
