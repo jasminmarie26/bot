@@ -7867,7 +7867,25 @@ function buildFestplayServerLockMessage(festplay, targetServerId = "") {
   return `${festplay.name} liegt auf ${festplay.server_label}.`;
 }
 
-function getCharacterFestplayHomeServer(characterId) {
+function getBoundFestplayForCharacter(characterId, festplayId) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return null;
+  }
+
+  return (
+    getBoundFestplaysForCharacter(characterId).find(
+      (festplay) => Number(festplay.id) === parsedFestplayId
+    ) || null
+  );
+}
+
+function getCharacterFestplayHomeServer(characterId, targetFestplayId = null) {
+  const targetFestplay = getBoundFestplayForCharacter(characterId, targetFestplayId);
+  if (targetFestplay?.server_id) {
+    return targetFestplay.server_id;
+  }
+
   const uniqueServerIds = [
     ...new Set(
       getBoundFestplaysForCharacter(characterId)
@@ -21669,11 +21687,19 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   }
 
   const currentServerId = normalizeCharacterServerId(character.server_id);
-  const requestedServerId = normalizeFestplayServerId(req.body.target_server_id);
-  const festplayHomeServerId = getCharacterFestplayHomeServer(id);
   const requestedDashboardMode = parseRequestedFestplayDashboardMode(
     req.body.target_dashboard_mode
   );
+  const targetFestplay = getBoundFestplayForCharacter(id, req.body.target_festplay_id);
+  const festplayHomeServerId = getCharacterFestplayHomeServer(
+    id,
+    requestedDashboardMode === "festplay" ? targetFestplay?.id : null
+  );
+  const requestedServerId =
+    normalizeFestplayServerId(req.body.target_server_id) ||
+    (requestedDashboardMode === "festplay"
+      ? normalizeFestplayServerId(targetFestplay?.server_id)
+      : "");
   const currentDashboardPlacement = getCharacterDashboardPlacement(
     character.server_id,
     festplayHomeServerId,
