@@ -17479,6 +17479,7 @@ function getDashboardOwnCharacters(userId) {
               c.serverlist_icon_focus_x,
               c.serverlist_icon_focus_y,
               c.serverlist_icon_zoom,
+              c.festplay_id,
               c.festplay_dashboard_mode,
               f.name AS festplay_name
        FROM characters c
