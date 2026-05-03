@@ -291,6 +291,10 @@
   margin-top: 0;
 }
 
+.serverlist-overview-column-wide {
+  grid-column: 1 / -1;
+}
+
 .serverlist-overview-column-header {
   padding-right: 0.7rem;
 }
@@ -305,6 +309,29 @@
 .serverlist-overview-column-body {
   display: grid;
   gap: 0.7rem;
+}
+
+.serverlist-overview-nested-grid {
+  gap: 0.7rem;
+}
+
+.serverlist-overview-subcolumn {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.1rem 0;
+}
+
+.serverlist-overview-subcolumn-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.serverlist-overview-subcolumn-header h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #fff;
 }
 
 .serverlist-overview-column-body > .muted {

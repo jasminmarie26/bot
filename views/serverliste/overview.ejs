@@ -5,9 +5,9 @@
 <section class="header-line serverlist-page-header">
   <div>
     <span class="serverlist-kicker">Rollenspiel</span>
-    <h1>Charakter&uuml;bersicht Free RP &amp; ERP</h1>
+    <h1>Charakter&uuml;bersicht Free RP, ERP &amp; Festspiele</h1>
     <p class="muted">
-      Links findest du alle Free-RP-Charaktere, rechts alle ERP-Charaktere. Ein Klick auf den Namen loggt dich mit dem Charakter in die Raum&uuml;bersicht ein.
+      Oben findest du deine Free-RP- und ERP-Charaktere, darunter alle Festspiel-Charaktere. Ein Klick auf den Namen bringt dich direkt mit dem jeweiligen Charakter weiter.
     </p>
   </div>
 </section>
@@ -15,14 +15,14 @@
 <section class="serverlist-block">
   <div class="serverlist-overview-grid" data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>">
     <% overviewSections.forEach((section) => { %>
-      <% const canCreateInOverviewSection = section.id !== "erp" || erpMoveAllowed; %>
-      <section
-        class="serverlist-festplay-overview serverlist-overview-column"
-        data-serverlist-drop-zone
-        data-serverlist-server-id="<%= section.id %>"
-        data-serverlist-server-label="<%= section.overview_title %>"
+      <% const isFestplaySection = section.id === "festspiele"; %>
+      <% const canCreateInOverviewSection = !isFestplaySection && (section.id !== "erp" || erpMoveAllowed); %>
+      <details
+        class="serverlist-festplay-overview serverlist-overview-column<%= isFestplaySection ? " serverlist-overview-column-wide" : "" %>"
+        <%= isFestplaySection ? "" : `data-serverlist-drop-zone data-serverlist-server-id="${section.id}" data-serverlist-server-label="${section.overview_title}"` %>
+        open
       >
-        <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
+        <summary class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= section.characters.length %>)</span>
@@ -48,13 +48,123 @@
                 +
               </button>
             <% } %>
+            <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
           </div>
-        </div>
+        </summary>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
           <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
 
-          <% if (!section.characters.length) { %>
+          <% if (isFestplaySection) { %>
+            <div class="serverlist-overview-grid serverlist-overview-nested-grid">
+              <% (section.festplay_groups || []).forEach((group) => { %>
+                <section class="serverlist-overview-subcolumn">
+                  <div class="serverlist-overview-subcolumn-header">
+                    <h4><%= group.overview_short_title %></h4>
+                    <span class="serverlist-festplay-count">(<%= group.characters.length %>)</span>
+                  </div>
+                  <p class="muted serverlist-section-copy"><%= group.overview_description %></p>
+
+                  <% if (!group.characters.length) { %>
+                    <p class="muted">Noch keine Festspiel-Charaktere in <%= group.overview_short_title %>.</p>
+                  <% } else { %>
+                    <div class="character-mini-grid serverlist-overview-character-grid">
+                      <% group.characters.forEach((char) => { %>
+                        <article
+                          class="character-mini-card serverlist-overview-character-card"
+                          draggable="true"
+                          data-serverlist-draggable-character
+                          data-serverlist-character-id="<%= char.id %>"
+                        >
+                          <a
+                            class="character-mini-item"
+                            href="/chat/rooms?c=<%= encodeURIComponent(String(char.chat_character_url_number || char.id)) %>"
+                            title="Mit <%= char.name %> zur Raum&uuml;bersicht"
+                            draggable="false"
+                          >
+                            <span class="character-mini-name"><%= char.name %></span>
+                            <span class="serverlist-character-state"><%= group.overview_short_title %></span>
+                          </a>
+                          <div class="character-mini-actions">
+                            <a
+                              class="character-mini-profile-edit-link"
+                              href="/characters/<%= char.id %>/edit?return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+                              aria-label="Charakter bearbeiten"
+                              title="Charakter bearbeiten"
+                            >
+                              <span class="character-mini-profile-edit-icon" aria-hidden="true"></span>
+                            </a>
+                            <a
+                              class="character-mini-guestbook-open-link"
+                              href="/characters/<%= char.id %>/guestbook"
+                              aria-label="G&auml;stebuch &ouml;ffnen"
+                              title="G&auml;stebuch &ouml;ffnen"
+                            >
+                              <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                            </a>
+                            <a
+                              class="character-mini-guestbook-edit-link"
+                              href="/characters/<%= char.id %>/guestbook/edit"
+                              aria-label="G&auml;stebuch bearbeiten"
+                              title="G&auml;stebuch bearbeiten"
+                            >
+                              <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
+                            </a>
+                            <form
+                              method="POST"
+                              action="/characters/<%= char.id %>/move"
+                              class="character-mini-move-form serverlist-overview-move-form"
+                              data-serverlist-area-move-confirm
+                              data-serverlist-character-name="<%= char.name %>"
+                              data-serverlist-current-server="<%= char.server_id %>"
+                              data-serverlist-home-server="<%= char.festplay_home_server_id || "" %>"
+                              data-serverlist-position="<%= char.dashboard_position || "main" %>"
+                              hidden
+                            >
+                              <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                              <input type="hidden" name="target_server_id" value="">
+                              <input type="hidden" name="target_dashboard_mode" value="">
+                            </form>
+                            <form
+                              method="POST"
+                              action="/characters/<%= char.id %>/guestbook-code-email"
+                              class="character-mini-export-form"
+                            >
+                              <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                              <button
+                                type="submit"
+                                class="character-mini-export-btn"
+                                aria-label="G&auml;stebuch-Code per E-Mail senden"
+                                title="G&auml;stebuch-Code per E-Mail senden"
+                              >
+                                <span class="character-mini-export-icon" aria-hidden="true"></span>
+                              </button>
+                            </form>
+                            <form
+                              method="POST"
+                              action="/characters/<%= char.id %>/delete"
+                              class="character-mini-delete-form"
+                              onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                            >
+                              <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                              <button
+                                type="submit"
+                                class="character-mini-delete-btn"
+                                aria-label="Charakter l&ouml;schen"
+                                title="Charakter l&ouml;schen"
+                              >
+                                X
+                              </button>
+                            </form>
+                          </div>
+                        </article>
+                      <% }) %>
+                    </div>
+                  <% } %>
+                </section>
+              <% }) %>
+            </div>
+          <% } else if (!section.characters.length) { %>
             <p class="muted">Noch keine Charaktere in <%= section.overview_title %>.</p>
           <% } else { %>
             <div class="character-mini-grid serverlist-overview-character-grid">
@@ -73,8 +183,12 @@
                     draggable="false"
                   >
                     <span class="character-mini-name"><%= char.name %></span>
-                    <% if (isFestplayCharacter) { %>
+                    <% if (isFestplayCharacter && !isFestplaySection) { %>
                       <span class="serverlist-character-state">Festspiel</span>
+                    <% } else if (isFestplaySection) { %>
+                      <span class="serverlist-character-state">
+                        <%= char.festplay_home_server_label || (char.server_id === "erp" ? "ERP" : "Free RP") %>
+                      </span>
                     <% } %>
                   </a>
                   <div class="character-mini-actions">
@@ -154,7 +268,7 @@
             </div>
           <% } %>
         </div>
-      </section>
+      </details>
     <% }) %>
   </div>
 </section>

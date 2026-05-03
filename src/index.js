@@ -17553,9 +17553,59 @@ function buildDashboardServerCharacterItems(ownCharacters, serverId, options = {
     });
 }
 
+function buildDashboardFestplayCharacterItems(ownCharacters) {
+  return ownCharacters
+    .map((character) => {
+      const dashboardPosition = getCharacterDashboardPlacement(
+        character.server_id,
+        character.festplay_home_server_id,
+        character.festplay_dashboard_mode
+      );
+
+      return {
+        ...character,
+        dashboard_position: dashboardPosition,
+        can_dashboard_move: true
+      };
+    })
+    .filter((character) => character.dashboard_position === "festplay")
+    .sort((left, right) => {
+      const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
+        sensitivity: "base"
+      });
+      if (nameCompare !== 0) {
+        return nameCompare;
+      }
+
+      return Number(left.id) - Number(right.id);
+    });
+}
+
+function buildDashboardFestplayOverviewGroups(ownCharacters) {
+  const festplayCharacters = buildDashboardFestplayCharacterItems(ownCharacters);
+
+  return SERVER_OPTIONS.map((server) => {
+    const isFreeRp = server.id === "free-rp";
+    return {
+      ...server,
+      overview_title: isFreeRp ? "Festspiele Free RP" : "Festspiele ERP",
+      overview_short_title: isFreeRp ? "Free RP" : "ERP",
+      overview_description: isFreeRp
+        ? "Hier liegen alle Festspiel-Charaktere mit Free-RP-Zuordnung."
+        : "Hier liegen alle Festspiel-Charaktere mit ERP-Zuordnung.",
+      characters: festplayCharacters.filter((character) => {
+        const homeServerId = normalizeServer(
+          character.festplay_home_server_id || character.server_id
+        );
+        return homeServerId === server.id;
+      })
+    };
+  });
+}
+
 function getDashboardCharacterOverviewSections(userId) {
   const ownCharacters = getDashboardOwnCharacters(userId);
-  return SERVER_OPTIONS.map((server) => {
+  const rpSections = SERVER_OPTIONS.map((server) => {
     const isFreeRp = server.id === "free-rp";
     return {
       ...server,
@@ -17564,9 +17614,24 @@ function getDashboardCharacterOverviewSections(userId) {
         ? "Alle Charaktere, die aktuell auf Free RP liegen."
         : "Alle Charaktere, die aktuell auf ERP liegen.",
       dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
-      characters: buildDashboardServerCharacterItems(ownCharacters, server.id)
+      characters: buildDashboardServerCharacterItems(ownCharacters, server.id, {
+        onlyMainArea: true
+      })
     };
   });
+
+  return [
+    ...rpSections,
+    {
+      id: "festspiele",
+      label: "Festspiele",
+      overview_title: "Festspiele",
+      overview_description: "Hier liegen alle Charaktere, die aktuell im Festspiel-Bereich einsortiert sind, getrennt nach Free RP und ERP.",
+      dashboard_area_title: "Festspiele",
+      characters: buildDashboardFestplayCharacterItems(ownCharacters),
+      festplay_groups: buildDashboardFestplayOverviewGroups(ownCharacters)
+    }
+  ];
 }
 
 function getLarpCharactersForUser(userId) {
@@ -18410,7 +18475,7 @@ app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
   const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
 
   return res.render("serverliste/overview", {
-    title: "Charakterübersicht Free RP & ERP",
+    title: "Charakterübersicht Free RP, ERP & Festspiele",
     overviewSections,
     erpMoveAllowed,
     ...getServerListPageAssets(["/serverliste-area.js"])
