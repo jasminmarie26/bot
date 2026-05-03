@@ -94,14 +94,14 @@
                   <a
                     class="character-mini-item"
                     href="<%= hasFestplayTarget
-                      ? `/characters/${char.id}/festplays/${char.festplay_id}/rooms`
+                      ? `/characters/${char.id}/festplays?selected_festplay=${char.festplay_id}&tab=raeume#festplay-selected-editor`
                       : (isFestplayLanding
-                        ? `/characters/${char.id}/festplays/public`
+                        ? `/characters/${char.id}/festplays`
                         : `/chat/rooms?c=${encodeURIComponent(String(char.chat_character_url_number || char.id))}`) %>"
                     title="<%= hasFestplayTarget
-                      ? `Mit ${char.name} zu Festspiel und R&auml;umen`
+                      ? `Mit ${char.name} zur Festspiel-&Uuml;bersicht mit R&auml;umen`
                       : (isFestplayLanding
-                        ? `Mit ${char.name} zur Festspiel-&Uuml;bersicht`
+                        ? `Mit ${char.name} zum Festspielbereich`
                         : `Mit ${char.name} zur Raum&uuml;bersicht`) %>"
                     draggable="false"
                   >
