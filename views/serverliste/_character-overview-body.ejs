@@ -47,6 +47,23 @@
                 +
               </button>
               <% } %>
+              <% if (!isFestplayGroup && (renderSection.id === "free-rp" || renderSection.id === "erp")) { %>
+              <form
+                method="POST"
+                action="/dashboard/areas/<%= renderSection.id %>/guestbook-code-email"
+                class="serverlist-export-all-form"
+              >
+                <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                <button
+                  type="submit"
+                  class="btn serverlist-add-character-btn serverlist-export-all-btn"
+                  aria-label="Alle Gästebücher aus <%= renderSection.overview_title %> per E-Mail senden"
+                  title="Alle Gästebücher aus <%= renderSection.overview_title %> per E-Mail senden"
+                >
+                  &#10003;
+                </button>
+              </form>
+              <% } %>
               <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
             </div>
           </summary>
