@@ -17565,11 +17565,19 @@ function buildDashboardFestplayCharacterItems(ownCharacters) {
       return {
         ...character,
         dashboard_position: dashboardPosition,
+        is_in_festplay_area: dashboardPosition === "festplay",
         can_dashboard_move: true
       };
     })
-    .filter((character) => character.dashboard_position === "festplay")
+    .filter((character) => {
+      const homeServerId = String(character.festplay_home_server_id || "").trim().toLowerCase();
+      return homeServerId === "free-rp" || homeServerId === "erp";
+    })
     .sort((left, right) => {
+      if (left.is_in_festplay_area !== right.is_in_festplay_area) {
+        return left.is_in_festplay_area ? -1 : 1;
+      }
+
       const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
         sensitivity: "base"
       });

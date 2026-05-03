@@ -59,32 +59,44 @@
             <div class="serverlist-overview-grid serverlist-overview-nested-grid">
               <% (section.festplay_groups || []).forEach((group) => { %>
                 <section class="serverlist-overview-subcolumn">
-                  <div class="serverlist-overview-subcolumn-header">
-                    <h4><%= group.overview_short_title %></h4>
-                    <span class="serverlist-festplay-count">(<%= group.characters.length %>)</span>
-                  </div>
-                  <p class="muted serverlist-section-copy"><%= group.overview_description %></p>
+                  <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
+                    <div class="serverlist-overview-subcolumn-header">
+                      <h4><%= group.overview_short_title %></h4>
+                      <span class="serverlist-festplay-count">(<%= group.characters.length %>)</span>
+                    </div>
+                    <p class="muted serverlist-section-copy"><%= group.overview_description %></p>
 
-                  <% if (!group.characters.length) { %>
-                    <p class="muted">Noch keine Festspiel-Charaktere in <%= group.overview_short_title %>.</p>
-                  <% } else { %>
-                    <div class="character-mini-grid serverlist-overview-character-grid">
+                    <% if (!group.characters.length) { %>
+                      <p class="muted">Noch keine Festspiel-Charaktere in <%= group.overview_short_title %>.</p>
+                    <% } else { %>
+                      <div class="character-mini-grid serverlist-overview-character-grid">
                       <% group.characters.forEach((char) => { %>
+                        <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
                         <article
-                          class="character-mini-card serverlist-overview-character-card"
+                          class="character-mini-card serverlist-overview-character-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>"
                           draggable="true"
                           data-serverlist-draggable-character
                           data-serverlist-character-id="<%= char.id %>"
                         >
-                          <a
-                            class="character-mini-item"
-                            href="/chat/rooms?c=<%= encodeURIComponent(String(char.chat_character_url_number || char.id)) %>"
-                            title="Mit <%= char.name %> zur Raum&uuml;bersicht"
-                            draggable="false"
-                          >
-                            <span class="character-mini-name"><%= char.name %></span>
-                            <span class="serverlist-character-state"><%= group.overview_short_title %></span>
-                          </a>
+                          <% if (isInFestplayArea) { %>
+                            <a
+                              class="character-mini-item"
+                              href="/chat/rooms?c=<%= encodeURIComponent(String(char.chat_character_url_number || char.id)) %>"
+                              title="Mit <%= char.name %> zur Raum&uuml;bersicht"
+                              draggable="false"
+                            >
+                              <span class="character-mini-name"><%= char.name %></span>
+                              <span class="serverlist-character-state"><%= group.overview_short_title %></span>
+                            </a>
+                          <% } else { %>
+                            <span
+                              class="character-mini-placeholder"
+                              title="<%= `${char.name} liegt aktuell oben auf ${char.server_id === "erp" ? "ERP" : "Free RP"}.` %>"
+                            >
+                              <span class="character-mini-name"><%= char.name %></span>
+                              <span class="serverlist-character-state"><%= char.server_id === "erp" ? "ERP" : "Free RP" %></span>
+                            </span>
+                          <% } %>
                           <div class="character-mini-actions">
                             <a
                               class="character-mini-profile-edit-link"
@@ -125,6 +137,15 @@
                               <input type="hidden" name="target_server_id" value="">
                               <input type="hidden" name="target_dashboard_mode" value="">
                             </form>
+                            <button
+                              type="button"
+                              class="character-mini-move-btn serverlist-overview-move-trigger"
+                              data-serverlist-overview-move-trigger
+                              aria-label="Charakter verschieben"
+                              title="Ziel ausw&auml;hlen"
+                            >
+                              &harr;
+                            </button>
                             <form
                               method="POST"
                               action="/characters/<%= char.id %>/guestbook-code-email"
@@ -159,8 +180,9 @@
                           </div>
                         </article>
                       <% }) %>
-                    </div>
-                  <% } %>
+                      </div>
+                    <% } %>
+                  </section>
                 </section>
               <% }) %>
             </div>
@@ -231,6 +253,15 @@
                       <input type="hidden" name="target_server_id" value="">
                       <input type="hidden" name="target_dashboard_mode" value="">
                     </form>
+                    <button
+                      type="button"
+                      class="character-mini-move-btn serverlist-overview-move-trigger"
+                      data-serverlist-overview-move-trigger
+                      aria-label="Charakter verschieben"
+                      title="Ziel ausw&auml;hlen"
+                    >
+                      &harr;
+                    </button>
                     <form
                       method="POST"
                       action="/characters/<%= char.id %>/guestbook-code-email"

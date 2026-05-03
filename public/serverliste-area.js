@@ -175,6 +175,24 @@
         });
       });
 
+      const moveTriggers = document.querySelectorAll("[data-serverlist-overview-move-trigger]");
+      moveTriggers.forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+          const card = trigger.closest("[data-serverlist-draggable-character]");
+          const form = card?.querySelector("[data-serverlist-area-move-confirm]");
+          if (!form) {
+            return;
+          }
+
+          if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+            return;
+          }
+
+          form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        });
+      });
+
       closeElements.forEach((element) => {
         element.addEventListener("click", closeModal);
       });
