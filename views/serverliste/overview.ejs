@@ -11,7 +11,10 @@
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= section.characters.length %>)</span>
           </div>
-          <a class="btn btn-secondary serverlist-overview-open-btn" href="/dashboard/areas/<%= section.id %>">
+          <a
+            class="btn btn-secondary serverlist-overview-open-btn"
+            href="<%= section.overview_link || `/dashboard/areas/${section.id}` %>"
+          >
             Bereich &ouml;ffnen
           </a>
         </div>
