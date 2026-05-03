@@ -326,9 +326,8 @@
 .serverlist-overview-subcolumn-box {
   border: 1px solid color-mix(in srgb, var(--panel-edge) 76%, var(--accent) 24%);
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 92%, white 8%) 0%, color-mix(in srgb, var(--panel-bg) 86%, black 14%) 100%);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  background: transparent;
+  box-shadow: none;
   padding: 0.55rem 0.65rem;
 }
 
