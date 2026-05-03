@@ -228,35 +228,6 @@
 
     const draggableCards = document.querySelectorAll("[data-serverlist-draggable-character]");
     const dropZones = document.querySelectorAll("[data-serverlist-drop-zone]");
-    const exclusiveSections = document.querySelectorAll("[data-serverlist-exclusive-section]");
-    const exclusiveGroups = new Map();
-
-    exclusiveSections.forEach((section) => {
-      const groupName = String(section.dataset.serverlistExclusiveSection || "").trim();
-      if (!groupName) {
-        return;
-      }
-
-      const currentGroup = exclusiveGroups.get(groupName) || [];
-      currentGroup.push(section);
-      exclusiveGroups.set(groupName, currentGroup);
-    });
-
-    exclusiveSections.forEach((section) => {
-      section.addEventListener("toggle", () => {
-        if (!section.open) {
-          return;
-        }
-
-        const groupName = String(section.dataset.serverlistExclusiveSection || "").trim();
-        const groupSections = exclusiveGroups.get(groupName) || [];
-        groupSections.forEach((otherSection) => {
-          if (otherSection !== section) {
-            otherSection.open = false;
-          }
-        });
-      });
-    });
 
     if (!draggableCards.length || !dropZones.length) {
       return;
