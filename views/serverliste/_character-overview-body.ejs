@@ -52,7 +52,7 @@
           </summary>
 
           <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
-            <% if (renderSection.overview_description) { %>
+            <% if (renderSection.overview_description && renderSection.overview_description !== "Hier liegen alle Festspiel-Charaktere mit Free-RP-Zuordnung.") { %>
               <p class="muted serverlist-section-copy"><%= renderSection.overview_description %></p>
           <% } %>
 
