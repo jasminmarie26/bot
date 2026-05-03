@@ -7417,6 +7417,7 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
         is_public_room: Number(room.is_public_room) === 1,
         is_saved_room: Number(room.is_saved_room) === 1,
         is_manual_festplay_room: Number(room.is_manual_festplay_room) === 1,
+        description_html: room.description ? renderGuestbookBbcode(room.description) : "",
         teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
         can_manage_room: canManageRoom,
         can_enter:

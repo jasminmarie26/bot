@@ -229,6 +229,10 @@
                 <div class="rp-room-custom-description">
                   <%- room.teaser_html %>
                 </div>
+              <% } else if (room.description_html) { %>
+                <div class="rp-room-custom-description">
+                  <%- room.description_html %>
+                </div>
               <% } else if (room.description) { %>
                 <div class="rp-room-custom-description">
                   <%= room.description %>
