@@ -7848,6 +7848,16 @@ function getBoundFestplaysForCharacter(characterId) {
     }));
 }
 
+function getCharacterFestplayHomeServerIds(characterId) {
+  return [
+    ...new Set(
+      getBoundFestplaysForCharacter(characterId)
+        .map((festplay) => normalizeServer(festplay.server_id))
+        .filter(Boolean)
+    )
+  ];
+}
+
 function getCharacterFestplayServerBlock(characterId, targetServerId) {
   const normalizedTargetServerId = normalizeServer(targetServerId);
   return (
@@ -7871,13 +7881,7 @@ function buildFestplayServerLockMessage(festplay, targetServerId = "") {
 }
 
 function getCharacterFestplayHomeServer(characterId) {
-  const uniqueServerIds = [
-    ...new Set(
-      getBoundFestplaysForCharacter(characterId)
-        .map((festplay) => normalizeServer(festplay.server_id))
-        .filter(Boolean)
-    )
-  ];
+  const uniqueServerIds = getCharacterFestplayHomeServerIds(characterId);
 
   if (uniqueServerIds.length !== 1) {
     return "";
@@ -17490,14 +17494,71 @@ function getDashboardOwnCharacters(userId) {
     )
     .all(parsedUserId)
     .map((character) => {
-      const festplayHomeServerId = getCharacterFestplayHomeServer(character.id);
+      const boundFestplays = getBoundFestplaysForCharacter(character.id);
+      const festplayHomeServerIds = [
+        ...new Set(
+          boundFestplays
+            .map((festplay) => normalizeServer(festplay.server_id))
+            .filter(Boolean)
+        )
+      ];
+      const currentServerId = normalizeCharacterServerId(character.server_id);
+      const festplayHomeServerId =
+        currentServerId && festplayHomeServerIds.includes(currentServerId)
+          ? currentServerId
+          : festplayHomeServerIds.length === 1
+            ? festplayHomeServerIds[0]
+            : "";
+      const festplayTargetsByServer = boundFestplays.reduce((targets, festplay) => {
+        const serverId = normalizeServer(festplay.server_id);
+        const festplayId = Number(festplay.id);
+        if (serverId && Number.isInteger(festplayId) && festplayId > 0 && !targets[serverId]) {
+          targets[serverId] = festplayId;
+        }
+        return targets;
+      }, {});
       return {
         ...character,
         chat_character_url_number: getChatCharacterRouteNumber(character),
         festplay_home_server_id: festplayHomeServerId,
-        festplay_home_server_label: getServerLabel(festplayHomeServerId)
+        festplay_home_server_ids: festplayHomeServerIds,
+        festplay_home_server_label: getServerLabel(festplayHomeServerId),
+        festplay_targets_by_server: festplayTargetsByServer
       };
     });
+}
+
+function getDashboardFestplayHomeServerIds(character) {
+  const ids = Array.isArray(character?.festplay_home_server_ids)
+    ? character.festplay_home_server_ids
+    : [character?.festplay_home_server_id];
+  return [
+    ...new Set(
+      ids
+        .map((serverId) => normalizeServer(serverId))
+        .filter((serverId) => serverId === "free-rp" || serverId === "erp")
+    )
+  ];
+}
+
+function getDashboardFestplayTargetForServer(character, serverId) {
+  const normalizedServerId = normalizeServer(serverId);
+  const targets = character?.festplay_targets_by_server || {};
+  const serverTargetId = Number(targets[normalizedServerId]);
+  if (Number.isInteger(serverTargetId) && serverTargetId > 0) {
+    return serverTargetId;
+  }
+
+  const directFestplayId = Number(character?.festplay_id);
+  if (
+    Number.isInteger(directFestplayId) &&
+    directFestplayId > 0 &&
+    normalizeServer(character?.festplay_home_server_id) === normalizedServerId
+  ) {
+    return directFestplayId;
+  }
+
+  return 0;
 }
 
 function buildDashboardServerSection(server, ownCharacters, userId) {
@@ -17560,6 +17621,7 @@ function buildDashboardServerCharacterItems(ownCharacters, serverId, options = {
 function buildDashboardFestplayCharacterItems(ownCharacters) {
   return ownCharacters
     .map((character) => {
+      const festplayHomeServerIds = getDashboardFestplayHomeServerIds(character);
       const dashboardPosition = getCharacterDashboardPlacement(
         character.server_id,
         character.festplay_home_server_id,
@@ -17568,15 +17630,13 @@ function buildDashboardFestplayCharacterItems(ownCharacters) {
 
       return {
         ...character,
+        festplay_home_server_ids: festplayHomeServerIds,
         dashboard_position: dashboardPosition,
         is_in_festplay_area: dashboardPosition === "festplay",
         can_dashboard_move: true
       };
     })
-    .filter((character) => {
-      const homeServerId = String(character.festplay_home_server_id || "").trim().toLowerCase();
-      return homeServerId === "free-rp" || homeServerId === "erp";
-    })
+    .filter((character) => character.festplay_home_server_ids.length > 0)
     .sort((left, right) => {
       if (left.is_in_festplay_area !== right.is_in_festplay_area) {
         return left.is_in_festplay_area ? -1 : 1;
@@ -17605,12 +17665,14 @@ function buildDashboardFestplayOverviewGroups(ownCharacters) {
       overview_description: isFreeRp
         ? "Hier liegen alle Festspiel-Charaktere mit Free-RP-Zuordnung."
         : "Hier liegen alle Festspiel-Charaktere mit ERP-Zuordnung.",
-      characters: festplayCharacters.filter((character) => {
-        const homeServerId = normalizeServer(
-          character.festplay_home_server_id || character.server_id
-        );
-        return homeServerId === server.id;
-      })
+      characters: festplayCharacters
+        .filter((character) => getDashboardFestplayHomeServerIds(character).includes(server.id))
+        .map((character) => ({
+          ...character,
+          festplay_id: getDashboardFestplayTargetForServer(character, server.id),
+          festplay_home_server_id: server.id,
+          festplay_home_server_label: getServerLabel(server.id)
+        }))
     };
   });
 }
