@@ -17572,10 +17572,41 @@ function buildDashboardServerCharacterItems(ownCharacters, serverId, options = {
 
 function getDashboardCharacterOverviewSections(userId) {
   const ownCharacters = getDashboardOwnCharacters(userId);
-  const parsedUserId = Number(userId);
-  return SERVER_OPTIONS
-    .map((server) => buildDashboardServerSection(server, ownCharacters, parsedUserId))
-    .filter(Boolean);
+
+  const overviewSections = SERVER_OPTIONS.map((server) => {
+    const isFreeRp = server.id === "free-rp";
+    const allCharacters = buildDashboardServerCharacterItems(ownCharacters, server.id);
+
+    return {
+      ...server,
+      overview_title: isFreeRp ? "Free RP" : "ERP",
+      overview_description: isFreeRp
+        ? "Alle Charaktere, die aktuell auf Free RP liegen."
+        : "Alle Charaktere, die aktuell auf ERP liegen.",
+      dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
+      characters: allCharacters.filter((char) => char.dashboard_position !== "festplay"),
+      overview_link: `/dashboard/areas/${server.id}`
+    };
+  });
+
+  const festplaySections = SERVER_OPTIONS.map((server) => {
+    const isFreeRp = server.id === "free-rp";
+    const allCharacters = buildDashboardServerCharacterItems(ownCharacters, server.id);
+
+    return {
+      ...server,
+      id: `${server.id}-festplay`,
+      overview_title: isFreeRp ? "Festspiele Free RP" : "Festspiele ERP",
+      overview_description: isFreeRp
+        ? "Festspiel-Charaktere im Free RP Bereich."
+        : "Festspiel-Charaktere im ERP Bereich.",
+      dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
+      characters: allCharacters.filter((char) => char.dashboard_position === "festplay"),
+      overview_link: `/dashboard/areas/${server.id}`
+    };
+  });
+
+  return [...overviewSections, ...festplaySections];
 }
 
 function getLarpCharactersForUser(userId) {
