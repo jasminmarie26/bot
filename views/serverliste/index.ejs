@@ -27,7 +27,7 @@
 
     <div class="serverlist-accordion-body">
       <div class="serverlist-role-switch" aria-label="Rollenspiel-Bereiche">
-        <% serverSections.forEach((section) => { %>
+        <% serverSections.filter((section) => section.id !== "erp").forEach((section) => { %>
           <a
             class="serverlist-role-link"
             href="/dashboard/areas/<%= section.id %>"
