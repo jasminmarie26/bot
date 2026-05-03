@@ -89,7 +89,7 @@
                   data-serverlist-draggable-character
                   data-serverlist-character-id="<%= char.id %>"
                 >
-                  <% const hasFestplayTarget = isFestplayGroup && Number(char.festplay_id) > 0; %>
+                  <% const hasFestplayTarget = Number(char.festplay_id) > 0 && (isFestplayGroup || isFestplayCharacter); %>
                   <a
                     class="character-mini-item"
                     href="<%= hasFestplayTarget
