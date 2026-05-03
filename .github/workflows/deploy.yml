@@ -44,6 +44,7 @@ jobs:
             PM2_CONFIG="${LIVE_DIR}/ecosystem.config.cjs"
             RELEASE_ID="${{ github.sha }}"
             PREV_NODE_MODULES="${LIVE_DIR}/node_modules.prev.${RELEASE_ID}"
+            LOCKFILE_HASH_FILE="${LIVE_DIR}/.package-lock.sha256"
             echo "Preparing deploy directory $LIVE_DIR for release $RELEASE_ID."
             mkdir -p "$LIVE_DIR"
             cd "$LIVE_DIR"
@@ -70,45 +71,73 @@ jobs:
               exit 1
             fi
 
+            CURRENT_LOCKFILE_HASH="$(sha256sum "$LIVE_DIR/package-lock.json" | awk '{print $1}')"
+            PREVIOUS_LOCKFILE_HASH=""
+            if [ -f "$LOCKFILE_HASH_FILE" ]; then
+              PREVIOUS_LOCKFILE_HASH="$(cat "$LOCKFILE_HASH_FILE" 2>/dev/null || true)"
+            fi
+
+            verify_existing_node_modules() {
+              if [ ! -d "$LIVE_DIR/node_modules" ]; then
+                return 1
+              fi
+              cd "$LIVE_DIR"
+              /usr/bin/node -e "require('better-sqlite3'); console.log('existing better-sqlite3 ok')"
+            }
+
             build_stage() {
               rm -rf "$STAGE_DIR"
               mkdir -p "$STAGE_DIR"
               cp "$LIVE_DIR/package.json" "$STAGE_DIR/package.json"
               cp "$LIVE_DIR/package-lock.json" "$STAGE_DIR/package-lock.json"
-              rm -rf /root/.cache/node-gyp/18.19.1 || true
-              export npm_config_build_from_source=true
               export npm_config_nodedir=/usr
               export npm_config_jobs=1
+              export npm_config_build_from_source=false
               cd "$STAGE_DIR"
               /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
               /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
               cd "$LIVE_DIR"
             }
 
-            ATTEMPT=1
-            MAX_ATTEMPTS=3
-            until build_stage; do
-              if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
-                echo "Build failed after ${MAX_ATTEMPTS} attempts"
-                exit 1
+            USED_EXISTING_NODE_MODULES=0
+            if [ -d "$LIVE_DIR/node_modules" ] && [ -n "$PREVIOUS_LOCKFILE_HASH" ] && [ "$PREVIOUS_LOCKFILE_HASH" = "$CURRENT_LOCKFILE_HASH" ]; then
+              echo "package-lock.json unchanged; verifying existing node_modules."
+              if verify_existing_node_modules; then
+                USED_EXISTING_NODE_MODULES=1
+                echo "Existing node_modules stay active for this deploy."
+              else
+                echo "Existing node_modules verification failed; rebuilding dependencies."
               fi
-              ATTEMPT=$((ATTEMPT + 1))
-              echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
-              rm -rf "$STAGE_DIR"
-              /usr/bin/npm cache verify || true
-              sleep 2
-            done
-
-            echo "Dependency build complete; swapping node_modules."
-            rm -rf "$PREV_NODE_MODULES" || true
-            if [ -d "$LIVE_DIR/node_modules" ]; then
-              echo "Moving current node_modules to $PREV_NODE_MODULES."
-              mv "$LIVE_DIR/node_modules" "$PREV_NODE_MODULES"
             fi
-            echo "Activating freshly built node_modules."
-            mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
-            rm -rf "$STAGE_DIR"
-            echo "node_modules swap complete."
+
+            if [ "$USED_EXISTING_NODE_MODULES" -ne 1 ]; then
+              ATTEMPT=1
+              MAX_ATTEMPTS=3
+              until build_stage; do
+                if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                  echo "Build failed after ${MAX_ATTEMPTS} attempts"
+                  exit 1
+                fi
+                ATTEMPT=$((ATTEMPT + 1))
+                echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
+                rm -rf "$STAGE_DIR"
+                /usr/bin/npm cache verify || true
+                sleep 2
+              done
+
+              echo "Dependency build complete; swapping node_modules."
+              rm -rf "$PREV_NODE_MODULES" || true
+              if [ -d "$LIVE_DIR/node_modules" ]; then
+                echo "Moving current node_modules to $PREV_NODE_MODULES."
+                mv "$LIVE_DIR/node_modules" "$PREV_NODE_MODULES"
+              fi
+              echo "Activating freshly built node_modules."
+              mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
+              rm -rf "$STAGE_DIR"
+              echo "node_modules swap complete."
+            fi
+
+            printf '%s\n' "$CURRENT_LOCKFILE_HASH" > "$LOCKFILE_HASH_FILE"
 
             RUNTIME_STATE="${LIVE_DIR}/.runtime-release.json"
             echo "Writing runtime release state for $RELEASE_ID."
