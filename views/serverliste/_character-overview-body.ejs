@@ -7,7 +7,6 @@
         class="serverlist-festplay-overview serverlist-overview-column<%= isFestplaySection ? " serverlist-overview-column-wide" : "" %>"
         <%= isFestplaySection ? "" : `data-serverlist-drop-zone data-serverlist-server-id="${section.id}" data-serverlist-server-label="${section.overview_title}"` %>
         data-serverlist-exclusive-section="serverlist-overview"
-        name="serverlist-overview"
         <%= section.id === "free-rp" ? "open" : "" %>
       >
         <summary class="serverlist-festplay-overview-header serverlist-overview-column-header">
