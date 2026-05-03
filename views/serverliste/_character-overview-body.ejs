@@ -41,7 +41,9 @@
         </summary>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
-          <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
+          <% if (section.overview_description) { %>
+            <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
+          <% } %>
 
           <% if (isFestplaySection) { %>
             <div class="serverlist-overview-grid serverlist-overview-nested-grid">

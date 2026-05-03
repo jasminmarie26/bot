@@ -17620,9 +17620,7 @@ function getDashboardCharacterOverviewSections(userId) {
     return {
       ...server,
       overview_title: isFreeRp ? "Free RP" : "ERP",
-      overview_description: isFreeRp
-        ? "Alle Charaktere, die aktuell auf Free RP liegen."
-        : "Alle Charaktere, die aktuell auf ERP liegen.",
+      overview_description: "",
       dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
       characters: buildDashboardServerCharacterItems(ownCharacters, server.id, {
         onlyMainArea: true
