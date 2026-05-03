@@ -226,10 +226,10 @@
       });
     }
 
-    const dragHandles = document.querySelectorAll("[data-serverlist-drag-handle]");
+    const draggableCards = document.querySelectorAll("[data-serverlist-draggable-character]");
     const dropZones = document.querySelectorAll("[data-serverlist-drop-zone]");
 
-    if (!dragHandles.length || !dropZones.length) {
+    if (!draggableCards.length || !dropZones.length) {
       return;
     }
 
@@ -260,10 +260,9 @@
       return targetServerId !== currentServer || currentPosition === "festplay";
     };
 
-    dragHandles.forEach((handle) => {
-      handle.addEventListener("dragstart", (event) => {
-        const card = handle.closest("[data-serverlist-draggable-character]");
-        if (!card) {
+    draggableCards.forEach((card) => {
+      card.addEventListener("dragstart", (event) => {
+        if (event.target instanceof Element && event.target.closest(".character-mini-actions")) {
           event.preventDefault();
           return;
         }
@@ -287,9 +286,8 @@
         }
       });
 
-      handle.addEventListener("dragend", () => {
-        const card = handle.closest("[data-serverlist-draggable-character]");
-        card?.classList.remove("is-dragging");
+      card.addEventListener("dragend", () => {
+        card.classList.remove("is-dragging");
         draggedCard = null;
         draggedForm = null;
         clearDropStates();
