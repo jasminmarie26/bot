@@ -17496,9 +17496,11 @@ function getDashboardOwnCharacters(userId) {
               c.serverlist_icon_focus_y,
               c.serverlist_icon_zoom,
               c.festplay_dashboard_mode,
-              f.name AS festplay_name
+              f.name AS festplay_name,
+              COALESCE(creator.name, '') AS festplay_creator_name
        FROM characters c
        LEFT JOIN festplays f ON f.id = c.festplay_id
+       LEFT JOIN characters creator ON creator.id = f.creator_character_id
        WHERE c.user_id = ?
        ORDER BY c.updated_at DESC`
     )

@@ -36,7 +36,10 @@
                   >
                     <span class="character-mini-name"><%= char.name %></span>
                     <% if (isFestplayCharacter) { %>
-                      <span class="serverlist-character-state">Festspiel</span>
+                      <span class="serverlist-character-state">Festspiel<% if (char.festplay_name) { %>: <%= char.festplay_name %><% } %></span>
+                      <% if (char.festplay_creator_name) { %>
+                        <span class="serverlist-character-state" style="font-size: 0.85em; margin-top: 2px;">von <%= char.festplay_creator_name %></span>
+                      <% } %>
                     <% } %>
                   </a>
                   <div class="character-mini-actions">
