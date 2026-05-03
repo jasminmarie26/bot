@@ -1,0 +1,5 @@
+[runtime-proxy] Listening on port 4340
+[runtime-proxy] Starting local-port-test-3 on 127.0.0.1:4342 (startup)
+[auth] Google Login aktiv (https://heldenhaftereisen.net/auth/google/callback).
+Server läuft auf http://localhost:4342
+[runtime-proxy] Active release is local-port-test-3 on 127.0.0.1:4342

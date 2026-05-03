@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GB Table Spacer Check</title>
+  <link rel="stylesheet" href="../public/styles.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #111;
+    }
+
+    .probe-frame {
+      width: 680px;
+      padding: 0;
+      border: 2px solid #d7b4c7;
+      background: #050505;
+    }
+
+    .guestbook-page-preview {
+      --gb-frame-width: 680px;
+      --gb-content-width: 640px;
+      --gb-base-font-size: 10.16px;
+      --gb-copy-font-size: 12.8px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.2rem 0;
+      background: #050505;
+      color: #7d5252;
+      font-family: "Georgia", serif;
+    }
+
+    .guestbook-entry-body {
+      width: min(100%, var(--gb-content-width));
+      margin: 0 auto;
+      color: #7d5252;
+      line-height: 1.55;
+      font-size: 1.6rem;
+    }
+
+    .bb-block {
+      color: #7d5252;
+    }
+  </style>
+</head>
+<body>
+  <div class="probe-frame">
+    <div class="guestbook-page-preview gb-theme-rosenlack">
+      <div class="guestbook-entry-body">
+        <div class="bb-center">
+          <div class="bb-table-wrap bb-table-flow">
+            <table class="bb-table bb-table-borderless bb-table-flow">
+              <tbody>
+                <tr>
+                  <td class="bb-table-cell bb-table-cell-spacer">       </td>
+                  <td class="bb-table-cell">
+                    <div class="bb-block">
+                      <strong>Ueber Rosenfledermaeuse</strong><br>
+                      Rosenfledermaeuse sind aeusserst selten. Genaugenommen gibt es nur wenige.
+                      Oder vielmehr nur noch. Es ist viele Dekaden her, dass ihr Bestand extrem
+                      dezimiert wurde im Rahmen der Ausrottung diverser angehoerigen der Gattung
+                      Faeriae.
+                    </div>
+                  </td>
+                  <td class="bb-table-cell bb-table-cell-spacer">       </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,3 @@
+[auth] Google Login aktiv (https://heldenhaftereisen.net/auth/google/callback).
+Inaktive Sitzungen bereinigt: 5
+Server läuft auf http://localhost:3000

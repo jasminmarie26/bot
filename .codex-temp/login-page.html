@@ -1,0 +1,744 @@
+﻿<!doctype html>
+<html lang="de">
+  <head>
+    
+    
+    
+    
+    
+    
+    
+    
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Heldenhafte Reisen</title>
+    <meta name="description" content="Heldenhafte Reisen ist eine kostenlose deutschsprachige Community für Rollenspiele, Free RP, LARP und Pen &amp; Paper inspirierte Abenteuer mit Charakterprofilen, Gästebüchern, Chat und Community-Austausch." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta property="og:site_name" content="Heldenhafte Reisen" />
+    <meta property="og:title" content="Login | Heldenhafte Reisen" />
+    <meta property="og:description" content="Heldenhafte Reisen ist eine kostenlose deutschsprachige Community für Rollenspiele, Free RP, LARP und Pen &amp; Paper inspirierte Abenteuer mit Charakterprofilen, Gästebüchern, Chat und Community-Austausch." />
+    <meta property="og:type" content="website" />
+    
+      <meta property="og:url" content="https://heldenhaftereisen.net/login" />
+      <link rel="canonical" href="https://heldenhaftereisen.net/login" />
+    
+    
+      <meta property="og:image" content="https://heldenhaftereisen.net/apple-touch-icon-hr.png" />
+      <meta name="twitter:image" content="https://heldenhaftereisen.net/apple-touch-icon-hr.png" />
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Login | Heldenhafte Reisen" />
+    <meta name="twitter:description" content="Heldenhafte Reisen ist eine kostenlose deutschsprachige Community für Rollenspiele, Free RP, LARP und Pen &amp; Paper inspirierte Abenteuer mit Charakterprofilen, Gästebüchern, Chat und Community-Austausch." />
+    <meta name="application-name" content="Heldenhafte Reisen" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Heldenhafte Reisen","description":"Heldenhafte Reisen ist eine kostenlose deutschsprachige Community für Rollenspiele, Free RP, LARP und Pen & Paper inspirierte Abenteuer mit Charakterprofilen, Gästebüchern, Chat und Community-Austausch.","url":"https://heldenhaftereisen.net/login"}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Manrope:wght@400;600;700&family=Audiowide&family=Berkshire+Swash&family=Cardo:wght@400;700&family=Della+Respira&family=Flamenco:wght@300;400&family=Indie+Flower&family=Josefin+Slab:wght@400;600;700&family=Kelly+Slab&family=MedievalSharp&family=Old+Standard+TT:wght@400;700&family=Russo+One&family=Sunshiney&family=UnifrakturCook:wght@700&family=Pirata+One&family=Poller+One&family=Orbitron:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Metamorphous&family=Great+Vibes&family=IM+Fell+English+SC&display=swap"
+    />
+    <script>
+      (() => {
+        const userAgent = String(window.navigator.userAgent || "");
+        const isChromiumBrowser =
+          /\b(?:Chrome|Chromium|CriOS)\//.test(userAgent) &&
+          !/\b(?:Edg|OPR)\//.test(userAgent);
+
+        if (!isChromiumBrowser) {
+          return;
+        }
+
+        const root = document.documentElement;
+        const enableSoftwareRendererFallback = () => {
+          root.classList.add("software-renderer");
+        };
+
+        try {
+          const canvas = document.createElement("canvas");
+          const contextOptions = {
+            alpha: false,
+            antialias: false,
+            depth: false,
+            failIfMajorPerformanceCaveat: false,
+            powerPreference: "low-power",
+            preserveDrawingBuffer: false,
+            stencil: false
+          };
+          const gl =
+            canvas.getContext("webgl2", contextOptions) ||
+            canvas.getContext("webgl", contextOptions) ||
+            canvas.getContext("experimental-webgl", contextOptions);
+
+          if (!gl) {
+            enableSoftwareRendererFallback();
+            return;
+          }
+
+          let renderer = "";
+          let vendor = "";
+
+          try {
+            const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+            if (debugInfo) {
+              renderer = String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || "");
+              vendor = String(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || "");
+            }
+          } catch (_error) {
+            // Renderer detection is best-effort only.
+          }
+
+          if (!renderer) {
+            try {
+              renderer = String(gl.getParameter(gl.RENDERER) || "");
+              vendor = vendor || String(gl.getParameter(gl.VENDOR) || "");
+            } catch (_error) {
+              // Ignore renderer fallback errors.
+            }
+          }
+
+          const rendererFingerprint = `${vendor} ${renderer}`.trim().toLowerCase();
+          if (
+            /swiftshader|software|llvmpipe|softpipe|basic render|microsoft basic render|mesa offscreen/i.test(
+              rendererFingerprint
+            )
+          ) {
+            enableSoftwareRendererFallback();
+          }
+
+          try {
+            gl.getExtension("WEBGL_lose_context")?.loseContext();
+          } catch (_error) {
+            // Ignore context cleanup errors.
+          }
+        } catch (_error) {
+          enableSoftwareRendererFallback();
+        }
+      })();
+    </script>
+    <script>
+      (() => {
+        const isEdgeBrowser = /\bEdg\//.test(window.navigator.userAgent);
+        if (!isEdgeBrowser) return;
+
+        if ("scrollRestoration" in window.history) {
+          window.history.scrollRestoration = "manual";
+        }
+
+        const navigationEntry = window.performance.getEntriesByType?.("navigation")?.[0];
+        const navigationType =
+          navigationEntry?.type ||
+          (window.performance.navigation?.type === 1 ? "reload" : "");
+
+        if (navigationType !== "reload") return;
+
+        const scrollToTop = () => {
+          window.scrollTo(0, 0);
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+        };
+
+        window.addEventListener(
+          "load",
+          () => {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(scrollToTop);
+            });
+          },
+          { once: true }
+        );
+      })();
+    </script>
+    <script>
+      (() => {
+        const isGuestbookPath = /^\/characters\/\d+\/guestbook\/?$/.test(window.location.pathname);
+        if (!isGuestbookPath) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageId = urlParams.get("page_id") || "default";
+        const storageKey = `guestbook-panel:${window.location.pathname}:${pageId}`;
+        const hasGuestbookEntryHash = window.location.hash.startsWith("#guestbook-entry-");
+
+        try {
+          if (window.sessionStorage.getItem(storageKey) === "open" || hasGuestbookEntryHash) {
+            document.documentElement.classList.add("guestbook-panel-open");
+          }
+        } catch (_error) {
+          if (hasGuestbookEntryHash) {
+            document.documentElement.classList.add("guestbook-panel-open");
+          }
+        }
+      })();
+    </script>
+    <script>
+      (() => {
+        const NOCTRA_PATTERN = /^noctra(?:\b|\s|\[|\()/i;
+        const CRESCENTIA_PATTERN = /^(?:crescentia|cresentia)(?:\b|\s|\[|\()/i;
+        const CERBERUS_PATTERN = /^cerberus(?:\b|\s|\[|\()/i;
+        const TARGET_SELECTOR = [
+          ".role-name-admin",
+          ".role-name-moderator",
+          ".staff-name-admin",
+          ".staff-name-moderator",
+          ".rp-header-identity",
+          ".rp-user-menu-meta > strong",
+          ".topbar-user-menu-meta > strong",
+          ".guestbook-author-link strong",
+          ".guestbook-item-authorline > strong",
+          ".rp-room-occupant"
+        ].join(", ");
+
+        const syncSpecialNameDecor = (root = document) => {
+          const targets = [];
+          if (root instanceof Element && root.matches(TARGET_SELECTOR)) {
+            targets.push(root);
+          }
+          if (root?.querySelectorAll) {
+            targets.push(...root.querySelectorAll(TARGET_SELECTOR));
+          }
+
+          targets.forEach((node) => {
+            if (node.classList?.contains("rp-room-occupant")) {
+              node.classList.remove("has-noctra-wings", "has-crescentia-moons", "has-cerberus-flame");
+              return;
+            }
+            const label = String(node.textContent || "").trim();
+            node.classList.toggle("has-noctra-wings", NOCTRA_PATTERN.test(label));
+            node.classList.toggle("has-crescentia-moons", CRESCENTIA_PATTERN.test(label));
+            node.classList.toggle("has-cerberus-flame", CERBERUS_PATTERN.test(label));
+          });
+        };
+
+        const boot = () => {
+          syncSpecialNameDecor(document);
+
+          if (!document.body || typeof MutationObserver !== "function") {
+            return;
+          }
+
+          const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+              if (mutation.type === "characterData") {
+                syncSpecialNameDecor(mutation.target?.parentElement || document);
+                return;
+              }
+
+              mutation.addedNodes.forEach((node) => {
+                if (node instanceof Element) {
+                  syncSpecialNameDecor(node);
+                }
+              });
+
+              if (mutation.target instanceof Element) {
+                syncSpecialNameDecor(mutation.target);
+              }
+            });
+          });
+
+          observer.observe(document.body, {
+            subtree: true,
+            childList: true,
+            characterData: true
+          });
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot, { once: true });
+        } else {
+          boot();
+        }
+      })();
+    </script>
+    
+    
+      <script src="/socket.io/socket.io.js?v=molhhyaa"></script>
+    
+    <link rel="icon" type="image/x-icon" href="/favicon-hr.ico?v=molhhyaa" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-hr-32.png?v=molhhyaa" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-hr-16.png?v=molhhyaa" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-hr.png?v=molhhyaa" />
+    <link rel="shortcut icon" href="/favicon-hr.ico?v=molhhyaa" />
+    <link rel="stylesheet" href="/styles.css?v=molhhyaa" />
+    
+      
+    
+  </head>
+    
+    
+  <body
+    class="theme-glass-aurora"
+    data-current-user-is-admin="false"
+  >
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <section
+      class="server-work-notice"
+      data-server-work-notice
+      data-server-work-time-zone="Europe/Berlin"
+      data-server-work-weekdays="Mon,Wed,Fri"
+      data-server-work-start-minutes="1005"
+      data-server-work-end-minutes="1230"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <div class="server-work-notice-inner">
+        <strong data-server-work-title>Heute Serverarbeit</strong>
+        <span data-server-work-message >17:00 bis 20:30 Uhr.</span>
+      </div>
+    </section>
+    
+      <header class="topbar">
+        <div class="topbar-inner">
+          
+            <a class="brand" href="/">
+              
+              Heldenhafte Reisen
+            </a>
+          
+          <nav class="nav ">
+            
+            
+              <a href="/login">Login</a>
+              <a href="/register">Registrieren</a>
+            
+            
+            
+              <a
+                class="live-updates-nav-link"
+                href="/live-updates"
+                data-live-updates-link-root
+                data-live-updates-open-mode="named-tab"
+                target="site-live-updates"
+                data-live-updates-target="site-live-updates"
+                data-live-updates-initial-revision="2026-03-30 17:43:08.873:3"
+                data-live-updates-initial-revisions="2026-03-30 17:43:08.873:3|2026-03-29 00:12:14.074:2"
+              >
+                <span>Live Updates</span>
+                <span class="live-updates-nav-badge" data-live-updates-badge hidden>1</span>
+              </a>
+            
+            
+              <form method="POST" action="/settings/theme" class="inline-form theme-form">
+                <label for="theme-select">Design</label>
+                <input type="hidden" name="return_to" value="/login" />
+                <select
+                  id="theme-select"
+                  name="theme"
+                  class="theme-select"
+                >
+                  
+                    <option value="glass-aurora" selected>
+                      Glass Aurora
+                    </option>
+                  
+                    <option value="glass-noir" >
+                      Glass Noir
+                    </option>
+                  
+                    <option value="glass-sunset" >
+                      Glass Sunset
+                    </option>
+                  
+                    <option value="future" >
+                      Future
+                    </option>
+                  
+                    <option value="paper-ink" >
+                      Paper Ink
+                    </option>
+                  
+                    <option value="windows-xp" >
+                      Windows XP
+                    </option>
+                  
+                    <option value="atari" >
+                      Atari
+                    </option>
+                  
+                    <option value="sith" >
+                      Sith
+                    </option>
+                  
+                    <option value="jedi" >
+                      Jedi
+                    </option>
+                  
+                    <option value="nature" >
+                      Nature
+                    </option>
+                  
+                    <option value="larp" >
+                      LARP
+                    </option>
+                  
+                </select>
+              </form>
+            
+            
+          </nav>
+        </div>
+      </header>
+    
+
+    <script>
+      (() => {
+        document.addEventListener("DOMContentLoaded", () => {
+          const serverWorkNotice = document.querySelector("[data-server-work-notice]");
+          const chatServerWorkNotice = document.querySelector("[data-chat-server-work-notice]");
+          const chatTopline = chatServerWorkNotice
+            ? chatServerWorkNotice.closest(".rp-topline")
+            : null;
+          const topbar = document.querySelector(".topbar");
+          const userMenus = Array.from(document.querySelectorAll(".topbar-user-menu"));
+          const serverWorkNoticeConfig = serverWorkNotice
+            ? {
+                timeZone: String(serverWorkNotice.dataset.serverWorkTimeZone || "Europe/Berlin").trim() || "Europe/Berlin",
+                weekdays: String(serverWorkNotice.dataset.serverWorkWeekdays || "Mon,Wed,Fri")
+                  .split(",")
+                  .map((value) => value.trim())
+                  .filter(Boolean),
+                startMinutes: Number.parseInt(serverWorkNotice.dataset.serverWorkStartMinutes || "", 10),
+                endMinutes: Number.parseInt(serverWorkNotice.dataset.serverWorkEndMinutes || "", 10),
+                title: String(
+                  serverWorkNotice.querySelector("[data-server-work-title]")?.textContent || "Heute Serverarbeit"
+                ).trim() || "Heute Serverarbeit",
+                message: String(
+                  serverWorkNotice.querySelector("[data-server-work-message]")?.textContent || "17:00 bis 20:30 Uhr."
+                ).trim()
+              }
+            : null;
+          const serverWorkNoticeClockFormatter = serverWorkNoticeConfig
+            ? new Intl.DateTimeFormat("en-US", {
+                timeZone: serverWorkNoticeConfig.timeZone,
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23"
+              })
+            : null;
+
+          const getServerWorkNoticeState = () => {
+            if (!serverWorkNoticeConfig || !serverWorkNoticeClockFormatter) {
+              return {
+                visible: false,
+                title: "Heute Serverarbeit",
+                message: "17:00 bis 20:30 Uhr."
+              };
+            }
+
+            const formattedParts = serverWorkNoticeClockFormatter.formatToParts(new Date());
+            const partMap = {};
+            formattedParts.forEach((part) => {
+              if (part.type !== "literal") {
+                partMap[part.type] = part.value;
+              }
+            });
+
+            const weekday = String(partMap.weekday || "");
+            const hour = Number(partMap.hour) || 0;
+            const minute = Number(partMap.minute) || 0;
+            const currentMinutes = hour * 60 + minute;
+            const visible =
+              serverWorkNoticeConfig.weekdays.includes(weekday) &&
+              currentMinutes >= serverWorkNoticeConfig.startMinutes &&
+              currentMinutes < serverWorkNoticeConfig.endMinutes;
+
+            return {
+              visible,
+              title: serverWorkNoticeConfig.title,
+              message: serverWorkNoticeConfig.message
+            };
+          };
+
+          const applyServerWorkNoticeState = (element, state) => {
+            if (!element) return;
+
+            const titleNode = element.querySelector("[data-server-work-title]");
+            const messageNode = element.querySelector("[data-server-work-message]");
+
+            if (titleNode) {
+              titleNode.textContent = state.title;
+            }
+
+            if (messageNode) {
+              messageNode.textContent = state.message;
+              messageNode.hidden = !state.message;
+            }
+
+            element.hidden = !state.visible;
+          };
+
+          const syncTopbarOffset = () => {
+            const serverWorkNoticeOffset = serverWorkNotice
+              ? Math.max(0, Math.round(serverWorkNotice.getBoundingClientRect().height))
+              : 0;
+            const fallbackOffset = 72 + serverWorkNoticeOffset;
+            const offset = topbar
+              ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom))
+              : Math.max(serverWorkNoticeOffset, fallbackOffset);
+
+            document.documentElement.style.setProperty(
+              "--server-work-notice-height",
+              `${serverWorkNoticeOffset}px`
+            );
+            document.documentElement.style.setProperty("--topbar-bottom-offset", `${offset}px`);
+          };
+
+          const syncServerWorkNoticeState = () => {
+            const state = getServerWorkNoticeState();
+
+            applyServerWorkNoticeState(serverWorkNotice, state);
+            applyServerWorkNoticeState(chatServerWorkNotice, state);
+
+            if (chatTopline) {
+              chatTopline.classList.toggle("has-server-work-notice", state.visible);
+            }
+
+            syncTopbarOffset();
+          };
+
+          syncServerWorkNoticeState();
+          window.addEventListener("resize", syncTopbarOffset);
+          window.addEventListener("orientationchange", syncTopbarOffset);
+          window.addEventListener("load", syncTopbarOffset, { once: true });
+          window.setInterval(syncServerWorkNoticeState, 5000);
+          document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+              syncServerWorkNoticeState();
+            }
+          });
+
+          if (topbar && "ResizeObserver" in window) {
+            const topbarObserver = new ResizeObserver(syncTopbarOffset);
+            topbarObserver.observe(topbar);
+          }
+
+          if (serverWorkNotice && "ResizeObserver" in window) {
+            const serverWorkNoticeObserver = new ResizeObserver(syncTopbarOffset);
+            serverWorkNoticeObserver.observe(serverWorkNotice);
+          }
+
+          if (!userMenus.length) return;
+
+          document.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+
+            userMenus.forEach((menu) => {
+              if (!menu.open || menu.contains(target)) return;
+              menu.open = false;
+            });
+          });
+        });
+      })();
+    </script>
+
+    
+
+    
+    
+    <main class="container">
+      
+      
+
+
+
+
+<section class="panel narrow">
+  <h1>Login</h1>
+
+  
+    
+    
+
+    <form method="POST" action="/login" class="form">
+      
+
+      
+
+      
+        <label>
+          Username
+          <input name="username" required minlength="3" maxlength="24" value="" />
+        </label>
+      
+
+      
+
+      
+
+      
+        <label>
+          Passwort
+          <span class="auth-password-wrap">
+            <input
+              id="auth-password-input"
+              type="password"
+              name="password"
+              required
+              minlength="6"
+            />
+            <button
+              type="button"
+              class="auth-password-toggle"
+              data-password-toggle="auth-password-input"
+              aria-label="Passwort anzeigen"
+              aria-pressed="false"
+              title="Passwort anzeigen"
+            >
+              &#128065;
+            </button>
+          </span>
+        </label>
+      
+
+      
+
+      
+
+      <button
+        type="submit"
+        class="btn"
+        
+      >Einloggen</button>
+    </form>
+
+    
+      <div class="auth-helper-links">
+        <a href="/forgot-username">Benutzernamen vergessen?</a>
+        <a href="/forgot-password">Passwort vergessen?</a>
+      </div>
+    
+
+    
+      <div class="oauth-section">
+        <p class="muted">Oder mit Social Login:</p>
+        <div class="oauth-buttons">
+          
+            <a class="btn btn-secondary oauth-btn" href="/auth/google">Mit Google einloggen</a>
+          
+
+          
+            <span class="oauth-disabled">Facebook Login noch nicht eingerichtet</span>
+            <p class="field-hint oauth-hint">
+              Wird aktiv, sobald Facebook App ID und App Secret eingetragen sind.
+            </p>
+          
+        </div>
+      </div>
+    
+
+    <p class="muted auth-secondary-links">
+      
+        Noch keinen Account? <a href="/register">Jetzt registrieren</a>
+      
+    </p>
+  
+</section>
+
+
+
+<script>
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    const targetId = button.getAttribute("data-password-toggle");
+    const targetInput = targetId ? document.getElementById(targetId) : null;
+    if (!targetInput) {
+      return;
+    }
+
+    const updatePasswordToggleState = (isVisible) => {
+      targetInput.type = isVisible ? "text" : "password";
+      button.setAttribute("aria-pressed", isVisible ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        isVisible ? "Passwort verbergen" : "Passwort anzeigen"
+      );
+      button.setAttribute(
+        "title",
+        isVisible ? "Passwort verbergen" : "Passwort anzeigen"
+      );
+    };
+
+    updatePasswordToggleState(false);
+
+    button.addEventListener("click", () => {
+      updatePasswordToggleState(targetInput.type === "password");
+    });
+  });
+</script>
+
+    </main>
+    <script src="/bbcode-font-loader.js?v=molhhyaa"></script>
+    <script src="/updates.js?v=molhhyaa"></script>
+    <script src="/guestbook-notifications.js?v=molhhyaa"></script>
+    <script src="/character-notes.js?v=molhhyaa"></script>
+    <script src="/social-panel.js?v=molhhyaa"></script>
+    <script src="/rp-board.js?v=molhhyaa"></script>
+    <script src="/theme-switcher.js?v=molhhyaa"></script>
+    
+    
+      
+    
+  </body>
+</html>
+
+

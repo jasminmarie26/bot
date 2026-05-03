@@ -1,0 +1,4 @@
+[runtime-proxy] Child port 4351 is already in use; trying another port.
+[runtime-proxy] Child port 4352 is already in use; trying another port.
+[runtime-proxy] No configured child port is free; asking the OS for a dynamic port.
+[auth] Facebook Login deaktiviert. Fehlt: Client ID und Client Secret.

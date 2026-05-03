@@ -1,0 +1,12 @@
+set -e
+LIVE_DIR="/opt/eigene-rp-seite"
+STAGE_DIR="${LIVE_DIR}/.deploy-stage"
+PM2_CONFIG="${LIVE_DIR}/ecosystem.config.cjs"
+RELEASE_ID="${{ github.sha }}"
+PREV_NODE_MODULES="${LIVE_DIR}/node_modules.prev.${RELEASE_ID}"
+LOCKFILE_HASH_FILE="${LIVE_DIR}/.package-lock.sha256"
+echo "Preparing deploy directory $LIVE_DIR for release $RELEASE_ID."
+mkdir -p "$LIVE_DIR"
+cd "$LIVE_DIR"
+export PATH="/usr/bin:/bin:${PATH}"
+echo "Deploy script started in $(pwd)."

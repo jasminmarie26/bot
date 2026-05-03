@@ -1,0 +1,3 @@
+[auth] Google Login aktiv (https://heldenhaftereisen.net/auth/google/callback).
+[auth] Facebook Login deaktiviert. Fehlt: Client ID und Client Secret.
+Server läuft auf http://localhost:3010

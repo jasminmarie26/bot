@@ -1,0 +1,5 @@
+[runtime-proxy] Listening on port 4350
+[runtime-proxy] Starting local-port-test-4 on a dynamic local port (startup)
+[auth] Google Login aktiv (https://heldenhaftereisen.net/auth/google/callback).
+Server läuft auf http://localhost:50129
+[runtime-proxy] Active release is local-port-test-4 on 127.0.0.1:50129
