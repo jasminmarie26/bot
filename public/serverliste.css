@@ -86,7 +86,8 @@
 .serverlist-accordion {
   border: 1px solid var(--panel-edge);
   border-radius: 18px;
-  background: transparent;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, color-mix(in srgb, var(--panel-bg) 88%, black 12%) 100%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
