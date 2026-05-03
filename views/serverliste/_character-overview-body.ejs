@@ -1,17 +1,3 @@
-<%- include("../partials/start") %>
-
-<% const dashboardOverviewReturnTarget = "/dashboard/areas/overview"; %>
-
-<section class="header-line serverlist-page-header">
-  <div>
-    <span class="serverlist-kicker">Rollenspiel</span>
-    <h1>Charakter&uuml;bersicht Free RP, ERP &amp; Festspiele</h1>
-    <p class="muted">
-      Free RP, ERP und Festspiele direkt im selben Fenster.
-    </p>
-  </div>
-</section>
-
 <section class="serverlist-block">
   <div class="serverlist-overview-grid" data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>">
     <% overviewSections.forEach((section) => { %>
@@ -289,5 +275,3 @@
     <% }) %>
   </div>
 </section>
-
-<%- include("../partials/end") %>

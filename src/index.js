@@ -18443,18 +18443,22 @@ function getServerListPageAssets(scriptPaths = []) {
 }
 
 app.get("/dashboard", requireAuth, (req, res) => {
-  const serverSections = getDashboardServerSections(req.session.user.id);
+  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
   const larpSection = getDashboardLarpSection();
   const larpCharacters = getLarpCharactersForUser(req.session.user.id);
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("serverliste/index", {
     title: "Serverliste",
-    serverSections,
+    overviewSections,
+    erpMoveAllowed,
     larpSection,
     larpCharacters,
     openLarpSection,
-    ...getServerListPageAssets()
+    ...getServerListPageAssets(["/serverliste-area.js"])
   });
 });
 
@@ -18482,17 +18486,7 @@ app.get("/dashboard/larp", requireAuth, (req, res) => {
 });
 
 app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
-  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
-  const accountUser = getAccountUserById(req.session.user.id);
-  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
-  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
-
-  return res.render("serverliste/overview", {
-    title: "Charakterübersicht Free RP, ERP & Festspiele",
-    overviewSections,
-    erpMoveAllowed,
-    ...getServerListPageAssets(["/serverliste-area.js"])
-  });
+  return res.redirect(302, "/dashboard");
 });
 
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
@@ -19293,7 +19287,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
     if (viewerAge === null || viewerAge < 18) {
       setFlash(req, "error", "ERP ist erst ab 18 Jahren verf\u00fcgbar.");
-      return res.redirect(returnTarget || "/dashboard/areas/overview");
+      return res.redirect(returnTarget || "/dashboard");
     }
   }
 

@@ -24,23 +24,8 @@
       <span class="serverlist-accordion-icon" aria-hidden="true"></span>
     </summary>
 
-    <div class="serverlist-accordion-body">
-      <div class="serverlist-role-switch" aria-label="Rollenspiel-Bereiche">
-        <% serverSections.filter((section) => section.id !== "erp" && section.id !== "free-rp").forEach((section) => { %>
-          <a
-            class="serverlist-role-link"
-            href="/dashboard/areas/<%= section.id %>"
-          >
-            <span class="serverlist-role-tab-title"><%= section.dashboard_area_title %></span>
-          </a>
-        <% }) %>
-        <a
-          class="serverlist-role-link serverlist-role-link-wide"
-          href="/dashboard/areas/overview"
-        >
-          <span class="serverlist-role-tab-title">Charakter&uuml;bersicht Free RP &amp; ERP</span>
-        </a>
-      </div>
+    <div class="serverlist-accordion-body serverlist-rollenspiel-overview-body">
+      <%- include("_character-overview-body", { dashboardOverviewReturnTarget: "/dashboard" }) %>
     </div>
   </details>
 
