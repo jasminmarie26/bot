@@ -3,8 +3,133 @@
 <% const dashboardOverviewReturnTarget = "/dashboard/areas/overview"; %>
 
 <section class="serverlist-block">
-  <div class="serverlist-overview-grid">
-    <% overviewSections.forEach((section) => { %>
+  <% overviewSections.forEach((serverSection) => { %>
+    <div class="dashboard-overview-section">
+      <section class="header-line dashboard-page-header">
+        <div>
+          <span class="dashboard-kicker">Rollenspiel</span>
+          <h2><%= serverSection.dashboard_area_title %></h2>
+          <p class="muted"><%= serverSection.dashboard_area_description %></p>
+        </div>
+      </section>
+
+      <section class="dashboard-block">
+        <details class="dashboard-festplay-overview dashboard-character-overview" open>
+          <summary class="dashboard-festplay-overview-header">
+            <div class="dashboard-festplay-overview-title">
+              <h3>Meine Charaktere</h3>
+              <span class="dashboard-festplay-count">(<%= serverSection.characters.length %>)</span>
+            </div>
+            <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+          </summary>
+
+          <div class="dashboard-server-panel dashboard-character-overview-body">
+            <% if (!serverSection.characters.length) { %>
+              <p class="muted">
+                <%= serverSection.festplays && serverSection.festplays.length
+                  ? `Keine freien Charaktere direkt im Bereich ${serverSection.dashboard_label || serverSection.label}. Festspiel-Charaktere sind darunter untergliedert.`
+                  : `Noch keine Charaktere im Bereich ${serverSection.dashboard_label || serverSection.label}.` %>
+              </p>
+            <% } else { %>
+              <div class="character-mini-grid">
+                <% serverSection.characters.forEach((char) => { %>
+                  <article class="character-mini-card">
+                    <a class="character-mini-item" href="/characters/<%= char.id %>" title="<%= char.name %>">
+                      <span class="character-mini-name"><%= char.name %></span>
+                    </a>
+                    <div class="character-mini-actions">
+                      <form
+                        method="POST"
+                        action="/characters/<%= char.id %>/move"
+                        class="character-mini-move-form"
+                        data-dashboard-move-confirm
+                        data-dashboard-character-name="<%= char.name %>"
+                        data-dashboard-current-server="<%= char.server_id %>"
+                        data-dashboard-home-server="<%= char.festplay_home_server_id || "" %>"
+                        data-dashboard-position="<%= char.dashboard_position || "main" %>"
+                      >
+                        <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                        <input type="hidden" name="target_server_id" value="">
+                        <input type="hidden" name="target_dashboard_mode" value="">
+                        <button type="submit" class="character-mini-move-btn" aria-label="Charakter verschieben" title="Zielserver auswählen">&harr;</button>
+                      </form>
+                      <form method="POST" action="/characters/<%= char.id %>/guestbook-code-email" class="character-mini-export-form">
+                        <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                        <button type="submit" class="character-mini-export-btn" aria-label="Gästebuch-Code per E-Mail senden" title="Gästebuch-Code per E-Mail senden"><span class="character-mini-export-icon" aria-hidden="true"></span></button>
+                      </form>
+                      <form method="POST" action="/characters/<%= char.id %>/delete" class="character-mini-delete-form" onsubmit="return confirm('Charakter wirklich löschen?')">
+                        <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                        <button type="submit" class="character-mini-delete-btn" aria-label="Charakter löschen" title="Charakter löschen">X</button>
+                      </form>
+                    </div>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+          </div>
+        </details>
+
+        <% if (serverSection.festplays && serverSection.festplays.length) { %>
+          <details class="dashboard-festplay-overview" open>
+            <summary class="dashboard-festplay-overview-header">
+              <div class="dashboard-festplay-overview-title">
+                <h3>Meine Festspiele</h3>
+                <span class="dashboard-festplay-count">(<%= serverSection.festplays.length %>)</span>
+              </div>
+              <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
+            </summary>
+
+            <div class="dashboard-festplay-stack">
+              <% serverSection.festplays.forEach((festplay) => { %>
+                <section class="panel dashboard-server-panel dashboard-festplay-panel dashboard-subpanel">
+                  <div class="header-line">
+                    <div>
+                      <h3><%= festplay.name %></h3>
+                      <p class="muted dashboard-section-copy"><%= festplay.caption || "Festspiel auf diesem Bereich." %></p>
+                    </div>
+                  </div>
+
+                  <div class="character-mini-grid">
+                    <% festplay.characters.forEach((char) => { %>
+                      <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
+                      <article class="character-mini-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
+                        <% if (isInFestplayArea) { %>
+                          <a class="character-mini-item" href="/characters/<%= char.id %>/festplays/<%= festplay.id %>/rooms" title="Festspiel-Räume mit <%= char.name %> öffnen">
+                            <span class="character-mini-name"><%= char.name %></span>
+                          </a>
+                        <% } else { %>
+                          <span class="character-mini-placeholder" title="<%= char.name %> liegt aktuell oben in <%= serverSection.dashboard_label || serverSection.label %>.">
+                            <span class="character-mini-name"><%= char.name %></span>
+                          </span>
+                        <% } %>
+                        <div class="character-mini-actions">
+                          <form method="POST" action="/characters/<%= char.id %>/move" class="character-mini-move-form" data-dashboard-move-confirm data-dashboard-character-name="<%= char.name %>" data-dashboard-current-server="<%= char.server_id %>" data-dashboard-home-server="<%= serverSection.id %>" data-dashboard-position="<%= char.dashboard_position || "main" %>">
+                            <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                            <input type="hidden" name="target_server_id" value="">
+                            <input type="hidden" name="target_dashboard_mode" value="">
+                            <button type="submit" class="character-mini-move-btn" aria-label="Charakter verschieben" title="Zielserver auswählen">&harr;</button>
+                          </form>
+                          <form method="POST" action="/characters/<%= char.id %>/guestbook-code-email" class="character-mini-export-form">
+                            <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                            <button type="submit" class="character-mini-export-btn" aria-label="Gästebuch-Code per E-Mail senden" title="Gästebuch-Code per E-Mail senden"><span class="character-mini-export-icon" aria-hidden="true"></span></button>
+                          </form>
+                          <% if (isInFestplayArea) { %>
+                            <form method="POST" action="/characters/<%= char.id %>/delete" class="character-mini-delete-form" onsubmit="return confirm('Charakter wirklich löschen?')">
+                              <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                              <button type="submit" class="character-mini-delete-btn" aria-label="Charakter löschen" title="Charakter löschen">X</button>
+                            </form>
+                          <% } %>
+                        </div>
+                      </article>
+                    <% }) %>
+                  </div>
+                </section>
+              <% }) %>
+            </div>
+          </details>
+        <% } %>
+      </section>
+    </div>
       <section class="serverlist-festplay-overview serverlist-overview-column">
         <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
@@ -125,38 +250,6 @@
         </div>
       </section>
     <% }) %>
-  </div>
 </section>
-
-<div
-  id="serverlist-area-move-modal"
-  class="serverlist-confirm-modal"
-  data-erp-move-allowed="<%= erpMoveAllowed ? "true" : "false" %>"
-  hidden
->
-  <div class="serverlist-confirm-backdrop" data-serverlist-area-close></div>
-  <section
-    class="serverlist-confirm-card panel"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="serverlist-area-move-title"
-  >
-    <h2 id="serverlist-area-move-title">Charakter verschieben</h2>
-    <p class="muted serverlist-confirm-note">
-      Freischaltungen an Festspielen bleiben dabei erhalten.
-    </p>
-    <div class="serverlist-confirm-actions">
-      <button type="button" class="btn btn-secondary" data-serverlist-area-close>
-        Abbrechen
-      </button>
-      <button type="button" class="btn btn-secondary" id="serverlist-area-move-free">
-        Free RP
-      </button>
-      <button type="button" class="btn" id="serverlist-area-move-erp">
-        ERP
-      </button>
-    </div>
-  </section>
-</div>
 
 <%- include("../partials/end") %>
