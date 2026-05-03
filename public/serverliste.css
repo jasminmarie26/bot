@@ -149,8 +149,7 @@
 
 .serverlist-subpanel {
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 92%, white 8%) 0%, color-mix(in srgb, var(--panel-bg) 85%, black 15%) 100%);
+  background: transparent;
 }
 
 .serverlist-panel,
