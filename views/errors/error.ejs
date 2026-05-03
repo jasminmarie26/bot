@@ -1,60 +1,9 @@
-<%
-  const resolvedErrorTitle = String(typeof title !== "undefined" && title ? title : "Fehler");
-  const resolvedErrorMessage = String(
-    typeof message !== "undefined" && message
-      ? message
-      : "Es ist ein Fehler aufgetreten."
-  );
-  const normalizedErrorTitle = resolvedErrorTitle.toLowerCase();
-  const errorState = normalizedErrorTitle.includes("zugriff")
-    ? {
-        code: "403",
-        kicker: "Kein Zugriff",
-        heading: "Diese T\u00fcr bleibt gerade geschlossen.",
-        detail: resolvedErrorMessage,
-        next: "Pr\u00fcfe deinen Login oder gehe zur\u00fcck in deinen Bereich."
-      }
-    : normalizedErrorTitle.includes("server")
-      ? {
-          code: "500",
-          kicker: "Serverfehler",
-          heading: "Heldenhafte Reisen hat sich kurz verhoben.",
-          detail: resolvedErrorMessage,
-          next: "Lade die Seite gleich erneut oder gehe zur Startseite."
-        }
-      : {
-          code: "!",
-          kicker: resolvedErrorTitle,
-          heading: resolvedErrorTitle,
-          detail: resolvedErrorMessage,
-          next: "Versuche es erneut oder gehe zur Startseite."
-        };
-%>
 <%- include("../partials/start") %>
 
-<section class="error-page-shell" aria-labelledby="error-page-title">
-  <div class="error-status-mark" aria-hidden="true"><%= errorState.code %></div>
-  <p class="error-page-kicker"><%= errorState.kicker %></p>
-  <h1 id="error-page-title"><%= errorState.heading %></h1>
-  <p class="error-page-copy"><%= errorState.detail %></p>
-
-  <div class="error-overview" aria-label="Fehler&uuml;bersicht">
-    <div class="error-overview-item">
-      <span>Status</span>
-      <strong><%= errorState.kicker %></strong>
-    </div>
-    <div class="error-overview-item">
-      <span>N&auml;chster Schritt</span>
-      <strong><%= errorState.next %></strong>
-    </div>
-  </div>
-
-  <div class="error-page-actions">
-    <a class="btn" href="/">Zur Startseite</a>
-    <button class="ghost-btn" type="button" onclick="window.location.reload()">
-      Erneut laden
-    </button>
-  </div>
+<section class="panel narrow">
+  <h1><%= title || "Fehler" %></h1>
+  <p><%= message || "Es ist ein Fehler aufgetreten." %></p>
+  <a class="btn" href="/">Zur Startseite</a>
 </section>
 
 <%- include("../partials/end") %>

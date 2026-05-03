@@ -15,8 +15,6 @@
 <% const activeGuestbookPage = activeGuestbookEditor?.activePage || null; %>
 <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
 <% const canCharacterShowBirthday = Boolean(typeof accountBirthDate !== "undefined" ? accountBirthDate : ""); %>
-<% const resolvedCharacterNameMaxLength = Number(typeof characterNameMaxLength !== "undefined" ? characterNameMaxLength : 26); %>
-<% const characterNameRemaining = Math.max(0, resolvedCharacterNameMaxLength - String(character.name || "").length); %>
 
 <% if (activeGuestbookEditor) { %>
   <nav
@@ -550,18 +548,10 @@
         <input
           name="name"
           required
-          maxlength="<%= resolvedCharacterNameMaxLength %>"
+          maxlength="80"
           value="<%= character.name || "" %>"
-          data-character-name-input
-          data-character-name-max-length="<%= resolvedCharacterNameMaxLength %>"
           <%= isNameLocked ? "readonly" : "" %>
         />
-        <span class="gb-editor-helptext character-name-limit-meta">
-          <span>Maximal <%= resolvedCharacterNameMaxLength %> Zeichen, damit der Name in der &Uuml;bersicht vor den Icons bleibt.</span>
-          <strong class="character-name-limit-counter">
-            <span data-character-name-remaining><%= characterNameRemaining %></span> Zeichen &uuml;brig
-          </strong>
-        </span>
       </label>
 
       <% if (mode !== "create") { %>
@@ -788,27 +778,5 @@
     </div>
   </section>
 <% } %>
-
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("[data-character-name-input]").forEach((input) => {
-      const maxLength = Number(input.dataset.characterNameMaxLength || input.maxLength || 0);
-      const label = input.closest("label");
-      const remainingOutput = label?.querySelector("[data-character-name-remaining]");
-
-      if (!maxLength || !remainingOutput) {
-        return;
-      }
-
-      const updateRemaining = () => {
-        const remaining = Math.max(0, maxLength - Array.from(String(input.value || "")).length);
-        remainingOutput.textContent = String(remaining);
-      };
-
-      input.addEventListener("input", updateRemaining);
-      updateRemaining();
-    });
-  });
-</script>
 
 <%- include("partials/end") %>

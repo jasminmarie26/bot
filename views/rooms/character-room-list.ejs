@@ -170,7 +170,7 @@
               <span><%= entry.label %>: <%= entry.value %></span>
             <% }) %>
           <% } %>
-          
+          <span data-live-character-server-label>Server: <%= character.server_id === "larp" ? "LARP" : (character.server_id === "erp" ? "ERP" : "FREE-RP") %></span>
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">

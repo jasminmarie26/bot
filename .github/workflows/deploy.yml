@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: auto-deploy-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Upload project files to server
         uses: appleboy/scp-action@v0.1.7
@@ -36,20 +36,13 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
           script_stop: true
-          command_timeout: 30m
           script: |
             set -e
             LIVE_DIR="/opt/eigene-rp-seite"
             STAGE_DIR="${LIVE_DIR}/.deploy-stage"
             PM2_CONFIG="${LIVE_DIR}/ecosystem.config.cjs"
-            RELEASE_ID="${{ github.sha }}"
-            PREV_NODE_MODULES="${LIVE_DIR}/node_modules.prev.${RELEASE_ID}"
-            LOCKFILE_HASH_FILE="${LIVE_DIR}/.package-lock.sha256"
-            echo "Preparing deploy directory $LIVE_DIR for release $RELEASE_ID."
-            mkdir -p "$LIVE_DIR"
             cd "$LIVE_DIR"
             export PATH="/usr/bin:/bin:${PATH}"
-            echo "Deploy script started in $(pwd)."
 
             PM2_BIN="$(command -v pm2 || true)"
             if [ -z "$PM2_BIN" ] && [ -x /usr/local/bin/pm2 ]; then
@@ -71,163 +64,70 @@ jobs:
               exit 1
             fi
 
-            CURRENT_LOCKFILE_HASH="$(sha256sum "$LIVE_DIR/package-lock.json" | awk '{print $1}')"
-            PREVIOUS_LOCKFILE_HASH=""
-            if [ -f "$LOCKFILE_HASH_FILE" ]; then
-              PREVIOUS_LOCKFILE_HASH="$(cat "$LOCKFILE_HASH_FILE" 2>/dev/null || true)"
-            fi
-
-            verify_existing_node_modules() {
-              if [ ! -d "$LIVE_DIR/node_modules" ]; then
-                return 1
-              fi
-              cd "$LIVE_DIR"
-              /usr/bin/node -e "require('better-sqlite3'); console.log('existing better-sqlite3 ok')"
-            }
-
             build_stage() {
               rm -rf "$STAGE_DIR"
               mkdir -p "$STAGE_DIR"
               cp "$LIVE_DIR/package.json" "$STAGE_DIR/package.json"
               cp "$LIVE_DIR/package-lock.json" "$STAGE_DIR/package-lock.json"
+              rm -rf /root/.cache/node-gyp/18.19.1 || true
+              export npm_config_build_from_source=true
               export npm_config_nodedir=/usr
               export npm_config_jobs=1
-              export npm_config_build_from_source=false
               cd "$STAGE_DIR"
               /usr/bin/node /usr/bin/npm ci --omit=dev --foreground-scripts
               /usr/bin/node -e "console.log('ABI', process.versions.modules); require('better-sqlite3'); console.log('better-sqlite3 ok')"
               cd "$LIVE_DIR"
             }
 
-            USED_EXISTING_NODE_MODULES=0
-            if [ -d "$LIVE_DIR/node_modules" ] && [ -n "$PREVIOUS_LOCKFILE_HASH" ] && [ "$PREVIOUS_LOCKFILE_HASH" = "$CURRENT_LOCKFILE_HASH" ]; then
-              echo "package-lock.json unchanged; verifying existing node_modules."
-              if verify_existing_node_modules; then
-                USED_EXISTING_NODE_MODULES=1
-                echo "Existing node_modules stay active for this deploy."
-              else
-                echo "Existing node_modules verification failed; rebuilding dependencies."
+            ATTEMPT=1
+            MAX_ATTEMPTS=3
+            until build_stage; do
+              if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                echo "Build failed after ${MAX_ATTEMPTS} attempts"
+                exit 1
               fi
-            fi
-
-            if [ "$USED_EXISTING_NODE_MODULES" -ne 1 ]; then
-              ATTEMPT=1
-              MAX_ATTEMPTS=3
-              until build_stage; do
-                if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
-                  echo "Build failed after ${MAX_ATTEMPTS} attempts"
-                  exit 1
-                fi
-                ATTEMPT=$((ATTEMPT + 1))
-                echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
-                rm -rf "$STAGE_DIR"
-                /usr/bin/npm cache verify || true
-                sleep 2
-              done
-
-              echo "Dependency build complete; swapping node_modules."
-              rm -rf "$PREV_NODE_MODULES" || true
-              if [ -d "$LIVE_DIR/node_modules" ]; then
-                echo "Moving current node_modules to $PREV_NODE_MODULES."
-                mv "$LIVE_DIR/node_modules" "$PREV_NODE_MODULES"
-              fi
-              echo "Activating freshly built node_modules."
-              mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "Build failed, retrying (${ATTEMPT}/${MAX_ATTEMPTS})..."
               rm -rf "$STAGE_DIR"
-              echo "node_modules swap complete."
+              /usr/bin/npm cache verify || true
+              sleep 2
+            done
+
+            rm -rf "$LIVE_DIR/node_modules.prev"
+            if [ -d "$LIVE_DIR/node_modules" ]; then
+              mv "$LIVE_DIR/node_modules" "$LIVE_DIR/node_modules.prev"
             fi
+            mv "$STAGE_DIR/node_modules" "$LIVE_DIR/node_modules"
+            rm -rf "$STAGE_DIR"
 
-            printf '%s\n' "$CURRENT_LOCKFILE_HASH" > "$LOCKFILE_HASH_FILE"
-
-            RUNTIME_STATE="${LIVE_DIR}/.runtime-release.json"
-            echo "Writing runtime release state for $RELEASE_ID."
-            /usr/bin/node -e "const fs=require('fs');fs.writeFileSync(process.argv[1],JSON.stringify({releaseId:process.argv[2],releaseDir:process.argv[3],updatedAt:new Date().toISOString()})+'\n');" "$RUNTIME_STATE" "$RELEASE_ID" "$LIVE_DIR"
-
-            read_pm2_app_state() {
-              "$PM2_BIN" jlist 2>/dev/null | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{try{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(JSON.stringify({status:app?.pm2_env?.status||'missing',script:app?.pm2_env?.pm_exec_path||''}));}catch(_error){process.stdout.write(JSON.stringify({status:'missing',script:''}));}});"
-            }
-
-            is_port_open() {
-              /usr/bin/node -e "const net=require('net');const port=Number(process.argv[1]);const socket=net.connect({host:'127.0.0.1',port},()=>{socket.destroy();process.exit(0);});socket.on('error',()=>process.exit(1));setTimeout(()=>{socket.destroy();process.exit(1);},1000);" "$1"
-            }
-
-            wait_for_port_free() {
-              PORT_TO_CHECK="$1"
-              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-                if ! is_port_open "$PORT_TO_CHECK"; then
-                  echo "Port ${PORT_TO_CHECK} is free."
-                  return 0
-                fi
-                echo "Waiting for port ${PORT_TO_CHECK} to become free (${i}/15)."
-                sleep 1
-              done
-              return 1
-            }
-
-            echo "Reading PM2 state."
-            APP_STATE="$(read_pm2_app_state)"
-            APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
-            APP_SCRIPT="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.script||'');" "$APP_STATE")"
-            EXPECTED_SCRIPT="${LIVE_DIR}/src/runtime-proxy.js"
-            echo "PM2 state: status=${APP_STATUS}, script=${APP_SCRIPT:-none}."
-
-            if [ "$APP_STATUS" = "online" ] && [ "$APP_SCRIPT" = "$EXPECTED_SCRIPT" ]; then
-              echo "Runtime proxy already active; restarting it so deploy-time proxy fixes are loaded."
-              "$PM2_BIN" restart "$PM2_CONFIG" --only rp-chat --update-env
-            else
-              if [ "$APP_STATUS" != "missing" ] && [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
-                echo "Existing rp-chat uses ${APP_SCRIPT:-unknown}; deleting it before runtime proxy migration."
-                "$PM2_BIN" stop rp-chat || true
-                "$PM2_BIN" delete rp-chat || true
-                wait_for_port_free 3000
-                echo "Starting PM2 runtime proxy from $PM2_CONFIG."
-                "$PM2_BIN" start "$PM2_CONFIG" --only rp-chat --update-env
-              else
-                echo "Starting or reloading PM2 runtime proxy from $PM2_CONFIG."
-                "$PM2_BIN" startOrReload "$PM2_CONFIG" --only rp-chat --update-env
-              fi
-            fi
-
-            APP_STATE="$(read_pm2_app_state)"
-            APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
-            APP_SCRIPT="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.script||'');" "$APP_STATE")"
-            echo "PM2 state after start: status=${APP_STATUS}, script=${APP_SCRIPT:-none}."
-            if [ "$APP_STATUS" != "online" ] || [ "$APP_SCRIPT" != "$EXPECTED_SCRIPT" ]; then
-              echo "PM2 did not migrate rp-chat to runtime proxy."
-              "$PM2_BIN" status || true
-              "$PM2_BIN" describe rp-chat || true
-              "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
-              exit 1
-            fi
+            "$PM2_BIN" startOrReload "$PM2_CONFIG" --update-env
             "$PM2_BIN" save
 
+            sleep 3
             HEALTH_URL="http://127.0.0.1:3000/healthz"
-            RUNTIME_HEALTH_URL="http://127.0.0.1:3000/_runtime/health"
             HEALTH_OK=0
-            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60; do
-              RUNTIME_PAYLOAD="$(curl -fsS --max-time 5 "$RUNTIME_HEALTH_URL" 2>/dev/null || true)"
-              if [ -n "$RUNTIME_PAYLOAD" ] && EXPECTED_RELEASE_ID="$RELEASE_ID" /usr/bin/node -e "const payload=JSON.parse(process.argv[1]);const active=payload.active||{};process.exit(payload.ok&&active.releaseId===process.env.EXPECTED_RELEASE_ID?0:1);" "$RUNTIME_PAYLOAD" && curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; then
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+              if curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; then
                 HEALTH_OK=1
                 break
               fi
               sleep 1
             done
 
-            APP_STATE="$(read_pm2_app_state)"
-            APP_STATUS="$(/usr/bin/node -e "const state=JSON.parse(process.argv[1]||'{}');process.stdout.write(state.status||'missing');" "$APP_STATE")"
+            APP_STATUS="$("$PM2_BIN" jlist | /usr/bin/node -e "let raw='';process.stdin.on('data',c=>raw+=c);process.stdin.on('end',()=>{const list=JSON.parse(raw||'[]');const app=list.find((item)=>item.name==='rp-chat');process.stdout.write(app?.pm2_env?.status || 'missing');});")"
             if [ "$APP_STATUS" != "online" ] || [ "$HEALTH_OK" -ne 1 ]; then
               echo "New release unhealthy. Rolling back node_modules."
               echo "rp-chat status is $APP_STATUS"
-              curl -i --max-time 5 "$RUNTIME_HEALTH_URL" || true
               curl -i --max-time 5 "$HEALTH_URL" || true
               "$PM2_BIN" status || true
               "$PM2_BIN" describe rp-chat || true
-              if [ -d "$PREV_NODE_MODULES" ]; then
+              if [ -d "$LIVE_DIR/node_modules.prev" ]; then
                 rm -rf "$LIVE_DIR/node_modules"
-                mv "$PREV_NODE_MODULES" "$LIVE_DIR/node_modules"
+                mv "$LIVE_DIR/node_modules.prev" "$LIVE_DIR/node_modules"
+                "$PM2_BIN" startOrReload "$PM2_CONFIG" --update-env || true
               fi
               "$PM2_BIN" logs rp-chat --lines 80 --nostream || true
               exit 1
             fi
 
-            rm -rf "$PREV_NODE_MODULES" "$LIVE_DIR"/node_modules.prev.*
+            rm -rf "$LIVE_DIR/node_modules.prev"

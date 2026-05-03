@@ -65,7 +65,6 @@ const SERVER_OPTIONS = [
 ];
 const LARP_SERVER_ID = "larp";
 const LARP_PROFILE_LIMIT_ERROR = "Im LARP-Bereich ist nur ein Profil pro Account möglich.";
-const CHARACTER_NAME_MAX_LENGTH = 26;
 const CHARACTER_SERVER_IDS = [LARP_SERVER_ID, ...SERVER_OPTIONS.map((server) => server.id)];
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
@@ -2952,7 +2951,6 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     serverOptions: SERVER_OPTIONS,
     renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
     guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
-    characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
     accountBirthDate,
     returnTo: options.returnTo || "",
     character: {
@@ -5394,7 +5392,7 @@ function normalizeCharacterInput(body) {
       Number.isInteger(parsedFestplayId) && parsedFestplayId > 0
         ? parsedFestplayId
         : null,
-    name: (body.name || "").trim().slice(0, CHARACTER_NAME_MAX_LENGTH),
+    name: (body.name || "").trim().slice(0, 80),
     species: (body.species || "").trim().slice(0, 80),
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
@@ -7417,7 +7415,6 @@ function getFestplayRoomsForUser(userId, festplayId, options = {}) {
         is_public_room: Number(room.is_public_room) === 1,
         is_saved_room: Number(room.is_saved_room) === 1,
         is_manual_festplay_room: Number(room.is_manual_festplay_room) === 1,
-        description_html: room.description ? renderGuestbookBbcode(room.description) : "",
         teaser_html: room.teaser ? renderGuestbookBbcode(room.teaser) : "",
         can_manage_room: canManageRoom,
         can_enter:
@@ -7848,16 +7845,6 @@ function getBoundFestplaysForCharacter(characterId) {
     }));
 }
 
-function getCharacterFestplayHomeServerIds(characterId) {
-  return [
-    ...new Set(
-      getBoundFestplaysForCharacter(characterId)
-        .map((festplay) => normalizeServer(festplay.server_id))
-        .filter(Boolean)
-    )
-  ];
-}
-
 function getCharacterFestplayServerBlock(characterId, targetServerId) {
   const normalizedTargetServerId = normalizeServer(targetServerId);
   return (
@@ -7881,7 +7868,13 @@ function buildFestplayServerLockMessage(festplay, targetServerId = "") {
 }
 
 function getCharacterFestplayHomeServer(characterId) {
-  const uniqueServerIds = getCharacterFestplayHomeServerIds(characterId);
+  const uniqueServerIds = [
+    ...new Set(
+      getBoundFestplaysForCharacter(characterId)
+        .map((festplay) => normalizeServer(festplay.server_id))
+        .filter(Boolean)
+    )
+  ];
 
   if (uniqueServerIds.length !== 1) {
     return "";
@@ -17484,7 +17477,6 @@ function getDashboardOwnCharacters(userId) {
               c.serverlist_icon_focus_x,
               c.serverlist_icon_focus_y,
               c.serverlist_icon_zoom,
-              c.festplay_id,
               c.festplay_dashboard_mode,
               f.name AS festplay_name
        FROM characters c
@@ -17494,71 +17486,13 @@ function getDashboardOwnCharacters(userId) {
     )
     .all(parsedUserId)
     .map((character) => {
-      const boundFestplays = getBoundFestplaysForCharacter(character.id);
-      const festplayHomeServerIds = [
-        ...new Set(
-          boundFestplays
-            .map((festplay) => normalizeServer(festplay.server_id))
-            .filter(Boolean)
-        )
-      ];
-      const currentServerId = normalizeCharacterServerId(character.server_id);
-      const festplayHomeServerId =
-        currentServerId && festplayHomeServerIds.includes(currentServerId)
-          ? currentServerId
-          : festplayHomeServerIds.length === 1
-            ? festplayHomeServerIds[0]
-            : "";
-      const festplayTargetsByServer = boundFestplays.reduce((targets, festplay) => {
-        const serverId = normalizeServer(festplay.server_id);
-        const festplayId = Number(festplay.id);
-        if (serverId && Number.isInteger(festplayId) && festplayId > 0 && !targets[serverId]) {
-          targets[serverId] = festplayId;
-        }
-        return targets;
-      }, {});
+      const festplayHomeServerId = getCharacterFestplayHomeServer(character.id);
       return {
         ...character,
-        chat_character_url_number: getChatCharacterRouteNumber(character),
         festplay_home_server_id: festplayHomeServerId,
-        festplay_home_server_ids: festplayHomeServerIds,
-        festplay_home_server_label: getServerLabel(festplayHomeServerId),
-        festplay_targets_by_server: festplayTargetsByServer
+        festplay_home_server_label: getServerLabel(festplayHomeServerId)
       };
     });
-}
-
-function getDashboardFestplayHomeServerIds(character) {
-  const ids = Array.isArray(character?.festplay_home_server_ids)
-    ? character.festplay_home_server_ids
-    : [character?.festplay_home_server_id];
-  return [
-    ...new Set(
-      ids
-        .map((serverId) => normalizeServer(serverId))
-        .filter((serverId) => serverId === "free-rp" || serverId === "erp")
-    )
-  ];
-}
-
-function getDashboardFestplayTargetForServer(character, serverId) {
-  const normalizedServerId = normalizeServer(serverId);
-  const targets = character?.festplay_targets_by_server || {};
-  const serverTargetId = Number(targets[normalizedServerId]);
-  if (Number.isInteger(serverTargetId) && serverTargetId > 0) {
-    return serverTargetId;
-  }
-
-  const directFestplayId = Number(character?.festplay_id);
-  if (
-    Number.isInteger(directFestplayId) &&
-    directFestplayId > 0 &&
-    normalizeServer(character?.festplay_home_server_id) === normalizedServerId
-  ) {
-    return directFestplayId;
-  }
-
-  return 0;
 }
 
 function buildDashboardServerSection(server, ownCharacters, userId) {
@@ -17618,92 +17552,20 @@ function buildDashboardServerCharacterItems(ownCharacters, serverId, options = {
     });
 }
 
-function buildDashboardFestplayCharacterItems(ownCharacters) {
-  return ownCharacters
-    .map((character) => {
-      const festplayHomeServerIds = getDashboardFestplayHomeServerIds(character);
-      const dashboardPosition = getCharacterDashboardPlacement(
-        character.server_id,
-        character.festplay_home_server_id,
-        character.festplay_dashboard_mode
-      );
-
-      return {
-        ...character,
-        festplay_home_server_ids: festplayHomeServerIds,
-        dashboard_position: dashboardPosition,
-        is_in_festplay_area: dashboardPosition === "festplay",
-        can_dashboard_move: true
-      };
-    })
-    .filter((character) => character.festplay_home_server_ids.length > 0)
-    .sort((left, right) => {
-      if (left.is_in_festplay_area !== right.is_in_festplay_area) {
-        return left.is_in_festplay_area ? -1 : 1;
-      }
-
-      const nameCompare = String(left.name || "").localeCompare(String(right.name || ""), "de", {
-        sensitivity: "base"
-      });
-      if (nameCompare !== 0) {
-        return nameCompare;
-      }
-
-      return Number(left.id) - Number(right.id);
-    });
-}
-
-function buildDashboardFestplayOverviewGroups(ownCharacters) {
-  const festplayCharacters = buildDashboardFestplayCharacterItems(ownCharacters);
-
+function getDashboardCharacterOverviewSections(userId) {
+  const ownCharacters = getDashboardOwnCharacters(userId);
   return SERVER_OPTIONS.map((server) => {
     const isFreeRp = server.id === "free-rp";
     return {
       ...server,
-      overview_title: isFreeRp ? "Festspiele Free RP" : "Festspiele ERP",
-      overview_short_title: isFreeRp ? "Free RP" : "ERP",
-      overview_description: isFreeRp
-        ? "Hier liegen alle Festspiel-Charaktere mit Free-RP-Zuordnung."
-        : "Hier liegen alle Festspiel-Charaktere mit ERP-Zuordnung.",
-      characters: festplayCharacters
-        .filter((character) => getDashboardFestplayHomeServerIds(character).includes(server.id))
-        .map((character) => ({
-          ...character,
-          festplay_id: getDashboardFestplayTargetForServer(character, server.id),
-          festplay_home_server_id: server.id,
-          festplay_home_server_label: getServerLabel(server.id)
-        }))
-    };
-  });
-}
-
-function getDashboardCharacterOverviewSections(userId) {
-  const ownCharacters = getDashboardOwnCharacters(userId);
-  const rpSections = SERVER_OPTIONS.map((server) => {
-    const isFreeRp = server.id === "free-rp";
-    return {
-      ...server,
       overview_title: isFreeRp ? "Free RP" : "ERP",
-      overview_description: "",
+      overview_description: isFreeRp
+        ? "Alle Charaktere, die aktuell auf Free RP liegen."
+        : "Alle Charaktere, die aktuell auf ERP liegen.",
       dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
-      characters: buildDashboardServerCharacterItems(ownCharacters, server.id, {
-        onlyMainArea: true
-      })
+      characters: buildDashboardServerCharacterItems(ownCharacters, server.id)
     };
   });
-
-  return [
-    ...rpSections,
-    {
-      id: "festspiele",
-      label: "Festspiele",
-      overview_title: "Festspiele",
-      overview_description: "Hier liegen alle Charaktere, die aktuell im Festspiel-Bereich einsortiert sind, getrennt nach Free RP und ERP.",
-      dashboard_area_title: "Festspiele",
-      characters: buildDashboardFestplayCharacterItems(ownCharacters),
-      festplay_groups: buildDashboardFestplayOverviewGroups(ownCharacters)
-    }
-  ];
 }
 
 function getLarpCharactersForUser(userId) {
@@ -18494,33 +18356,26 @@ function getDashboardLarpSection() {
 }
 
 function getServerListPageAssets(scriptPaths = []) {
-  const allScriptPaths = ["/serverliste-accordion.js", "/serverliste-character-rows.js", ...scriptPaths].filter(Boolean);
   return {
     pageClass: "page-serverliste",
     pageStyles: ["/serverliste.css?v=" + STATIC_ASSET_VERSION],
-    pageScripts: Array.from(new Set(allScriptPaths)).map(
-      (scriptPath) => scriptPath + "?v=" + STATIC_ASSET_VERSION
-    )
+    pageScripts: scriptPaths.map((scriptPath) => scriptPath + "?v=" + STATIC_ASSET_VERSION)
   };
 }
 
 app.get("/dashboard", requireAuth, (req, res) => {
-  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
-  const accountUser = getAccountUserById(req.session.user.id);
-  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
-  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+  const serverSections = getDashboardServerSections(req.session.user.id);
   const larpSection = getDashboardLarpSection();
   const larpCharacters = getLarpCharactersForUser(req.session.user.id);
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("serverliste/index", {
     title: "Serverliste",
-    overviewSections,
-    erpMoveAllowed,
+    serverSections,
     larpSection,
     larpCharacters,
     openLarpSection,
-    ...getServerListPageAssets(["/serverliste-area.js"])
+    ...getServerListPageAssets()
   });
 });
 
@@ -18548,7 +18403,17 @@ app.get("/dashboard/larp", requireAuth, (req, res) => {
 });
 
 app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
-  return res.redirect(302, "/dashboard");
+  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
+
+  return res.render("serverliste/overview", {
+    title: "Charakterübersicht Free RP & ERP",
+    overviewSections,
+    erpMoveAllowed,
+    ...getServerListPageAssets(["/serverliste-area.js"])
+  });
 });
 
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
@@ -19344,15 +19209,6 @@ app.get("/characters/new", requireAuth, (req, res) => {
     fallbackReturnTarget
   );
 
-  if (requestedServer === "erp") {
-    const accountUser = getAccountUserById(req.session.user.id);
-    const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
-    if (viewerAge === null || viewerAge < 18) {
-      setFlash(req, "error", "ERP ist erst ab 18 Jahren verf\u00fcgbar.");
-      return res.redirect(returnTarget || "/dashboard");
-    }
-  }
-
   if (requestedServer === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
     setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
     return res.redirect("/dashboard/larp");
@@ -19365,7 +19221,6 @@ app.get("/characters/new", requireAuth, (req, res) => {
     festplays,
     serverOptions: SERVER_OPTIONS,
     staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-    characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
     returnTo: returnTarget,
     accountBirthDate: getAccountUserById(req.session.user.id)?.birth_date || "",
     character: {
@@ -19411,18 +19266,10 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
-      characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
       returnTo: returnTarget,
       accountBirthDate,
       character: payload
     });
-
-  if (payload.server_id === "erp") {
-    const viewerAge = getAgeFromBirthDate(accountBirthDate);
-    if (viewerAge === null || viewerAge < 18) {
-      return renderCharacterCreateFormError("ERP ist erst ab 18 Jahren verf\u00fcgbar.");
-    }
-  }
 
   if (payload.server_id === LARP_SERVER_ID && userHasLarpProfile(req.session.user.id)) {
     setFlash(req, "error", LARP_PROFILE_LIMIT_ERROR);
@@ -20157,7 +20004,10 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
   }
 
   if (character.user_id !== req.session.user.id) {
-    return res.redirect(`/characters/${id}/festplays/public/${festplayId}`);
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diesen Festspiel-Chat mit dem Charakter betreten."
+    });
   }
 
   const festplay = getFestplayById(festplayId);
@@ -20181,7 +20031,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     rememberPreferredCharacter(req, character);
     const onlineIgnoreFilterCache = new Map();
     const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
-      manualOnly: false
+      manualOnly: true
     }).filter((room) => {
       if (!room || typeof room !== "object" || room.is_saved_room !== true) {
         return false;
@@ -20963,7 +20813,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     festplayRooms =
       selectedFestplay &&
       (selectedFestplayMode === "owned" || selectedFestplayHasRoomRights)
-      ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id, { manualOnly: false }).filter((room) => {
+      ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id).filter((room) => {
           if (!room || typeof room !== "object" || room.is_saved_room !== true) {
             return false;
           }
@@ -31742,15 +31592,8 @@ io.on("connection", (socket) => {
   });
 });
 
-function normalizeListenPort(value, fallback) {
-  const port = Number(value);
-  return Number.isInteger(port) && port >= 0 && port < 65536 ? port : fallback;
-}
-
-const requestedPort = normalizeListenPort(process.env.PORT, 3000);
-server.listen(requestedPort, () => {
-  const address = server.address();
-  const port = address && typeof address === "object" ? address.port : requestedPort;
+const port = Number(process.env.PORT) || 3000;
+server.listen(port, () => {
   ensureCuratedPublicRooms();
   pruneEmptyRooms();
   void refreshDiscordHomeStats(true);
@@ -31793,53 +31636,4 @@ server.listen(requestedPort, () => {
       });
   }, FESTPLAY_INACTIVITY_CLEANUP_INTERVAL_MS);
   console.log(`Server läuft auf http://localhost:${port}`);
-  if (typeof process.send === "function") {
-    process.send({
-      type: "ready",
-      port,
-      releaseId: String(process.env.HR_RELEASE_ID || "")
-    });
-  }
-});
-
-let isServerShuttingDown = false;
-
-function shutdownServer(signal) {
-  if (isServerShuttingDown) {
-    return;
-  }
-
-  isServerShuttingDown = true;
-  console.log(`${signal} erhalten, Server wird beendet.`);
-
-  const forceExitTimer = setTimeout(() => {
-    if (typeof server.closeAllConnections === "function") {
-      server.closeAllConnections();
-    }
-    process.exit(0);
-  }, 10000);
-  forceExitTimer.unref();
-
-  try {
-    io.close();
-  } catch (error) {
-    console.error("Socket.IO konnte beim Beenden nicht sauber geschlossen werden:", error);
-  }
-
-  server.close((error) => {
-    clearTimeout(forceExitTimer);
-    if (error && error.code !== "ERR_SERVER_NOT_RUNNING") {
-      console.error("Server konnte nicht sauber beendet werden:", error);
-      process.exit(1);
-    }
-    process.exit(0);
-  });
-}
-
-process.on("SIGINT", () => shutdownServer("SIGINT"));
-process.on("SIGTERM", () => shutdownServer("SIGTERM"));
-process.on("message", (message) => {
-  if (message === "shutdown") {
-    shutdownServer("shutdown message");
-  }
 });

@@ -1,30 +1,9 @@
 <%- include("../partials/start") %>
 
-<section class="error-page-shell" aria-labelledby="error-page-title">
-  <div class="error-status-mark" aria-hidden="true">404</div>
-  <p class="error-page-kicker">Nicht gefunden</p>
-  <h1 id="error-page-title">Diese Reise f&uuml;hrt ins Leere.</h1>
-  <p class="error-page-copy">
-    Die Adresse gibt es hier nicht mehr oder sie wurde falsch aufgerufen.
-  </p>
-
-  <div class="error-overview" aria-label="Fehler&uuml;bersicht">
-    <div class="error-overview-item">
-      <span>Fehler</span>
-      <strong>Seite nicht gefunden</strong>
-    </div>
-    <div class="error-overview-item">
-      <span>N&auml;chster Schritt</span>
-      <strong>Zur Startseite oder zur&uuml;ck</strong>
-    </div>
-  </div>
-
-  <div class="error-page-actions">
-    <a class="btn" href="/">Zur Startseite</a>
-    <button class="ghost-btn" type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.assign('/')">
-      Zur&uuml;ck
-    </button>
-  </div>
+<section class="panel narrow">
+  <h1>404</h1>
+  <p>Die Seite wurde nicht gefunden.</p>
+  <a class="btn" href="/">Zur Startseite</a>
 </section>
 
 <%- include("../partials/end") %>

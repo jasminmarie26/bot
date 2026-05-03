@@ -3916,120 +3916,6 @@ body.serverlist-account-icon-modal-open {
   margin: 0 auto;
 }
 
-.error-page-shell {
-  width: min(720px, 100%);
-  margin: clamp(1rem, 5vh, 3rem) auto 0;
-  padding: clamp(1.1rem, 3vw, 1.7rem);
-  border: 1px solid color-mix(in srgb, var(--panel-edge) 84%, var(--accent) 16%);
-  border-radius: 18px;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--panel-bg) 88%, transparent), rgba(255, 255, 255, 0.045)),
-    var(--panel-bg);
-  box-shadow: 0 24px 56px -36px var(--panel-shadow);
-  text-align: center;
-}
-
-.error-status-mark {
-  display: inline-grid;
-  min-width: 4.25rem;
-  height: 4.25rem;
-  margin-bottom: 0.9rem;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--field-bg) 82%, var(--accent) 18%);
-  color: var(--readable-heading);
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.error-page-kicker {
-  margin: 0 0 0.35rem;
-  color: var(--link);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.error-page-shell h1 {
-  margin: 0;
-  color: var(--readable-heading);
-  font-family: var(--font-display);
-  font-size: clamp(1.45rem, 3vw, 2.15rem);
-}
-
-.error-page-copy {
-  max-width: 42rem;
-  margin: 0.75rem auto 0;
-  color: var(--readable-muted);
-}
-
-.error-overview {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1.2rem;
-  text-align: left;
-}
-
-.error-overview-item {
-  min-height: 5.25rem;
-  padding: 0.78rem 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--field-bg) 72%, transparent);
-}
-
-.error-overview-item span,
-.error-overview-item strong {
-  display: block;
-}
-
-.error-overview-item span {
-  margin-bottom: 0.28rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.error-overview-item strong {
-  color: var(--text);
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-.error-page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.65rem;
-  margin-top: 1.2rem;
-}
-
-.error-page-actions .btn,
-.error-page-actions .ghost-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.5rem;
-  text-align: center;
-  text-decoration: none;
-}
-
-@media (max-width: 640px) {
-  .error-overview {
-    grid-template-columns: 1fr;
-  }
-
-  .error-page-actions .btn,
-  .error-page-actions .ghost-btn {
-    width: 100%;
-  }
-}
-
 .legal-page-shell {
   max-width: 980px;
   margin: 0 auto;
@@ -9789,6 +9675,7 @@ body.theme-atari .guestbook-entry-panel {
 .guestbook-entry-body::after {
   content: "";
   display: block;
+  clear: both;
 }
 
 .guestbook-entry-body h1,
@@ -9883,7 +9770,6 @@ body.theme-atari .guestbook-entry-panel {
 .bb-block {
   display: block;
   text-align: justify;
-  text-align-last: left;
   text-justify: inter-word;
   hyphens: none;
   overflow-wrap: normal;
@@ -11706,20 +11592,6 @@ body.page-guestbook-preview::after {
   min-width: 0;
 }
 
-.character-name-limit-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.character-name-limit-counter {
-  color: var(--text);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .character-birthday-visibility-fieldset {
   min-width: 0;
   margin: 0;
@@ -12971,10 +12843,8 @@ body.gb-editor-fullscreen-open {
   padding: 0;
   display: inline-flex;
   align-items: center;
-  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -13003,10 +12873,8 @@ body.gb-editor-fullscreen-open {
 .character-mini-placeholder {
   display: inline-flex;
   align-items: center;
-  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
   color: color-mix(in srgb, var(--muted) 82%, white 18%);
   cursor: default;
   opacity: 0.72;
@@ -13025,15 +12893,12 @@ body.gb-editor-fullscreen-open {
 }
 
 .character-mini-name {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .backup-view-tabs {
@@ -13233,6 +13098,7 @@ body.gb-editor-fullscreen-open {
   margin: 0;
 }
 
+.character-mini-profile-edit-link,
 .character-mini-guestbook-open-link,
 .character-mini-guestbook-edit-link,
 .character-mini-export-btn,
@@ -13249,6 +13115,7 @@ body.gb-editor-fullscreen-open {
   cursor: pointer;
 }
 
+.character-mini-profile-edit-link,
 .character-mini-guestbook-open-link,
 .character-mini-guestbook-edit-link,
 .character-mini-export-btn {
@@ -13259,6 +13126,21 @@ body.gb-editor-fullscreen-open {
   min-width: 1.05rem;
   height: 1.05rem;
   border-radius: 999px;
+}
+
+.character-mini-profile-edit-icon {
+  display: block;
+  width: 0.86rem;
+  height: 0.86rem;
+  background: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4.2l10.15-10.15a2.05 2.05 0 0 0-2.9-2.9L5.3 17.1 4 20Z'/%3E%3Cpath d='M12.9 6.5 17.5 11.1'/%3E%3Cpath d='M14.8 20H20'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4.2l10.15-10.15a2.05 2.05 0 0 0-2.9-2.9L5.3 17.1 4 20Z'/%3E%3Cpath d='M12.9 6.5 17.5 11.1'/%3E%3Cpath d='M14.8 20H20'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .character-mini-guestbook-open-icon {
@@ -13328,6 +13210,7 @@ body.gb-editor-fullscreen-open {
   font-size: 0.78rem;
 }
 
+.character-mini-profile-edit-link:hover,
 .character-mini-guestbook-open-link:hover,
 .character-mini-guestbook-edit-link:hover,
 .character-mini-export-btn:hover,

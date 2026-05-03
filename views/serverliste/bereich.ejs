@@ -10,12 +10,6 @@
   </div>
   <div class="serverlist-actions">
     <a
-      class="btn btn-secondary serverlist-overview-open-btn"
-      href="/dashboard"
-    >
-      Charakter&uuml;bersicht Free RP &amp; ERP
-    </a>
-    <a
       class="btn serverlist-add-character-btn"
       href="/characters/new?server=<%= serverSection.id %>&return_to=<%= encodeURIComponent(dashboardAreaReturnTarget) %>"
       aria-label="Charakter hinzufügen"
@@ -42,11 +36,7 @@
 </section>
 
 <section class="serverlist-block">
-  <details
-    class="serverlist-festplay-overview serverlist-character-overview"
-    data-serverlist-exclusive-section="serverlist-area"
-    open
-  >
+  <details class="serverlist-festplay-overview serverlist-character-overview" open>
     <summary class="serverlist-festplay-overview-header">
       <div class="serverlist-festplay-overview-title">
         <h3>Meine Charaktere</h3>
@@ -150,10 +140,7 @@
   </details>
 
   <% if (serverSection.festplays && serverSection.festplays.length) { %>
-    <details
-      class="serverlist-festplay-overview"
-      data-serverlist-exclusive-section="serverlist-area"
-    >
+    <details class="serverlist-festplay-overview" open>
       <summary class="serverlist-festplay-overview-header">
         <div class="serverlist-festplay-overview-title">
           <h3>Meine Festspiele</h3>

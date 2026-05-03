@@ -137,7 +137,7 @@
             <span>Konto: <%= festplayRoomAccountDisplayName %></span>
           <% } %>
           <span>Festspiel: <%= festplay.name %></span>
-          
+          <span data-live-character-server-label>Server: <%= character.server_id === "erp" ? "ERP" : "FREE-RP" %></span>
         </div>
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
@@ -225,15 +225,7 @@
                   aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
                 ><%= room.name %></a>
               </div>
-              <% if (room.teaser_html) { %>
-                <div class="rp-room-custom-description">
-                  <%- room.teaser_html %>
-                </div>
-              <% } else if (room.description_html) { %>
-                <div class="rp-room-custom-description">
-                  <%- room.description_html %>
-                </div>
-              <% } else if (room.description) { %>
+              <% if (room.description) { %>
                 <div class="rp-room-custom-description">
                   <%= room.description %>
                 </div>
