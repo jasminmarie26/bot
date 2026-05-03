@@ -3916,6 +3916,120 @@ body.serverlist-account-icon-modal-open {
   margin: 0 auto;
 }
 
+.error-page-shell {
+  width: min(720px, 100%);
+  margin: clamp(1rem, 5vh, 3rem) auto 0;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 84%, var(--accent) 16%);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--panel-bg) 88%, transparent), rgba(255, 255, 255, 0.045)),
+    var(--panel-bg);
+  box-shadow: 0 24px 56px -36px var(--panel-shadow);
+  text-align: center;
+}
+
+.error-status-mark {
+  display: inline-grid;
+  min-width: 4.25rem;
+  height: 4.25rem;
+  margin-bottom: 0.9rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--field-bg) 82%, var(--accent) 18%);
+  color: var(--readable-heading);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.error-page-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--link);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.error-page-shell h1 {
+  margin: 0;
+  color: var(--readable-heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+}
+
+.error-page-copy {
+  max-width: 42rem;
+  margin: 0.75rem auto 0;
+  color: var(--readable-muted);
+}
+
+.error-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+  text-align: left;
+}
+
+.error-overview-item {
+  min-height: 5.25rem;
+  padding: 0.78rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--field-bg) 72%, transparent);
+}
+
+.error-overview-item span,
+.error-overview-item strong {
+  display: block;
+}
+
+.error-overview-item span {
+  margin-bottom: 0.28rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.error-overview-item strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.error-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.error-page-actions .btn,
+.error-page-actions .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .error-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .error-page-actions .btn,
+  .error-page-actions .ghost-btn {
+    width: 100%;
+  }
+}
+
 .legal-page-shell {
   max-width: 980px;
   margin: 0 auto;

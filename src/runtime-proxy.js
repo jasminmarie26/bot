@@ -65,23 +65,59 @@ function readReleaseState() {
   }
 }
 
-function selectChildPort() {
-  if (!activeTarget) {
-    return CHILD_PORTS[0];
+function formatChildPort(port) {
+  return port > 0 ? `${CHILD_HOST}:${port}` : "a dynamic local port";
+}
+
+function canBindPort(port) {
+  if (port === 0) {
+    return Promise.resolve(true);
   }
 
-  return CHILD_PORTS.find((port) => port !== activeTarget.port) || CHILD_PORTS[0];
+  return new Promise((resolve) => {
+    const server = net.createServer();
+
+    function finish(result) {
+      server.removeAllListeners();
+      if (server.listening) {
+        server.close(() => resolve(result));
+      } else {
+        resolve(result);
+      }
+    }
+
+    server.once("error", () => finish(false));
+    server.once("listening", () => finish(true));
+    server.listen(port);
+  });
+}
+
+async function selectChildPort() {
+  const candidates = activeTarget
+    ? CHILD_PORTS.filter((port) => port !== activeTarget.port)
+    : [...CHILD_PORTS];
+
+  for (const port of candidates) {
+    if (await canBindPort(port)) {
+      return port;
+    }
+
+    console.warn(`[runtime-proxy] Child port ${port} is already in use; trying another port.`);
+  }
+
+  console.warn("[runtime-proxy] No configured child port is free; asking the OS for a dynamic port.");
+  return 0;
 }
 
 function isChildAlive(target) {
   return Boolean(target?.child && target.child.exitCode === null && !target.child.killed);
 }
 
-function waitForChildReady(child, port) {
+function waitForChildReady(child, requestedPort) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error(`Child on port ${port} did not become ready in time`));
+      reject(new Error(`Child on ${formatChildPort(requestedPort)} did not become ready in time`));
     }, CHILD_READY_TIMEOUT_MS);
 
     function cleanup() {
@@ -92,9 +128,15 @@ function waitForChildReady(child, port) {
     }
 
     function onMessage(message) {
-      if (message?.type === "ready" && Number(message.port) === port) {
+      const readyPort = Number(message?.port);
+      if (
+        message?.type === "ready" &&
+        Number.isInteger(readyPort) &&
+        readyPort > 0 &&
+        (requestedPort === 0 || readyPort === requestedPort)
+      ) {
         cleanup();
-        resolve();
+        resolve(readyPort);
       }
     }
 
@@ -142,7 +184,7 @@ function checkChildHealth(port) {
   });
 }
 
-async function launchChild(releaseState, port) {
+async function launchChild(releaseState, requestedPort) {
   const scriptPath = path.join(releaseState.releaseDir, "src", "index.js");
   if (!fs.existsSync(scriptPath)) {
     throw new Error(`App entry not found: ${scriptPath}`);
@@ -152,20 +194,12 @@ async function launchChild(releaseState, port) {
     cwd: releaseState.releaseDir,
     env: {
       ...process.env,
-      PORT: String(port),
+      PORT: String(requestedPort),
       HR_MANAGED_CHILD: "1",
       HR_RELEASE_ID: releaseState.releaseId
     },
     stdio: ["ignore", "inherit", "inherit", "ipc"]
   });
-
-  const target = {
-    child,
-    port,
-    releaseId: releaseState.releaseId,
-    releaseDir: releaseState.releaseDir,
-    startedAt: new Date().toISOString()
-  };
 
   child.on("exit", (code, signal) => {
     if (activeTarget?.child !== child || shuttingDown) {
@@ -177,9 +211,22 @@ async function launchChild(releaseState, port) {
     scheduleRecovery();
   });
 
-  await waitForChildReady(child, port);
-  await checkChildHealth(port);
-  return target;
+  try {
+    const readyPort = await waitForChildReady(child, requestedPort);
+    await checkChildHealth(readyPort);
+    return {
+      child,
+      port: readyPort,
+      releaseId: releaseState.releaseId,
+      releaseDir: releaseState.releaseDir,
+      startedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    if (child.exitCode === null && !child.killed) {
+      child.kill("SIGINT");
+    }
+    throw error;
+  }
 }
 
 function stopChild(target) {
@@ -213,11 +260,11 @@ async function replaceActiveChild(reason) {
 
   replacementRunning = true;
   const previousTarget = activeTarget;
-  const nextPort = selectChildPort();
+  const nextPort = await selectChildPort();
 
   try {
     console.log(
-      `[runtime-proxy] Starting ${releaseState.releaseId} on ${CHILD_HOST}:${nextPort} (${reason})`
+      `[runtime-proxy] Starting ${releaseState.releaseId} on ${formatChildPort(nextPort)} (${reason})`
     );
     const nextTarget = await launchChild(releaseState, nextPort);
     activeTarget = nextTarget;
@@ -297,16 +344,37 @@ function sendTemporaryUnavailable(res) {
   <meta http-equiv="refresh" content="5">
   <title>Heldenhafte Reisen startet neu</title>
   <style>
-    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111827;color:#f9fafb;font-family:Arial,sans-serif}
-    main{max-width:34rem;padding:2rem;text-align:center}
-    h1{font-size:1.6rem;margin:0 0 .75rem}
-    p{line-height:1.5;color:#d1d5db}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:radial-gradient(circle at 12% 12%,rgba(82,216,255,.2),transparent 32%),radial-gradient(circle at 88% 20%,rgba(255,214,123,.14),transparent 34%),#091322;color:#eaf3ff;font-family:Manrope,Arial,sans-serif}
+    main{width:min(42rem,100%);padding:clamp(1.15rem,4vw,1.8rem);border:1px solid rgba(166,212,255,.28);border-radius:18px;background:rgba(20,33,51,.68);box-shadow:0 24px 56px -36px rgba(0,0,0,.72);text-align:center}
+    .mark{display:inline-grid;min-width:4.25rem;height:4.25rem;margin-bottom:.9rem;place-items:center;border:1px solid rgba(82,216,255,.56);border-radius:999px;background:rgba(6,14,25,.58);color:#c9f3ff;font-family:Georgia,serif;font-size:1.25rem;font-weight:700}
+    .kicker{margin:0 0 .35rem;color:#9de7ff;font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    h1{font-family:Georgia,serif;font-size:clamp(1.45rem,4vw,2.05rem);margin:0}
+    p{line-height:1.5;color:#c7d6e8}
+    .overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-top:1.2rem;text-align:left}
+    .item{min-height:5.25rem;padding:.78rem .85rem;border:1px solid rgba(166,212,255,.22);border-radius:14px;background:rgba(6,14,25,.36)}
+    .item span,.item strong{display:block}
+    .item span{margin-bottom:.28rem;color:#b5c7dd;font-size:.75rem;font-weight:700;text-transform:uppercase}
+    .item strong{color:#f9fbff;font-size:.95rem;line-height:1.35}
+    @media (max-width:640px){.overview{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <main>
+    <div class="mark" aria-hidden="true">503</div>
+    <p class="kicker">Neustart</p>
     <h1>Heldenhafte Reisen startet gerade neu</h1>
-    <p>Die Seite lädt in wenigen Sekunden automatisch erneut.</p>
+    <p>Die Seite l&auml;dt in wenigen Sekunden automatisch erneut.</p>
+    <div class="overview" aria-label="Fehler&uuml;bersicht">
+      <div class="item">
+        <span>Status</span>
+        <strong>Die App wird gerade wieder verbunden</strong>
+      </div>
+      <div class="item">
+        <span>N&auml;chster Versuch</span>
+        <strong>Automatisch in 5 Sekunden</strong>
+      </div>
+    </div>
   </main>
 </body>
 </html>`;

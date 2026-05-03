@@ -31682,8 +31682,15 @@ io.on("connection", (socket) => {
   });
 });
 
-const port = Number(process.env.PORT) || 3000;
-server.listen(port, () => {
+function normalizeListenPort(value, fallback) {
+  const port = Number(value);
+  return Number.isInteger(port) && port >= 0 && port < 65536 ? port : fallback;
+}
+
+const requestedPort = normalizeListenPort(process.env.PORT, 3000);
+server.listen(requestedPort, () => {
+  const address = server.address();
+  const port = address && typeof address === "object" ? address.port : requestedPort;
   ensureCuratedPublicRooms();
   pruneEmptyRooms();
   void refreshDiscordHomeStats(true);
