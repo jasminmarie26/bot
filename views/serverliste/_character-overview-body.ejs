@@ -40,7 +40,7 @@
         </summary>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
-          <% if (section.overview_description) { %>
+          <% if (section.overview_description && section.id !== "festspiele") { %>
             <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
           <% } %>
 
