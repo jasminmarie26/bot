@@ -89,15 +89,20 @@
                   data-serverlist-draggable-character
                   data-serverlist-character-id="<%= char.id %>"
                 >
-                  <% const hasFestplayTarget = Number(char.festplay_id) > 0 && (isFestplayGroup || isFestplayCharacter); %>
+                  <% const isFestplayLanding = isFestplayGroup || isFestplayCharacter; %>
+                  <% const hasFestplayTarget = Number(char.festplay_id) > 0 && isFestplayLanding; %>
                   <a
                     class="character-mini-item"
                     href="<%= hasFestplayTarget
                       ? `/characters/${char.id}/festplays/${char.festplay_id}/rooms`
-                      : `/chat/rooms?c=${encodeURIComponent(String(char.chat_character_url_number || char.id))}` %>"
+                      : (isFestplayLanding
+                        ? `/characters/${char.id}/festplays`
+                        : `/chat/rooms?c=${encodeURIComponent(String(char.chat_character_url_number || char.id))}`) %>"
                     title="<%= hasFestplayTarget
                       ? `Mit ${char.name} zu Festspiel und R&auml;umen`
-                      : `Mit ${char.name} zur Raum&uuml;bersicht` %>"
+                      : (isFestplayLanding
+                        ? `Mit ${char.name} zum Festspielbereich`
+                        : `Mit ${char.name} zur Raum&uuml;bersicht`) %>"
                     draggable="false"
                   >
                     <span class="character-mini-name"><%= char.name %></span>
