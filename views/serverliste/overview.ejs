@@ -61,7 +61,7 @@
             <div class="serverlist-overview-grid serverlist-overview-nested-grid">
               <% (section.festplay_groups || []).forEach((group) => { %>
                 <section class="serverlist-overview-subcolumn">
-                  <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
+                  <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel serverlist-overview-subcolumn-box">
                     <div class="serverlist-overview-subcolumn-header">
                       <h4><%= group.overview_short_title %></h4>
                       <span class="serverlist-festplay-count">(<%= group.characters.length %>)</span>

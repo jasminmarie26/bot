@@ -321,6 +321,15 @@
   padding: 0.1rem 0;
 }
 
+.serverlist-overview-subcolumn-box {
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 76%, var(--accent) 24%);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 92%, white 8%) 0%, color-mix(in srgb, var(--panel-bg) 86%, black 14%) 100%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.55rem 0.65rem;
+}
+
 .serverlist-overview-subcolumn-header {
   display: flex;
   align-items: baseline;
@@ -364,11 +373,6 @@
 
 .serverlist-overview-character-card::before {
   content: none;
-}
-
-.serverlist-overview-character-card:nth-child(n + 3) {
-  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 64%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .serverlist-overview-character-card:hover,
@@ -465,7 +469,8 @@
 .serverlist-festplay-panel .character-mini-grid {
   gap: 0.42rem 0.72rem;
   row-gap: 0.72rem;
-  background-size: 100% 2.55rem;
+  background: none;
+  background-size: auto;
 }
 
 .serverlist-festplay-panel .character-mini-grid {

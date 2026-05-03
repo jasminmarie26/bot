@@ -15,8 +15,8 @@
 <% const activeGuestbookPage = activeGuestbookEditor?.activePage || null; %>
 <% const isNameLocked = mode === "edit" && safeRenameAvailability && !safeRenameAvailability.can_change; %>
 <% const canCharacterShowBirthday = Boolean(typeof accountBirthDate !== "undefined" ? accountBirthDate : ""); %>
-<% const characterNameMaxLength = Number(typeof characterNameMaxLength !== "undefined" ? characterNameMaxLength : 26); %>
-<% const characterNameRemaining = Math.max(0, characterNameMaxLength - String(character.name || "").length); %>
+<% const resolvedCharacterNameMaxLength = Number(typeof characterNameMaxLength !== "undefined" ? characterNameMaxLength : 26); %>
+<% const characterNameRemaining = Math.max(0, resolvedCharacterNameMaxLength - String(character.name || "").length); %>
 
 <% if (activeGuestbookEditor) { %>
   <nav
@@ -550,14 +550,14 @@
         <input
           name="name"
           required
-          maxlength="<%= characterNameMaxLength %>"
+          maxlength="<%= resolvedCharacterNameMaxLength %>"
           value="<%= character.name || "" %>"
           data-character-name-input
-          data-character-name-max-length="<%= characterNameMaxLength %>"
+          data-character-name-max-length="<%= resolvedCharacterNameMaxLength %>"
           <%= isNameLocked ? "readonly" : "" %>
         />
         <span class="gb-editor-helptext character-name-limit-meta">
-          <span>Maximal <%= characterNameMaxLength %> Zeichen, damit der Name in der &Uuml;bersicht vor den Icons bleibt.</span>
+          <span>Maximal <%= resolvedCharacterNameMaxLength %> Zeichen, damit der Name in der &Uuml;bersicht vor den Icons bleibt.</span>
           <strong class="character-name-limit-counter">
             <span data-character-name-remaining><%= characterNameRemaining %></span> Zeichen &uuml;brig
           </strong>
