@@ -267,12 +267,12 @@
       currentActionWrap.appendChild(currentActionText);
       currentActionWrap.appendChild(currentActionLink);
 
-      composeSection = document.createElement("section");
+      composeSection = document.createElement("details");
       composeSection.className = "guestbook-notification-compose guestbook-notification-compose-toggle";
 
-      const composeTitle = document.createElement("h4");
-      composeTitle.className = "guestbook-notification-compose-title";
-      composeTitle.textContent = "Neue Nachricht schreiben";
+      const composeSummary = document.createElement("summary");
+      composeSummary.className = "guestbook-notification-compose-summary";
+      composeSummary.textContent = "Neue Nachricht schreiben";
 
       composeForm = document.createElement("form");
       composeForm.className = "guestbook-notification-compose-form";
@@ -433,7 +433,7 @@
       composeForm.appendChild(composeGrid);
       composeForm.appendChild(composeHint);
       composeForm.appendChild(composeActions);
-      composeSection.appendChild(composeTitle);
+      composeSection.appendChild(composeSummary);
       composeSection.appendChild(composeForm);
 
       body.appendChild(currentActionWrap);

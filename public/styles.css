@@ -14328,9 +14328,15 @@ body.page-guestbook-view .guestbook-entry-heading {
 
 #guestbook-notification-panel .guestbook-notification-compose {
   flex: 0 0 auto;
-  gap: 0.9rem;
-  padding: 0.95rem;
-  overflow: visible;
+  overflow: hidden;
+}
+
+#guestbook-notification-panel .guestbook-notification-compose-toggle[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(62vh, 44rem);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 #guestbook-notification-panel .guestbook-notification-compose-form {
@@ -14338,12 +14344,12 @@ body.page-guestbook-view .guestbook-entry-heading {
   max-height: none;
   overflow: visible;
   gap: 0.85rem;
-  padding: 0;
+  padding: 0 0.95rem 0.95rem;
 }
 
 #guestbook-notification-panel .guestbook-notification-compose-field textarea {
-  min-height: clamp(12rem, 28vh, 15rem);
-  height: clamp(12rem, 28vh, 15rem);
+  min-height: clamp(8.5rem, 22vh, 13rem);
+  height: clamp(8.5rem, 22vh, 13rem);
   max-height: none;
   resize: none;
   overflow-y: auto;
@@ -14356,14 +14362,12 @@ body.page-guestbook-view .guestbook-entry-heading {
   background: transparent;
 }
 
-#guestbook-notification-panel .guestbook-notification-compose ~ .chat-whisper-thread-wrap .guestbook-notification-approval-shell {
-  max-height: none;
-  height: 100%;
+#guestbook-notification-panel .guestbook-notification-compose-toggle[open] ~ .chat-whisper-thread-wrap .guestbook-notification-approval-shell {
+  max-height: min(24vh, 240px);
 }
 
-#guestbook-notification-panel .guestbook-notification-compose ~ .chat-whisper-thread-wrap .whisper-thread {
-  max-height: none;
-  height: 100%;
+#guestbook-notification-panel .guestbook-notification-compose-toggle[open] ~ .chat-whisper-thread-wrap .whisper-thread {
+  max-height: min(18vh, 180px);
 }
 
 #guestbook-notification-panel .chat-whisper-thread-wrap {
@@ -14373,18 +14377,13 @@ body.page-guestbook-view .guestbook-entry-heading {
 }
 
 #guestbook-notification-panel .guestbook-notification-approval-shell {
-  max-height: none;
+  max-height: min(56vh, 520px);
   height: 100%;
 }
 
 #guestbook-notification-panel .whisper-thread {
-  max-height: none;
+  max-height: min(48vh, 460px);
   height: 100%;
-}
-
-#guestbook-notification-panel .guestbook-notification-compose-title {
-  font-size: 1rem;
-  line-height: 1.35;
 }
 
 .guestbook-notification-current-action {
