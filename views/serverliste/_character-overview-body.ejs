@@ -62,10 +62,16 @@
                         <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
                         <article
                           class="character-mini-card serverlist-overview-character-card<%= isInFestplayArea ? "" : " is-festplay-ghost" %>"
-                          draggable="true"
                           data-serverlist-draggable-character
                           data-serverlist-character-id="<%= char.id %>"
                         >
+                          <span
+                            class="serverlist-drag-handle"
+                            draggable="true"
+                            data-serverlist-drag-handle
+                            aria-label="Charakter per Drag &amp; Drop zuordnen"
+                            title="Charakter per Drag &amp; Drop zuordnen"
+                          ></span>
                           <% if (isInFestplayArea) { %>
                             <a
                               class="character-mini-item"
@@ -174,10 +180,16 @@
                 <% const isFestplayCharacter = char.dashboard_position === "festplay"; %>
                 <article
                   class="character-mini-card serverlist-overview-character-card"
-                  draggable="true"
                   data-serverlist-draggable-character
                   data-serverlist-character-id="<%= char.id %>"
                 >
+                  <span
+                    class="serverlist-drag-handle"
+                    draggable="true"
+                    data-serverlist-drag-handle
+                    aria-label="Charakter per Drag &amp; Drop zuordnen"
+                    title="Charakter per Drag &amp; Drop zuordnen"
+                  ></span>
                   <a
                     class="character-mini-item"
                     href="/chat/rooms?c=<%= encodeURIComponent(String(char.chat_character_url_number || char.id)) %>"
