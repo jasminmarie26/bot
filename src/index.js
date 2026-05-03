@@ -65,6 +65,7 @@ const SERVER_OPTIONS = [
 ];
 const LARP_SERVER_ID = "larp";
 const LARP_PROFILE_LIMIT_ERROR = "Im LARP-Bereich ist nur ein Profil pro Account möglich.";
+const CHARACTER_NAME_MAX_LENGTH = 26;
 const CHARACTER_SERVER_IDS = [LARP_SERVER_ID, ...SERVER_OPTIONS.map((server) => server.id)];
 const GUESTBOOK_PAGE_SIZE = 12;
 const DEFAULT_GUESTBOOK_PAGE_TEXT_COLOR = "#EED7AE";
@@ -2951,6 +2952,7 @@ function buildCharacterEditFormViewModel(character, options = {}) {
     serverOptions: SERVER_OPTIONS,
     renameAvailability: options.renameAvailability || getCharacterRenameAvailability(character),
     guestbookEditor: buildCharacterGuestbookEditorState(character.id, options.requestedGuestbookPageId),
+    characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
     accountBirthDate,
     returnTo: options.returnTo || "",
     character: {
@@ -5392,7 +5394,7 @@ function normalizeCharacterInput(body) {
       Number.isInteger(parsedFestplayId) && parsedFestplayId > 0
         ? parsedFestplayId
         : null,
-    name: (body.name || "").trim().slice(0, 80),
+    name: (body.name || "").trim().slice(0, CHARACTER_NAME_MAX_LENGTH),
     species: (body.species || "").trim().slice(0, 80),
     age: (body.age || "").trim().slice(0, 40),
     faceclaim: (body.faceclaim || "").trim().slice(0, 120),
@@ -19307,6 +19309,7 @@ app.get("/characters/new", requireAuth, (req, res) => {
     festplays,
     serverOptions: SERVER_OPTIONS,
     staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+    characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
     returnTo: returnTarget,
     accountBirthDate: getAccountUserById(req.session.user.id)?.birth_date || "",
     character: {
@@ -19352,6 +19355,7 @@ app.post("/characters", requireAuth, (req, res) => {
       festplays,
       serverOptions: SERVER_OPTIONS,
       staffCharacterUsage: getStaffCharacterUsageForUser(req.session.user, null),
+      characterNameMaxLength: CHARACTER_NAME_MAX_LENGTH,
       returnTo: returnTarget,
       accountBirthDate,
       character: payload

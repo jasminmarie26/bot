@@ -348,6 +348,8 @@
 }
 
 .serverlist-overview-character-card {
+  display: flex;
+  width: 100%;
   min-height: 2.15rem;
   padding: 0.35rem 0;
   justify-content: space-between;
@@ -397,6 +399,17 @@
   min-width: 0;
   flex: 1 1 auto;
   gap: 0.35rem;
+}
+
+.serverlist-overview-character-card .character-mini-placeholder {
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 0.35rem;
+}
+
+.serverlist-overview-character-card .character-mini-name {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .serverlist-overview-character-card .character-mini-actions {

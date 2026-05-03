@@ -11706,6 +11706,20 @@ body.page-guestbook-preview::after {
   min-width: 0;
 }
 
+.character-name-limit-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.character-name-limit-counter {
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .character-birthday-visibility-fieldset {
   min-width: 0;
   margin: 0;
@@ -12957,8 +12971,10 @@ body.gb-editor-fullscreen-open {
   padding: 0;
   display: inline-flex;
   align-items: center;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -12987,8 +13003,10 @@ body.gb-editor-fullscreen-open {
 .character-mini-placeholder {
   display: inline-flex;
   align-items: center;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
   color: color-mix(in srgb, var(--muted) 82%, white 18%);
   cursor: default;
   opacity: 0.72;
@@ -13007,12 +13025,15 @@ body.gb-editor-fullscreen-open {
 }
 
 .character-mini-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .backup-view-tabs {
