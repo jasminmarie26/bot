@@ -101,14 +101,6 @@
                           <% } %>
                           <div class="character-mini-actions">
                             <a
-                              class="character-mini-profile-edit-link"
-                              href="/characters/<%= char.id %>/edit?return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
-                              aria-label="Charakter bearbeiten"
-                              title="Charakter bearbeiten"
-                            >
-                              <span class="character-mini-profile-edit-icon" aria-hidden="true"></span>
-                            </a>
-                            <a
                               class="character-mini-guestbook-open-link"
                               href="/characters/<%= char.id %>/guestbook"
                               aria-label="G&auml;stebuch &ouml;ffnen"
@@ -216,14 +208,6 @@
                     <% } %>
                   </a>
                   <div class="character-mini-actions">
-                    <a
-                      class="character-mini-profile-edit-link"
-                      href="/characters/<%= char.id %>/edit?return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
-                      aria-label="Charakter bearbeiten"
-                      title="Charakter bearbeiten"
-                    >
-                      <span class="character-mini-profile-edit-icon" aria-hidden="true"></span>
-                    </a>
                     <a
                       class="character-mini-guestbook-open-link"
                       href="/characters/<%= char.id %>/guestbook"
