@@ -17584,7 +17584,7 @@ function getDashboardCharacterOverviewSections(userId) {
         ? "Alle Charaktere, die aktuell auf Free RP liegen."
         : "Alle Charaktere, die aktuell auf ERP liegen.",
       dashboard_area_title: isFreeRp ? "Rollenspiel - Free" : "Rollenspiel - Erotik",
-      characters: allCharacters.filter((char) => char.dashboard_position !== "festplay"),
+      characters: allCharacters,
       overview_link: `/dashboard/areas/${server.id}`
     };
   });
