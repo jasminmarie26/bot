@@ -367,7 +367,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0 1rem;
+  align-content: flex-start;
+  gap: 0 0.72rem;
   padding: 0.08rem 0;
   margin: 0;
   background: none;
@@ -438,13 +439,15 @@
   cursor: pointer;
   min-width: 0;
   flex: 0 1 auto;
-  gap: 0.35rem;
+  max-width: 100%;
+  gap: 0.28rem;
 }
 
 .serverlist-overview-character-card .character-mini-placeholder {
   min-width: 0;
   flex: 0 1 auto;
-  gap: 0.35rem;
+  max-width: 100%;
+  gap: 0.28rem;
 }
 
 .serverlist-overview-character-card .character-mini-name {
