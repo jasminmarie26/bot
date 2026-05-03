@@ -20120,7 +20120,7 @@ app.get("/characters/:id/festplays/:festplayId/rooms", requireAuth, (req, res) =
     rememberPreferredCharacter(req, character);
     const onlineIgnoreFilterCache = new Map();
     const festplayRooms = getFestplayRoomsForUser(req.session.user.id, festplayId, {
-      manualOnly: true
+      manualOnly: false
     }).filter((room) => {
       if (!room || typeof room !== "object" || room.is_saved_room !== true) {
         return false;
@@ -20902,7 +20902,7 @@ app.get("/characters/:id/festplays", requireAuth, (req, res) => {
     festplayRooms =
       selectedFestplay &&
       (selectedFestplayMode === "owned" || selectedFestplayHasRoomRights)
-      ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id).filter((room) => {
+      ? getFestplayRoomsForUser(req.session.user.id, selectedFestplay.id, { manualOnly: false }).filter((room) => {
           if (!room || typeof room !== "object" || room.is_saved_room !== true) {
             return false;
           }
