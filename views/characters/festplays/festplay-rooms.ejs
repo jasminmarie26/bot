@@ -225,7 +225,11 @@
                   aria-disabled="<%= room.can_enter ? 'false' : 'true' %>"
                 ><%= room.name %></a>
               </div>
-              <% if (room.description) { %>
+              <% if (room.teaser_html) { %>
+                <div class="rp-room-custom-description">
+                  <%- room.teaser_html %>
+                </div>
+              <% } else if (room.description) { %>
                 <div class="rp-room-custom-description">
                   <%= room.description %>
                 </div>
