@@ -26,6 +26,8 @@ const PROXY_REQUEST_TIMEOUT_MS = normalizePositiveNumber(
   process.env.HR_PROXY_REQUEST_TIMEOUT_MS,
   120000
 );
+const PROXY_WAIT_FOR_READY_MS = normalizePositiveNumber(process.env.HR_PROXY_WAIT_FOR_READY_MS, 50000);
+const PROXY_WS_WAIT_FOR_READY_MS = normalizePositiveNumber(process.env.HR_PROXY_WS_WAIT_FOR_READY_MS, 12000);
 
 if (CHILD_PORTS.length < 2) {
   throw new Error("HR_CHILD_PORTS must contain at least two ports");
@@ -307,6 +309,44 @@ function scheduleRecovery() {
   restartTimer.unref();
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Holds the client open while the app child starts/restarts instead of answering 503 immediately
+ * (reduces flaky Apache proxy + ErrorDocument double errors).
+ */
+function isClientDisconnected(client) {
+  if (!client) {
+    return false;
+  }
+
+  return Boolean(client.destroyed || client.writableEnded);
+}
+
+async function waitUntilChildAlive(client, maxWaitMs) {
+  const deadline = Date.now() + maxWaitMs;
+  let kickstarted = false;
+
+  while (Date.now() < deadline && !shuttingDown) {
+    if (isChildAlive(activeTarget)) {
+      return true;
+    }
+    if (isClientDisconnected(client)) {
+      return false;
+    }
+    if (!kickstarted && !replacementRunning && !activeTarget) {
+      kickstarted = true;
+      void queueReplacement("on-demand");
+    }
+
+    await delay(100);
+  }
+
+  return isChildAlive(activeTarget);
+}
+
 function sendRuntimeHealth(res) {
   const ok = Boolean(activeTarget && isChildAlive(activeTarget));
   const body = JSON.stringify(
@@ -393,9 +433,33 @@ function proxyHttpRequest(req, res) {
     return;
   }
 
+  void serveProxiedHttpRequest(req, res);
+}
+
+async function serveProxiedHttpRequest(req, res) {
+  req.pause();
+  let ready = false;
+
+  try {
+    ready = await waitUntilChildAlive(res, PROXY_WAIT_FOR_READY_MS);
+  } finally {
+    req.resume();
+  }
+
+  if (!ready) {
+    req.destroy();
+    if (!res.headersSent && !res.writableEnded) {
+      sendTemporaryUnavailable(res);
+    }
+    return;
+  }
+
   const target = activeTarget;
   if (!isChildAlive(target)) {
-    sendTemporaryUnavailable(res);
+    req.destroy();
+    if (!res.headersSent && !res.writableEnded) {
+      sendTemporaryUnavailable(res);
+    }
     return;
   }
 
@@ -430,12 +494,25 @@ function proxyHttpRequest(req, res) {
 }
 
 function proxyUpgradeRequest(req, socket, head) {
-  const target = activeTarget;
-  if (!isChildAlive(target)) {
-    socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 5\r\n\r\n");
+  void attachWebSocketUpstream(req, socket, head);
+}
+
+async function attachWebSocketUpstream(req, socket, head) {
+  const ready = await waitUntilChildAlive(socket, PROXY_WS_WAIT_FOR_READY_MS);
+  if (!ready || !isChildAlive(activeTarget)) {
+    try {
+      if (!socket.destroyed) {
+        socket.end(
+          "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 5\r\n\r\n"
+        );
+      }
+    } catch (_error) {
+      /* ignore */
+    }
     return;
   }
 
+  const target = activeTarget;
   const upstream = net.connect(target.port, CHILD_HOST, () => {
     upstream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
     for (let index = 0; index < req.rawHeaders.length; index += 2) {
@@ -451,7 +528,15 @@ function proxyUpgradeRequest(req, socket, head) {
 
   upstream.on("error", (error) => {
     lastError = error?.message || String(error);
-    socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 5\r\n\r\n");
+    try {
+      if (!socket.destroyed) {
+        socket.end(
+          "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nRetry-After: 5\r\n\r\n"
+        );
+      }
+    } catch (_error) {
+      /* ignore */
+    }
   });
 }
 
