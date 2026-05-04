@@ -89,6 +89,13 @@
   margin: 0;
 }
 
+.serverlist-overview-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  flex: 0 0 auto;
+}
+
 .serverlist-accordion {
   border: 1px solid var(--panel-edge);
   border-radius: 18px;
