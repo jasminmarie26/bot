@@ -315,7 +315,6 @@
   align-items: start;
   gap: 0.6rem 0.8rem;
   padding: 0 0.62rem 0.62rem;
-  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
 }
 
 .serverlist-character-overview-body {
