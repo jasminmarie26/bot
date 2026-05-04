@@ -18438,14 +18438,21 @@ function getServerListPageAssets(scriptPaths = []) {
 app.get("/dashboard", requireAuth, (req, res) => {
   const larpSection = getDashboardLarpSection();
   const larpCharacters = getLarpCharactersForUser(req.session.user.id);
+  const overviewSections = getDashboardCharacterOverviewSections(req.session.user.id);
+  const accountUser = getAccountUserById(req.session.user.id);
+  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
+  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("serverliste/index", {
     title: "Serverliste",
     larpSection,
     larpCharacters,
+    overviewSections,
+    erpMoveAllowed,
+    serverlistOverviewStorageKey: getServerlistOverviewStorageKey(req),
     openLarpSection,
-    ...getServerListPageAssets()
+    ...getServerListPageAssets(["/serverliste-area.js"])
   });
 });
 

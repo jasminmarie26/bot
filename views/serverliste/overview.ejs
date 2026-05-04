@@ -1,6 +1,9 @@
-<%- include("../partials/start") %>
+<% const isServerlistOverviewEmbedded = Boolean(typeof serverlistOverviewEmbedded !== "undefined" && serverlistOverviewEmbedded); %>
+<% if (!isServerlistOverviewEmbedded) { %>
+  <%- include("../partials/start") %>
+<% } %>
 
-<% const dashboardOverviewReturnTarget = "/dashboard/areas/overview"; %>
+<% const dashboardOverviewReturnTarget = String(typeof dashboardOverviewReturnTargetOverride !== "undefined" ? dashboardOverviewReturnTargetOverride || "/dashboard/areas/overview" : "/dashboard/areas/overview"); %>
 <% const dashboardOverviewStorageKey = String(typeof serverlistOverviewStorageKey !== "undefined" ? serverlistOverviewStorageKey || "" : ""); %>
 
 <section
@@ -315,4 +318,6 @@
   </section>
 </div>
 
-<%- include("../partials/end") %>
+<% if (!isServerlistOverviewEmbedded) { %>
+  <%- include("../partials/end") %>
+<% } %>
