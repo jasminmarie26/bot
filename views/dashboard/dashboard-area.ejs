@@ -139,9 +139,11 @@
             <div class="header-line">
               <div>
                 <h3><%= festplay.name %></h3>
-                <p class="muted dashboard-section-copy">
-                  <%= festplay.caption || "Festspiel auf diesem Bereich." %>
-                </p>
+                <% if (festplay.caption) { %>
+                  <p class="muted dashboard-section-copy">
+                    <%= festplay.caption %>
+                  </p>
+                <% } %>
               </div>
             </div>
 

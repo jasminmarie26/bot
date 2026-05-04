@@ -72,9 +72,11 @@
                     <summary class="serverlist-festplay-panel-summary">
                       <div>
                         <h3><%= festplay.name %></h3>
-                        <p class="muted serverlist-section-copy">
-                          <%= festplay.caption || "Festspiel in diesem Bereich." %>
-                        </p>
+                        <% if (festplay.caption) { %>
+                          <p class="muted serverlist-section-copy">
+                            <%= festplay.caption %>
+                          </p>
+                        <% } %>
                       </div>
                       <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
                     </summary>

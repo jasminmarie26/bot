@@ -7176,7 +7176,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_zoom: row.linked_character_serverlist_icon_zoom,
           character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
         },
-        "Dein eigenes Festspiel."
+        ""
       );
       return;
     }
@@ -7202,7 +7202,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_zoom: fallbackCharacter.character_serverlist_icon_zoom,
           character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
         },
-      "Dein eigenes Festspiel."
+      ""
     );
   });
 
