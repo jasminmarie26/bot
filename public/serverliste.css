@@ -336,6 +336,7 @@
   margin-top: 0;
   align-self: start;
   min-width: 0;
+  background: transparent;
 }
 
 .serverlist-overview-column-header {
