@@ -17493,8 +17493,7 @@ function getCharacterAreaReturnTarget(serverId) {
     return "/dashboard/larp";
   }
 
-  const normalizedServerId = normalizeServer(serverId);
-  return normalizedServerId ? "/dashboard/areas/overview" : "/dashboard";
+  return "/dashboard";
 }
 
 function getDashboardOwnCharacters(userId) {
@@ -18517,7 +18516,7 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
     }
   }
 
-  return res.redirect("/dashboard/areas/overview");
+  return res.redirect("/dashboard");
 });
 
 app.post(
