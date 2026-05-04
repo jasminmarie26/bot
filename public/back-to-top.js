@@ -13,7 +13,7 @@
     return;
   }
 
-  const showAfterPixels = 320;
+  const showAfterPixels = 140;
   const prefersReducedMotion = () =>
     window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
 
