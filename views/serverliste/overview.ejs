@@ -12,6 +12,13 @@
   data-serverlist-overview-storage-key="<%= dashboardOverviewStorageKey %>"
   data-serverlist-overview-default-open="free-rp,erp"
 >
+  <% const overviewCountsById = new Map((Array.isArray(overviewSections) ? overviewSections : []).map((overviewSection) => {
+    const overviewSectionIsFestplay = String(overviewSection.id || "").endsWith("-festplay");
+    const overviewSectionCount = overviewSectionIsFestplay
+      ? (Array.isArray(overviewSection.festplays) ? overviewSection.festplays.length : 0)
+      : (Array.isArray(overviewSection.characters) ? overviewSection.characters.length : 0);
+    return [String(overviewSection.id || ""), overviewSectionCount];
+  })); %>
   <div class="serverlist-overview-grid">
     <% overviewSections.forEach((section) => { %>
       <% const isFestplayOverviewSection = String(section.id || "").endsWith("-festplay"); %>
@@ -20,8 +27,14 @@
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const sectionFestplays = Array.isArray(section.festplays) ? section.festplays : []; %>
       <% const overviewItemCount = isFestplayOverviewSection ? sectionFestplays.length : sectionCharacters.length; %>
+      <% const pairedOverviewServerId = sectionServerId === "free-rp" ? "erp" : "free-rp"; %>
+      <% const pairedOverviewId = isFestplayOverviewSection ? `${pairedOverviewServerId}-festplay` : pairedOverviewServerId; %>
+      <% const pairedOverviewItemCount = Number(overviewCountsById.get(pairedOverviewId) || 0); %>
+      <% const overviewColumnModifier = overviewItemCount > 0 && pairedOverviewItemCount < 1
+        ? " is-overview-wide"
+        : (overviewItemCount < 1 && pairedOverviewItemCount > 0 ? " is-overview-narrow" : ""); %>
       <details
-        class="serverlist-festplay-overview serverlist-overview-column"
+        class="serverlist-festplay-overview serverlist-overview-column<%= overviewColumnModifier %>"
         data-serverlist-overview-section
         data-serverlist-overview-section-id="<%= section.id %>"
         <%= isFestplayOverviewSection ? "" : "open" %>

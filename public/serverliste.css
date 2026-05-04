@@ -326,14 +326,24 @@
 
 .serverlist-overview-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   align-items: start;
   gap: 0.7rem;
 }
 
 .serverlist-overview-column {
+  grid-column: span 6;
   margin-top: 0;
   align-self: start;
+  min-width: 0;
+}
+
+.serverlist-overview-column.is-overview-wide {
+  grid-column: span 9;
+}
+
+.serverlist-overview-column.is-overview-narrow {
+  grid-column: span 3;
 }
 
 .serverlist-overview-column-header {
@@ -605,6 +615,12 @@
 
   .serverlist-overview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .serverlist-overview-column,
+  .serverlist-overview-column.is-overview-wide,
+  .serverlist-overview-column.is-overview-narrow {
+    grid-column: auto;
   }
 
   .serverlist-overview-column-header {
