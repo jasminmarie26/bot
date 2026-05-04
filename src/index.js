@@ -6997,6 +6997,14 @@ function getDashboardFestplaysForUser(userId, serverId) {
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
 
   const festplayMap = new Map();
+  const getOwnedFestplayCaption = (...nameCandidates) => {
+    const creatorName = nameCandidates
+      .map((name) => String(name || "").trim())
+      .find(Boolean);
+
+    return creatorName ? `${creatorName}.` : "Dein eigenes Festspiel.";
+  };
+
   const addDashboardFestplayCharacter = (row, caption) => {
     const festplayId = Number(row.id);
     if (!Number.isInteger(festplayId) || festplayId < 1) {
@@ -7175,11 +7183,10 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_focus_x: row.linked_character_serverlist_icon_focus_x,
           character_serverlist_icon_focus_y: row.linked_character_serverlist_icon_focus_y,
           character_serverlist_icon_zoom: row.linked_character_serverlist_icon_zoom,
-          character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
+          character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode,
+          creator_character_name: row.creator_character_name || row.linked_character_name
         },
-        row.creator_character_name
-          ? `${row.creator_character_name}.`
-          : "Dein eigenes Festspiel."
+        getOwnedFestplayCaption(row.creator_character_name, row.linked_character_name)
       );
       return;
     }
@@ -7203,11 +7210,10 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_focus_x: fallbackCharacter.character_serverlist_icon_focus_x,
           character_serverlist_icon_focus_y: fallbackCharacter.character_serverlist_icon_focus_y,
           character_serverlist_icon_zoom: fallbackCharacter.character_serverlist_icon_zoom,
-          character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
+          character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode,
+          creator_character_name: row.creator_character_name || fallbackCharacter.character_name
         },
-      row.creator_character_name
-        ? `${row.creator_character_name}.`
-        : "Dein eigenes Festspiel."
+      getOwnedFestplayCaption(row.creator_character_name, fallbackCharacter.character_name)
     );
   });
 
