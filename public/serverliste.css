@@ -107,8 +107,7 @@
 .serverlist-accordion {
   border: 1px solid var(--panel-edge);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, color-mix(in srgb, var(--panel-bg) 88%, black 12%) 100%);
+  background: transparent;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
@@ -125,6 +124,8 @@
   align-items: center;
   padding: 0.58rem 0.7rem;
   border-bottom: 1px solid color-mix(in srgb, var(--panel-edge) 78%, var(--accent) 22%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, white 6%) 0%, color-mix(in srgb, var(--panel-bg) 88%, black 12%) 100%);
   cursor: pointer;
 }
 
@@ -336,7 +337,6 @@
   margin-top: 0;
   align-self: start;
   min-width: 0;
-  background: transparent;
 }
 
 .serverlist-overview-column-header {
