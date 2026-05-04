@@ -68,17 +68,18 @@
             <% if (sectionFestplays.length) { %>
               <div class="serverlist-festplay-stack">
                 <% sectionFestplays.forEach((festplay) => { %>
-                  <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
-                    <div class="header-line">
+                  <details class="serverlist-festplay-panel" open>
+                    <summary class="serverlist-festplay-panel-summary">
                       <div>
                         <h3><%= festplay.name %></h3>
                         <p class="muted serverlist-section-copy">
                           <%= festplay.caption || "Festspiel in diesem Bereich." %>
                         </p>
                       </div>
-                    </div>
+                      <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
+                    </summary>
 
-                    <div class="character-mini-grid">
+                    <div class="character-mini-grid serverlist-festplay-panel-body">
                       <% festplay.characters.forEach((char) => { %>
                         <% const currentServerId = char.current_server_id || sectionServerId; %>
                         <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
@@ -182,7 +183,7 @@
                         </article>
                       <% }) %>
                     </div>
-                  </section>
+                  </details>
                 <% }) %>
               </div>
             <% } %>
