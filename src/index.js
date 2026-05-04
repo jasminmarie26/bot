@@ -7178,7 +7178,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
         },
         row.creator_character_name
-          ? `Erstellt mit ${row.creator_character_name}.`
+          ? `${row.creator_character_name}.`
           : "Dein eigenes Festspiel."
       );
       return;
@@ -7206,7 +7206,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
         },
       row.creator_character_name
-        ? `Erstellt mit ${row.creator_character_name}.`
+        ? `${row.creator_character_name}.`
         : "Dein eigenes Festspiel."
     );
   });
