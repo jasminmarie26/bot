@@ -5,7 +5,8 @@
 <section class="serverlist-block">
   <div class="serverlist-overview-grid">
     <% overviewSections.forEach((section) => { %>
-      <% const canCreateOverviewCharacter = !String(section.id || "").endsWith("-festplay"); %>
+      <% const isFestplayOverviewSection = String(section.id || "").endsWith("-festplay"); %>
+      <% const canCreateOverviewCharacter = !isFestplayOverviewSection; %>
       <section class="serverlist-festplay-overview serverlist-overview-column">
         <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
@@ -29,6 +30,125 @@
 
           <% if (!section.characters.length) { %>
             <p class="muted">Noch keine Charaktere in <%= section.overview_title %>.</p>
+          <% } else if (isFestplayOverviewSection) { %>
+            <% const festplayGroups = []; %>
+            <% section.characters.forEach((char) => { %>
+              <% const festplayName = String(char.festplay_name || "Festspiel").trim() || "Festspiel"; %>
+              <% let festplayGroup = festplayGroups.find((entry) => entry.name === festplayName); %>
+              <% if (!festplayGroup) { %>
+                <% festplayGroup = { name: festplayName, creatorName: char.festplay_creator_name || "", characters: [] }; %>
+                <% festplayGroups.push(festplayGroup); %>
+              <% } %>
+              <% festplayGroup.characters.push(char); %>
+            <% }) %>
+
+            <div class="serverlist-festplay-stack">
+              <% festplayGroups.forEach((festplayGroup) => { %>
+                <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
+                  <div class="header-line">
+                    <div>
+                      <h3><%= festplayGroup.name %></h3>
+                      <% if (festplayGroup.creatorName) { %>
+                        <p class="muted serverlist-section-copy">von <%= festplayGroup.creatorName %></p>
+                      <% } %>
+                    </div>
+                  </div>
+
+                  <div class="character-mini-grid">
+                    <% festplayGroup.characters.forEach((char) => { %>
+                      <article class="character-mini-card serverlist-overview-character-card">
+                        <a
+                          class="character-mini-item"
+                          href="/characters/<%= char.id %>"
+                          title="<%= char.name %> in <%= festplayGroup.name %> &ouml;ffnen"
+                        >
+                          <span class="character-mini-name"><%= char.name %></span>
+                        </a>
+                        <div class="character-mini-actions">
+                          <a
+                            class="character-mini-profile-edit-link"
+                            href="/characters/<%= char.id %>/edit?return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+                            aria-label="Charakter bearbeiten"
+                            title="Charakter bearbeiten"
+                          >
+                            <span class="character-mini-profile-edit-icon" aria-hidden="true"></span>
+                          </a>
+                          <a
+                            class="character-mini-guestbook-open-link"
+                            href="/characters/<%= char.id %>/guestbook"
+                            aria-label="G&auml;stebuch &ouml;ffnen"
+                            title="G&auml;stebuch &ouml;ffnen"
+                          >
+                            <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                          </a>
+                          <a
+                            class="character-mini-guestbook-edit-link"
+                            href="/characters/<%= char.id %>/guestbook/edit"
+                            aria-label="G&auml;stebuch bearbeiten"
+                            title="G&auml;stebuch bearbeiten"
+                          >
+                            <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
+                          </a>
+                          <form
+                            method="POST"
+                            action="/characters/<%= char.id %>/move"
+                            class="character-mini-move-form"
+                            data-serverlist-area-move-confirm
+                            data-serverlist-character-name="<%= char.name %>"
+                            data-serverlist-current-server="<%= char.server_id %>"
+                            data-serverlist-home-server="<%= char.festplay_home_server_id || "" %>"
+                            data-serverlist-position="<%= char.dashboard_position || "main" %>"
+                          >
+                            <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                            <input type="hidden" name="target_server_id" value="">
+                            <input type="hidden" name="target_dashboard_mode" value="">
+                            <button
+                              type="submit"
+                              class="character-mini-move-btn"
+                              aria-label="Charakter verschieben"
+                              title="Zielserver ausw&auml;hlen"
+                            >
+                              &harr;
+                            </button>
+                          </form>
+                          <form
+                            method="POST"
+                            action="/characters/<%= char.id %>/guestbook-code-email"
+                            class="character-mini-export-form"
+                          >
+                            <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                            <button
+                              type="submit"
+                              class="character-mini-export-btn"
+                              aria-label="G&auml;stebuch-Code per E-Mail senden"
+                              title="G&auml;stebuch-Code per E-Mail senden"
+                            >
+                              <span class="character-mini-export-icon" aria-hidden="true"></span>
+                            </button>
+                          </form>
+                          <form
+                            method="POST"
+                            action="/characters/<%= char.id %>/delete"
+                            class="character-mini-delete-form"
+                            onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                          >
+                            <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                            <button
+                              type="submit"
+                              class="character-mini-delete-btn"
+                              aria-label="Charakter l&ouml;schen"
+                              title="Charakter l&ouml;schen"
+                            >
+                              X
+                            </button>
+                          </form>
+                        </div>
+                      </article>
+                    <% }) %>
+                  </div>
+                </section>
+              <% }) %>
+            </div>
           <% } else { %>
             <div class="character-mini-grid serverlist-overview-character-grid">
               <% section.characters.forEach((char) => { %>
