@@ -8,6 +8,108 @@
     const moveForms = document.querySelectorAll("[data-serverlist-area-move-confirm]");
     const erpMoveAllowed = modal?.dataset.erpMoveAllowed === "true";
 
+    const initOverviewAccordionState = () => {
+      const root = document.querySelector("[data-serverlist-overview-root]");
+      if (!root) {
+        return;
+      }
+
+      const overviewSections = Array.from(root.querySelectorAll("[data-serverlist-overview-section]"))
+        .filter((section) => section instanceof HTMLDetailsElement);
+      if (!overviewSections.length) {
+        return;
+      }
+
+      const getSectionId = (section) => String(section.dataset.serverlistOverviewSectionId || "").trim();
+      const storageKey =
+        String(root.dataset.serverlistOverviewStorageKey || "").trim() ||
+        `serverlist-overview:${window.location.pathname}`;
+      const defaultOpenIds = String(root.dataset.serverlistOverviewDefaultOpen || "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+      const readStoredOpenIds = () => {
+        try {
+          const storedValue = window.sessionStorage.getItem(storageKey);
+          if (!storedValue) {
+            return null;
+          }
+
+          const parsedValue = JSON.parse(storedValue);
+          if (!Array.isArray(parsedValue)) {
+            return null;
+          }
+
+          return parsedValue
+            .map((entry) => String(entry || "").trim())
+            .filter(Boolean);
+        } catch (_error) {
+          return null;
+        }
+      };
+
+      const writeOpenIds = () => {
+        try {
+          const openIds = overviewSections
+            .filter((section) => section.open)
+            .map(getSectionId)
+            .filter(Boolean);
+          window.sessionStorage.setItem(storageKey, JSON.stringify(openIds));
+        } catch (_error) {
+          // Saving the accordion state is best-effort only.
+        }
+      };
+
+      const applyOpenIds = (openIds) => {
+        const openIdSet = new Set(openIds);
+        overviewSections.forEach((section) => {
+          section.open = openIdSet.has(getSectionId(section));
+        });
+      };
+
+      const storedOpenIds = readStoredOpenIds();
+      applyOpenIds(storedOpenIds === null ? defaultOpenIds : storedOpenIds);
+
+      let pendingActiveSection = null;
+      let syncTimer = 0;
+      const scheduleAccordionSync = (activeSection) => {
+        if (activeSection) {
+          pendingActiveSection = activeSection;
+        }
+
+        window.clearTimeout(syncTimer);
+        syncTimer = window.setTimeout(() => {
+          const activeSectionToKeep = pendingActiveSection;
+          pendingActiveSection = null;
+
+          if (activeSectionToKeep?.open) {
+            overviewSections.forEach((section) => {
+              if (section !== activeSectionToKeep) {
+                section.open = false;
+              }
+            });
+          }
+
+          writeOpenIds();
+        }, 0);
+      };
+
+      overviewSections.forEach((section) => {
+        section.addEventListener("toggle", () => {
+          scheduleAccordionSync(section.open ? section : null);
+        });
+      });
+
+      root.querySelectorAll("[data-serverlist-overview-actions]").forEach((actions) => {
+        actions.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+      });
+    };
+
+    initOverviewAccordionState();
+
     if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
     }

@@ -1,8 +1,14 @@
 <%- include("../partials/start") %>
 
 <% const dashboardOverviewReturnTarget = "/dashboard/areas/overview"; %>
+<% const dashboardOverviewStorageKey = String(typeof serverlistOverviewStorageKey !== "undefined" ? serverlistOverviewStorageKey || "" : ""); %>
 
-<section class="serverlist-block">
+<section
+  class="serverlist-block"
+  data-serverlist-overview-root
+  data-serverlist-overview-storage-key="<%= dashboardOverviewStorageKey %>"
+  data-serverlist-overview-default-open="free-rp,erp"
+>
   <div class="serverlist-overview-grid">
     <% overviewSections.forEach((section) => { %>
       <% const isFestplayOverviewSection = String(section.id || "").endsWith("-festplay"); %>
@@ -11,40 +17,48 @@
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const sectionFestplays = Array.isArray(section.festplays) ? section.festplays : []; %>
       <% const overviewItemCount = isFestplayOverviewSection ? sectionFestplays.length : sectionCharacters.length; %>
-      <section class="serverlist-festplay-overview serverlist-overview-column">
-        <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
+      <details
+        class="serverlist-festplay-overview serverlist-overview-column"
+        data-serverlist-overview-section
+        data-serverlist-overview-section-id="<%= section.id %>"
+        <%= isFestplayOverviewSection ? "" : "open" %>
+      >
+        <summary class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= overviewItemCount %>)</span>
           </div>
-          <% if (canCreateOverviewCharacter) { %>
-            <div class="serverlist-overview-actions">
-              <a
-                class="btn serverlist-add-character-btn"
-                href="/characters/new?server=<%= sectionServerId %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
-                aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-                title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-              >
-                +
-              </a>
-              <form
-                method="POST"
-                action="/dashboard/areas/<%= sectionServerId %>/guestbook-code-email"
-                class="serverlist-export-all-form"
-              >
-                <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                <button
-                  type="submit"
-                  class="btn serverlist-add-character-btn serverlist-export-all-btn"
-                  aria-label="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
-                  title="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+          <div class="serverlist-overview-header-tools">
+            <% if (canCreateOverviewCharacter) { %>
+              <div class="serverlist-overview-actions" data-serverlist-overview-actions>
+                <a
+                  class="btn serverlist-add-character-btn"
+                  href="/characters/new?server=<%= sectionServerId %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+                  aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+                  title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
                 >
-                  &#10003;
-                </button>
-              </form>
-            </div>
-          <% } %>
-        </div>
+                  +
+                </a>
+                <form
+                  method="POST"
+                  action="/dashboard/areas/<%= sectionServerId %>/guestbook-code-email"
+                  class="serverlist-export-all-form"
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="btn serverlist-add-character-btn serverlist-export-all-btn"
+                    aria-label="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+                    title="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+                  >
+                    &#10003;
+                  </button>
+                </form>
+              </div>
+            <% } %>
+            <span class="serverlist-festplay-toggle-icon" aria-hidden="true"></span>
+          </div>
+        </summary>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
           <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
@@ -269,7 +283,7 @@
             </div>
           <% } %>
         </div>
-      </section>
+      </details>
     <% }) %>
   </div>
 </section>

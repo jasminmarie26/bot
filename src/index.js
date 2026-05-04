@@ -2627,6 +2627,27 @@ function buildSystemNotificationUniqueKey(prefix = "system") {
   return `${normalizedPrefix}:${Date.now()}:${crypto.randomBytes(6).toString("hex")}`;
 }
 
+function refreshServerlistOverviewLoginState(req) {
+  if (!req?.session) {
+    return "";
+  }
+
+  req.session.serverlist_overview_state_key = buildSystemNotificationUniqueKey("serverlist-overview");
+  return req.session.serverlist_overview_state_key;
+}
+
+function getServerlistOverviewStorageKey(req) {
+  const userId = Number(req?.session?.user?.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return "serverlist-overview:anonymous";
+  }
+
+  const loginStateKey =
+    String(req.session.serverlist_overview_state_key || "").trim() ||
+    refreshServerlistOverviewLoginState(req);
+  return `serverlist-overview:${userId}:${loginStateKey}`;
+}
+
 function normalizeStaffNotificationSubject(value) {
   return String(value || "").replace(/\r\n?/g, " ").trim().slice(0, 120);
 }
@@ -15285,6 +15306,7 @@ app.post("/login", (req, res) => {
 
   touchUserLoginMetadata(user.id, req);
   req.session.user = toSessionUser(user);
+  refreshServerlistOverviewLoginState(req);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   setPostLoginFlash(req, user.id, "Erfolgreich eingeloggt.");
   return res.redirect("/dashboard");
@@ -15521,6 +15543,7 @@ app.get("/auth/google/callback", (req, res, next) => {
         try {
           const oauthUser = findOrCreateOAuthUser("google", profile, getRequestIp(req));
           req.session.user = oauthUser.sessionUser;
+          refreshServerlistOverviewLoginState(req);
           req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
           touchUserLoginMetadata(req.session.user.id, req);
           const accountUser = getAccountUserById(req.session.user.id);
@@ -15623,6 +15646,7 @@ app.get("/auth/facebook/callback", (req, res, next) => {
         try {
           const oauthUser = findOrCreateOAuthUser("facebook", profile, getRequestIp(req));
           req.session.user = oauthUser.sessionUser;
+          refreshServerlistOverviewLoginState(req);
           req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
           touchUserLoginMetadata(req.session.user.id, req);
           const accountUser = getAccountUserById(req.session.user.id);
@@ -18460,6 +18484,7 @@ app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
     title: "Charakterübersicht Free RP & ERP",
     overviewSections,
     erpMoveAllowed,
+    serverlistOverviewStorageKey: getServerlistOverviewStorageKey(req),
     ...getServerListPageAssets(["/serverliste-area.js"])
   });
 });
