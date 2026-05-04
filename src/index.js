@@ -10916,6 +10916,7 @@ function renderGuestbookBbcode(rawContent, options = {}) {
   const normalizedContent = normalizeBbcodeMarkup(preparedContent);
   const compactImageLineBreaks = options?.compactImageLineBreaks !== false;
   const compactBlockLineBreaks = options?.compactBlockLineBreaks !== false;
+  const canViewAb18Content = options?.canViewAb18Content !== false;
   let html = escapeHtml(normalizedContent).replace(/\r\n?/g, "\n");
 
   const inlineTags = [
@@ -10985,6 +10986,13 @@ function renderGuestbookBbcode(rawContent, options = {}) {
       .replace(/\n/g, "<br>")
       .replace(new RegExp(BBCODE_LITERAL_OPEN_TOKEN, "g"), "[")
       .replace(new RegExp(BBCODE_LITERAL_CLOSE_TOKEN, "g"), "]");
+  };
+  const renderAb18BbcodeBlock = (inner) => {
+    if (!canViewAb18Content) {
+      return "<div class=\"bb-spoiler bb-spoiler-ab18 bb-spoiler-ab18-locked\" data-ab18-locked=\"1\"><span class=\"bb-spoiler-ab18-summary\" role=\"button\" aria-disabled=\"true\">Ab 18 Inhalt</span></div>";
+    }
+
+    return `<details class="bb-spoiler bb-spoiler-ab18"><summary>Ab 18 Inhalt</summary><div class="bb-spoiler-content">${inner}</div></details>`;
   };
 
   html = html.replace(createBbcodeSingleRegex("hr"), "<hr class=\"bb-hr\">");
@@ -11059,11 +11067,7 @@ function renderGuestbookBbcode(rawContent, options = {}) {
       `<details class="bb-spoiler"><summary>${renderBbcodeInlineFragment(rawTitle)}</summary><div class="bb-spoiler-content">${inner}</div></details>`
     )
   );
-  html = replaceInnermostBbcodeWrap(
-    html,
-    "ab18",
-    "<details class=\"bb-spoiler bb-spoiler-ab18\"><summary>Ab 18 Inhalt</summary><div class=\"bb-spoiler-content\">$1</div></details>"
-  );
+  html = replaceInnermostBbcodeWrapWithCallback(html, "ab18", renderAb18BbcodeBlock);
 
   html = html.replace(/\[\s*img([^\]]*)\]([\s\S]*?)\[\s*\/\s*img\s*\]/gi, (full, rawAttributes, rawUrl) => {
     const safeUrl = sanitizeBbcodeImageUrl(rawUrl);
@@ -11271,6 +11275,18 @@ function normalizeGuestbookOpacity(input, fallback = 100) {
   return Math.min(100, Math.max(0, value));
 }
 
+function normalizeGuestbookAb18FontSize(input) {
+  const safeSize = sanitizeBbcodeSize(input);
+  if (!safeSize) {
+    return "";
+  }
+
+  const parsedSize = Number(safeSize);
+  return Number.isFinite(parsedSize) && parsedSize >= 8 && parsedSize <= 48
+    ? safeSize
+    : "";
+}
+
 function resolveGuestbookPageTextColor(rawColor, themeStyle) {
   const normalizedColor = normalizeGuestbookColor(rawColor);
   if (normalizedColor && normalizedColor !== LEGACY_GUESTBOOK_PAGE_TEXT_COLOR) {
@@ -11409,6 +11425,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingFrameColor = normalizeOptionalGuestbookPageColor(existingSettings?.frame_color);
   const existingBackgroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.background_color);
   const existingSurroundColor = normalizeOptionalGuestbookPageColor(existingSettings?.surround_color);
+  const existingAb18TextColor = normalizeOptionalGuestbookPageColor(existingSettings?.ab18_text_color);
+  const existingAb18FontSize = normalizeGuestbookAb18FontSize(existingSettings?.ab18_font_size);
   const existingTags = serializeGuestbookDiscoveryTags(existingSettings?.tags);
   const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
   const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
@@ -11429,6 +11447,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const hasFrameColorField = Object.prototype.hasOwnProperty.call(safeBody, "frame_color");
   const hasBackgroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "background_color");
   const hasSurroundColorField = Object.prototype.hasOwnProperty.call(safeBody, "surround_color");
+  const hasAb18TextColorField = Object.prototype.hasOwnProperty.call(safeBody, "ab18_text_color");
+  const hasAb18FontSizeField = Object.prototype.hasOwnProperty.call(safeBody, "ab18_font_size");
   const hasPageStyleField = Object.prototype.hasOwnProperty.call(safeBody, "page_style");
   const hasGuestbookTagsField = Object.prototype.hasOwnProperty.call(safeBody, "guestbook_tags");
   const hasGuestbookTagsCustomField = Object.prototype.hasOwnProperty.call(safeBody, "guestbook_tags_custom");
@@ -11469,6 +11489,12 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const surroundColor = hasSurroundColorField
     ? normalizeOptionalGuestbookPageColor(safeBody.surround_color)
     : existingSurroundColor;
+  const ab18TextColor = hasAb18TextColorField
+    ? normalizeOptionalGuestbookPageColor(safeBody.ab18_text_color)
+    : existingAb18TextColor;
+  const ab18FontSize = hasAb18FontSizeField
+    ? normalizeGuestbookAb18FontSize(safeBody.ab18_font_size)
+    : existingAb18FontSize;
   const innerImageOpacity = hasInnerImageOpacityField
     ? normalizeGuestbookOpacity(safeBody.inner_image_opacity, existingInnerImageOpacity)
     : existingInnerImageOpacity;
@@ -11517,6 +11543,8 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       frame_color: frameColor,
       background_color: backgroundColor,
       surround_color: surroundColor,
+      ab18_text_color: ab18TextColor,
+      ab18_font_size: ab18FontSize,
       page_style: pageStyle,
       theme_style: themeStyle,
       font_style: fontStyle,
@@ -11712,6 +11740,8 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
     background_color:
       normalizeOptionalGuestbookPageColor(baseSettings?.background_color) || pageBackgroundColor,
     surround_color: normalizeOptionalGuestbookPageColor(baseSettings?.surround_color) || pageSurroundColor,
+    ab18_text_color: normalizeOptionalGuestbookPageColor(baseSettings?.ab18_text_color),
+    ab18_font_size: normalizeGuestbookAb18FontSize(baseSettings?.ab18_font_size),
     page_style: normalizeGuestbookOption(
       baseSettings?.page_style,
       GUESTBOOK_PAGE_STYLE_OPTIONS,
@@ -11759,7 +11789,7 @@ const insertDefaultGuestbookPageStatement = db.prepare(
    VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 const selectGuestbookSettingsByCharacterStatement = db.prepare(
-  `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, page_style, theme_style, font_style, music_url, tags
+  `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, ab18_text_color, ab18_font_size, page_style, theme_style, font_style, music_url, tags
    FROM guestbook_settings
    WHERE character_id = ?`
 );
@@ -12256,6 +12286,17 @@ function getGuestbookAccessState(req, targetCharacter) {
   };
 }
 
+function canViewerOpenAb18Bbcode(viewerUser) {
+  const viewerUserId = Number(viewerUser?.id);
+  if (!Number.isInteger(viewerUserId) || viewerUserId < 1) {
+    return false;
+  }
+
+  const viewerAccount = getAccountUserById(viewerUserId);
+  const viewerAge = getAgeFromBirthDate(viewerAccount?.birth_date);
+  return viewerAge !== null && viewerAge >= 18;
+}
+
 function buildGuestbookAccessDeniedPayload(accessState = {}) {
   if (accessState?.denialReason === "staff-character-required") {
     return {
@@ -12442,13 +12483,17 @@ function getGuestbookEntriesCountForViewer(character, pageId, viewerUser, access
   return Number(row?.total || 0);
 }
 
-function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState, entriesPageNumber = 1) {
+function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState, entriesPageNumber = 1, options = {}) {
   const viewerUserId = Number(viewerUser?.id);
   const viewerIsAdmin = Boolean(accessState?.isAdmin);
   const viewerIsOwner = Boolean(accessState?.isOwner);
   const viewerIsStaff = Boolean(accessState?.isStaffView);
   const normalizedEntriesPageNumber = normalizeGuestbookEntriesPageNumber(entriesPageNumber);
   const offset = (normalizedEntriesPageNumber - 1) * GUESTBOOK_PAGE_SIZE;
+  const canViewAb18Content =
+    typeof options?.canViewAb18Content === "boolean"
+      ? options.canViewAb18Content
+      : canViewerOpenAb18Bbcode(viewerUser);
 
   return getGuestbookEntriesForViewerStatement
     .all(
@@ -12469,7 +12514,8 @@ function getGuestbookEntriesForViewer(character, pageId, viewerUser, accessState
         is_private: isPrivate,
         content_html: renderGuestbookBbcode(entry.content, {
           compactImageLineBreaks: false,
-          compactBlockLineBreaks: false
+          compactBlockLineBreaks: false,
+          canViewAb18Content
         }),
         can_edit: entryAuthorId === viewerUserId || viewerIsAdmin,
         can_delete: entryAuthorId === viewerUserId || viewerIsOwner || viewerIsAdmin,
@@ -21916,12 +21962,14 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
   );
   const totalGuestbookEntryPages = Math.max(1, Math.ceil(totalGuestbookEntries / GUESTBOOK_PAGE_SIZE));
   const activeGuestbookEntriesPageNumber = Math.min(requestedEntriesPageNumber, totalGuestbookEntryPages);
+  const canViewAb18Content = canViewerOpenAb18Bbcode(req.session.user);
   const guestbookEntries = getGuestbookEntriesForViewer(
     character,
     activeGuestbookPage.id,
     req.session.user,
     guestbookAccessState,
-    activeGuestbookEntriesPageNumber
+    activeGuestbookEntriesPageNumber,
+    { canViewAb18Content }
   );
   const postingCharactersState = getGuestbookPostingCharactersForAccess(req, character, guestbookAccessState);
   const replyCharacterId = Number(guestbookAccessState.replyContextCharacterId);
@@ -22023,7 +22071,8 @@ app.get("/characters/:id/guestbook", requireAuth, (req, res) => {
       content_html: renderGuestbookBbcode(activeGuestbookPage.content || "", {
         maxLength: 0,
         compactImageLineBreaks: false,
-        compactBlockLineBreaks: false
+        compactBlockLineBreaks: false,
+        canViewAb18Content
       })
     },
     guestbookPageNavigation,
@@ -22501,6 +22550,8 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
            frame_color = ?,
            background_color = ?,
            surround_color = ?,
+           ab18_text_color = ?,
+           ab18_font_size = ?,
            page_style = ?,
            theme_style = ?,
            font_style = ?,
@@ -22522,6 +22573,8 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
       payload.settings.frame_color,
       payload.settings.background_color,
       payload.settings.surround_color,
+      payload.settings.ab18_text_color,
+      payload.settings.ab18_font_size,
       payload.settings.page_style,
       payload.settings.theme_style,
       payload.settings.font_style,

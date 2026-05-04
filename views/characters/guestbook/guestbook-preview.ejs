@@ -117,6 +117,12 @@
     --gb-entry-color: <%= guestbookEntryColor %>;
     --gb-panel-bg-color: <%= guestbookPanelColor %>;
     --gb-panel-image: <%= guestbookPanelImageCss %>;
+    <% if (guestbookSettings?.ab18_text_color) { %>
+    --gb-ab18-text-color: <%= guestbookSettings.ab18_text_color %>;
+    <% } %>
+    <% if (guestbookSettings?.ab18_font_size) { %>
+    --gb-ab18-font-size: <%= guestbookSettings.ab18_font_size %>px;
+    <% } %>
   }
 </style>
 

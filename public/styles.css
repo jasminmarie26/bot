@@ -10010,7 +10010,8 @@ body.theme-atari .guestbook-entry-panel {
   overflow: visible;
 }
 
-.bb-spoiler summary {
+.bb-spoiler summary,
+.bb-spoiler-ab18-summary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10041,7 +10042,9 @@ body.theme-atari .guestbook-entry-panel {
 }
 
 .bb-spoiler summary:hover,
-.bb-spoiler summary:focus-visible {
+.bb-spoiler summary:focus-visible,
+.bb-spoiler-ab18-summary:hover,
+.bb-spoiler-ab18-summary:focus-visible {
   filter: brightness(1.03);
 }
 
@@ -10071,8 +10074,29 @@ body.theme-atari .guestbook-entry-panel {
   margin-bottom: 0;
 }
 
-.bb-spoiler-ab18 {
+.bb-spoiler.bb-spoiler-ab18 {
+  color: var(--gb-ab18-text-color, inherit);
+  font-size: var(--gb-ab18-font-size, inherit);
   border-color: color-mix(in srgb, var(--danger) 55%, var(--field-edge));
+}
+
+.bb-spoiler-ab18 > summary,
+.bb-spoiler-ab18-summary {
+  color: var(--gb-ab18-text-color, var(--bb-spoiler-button-text));
+  font-size: var(--gb-ab18-font-size, inherit);
+}
+
+.bb-spoiler-ab18[open] > summary {
+  color: var(--gb-ab18-text-color, var(--bb-spoiler-button-open-text));
+}
+
+.bb-spoiler-ab18 .bb-spoiler-content {
+  color: var(--gb-ab18-text-color, inherit);
+  font-size: var(--gb-ab18-font-size, inherit);
+}
+
+.bb-spoiler-ab18-locked .bb-spoiler-ab18-summary {
+  cursor: not-allowed;
 }
 
 .bb-code-block {
@@ -11822,6 +11846,11 @@ body.page-guestbook-preview::after {
 
 .gb-color-reset {
   min-width: 5.8rem;
+}
+
+.gb-ab18-size-controls {
+  grid-template-columns: minmax(0, 10rem) auto;
+  align-items: center;
 }
 
 .gb-editor-row-meta,

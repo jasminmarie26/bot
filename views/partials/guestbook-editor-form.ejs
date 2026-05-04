@@ -434,6 +434,90 @@
       </label>
     </div>
   </div>
+
+  <div class="gb-color-row" data-gb-theme-color-row>
+    <div>
+      <span class="gb-editor-subheading">Ab 18 Farbe</span>
+      <span class="gb-editor-helptext">Leer = Farbe vom gew&auml;hlten G&auml;stebuch-Design.</span>
+    </div>
+
+    <div class="gb-color-input-wrap">
+      <input
+        id="guestbook-ab18-text-color-text"
+        name="ab18_text_color"
+        value="<%= settings.ab18_text_color || '' %>"
+        maxlength="9"
+        placeholder="#F2D27A"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <input
+        id="guestbook-ab18-text-color-picker"
+        class="gb-color-picker"
+        type="color"
+        value="<%= /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(String(settings.ab18_text_color || '').trim()) ? String(settings.ab18_text_color).trim().slice(0, 7) : '#F2D27A' %>"
+        aria-label="Ab 18 Farbe ausw&auml;hlen"
+      />
+      <span
+        id="guestbook-ab18-text-color-preview"
+        class="gb-color-preview gb-color-preview-swatch"
+        aria-hidden="true"
+      ></span>
+      <button type="button" class="btn btn-secondary gb-color-reset" data-color-reset="guestbook-ab18-text-color">
+        Standard
+      </button>
+      <label class="gb-color-alpha-field" for="guestbook-ab18-text-color-alpha">
+        Transparenz
+        <div class="gb-color-alpha-controls">
+          <input
+            id="guestbook-ab18-text-color-alpha"
+            class="gb-color-alpha-range"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="0"
+          />
+          <input
+            id="guestbook-ab18-text-color-alpha-number"
+            class="gb-color-alpha-number"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            value="0"
+            inputmode="numeric"
+            aria-label="Ab 18 Farbe Transparenz in Prozent"
+          />
+          <span class="gb-color-alpha-unit">%</span>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <div class="gb-editor-row">
+    <div>
+      <span class="gb-editor-subheading">Ab 18 Schriftgr&ouml;&szlig;e</span>
+      <span class="gb-editor-helptext">Leer = Schriftgr&ouml;&szlig;e vom gew&auml;hlten G&auml;stebuch-Design.</span>
+    </div>
+
+    <div class="gb-editor-row-content gb-ab18-size-controls">
+      <input
+        id="guestbook-ab18-font-size"
+        name="ab18_font_size"
+        type="number"
+        min="8"
+        max="48"
+        step="0.5"
+        value="<%= settings.ab18_font_size || '' %>"
+        placeholder="13"
+        inputmode="decimal"
+      />
+      <button type="button" class="btn btn-secondary gb-color-reset" data-ab18-size-reset>
+        Standard
+      </button>
+    </div>
+  </div>
     </div>
     </details>
   </section>
@@ -987,7 +1071,7 @@
         : `${normalizedHex}${percentToAlphaHex(normalizedAlpha)}`;
     };
 
-    const bindColorField = (key, defaultColor) => {
+    const bindColorField = (key, defaultColor, options = {}) => {
       const textInput = document.getElementById(`${key}-text`);
       const pickerInput = document.getElementById(`${key}-picker`);
       const preview = document.getElementById(`${key}-preview`);
@@ -1125,7 +1209,7 @@
           syncFromText(true);
         },
         setDisabled(isDisabled) {
-          const nextDisabled = Boolean(isDisabled);
+          const nextDisabled = options?.themeSensitive === false ? false : Boolean(isDisabled);
           textInput.disabled = nextDisabled;
           pickerInput.disabled = nextDisabled;
           alphaRangeInput.disabled = nextDisabled;
@@ -1142,7 +1226,8 @@
     const colorFieldControllers = [
       bindColorField("guestbook-frame-color", "#7A6855"),
       bindColorField("guestbook-background-color", "#3E3935"),
-      bindColorField("guestbook-surround-color", "#2C2118")
+      bindColorField("guestbook-surround-color", "#2C2118"),
+      bindColorField("guestbook-ab18-text-color", "#F2D27A", { themeSensitive: false })
     ].filter(Boolean);
 
     const initialPageTitle = <%- JSON.stringify(String(activePage.page_heading || ""))
@@ -1183,6 +1268,8 @@
     const editorWasSaved = String(editorForm?.dataset?.editorSaved || "").trim().toLowerCase() === "true";
     const pageTitleField = editorForm?.querySelector('input[name="page_title"]') || null;
     const pageContentField = editorForm?.querySelector('textarea[name="page_content"]') || null;
+    const ab18FontSizeField = editorForm?.querySelector('input[name="ab18_font_size"]') || null;
+    const ab18FontSizeResetButton = editorForm?.querySelector("[data-ab18-size-reset]") || null;
     const editorScrollTopTarget =
       editorForm?.closest(".character-guestbook-panel") ||
       editorForm?.closest(".gb-editor-shell") ||
@@ -1231,6 +1318,8 @@
       "frame_color",
       "background_color",
       "surround_color",
+      "ab18_text_color",
+      "ab18_font_size",
       "censor_level",
       "guestbook_tags_custom",
       "inner_image_url",
@@ -1838,6 +1927,14 @@
       pageContentField.value = initialPageContent;
     }
     restoreGuestbookDraft();
+
+    if (ab18FontSizeField && ab18FontSizeResetButton) {
+      ab18FontSizeResetButton.addEventListener("click", () => {
+        ab18FontSizeField.value = "";
+        ab18FontSizeField.dispatchEvent(new Event("input", { bubbles: true }));
+        ab18FontSizeField.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    }
 
     const focusPageContentField = () => {
       if (!pageContentField) {
