@@ -316,8 +316,8 @@
 }
 
 .serverlist-overview-character-card {
-  width: 100%;
-  justify-content: space-between;
+  width: auto;
+  justify-content: flex-start;
   gap: 0.5rem;
 }
 
