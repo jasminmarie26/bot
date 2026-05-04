@@ -71,33 +71,17 @@
       const storedOpenIds = readStoredOpenIds();
       applyOpenIds(storedOpenIds === null ? defaultOpenIds : storedOpenIds);
 
-      let pendingActiveSection = null;
       let syncTimer = 0;
-      const scheduleAccordionSync = (activeSection) => {
-        if (activeSection) {
-          pendingActiveSection = activeSection;
-        }
-
+      const scheduleAccordionSync = () => {
         window.clearTimeout(syncTimer);
         syncTimer = window.setTimeout(() => {
-          const activeSectionToKeep = pendingActiveSection;
-          pendingActiveSection = null;
-
-          if (activeSectionToKeep?.open) {
-            overviewSections.forEach((section) => {
-              if (section !== activeSectionToKeep) {
-                section.open = false;
-              }
-            });
-          }
-
           writeOpenIds();
         }, 0);
       };
 
       overviewSections.forEach((section) => {
         section.addEventListener("toggle", () => {
-          scheduleAccordionSync(section.open ? section : null);
+          scheduleAccordionSync();
         });
       });
 
