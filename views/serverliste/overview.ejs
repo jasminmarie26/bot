@@ -61,12 +61,8 @@
         </summary>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
-          <p class="muted serverlist-section-copy"><%= section.overview_description %></p>
-
           <% if (isFestplayOverviewSection) { %>
-            <% if (!sectionFestplays.length) { %>
-              <p class="muted">Noch keine Charaktere in <%= section.overview_title %>.</p>
-            <% } else { %>
+            <% if (sectionFestplays.length) { %>
               <div class="serverlist-festplay-stack">
                 <% sectionFestplays.forEach((festplay) => { %>
                   <section class="panel serverlist-panel serverlist-festplay-panel serverlist-subpanel">
