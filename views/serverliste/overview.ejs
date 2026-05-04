@@ -11,6 +11,14 @@
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= section.characters.length %>)</span>
           </div>
+          <a
+            class="btn serverlist-add-character-btn"
+            href="/characters/new?server=<%= section.id %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+            aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+            title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+          >
+            +
+          </a>
         </div>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">

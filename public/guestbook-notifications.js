@@ -916,9 +916,7 @@
     panelElements.composeHint.textContent = isPersonalStaffPm
       ? "Schreibe eine persönliche PM an einen einzelnen User. Gib den Charakternamen ein."
       : isSingleRecipient
-      ? isSystemMessage
-        ? "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
-        : "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Suche per Accountname, Accountnummer oder Charaktername."
+      ? ""
       : isSystemMessage
         ? "Geht als Systemnachricht an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren."
         : "Geht als Brief an alle Accounts mit mindestens einem Charakter auf FREE-RP oder ERP, inklusive Admins und Moderatoren.";
@@ -927,9 +925,9 @@
       panelElements.composeHint.textContent =
         "Schreibe eine persönliche PM an einen einzelnen User. Beim Tippen erscheinen Vorschläge für Charakternamen.";
     } else if (isSingleRecipient) {
-      panelElements.composeHint.textContent =
-        "Geht an einen einzelnen RP-Account auf FREE-RP oder ERP. Charakternamen werden direkt vorgeschlagen, Accountname oder Nummer gehen weiter manuell.";
+      panelElements.composeHint.textContent = "";
     }
+    panelElements.composeHint.hidden = !panelElements.composeHint.textContent.trim();
   }
 
   async function sendSystemNotification(formValues) {
