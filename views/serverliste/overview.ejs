@@ -198,13 +198,7 @@
                     href="/characters/<%= char.id %>"
                     title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
                   >
-                    <span class="character-mini-name"><%= char.name %></span>
-                    <% if (isFestplayCharacter) { %>
-                      <span class="serverlist-character-state">Festspiel<% if (char.festplay_name) { %>: <%= char.festplay_name %><% } %></span>
-                      <% if (char.festplay_creator_name) { %>
-                        <span class="serverlist-character-state" style="font-size: 0.85em; margin-top: 2px;">von <%= char.festplay_creator_name %></span>
-                      <% } %>
-                    <% } %>
+                    <span class="character-mini-name<%= isFestplayCharacter ? " is-festplay-character-name" : "" %>"><%= char.name %></span>
                   </a>
                   <div class="character-mini-actions">
                     <a

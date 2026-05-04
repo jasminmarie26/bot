@@ -348,6 +348,11 @@
   flex: 0 0 auto;
 }
 
+.serverlist-overview-character-card .is-festplay-character-name {
+  color: color-mix(in srgb, var(--accent) 78%, white 22%);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
 .serverlist-character-state {
   display: inline-flex;
   align-items: center;
