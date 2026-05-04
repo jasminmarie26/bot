@@ -5,20 +5,23 @@
 <section class="serverlist-block">
   <div class="serverlist-overview-grid">
     <% overviewSections.forEach((section) => { %>
+      <% const canCreateOverviewCharacter = !String(section.id || "").endsWith("-festplay"); %>
       <section class="serverlist-festplay-overview serverlist-overview-column">
         <div class="serverlist-festplay-overview-header serverlist-overview-column-header">
           <div class="serverlist-festplay-overview-title">
             <h3><%= section.overview_title %></h3>
             <span class="serverlist-festplay-count">(<%= section.characters.length %>)</span>
           </div>
-          <a
-            class="btn serverlist-add-character-btn"
-            href="/characters/new?server=<%= section.id %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
-            aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-            title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-          >
-            +
-          </a>
+          <% if (canCreateOverviewCharacter) { %>
+            <a
+              class="btn serverlist-add-character-btn"
+              href="/characters/new?server=<%= section.id %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+              aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+              title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+            >
+              +
+            </a>
+          <% } %>
         </div>
 
         <div class="serverlist-panel serverlist-character-overview-body serverlist-overview-column-body">
