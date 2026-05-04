@@ -17499,7 +17499,7 @@ function getCharacterAreaReturnTarget(serverId) {
   }
 
   const normalizedServerId = normalizeServer(serverId);
-  return normalizedServerId ? `/dashboard/areas/${normalizedServerId}` : "/dashboard";
+  return normalizedServerId ? "/dashboard/areas/overview" : "/dashboard";
 }
 
 function getDashboardOwnCharacters(userId) {
@@ -18436,14 +18436,12 @@ function getServerListPageAssets(scriptPaths = []) {
 }
 
 app.get("/dashboard", requireAuth, (req, res) => {
-  const serverSections = getDashboardServerSections(req.session.user.id);
   const larpSection = getDashboardLarpSection();
   const larpCharacters = getLarpCharactersForUser(req.session.user.id);
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("serverliste/index", {
     title: "Serverliste",
-    serverSections,
     larpSection,
     larpCharacters,
     openLarpSection,
@@ -18490,8 +18488,8 @@ app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
 });
 
 app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
-  const serverSection = getDashboardServerSection(req.session.user.id, req.params.serverId);
-  if (!serverSection) {
+  const normalizedServerId = normalizeServer(req.params.serverId);
+  if (!normalizedServerId) {
     return res.redirect("/dashboard");
   }
 
@@ -18501,22 +18499,13 @@ app.get("/dashboard/areas/:serverId", requireAuth, (req, res) => {
     if (
       requestedCharacter &&
       Number(requestedCharacter.user_id) === Number(req.session.user.id) &&
-      normalizeCharacterServerId(requestedCharacter.server_id) === serverSection.id
+      normalizeCharacterServerId(requestedCharacter.server_id) === normalizedServerId
     ) {
       rememberPreferredCharacter(req, requestedCharacter);
     }
   }
 
-  const accountUser = getAccountUserById(req.session.user.id);
-  const viewerAge = getAgeFromBirthDate(accountUser?.birth_date);
-  const erpMoveAllowed = viewerAge !== null && viewerAge >= 18;
-
-  return res.render("serverliste/bereich", {
-    title: serverSection.dashboard_area_title || serverSection.dashboard_label || "Rollenspiel",
-    serverSection,
-    erpMoveAllowed,
-    ...getServerListPageAssets(["/serverliste-area.js"])
-  });
+  return res.redirect("/dashboard/areas/overview");
 });
 
 app.post(

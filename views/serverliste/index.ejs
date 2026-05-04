@@ -6,7 +6,7 @@
 <section class="header-line serverlist-page-header">
   <div>
     <h1>Serverliste</h1>
-    <p class="muted">Hier &ouml;ffnest du Free RP, Erotik oder die gemeinsame Charakter&uuml;bersicht direkt im selben Fenster.</p>
+    <p class="muted">Hier &ouml;ffnest du deine gemeinsame Charakter&uuml;bersicht direkt im selben Fenster.</p>
   </div>
 </section>
 
@@ -15,23 +15,15 @@
     <summary class="serverlist-accordion-summary">
       <div class="serverlist-accordion-copy">
         <h2>Rollenspiel</h2>
-        <p class="muted">W&auml;hle Free RP, Erotik oder die Charakter&uuml;bersicht. Die jeweilige &Uuml;bersicht &ouml;ffnet sich direkt im selben Fenster.</p>
+        <p class="muted">Free RP, ERP und Festspiele sind jetzt in einer gemeinsamen &Uuml;bersicht.</p>
       </div>
       <span class="serverlist-accordion-icon" aria-hidden="true"></span>
     </summary>
 
     <div class="serverlist-accordion-body">
       <div class="serverlist-role-switch" aria-label="Rollenspiel-Bereiche">
-        <% serverSections.forEach((section) => { %>
-          <a
-            class="serverlist-role-link"
-            href="/dashboard/areas/<%= section.id %>"
-          >
-            <span class="serverlist-role-tab-title"><%= section.dashboard_area_title %></span>
-          </a>
-        <% }) %>
-        <a class="serverlist-role-link" href="/dashboard/areas/overview">
-          <span class="serverlist-role-tab-title">Charakterübersicht Free RP &amp; ERP</span>
+        <a class="serverlist-role-link serverlist-role-link-wide" href="/dashboard/areas/overview">
+          <span class="serverlist-role-tab-title">Charakter&uuml;bersicht Free RP &amp; ERP</span>
         </a>
       </div>
     </div>
