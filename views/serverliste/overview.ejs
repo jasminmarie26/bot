@@ -192,7 +192,7 @@
           <% } else { %>
             <div class="character-mini-grid serverlist-overview-character-grid">
               <% sectionCharacters.forEach((char) => { %>
-                <% const isFestplayCharacter = char.dashboard_position === "festplay"; %>
+                <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
                 <article class="character-mini-card serverlist-overview-character-card">
                   <a
                     class="character-mini-item"

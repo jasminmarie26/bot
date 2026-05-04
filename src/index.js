@@ -17530,9 +17530,19 @@ function getDashboardOwnCharacters(userId) {
     )
     .all(parsedUserId)
     .map((character) => {
-      const festplayHomeServerId = getCharacterFestplayHomeServer(character.id);
+      const boundFestplays = getBoundFestplaysForCharacter(character.id);
+      const boundFestplayServerIds = [
+        ...new Set(
+          boundFestplays
+            .map((festplay) => normalizeFestplayServerId(festplay.server_id))
+            .filter(Boolean)
+        )
+      ];
+      const festplayHomeServerId =
+        boundFestplayServerIds.length === 1 ? boundFestplayServerIds[0] : "";
       return {
         ...character,
+        is_festplay_character: boundFestplays.length > 0,
         festplay_home_server_id: festplayHomeServerId,
         festplay_home_server_label: getServerLabel(festplayHomeServerId)
       };
