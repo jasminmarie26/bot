@@ -1,4 +1,10 @@
     </main>
+    <button type="button" class="site-back-to-top" data-site-back-to-top aria-label="Ganz nach oben" title="Ganz nach oben">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 19V5"></path>
+        <path d="m6.5 11.5 5.5-5.5 5.5 5.5"></path>
+      </svg>
+    </button>
     <script src="/bbcode-font-loader.js?v=<%= staticAssetVersion %>"></script>
     <script src="/updates.js?v=<%= staticAssetVersion %>"></script>
     <script src="/guestbook-notifications.js?v=<%= staticAssetVersion %>"></script>
@@ -6,6 +12,7 @@
     <script src="/social-panel.js?v=<%= staticAssetVersion %>"></script>
     <script src="/rp-board.js?v=<%= staticAssetVersion %>"></script>
     <script src="/theme-switcher.js?v=<%= staticAssetVersion %>"></script>
+    <script src="/back-to-top.js?v=<%= staticAssetVersion %>"></script>
     <% if (currentUser) { %>
       <script src="/serverlist-account-icon.js?v=<%= staticAssetVersion %>"></script>
       <script src="/staff-session-keepalive.js?v=<%= staticAssetVersion %>"></script>
