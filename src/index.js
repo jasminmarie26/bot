@@ -11308,6 +11308,14 @@ function normalizeGuestbookOpacity(input, fallback = 100) {
   return Math.min(100, Math.max(0, value));
 }
 
+function normalizeGuestbookImagePosition(input, fallback = 50) {
+  const value = Number.parseInt(String(input ?? "").trim(), 10);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(100, Math.max(0, value));
+}
+
 function normalizeGuestbookAb18FontSize(input) {
   const safeSize = sanitizeBbcodeSize(input);
   if (!safeSize) {
@@ -11463,6 +11471,10 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const existingTags = serializeGuestbookDiscoveryTags(existingSettings?.tags);
   const existingInnerImageOpacity = normalizeGuestbookOpacity(existingSettings?.inner_image_opacity, 100);
   const existingOuterImageOpacity = normalizeGuestbookOpacity(existingSettings?.outer_image_opacity, 100);
+  const existingInnerImagePositionX = normalizeGuestbookImagePosition(existingSettings?.inner_image_position_x, 50);
+  const existingInnerImagePositionY = normalizeGuestbookImagePosition(existingSettings?.inner_image_position_y, 0);
+  const existingOuterImagePositionX = normalizeGuestbookImagePosition(existingSettings?.outer_image_position_x, 50);
+  const existingOuterImagePositionY = normalizeGuestbookImagePosition(existingSettings?.outer_image_position_y, 0);
   const existingInnerImageRepeat = 0;
   const existingOuterImageRepeat = 0;
   const hasImageUrlField = Object.prototype.hasOwnProperty.call(safeBody, "image_url");
@@ -11473,6 +11485,10 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const hasClearOuterImageField = Object.prototype.hasOwnProperty.call(safeBody, "clear_outer_image");
   const hasInnerImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_opacity");
   const hasOuterImageOpacityField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_opacity");
+  const hasInnerImagePositionXField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_position_x");
+  const hasInnerImagePositionYField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_position_y");
+  const hasOuterImagePositionXField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_position_x");
+  const hasOuterImagePositionYField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_position_y");
   const hasInnerImageRepeatField = Object.prototype.hasOwnProperty.call(safeBody, "inner_image_repeat");
   const hasOuterImageRepeatField = Object.prototype.hasOwnProperty.call(safeBody, "outer_image_repeat");
   const hasCensorLevelField = Object.prototype.hasOwnProperty.call(safeBody, "censor_level");
@@ -11534,6 +11550,18 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
   const outerImageOpacity = hasOuterImageOpacityField
     ? normalizeGuestbookOpacity(safeBody.outer_image_opacity, existingOuterImageOpacity)
     : existingOuterImageOpacity;
+  const innerImagePositionX = hasInnerImagePositionXField
+    ? normalizeGuestbookImagePosition(safeBody.inner_image_position_x, existingInnerImagePositionX)
+    : existingInnerImagePositionX;
+  const innerImagePositionY = hasInnerImagePositionYField
+    ? normalizeGuestbookImagePosition(safeBody.inner_image_position_y, existingInnerImagePositionY)
+    : existingInnerImagePositionY;
+  const outerImagePositionX = hasOuterImagePositionXField
+    ? normalizeGuestbookImagePosition(safeBody.outer_image_position_x, existingOuterImagePositionX)
+    : existingOuterImagePositionX;
+  const outerImagePositionY = hasOuterImagePositionYField
+    ? normalizeGuestbookImagePosition(safeBody.outer_image_position_y, existingOuterImagePositionY)
+    : existingOuterImagePositionY;
   const innerImageRepeat = hasInnerImageRepeatField
     ? (String(safeBody.inner_image_repeat || "").trim() === "1" ? 1 : 0)
     : 0;
@@ -11568,6 +11596,10 @@ function getGuestbookEditorPayload(body, existingSettings = null) {
       outer_image_url: sanitizedOuterImageUrl,
       inner_image_opacity: innerImageOpacity,
       outer_image_opacity: outerImageOpacity,
+      inner_image_position_x: innerImagePositionX,
+      inner_image_position_y: innerImagePositionY,
+      outer_image_position_x: outerImagePositionX,
+      outer_image_position_y: outerImagePositionY,
       inner_image_repeat: innerImageRepeat,
       outer_image_repeat: outerImageRepeat,
       censor_level: censorLevel,
@@ -11747,6 +11779,10 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
       : "";
   const pageInnerImageOpacity = normalizeGuestbookOpacity(page?.inner_image_opacity, 100);
   const pageOuterImageOpacity = normalizeGuestbookOpacity(page?.outer_image_opacity, 100);
+  const pageInnerImagePositionX = normalizeGuestbookImagePosition(page?.inner_image_position_x, 50);
+  const pageInnerImagePositionY = normalizeGuestbookImagePosition(page?.inner_image_position_y, 0);
+  const pageOuterImagePositionX = normalizeGuestbookImagePosition(page?.outer_image_position_x, 50);
+  const pageOuterImagePositionY = normalizeGuestbookImagePosition(page?.outer_image_position_y, 0);
   const pageFrameColor = normalizeOptionalGuestbookPageColor(page?.frame_color);
   const pageBackgroundColor = normalizeOptionalGuestbookPageColor(page?.background_color);
   const pageSurroundColor = normalizeOptionalGuestbookPageColor(page?.surround_color);
@@ -11764,6 +11800,22 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
       normalizeGuestbookUrl(baseSettings?.outer_image_url) || normalizeGuestbookUrl(page?.outer_image_url),
     inner_image_opacity: normalizeGuestbookOpacity(baseSettings?.inner_image_opacity, pageInnerImageOpacity),
     outer_image_opacity: normalizeGuestbookOpacity(baseSettings?.outer_image_opacity, pageOuterImageOpacity),
+    inner_image_position_x: normalizeGuestbookImagePosition(
+      baseSettings?.inner_image_position_x,
+      pageInnerImagePositionX
+    ),
+    inner_image_position_y: normalizeGuestbookImagePosition(
+      baseSettings?.inner_image_position_y,
+      pageInnerImagePositionY
+    ),
+    outer_image_position_x: normalizeGuestbookImagePosition(
+      baseSettings?.outer_image_position_x,
+      pageOuterImagePositionX
+    ),
+    outer_image_position_y: normalizeGuestbookImagePosition(
+      baseSettings?.outer_image_position_y,
+      pageOuterImagePositionY
+    ),
     inner_image_repeat: 0,
     outer_image_repeat: 0,
     censor_level: normalizeGuestbookOption(baseSettings?.censor_level, GUESTBOOK_CENSOR_OPTIONS, "none"),
@@ -11794,7 +11846,8 @@ function buildGuestbookPageSettings(baseSettings = null, page = null) {
 
 const selectGuestbookPagesByCharacterStatement = db.prepare(
   `SELECT id, character_id, page_number, title, content, image_url, inner_image_url, outer_image_url,
-          inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, frame_color,
+          inner_image_opacity, outer_image_opacity, inner_image_position_x, inner_image_position_y,
+          outer_image_position_x, outer_image_position_y, inner_image_repeat, outer_image_repeat, frame_color,
           background_color, surround_color, page_style, theme_style, created_at, updated_at
    FROM guestbook_pages
    WHERE character_id = ?
@@ -11811,6 +11864,10 @@ const insertDefaultGuestbookPageStatement = db.prepare(
      outer_image_url,
      inner_image_opacity,
      outer_image_opacity,
+     inner_image_position_x,
+     inner_image_position_y,
+     outer_image_position_x,
+     outer_image_position_y,
      inner_image_repeat,
      outer_image_repeat,
      frame_color,
@@ -11819,10 +11876,10 @@ const insertDefaultGuestbookPageStatement = db.prepare(
      page_style,
      theme_style
    )
-   VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+   VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 );
 const selectGuestbookSettingsByCharacterStatement = db.prepare(
-  `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, ab18_text_color, ab18_font_size, page_style, theme_style, font_style, music_url, tags
+  `SELECT character_id, image_url, inner_image_url, outer_image_url, inner_image_opacity, outer_image_opacity, inner_image_position_x, inner_image_position_y, outer_image_position_x, outer_image_position_y, inner_image_repeat, outer_image_repeat, censor_level, chat_text_color, page_text_color, frame_color, background_color, surround_color, ab18_text_color, ab18_font_size, page_style, theme_style, font_style, music_url, tags
    FROM guestbook_settings
    WHERE character_id = ?`
 );
@@ -11848,6 +11905,10 @@ function ensureGuestbookPages(characterId) {
     defaultSettings.outer_image_url,
     defaultSettings.inner_image_opacity,
     defaultSettings.outer_image_opacity,
+    defaultSettings.inner_image_position_x,
+    defaultSettings.inner_image_position_y,
+    defaultSettings.outer_image_position_x,
+    defaultSettings.outer_image_position_y,
     defaultSettings.inner_image_repeat,
     defaultSettings.outer_image_repeat,
     defaultSettings.frame_color,
@@ -22543,6 +22604,10 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
            outer_image_url = ?,
            inner_image_opacity = ?,
            outer_image_opacity = ?,
+           inner_image_position_x = ?,
+           inner_image_position_y = ?,
+           outer_image_position_x = ?,
+           outer_image_position_y = ?,
            inner_image_repeat = ?,
            outer_image_repeat = ?,
            frame_color = ?,
@@ -22558,6 +22623,10 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
       payload.settings.outer_image_url,
       payload.settings.inner_image_opacity,
       payload.settings.outer_image_opacity,
+      payload.settings.inner_image_position_x,
+      payload.settings.inner_image_position_y,
+      payload.settings.outer_image_position_x,
+      payload.settings.outer_image_position_y,
       payload.settings.inner_image_repeat,
       payload.settings.outer_image_repeat,
       payload.settings.frame_color,
@@ -22575,6 +22644,10 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
            outer_image_url = ?,
            inner_image_opacity = ?,
            outer_image_opacity = ?,
+           inner_image_position_x = ?,
+           inner_image_position_y = ?,
+           outer_image_position_x = ?,
+           outer_image_position_y = ?,
            inner_image_repeat = ?,
            outer_image_repeat = ?,
            censor_level = ?,
@@ -22598,6 +22671,10 @@ app.post("/characters/:id/guestbook/edit/save", requireAuth, (req, res) => {
       payload.settings.outer_image_url,
       payload.settings.inner_image_opacity,
       payload.settings.outer_image_opacity,
+      payload.settings.inner_image_position_x,
+      payload.settings.inner_image_position_y,
+      payload.settings.outer_image_position_x,
+      payload.settings.outer_image_position_y,
       payload.settings.inner_image_repeat,
       payload.settings.outer_image_repeat,
       payload.settings.censor_level,
@@ -22753,6 +22830,10 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
          outer_image_url,
          inner_image_opacity,
          outer_image_opacity,
+         inner_image_position_x,
+         inner_image_position_y,
+         outer_image_position_x,
+         outer_image_position_y,
          inner_image_repeat,
          outer_image_repeat,
          frame_color,
@@ -22761,7 +22842,7 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
          page_style,
          theme_style
        )
-       VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
@@ -22771,6 +22852,10 @@ app.post("/characters/:id/guestbook/edit/add-page", requireAuth, (req, res) => {
       sourcePageSettings.outer_image_url,
       sourcePageSettings.inner_image_opacity,
       sourcePageSettings.outer_image_opacity,
+      sourcePageSettings.inner_image_position_x,
+      sourcePageSettings.inner_image_position_y,
+      sourcePageSettings.outer_image_position_x,
+      sourcePageSettings.outer_image_position_y,
       sourcePageSettings.inner_image_repeat,
       sourcePageSettings.outer_image_repeat,
       sourcePageSettings.frame_color,
@@ -24704,6 +24789,10 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
            outer_image_url,
            inner_image_opacity,
            outer_image_opacity,
+           inner_image_position_x,
+           inner_image_position_y,
+           outer_image_position_x,
+           outer_image_position_y,
            inner_image_repeat,
            outer_image_repeat,
            frame_color,
@@ -24712,7 +24801,7 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
            page_style,
            theme_style
          )
-         VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, 1, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         id,
         resetPageSettings.image_url,
@@ -24720,6 +24809,10 @@ app.post("/admin/guestbooks/:id/clear", requireAuth, requireAdmin, (req, res) =>
         resetPageSettings.outer_image_url,
         resetPageSettings.inner_image_opacity,
         resetPageSettings.outer_image_opacity,
+        resetPageSettings.inner_image_position_x,
+        resetPageSettings.inner_image_position_y,
+        resetPageSettings.outer_image_position_x,
+        resetPageSettings.outer_image_position_y,
         resetPageSettings.inner_image_repeat,
         resetPageSettings.outer_image_repeat,
         resetPageSettings.frame_color,

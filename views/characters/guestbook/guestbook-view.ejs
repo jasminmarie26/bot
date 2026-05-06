@@ -24,6 +24,13 @@
     }
     return Math.min(100, Math.max(0, Math.round(parsed)));
   };
+  const normalizeGuestbookImagePosition = (value, fallback = 50) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, Math.round(parsed)));
+  };
   const buildGuestbookCssUrl = (value) => {
     const normalized = String(value || "").trim();
     return normalized ? `url(${JSON.stringify(normalized)})` : "";
@@ -38,6 +45,10 @@
   };
   const innerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.inner_image_opacity, 100);
   const outerImageOpacity = normalizeGuestbookOpacity(guestbookSettings?.outer_image_opacity, 100);
+  const innerImagePositionX = normalizeGuestbookImagePosition(guestbookSettings?.inner_image_position_x, 50);
+  const innerImagePositionY = normalizeGuestbookImagePosition(guestbookSettings?.inner_image_position_y, 0);
+  const outerImagePositionX = normalizeGuestbookImagePosition(guestbookSettings?.outer_image_position_x, 50);
+  const outerImagePositionY = normalizeGuestbookImagePosition(guestbookSettings?.outer_image_position_y, 0);
   const innerImageRepeat = Number(guestbookSettings?.inner_image_repeat) === 1;
   const outerImageRepeat = Number(guestbookSettings?.outer_image_repeat) === 1;
   const hasCustomGuestbookColors = Boolean(
@@ -64,7 +75,7 @@
     `--gb-inner-image-opacity:${innerImageOpacity / 100}`,
     `--gb-inner-image-repeat:${innerImageRepeat ? "repeat" : "no-repeat"}`,
     `--gb-inner-image-size:${innerImageRepeat ? "auto" : "cover"}`,
-    `--gb-inner-image-position:${innerImageRepeat ? "top left" : "center top"}`
+    `--gb-inner-image-position:${innerImagePositionX}% ${innerImagePositionY}%`
   ].filter(Boolean).join(";");
   const guestbookLayoutStyle = [
     effectiveGuestbookSurroundColor ? `--gb-surround-color:${effectiveGuestbookSurroundColor}` : "",
@@ -74,7 +85,7 @@
     `--gb-outer-image-opacity:${outerImageOpacity / 100}`,
     `--gb-outer-image-repeat:${outerImageRepeat ? "repeat" : "no-repeat"}`,
     `--gb-outer-image-size:${outerImageRepeat ? "auto" : "cover"}`,
-    `--gb-outer-image-position:${outerImageRepeat ? "top left" : "center top"}`
+    `--gb-outer-image-position:${outerImagePositionX}% ${outerImagePositionY}%`
   ].filter(Boolean).join(";");
 %>
 <%

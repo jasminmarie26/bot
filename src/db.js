@@ -168,6 +168,10 @@ db.exec(`
     outer_image_url TEXT NOT NULL DEFAULT '',
     inner_image_opacity INTEGER NOT NULL DEFAULT 100,
     outer_image_opacity INTEGER NOT NULL DEFAULT 100,
+    inner_image_position_x INTEGER NOT NULL DEFAULT 50,
+    inner_image_position_y INTEGER NOT NULL DEFAULT 0,
+    outer_image_position_x INTEGER NOT NULL DEFAULT 50,
+    outer_image_position_y INTEGER NOT NULL DEFAULT 0,
     inner_image_repeat INTEGER NOT NULL DEFAULT 0,
     outer_image_repeat INTEGER NOT NULL DEFAULT 0,
     frame_color TEXT NOT NULL DEFAULT '',
@@ -189,6 +193,10 @@ db.exec(`
     outer_image_url TEXT NOT NULL DEFAULT '',
     inner_image_opacity INTEGER NOT NULL DEFAULT 100,
     outer_image_opacity INTEGER NOT NULL DEFAULT 100,
+    inner_image_position_x INTEGER NOT NULL DEFAULT 50,
+    inner_image_position_y INTEGER NOT NULL DEFAULT 0,
+    outer_image_position_x INTEGER NOT NULL DEFAULT 50,
+    outer_image_position_y INTEGER NOT NULL DEFAULT 0,
     inner_image_repeat INTEGER NOT NULL DEFAULT 0,
     outer_image_repeat INTEGER NOT NULL DEFAULT 0,
     censor_level TEXT NOT NULL DEFAULT 'none',
@@ -873,6 +881,10 @@ const guestbookPageDesignColumnsWereMissing =
   !guestbookPageColumns.includes("outer_image_url") ||
   !guestbookPageColumns.includes("inner_image_opacity") ||
   !guestbookPageColumns.includes("outer_image_opacity") ||
+  !guestbookPageColumns.includes("inner_image_position_x") ||
+  !guestbookPageColumns.includes("inner_image_position_y") ||
+  !guestbookPageColumns.includes("outer_image_position_x") ||
+  !guestbookPageColumns.includes("outer_image_position_y") ||
   !guestbookPageColumns.includes("inner_image_repeat") ||
   !guestbookPageColumns.includes("outer_image_repeat") ||
   !guestbookPageColumns.includes("frame_color") ||
@@ -1567,6 +1579,22 @@ if (!guestbookPageColumns.includes("outer_image_opacity")) {
   db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_opacity INTEGER NOT NULL DEFAULT 100");
 }
 
+if (!guestbookPageColumns.includes("inner_image_position_x")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_position_x INTEGER NOT NULL DEFAULT 50");
+}
+
+if (!guestbookPageColumns.includes("inner_image_position_y")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_position_y INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookPageColumns.includes("outer_image_position_x")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_position_x INTEGER NOT NULL DEFAULT 50");
+}
+
+if (!guestbookPageColumns.includes("outer_image_position_y")) {
+  db.exec("ALTER TABLE guestbook_pages ADD COLUMN outer_image_position_y INTEGER NOT NULL DEFAULT 0");
+}
+
 if (!guestbookPageColumns.includes("inner_image_repeat")) {
   db.exec("ALTER TABLE guestbook_pages ADD COLUMN inner_image_repeat INTEGER NOT NULL DEFAULT 0");
 }
@@ -1609,6 +1637,22 @@ if (!guestbookSettingsColumns.includes("inner_image_opacity")) {
 
 if (!guestbookSettingsColumns.includes("outer_image_opacity")) {
   db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_opacity INTEGER NOT NULL DEFAULT 100");
+}
+
+if (!guestbookSettingsColumns.includes("inner_image_position_x")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_position_x INTEGER NOT NULL DEFAULT 50");
+}
+
+if (!guestbookSettingsColumns.includes("inner_image_position_y")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN inner_image_position_y INTEGER NOT NULL DEFAULT 0");
+}
+
+if (!guestbookSettingsColumns.includes("outer_image_position_x")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_position_x INTEGER NOT NULL DEFAULT 50");
+}
+
+if (!guestbookSettingsColumns.includes("outer_image_position_y")) {
+  db.exec("ALTER TABLE guestbook_settings ADD COLUMN outer_image_position_y INTEGER NOT NULL DEFAULT 0");
 }
 
 if (!guestbookSettingsColumns.includes("inner_image_repeat")) {
@@ -1857,6 +1901,10 @@ db.prepare("UPDATE guestbook_settings SET inner_image_url = '' WHERE inner_image
 db.prepare("UPDATE guestbook_settings SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_opacity = 100 WHERE inner_image_opacity IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET inner_image_position_x = 50 WHERE inner_image_position_x IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET inner_image_position_y = 0 WHERE inner_image_position_y IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET outer_image_position_x = 50 WHERE outer_image_position_x IS NULL").run();
+db.prepare("UPDATE guestbook_settings SET outer_image_position_y = 0 WHERE outer_image_position_y IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_settings SET music_url = '' WHERE music_url IS NULL").run();
@@ -1865,6 +1913,10 @@ db.prepare("UPDATE guestbook_pages SET inner_image_url = '' WHERE inner_image_ur
 db.prepare("UPDATE guestbook_pages SET outer_image_url = '' WHERE outer_image_url IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET inner_image_opacity = 100 WHERE inner_image_opacity IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET outer_image_opacity = 100 WHERE outer_image_opacity IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET inner_image_position_x = 50 WHERE inner_image_position_x IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET inner_image_position_y = 0 WHERE inner_image_position_y IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET outer_image_position_x = 50 WHERE outer_image_position_x IS NULL").run();
+db.prepare("UPDATE guestbook_pages SET outer_image_position_y = 0 WHERE outer_image_position_y IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET inner_image_repeat = 0 WHERE inner_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET outer_image_repeat = 0 WHERE outer_image_repeat IS NULL").run();
 db.prepare("UPDATE guestbook_pages SET frame_color = '' WHERE frame_color IS NULL").run();
@@ -1905,6 +1957,10 @@ if (guestbookPageDesignColumnsWereMissing) {
         outer_image_url = gs.outer_image_url,
         inner_image_opacity = gs.inner_image_opacity,
         outer_image_opacity = gs.outer_image_opacity,
+        inner_image_position_x = gs.inner_image_position_x,
+        inner_image_position_y = gs.inner_image_position_y,
+        outer_image_position_x = gs.outer_image_position_x,
+        outer_image_position_y = gs.outer_image_position_y,
         inner_image_repeat = gs.inner_image_repeat,
         outer_image_repeat = gs.outer_image_repeat,
         frame_color = gs.frame_color,

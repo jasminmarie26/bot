@@ -10847,6 +10847,31 @@ body.page-guestbook-preview::after {
   width: 6rem;
 }
 
+.gb-image-position-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.gb-image-position-field {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.gb-image-position-field input {
+  width: 100%;
+}
+
+.gb-image-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
 .page-guestbook-preview .guestbook-preview-page-shell {
   margin-top: 1.15rem;
 }
@@ -12426,6 +12451,10 @@ body.gb-editor-fullscreen-open {
 
   .gb-image-field,
   .gb-editor-content-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gb-image-position-controls {
     grid-template-columns: 1fr;
   }
 

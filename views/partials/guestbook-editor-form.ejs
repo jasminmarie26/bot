@@ -8,6 +8,13 @@
     typeof flash !== "undefined" &&
     flash?.type === "success" &&
     String(flash.text || "") === "Gästebuch gespeichert.";
+  const normalizeGuestbookImagePosition = (value, fallback = 50) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.min(100, Math.max(0, Math.round(parsed)));
+  };
 %>
 
 <form
@@ -891,6 +898,31 @@
               />
             </label>
           </div>
+          <div class="gb-image-position-controls">
+            <label class="gb-image-position-field">
+              Links / rechts
+              <input
+                type="range"
+                name="inner_image_position_x"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= normalizeGuestbookImagePosition(settings.inner_image_position_x, 50) %>"
+              />
+            </label>
+
+            <label class="gb-image-position-field">
+              Hoch / runter
+              <input
+                type="range"
+                name="inner_image_position_y"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= normalizeGuestbookImagePosition(settings.inner_image_position_y, 0) %>"
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -927,6 +959,31 @@
               />
             </label>
           </div>
+          <div class="gb-image-position-controls">
+            <label class="gb-image-position-field">
+              Links / rechts
+              <input
+                type="range"
+                name="outer_image_position_x"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= normalizeGuestbookImagePosition(settings.outer_image_position_x, 50) %>"
+              />
+            </label>
+
+            <label class="gb-image-position-field">
+              Hoch / runter
+              <input
+                type="range"
+                name="outer_image_position_y"
+                min="0"
+                max="100"
+                step="1"
+                value="<%= normalizeGuestbookImagePosition(settings.outer_image_position_y, 0) %>"
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -947,6 +1004,19 @@
           />
         </div>
       </div>
+    </div>
+
+    <div class="gb-image-preview-actions">
+      <button
+        class="btn btn-secondary"
+        type="submit"
+        form="guestbook-editor-form"
+        formaction="/characters/<%= character.id %>/guestbook/edit/preview?page_id=<%= activePage.id %>"
+        formmethod="POST"
+        formtarget="guestbook-preview-<%= character.id %>"
+      >
+        Vorschau
+      </button>
     </div>
     </details>
   </section>
@@ -1325,9 +1395,13 @@
       "inner_image_url",
       "clear_inner_image",
       "inner_image_opacity",
+      "inner_image_position_x",
+      "inner_image_position_y",
       "outer_image_url",
       "clear_outer_image",
       "outer_image_opacity",
+      "outer_image_position_x",
+      "outer_image_position_y",
       "music_url"
     ]);
 
