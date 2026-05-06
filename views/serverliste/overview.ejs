@@ -77,6 +77,8 @@
             <% sectionCharacters.forEach((char, charIndex) => { %>
               <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
               <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
+              <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
+              <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
               <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= characterPage === 1 ? "" : "hidden" %>>
                 <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
                   <% if (char.serverlist_icon_url) { %>
@@ -116,28 +118,6 @@
                   </a>
                   <form
                     method="POST"
-                    action="/characters/<%= char.id %>/move"
-                    class="character-mini-move-form"
-                    data-serverlist-area-move-confirm
-                    data-serverlist-character-name="<%= char.name %>"
-                    data-serverlist-current-server="<%= char.server_id %>"
-                    data-serverlist-home-server="<%= char.festplay_home_server_id || "" %>"
-                    data-serverlist-position="<%= char.dashboard_position || "main" %>"
-                  >
-                    <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                    <input type="hidden" name="target_server_id" value="">
-                    <input type="hidden" name="target_dashboard_mode" value="">
-                    <button
-                      type="submit"
-                      class="serverlist-board-action-btn"
-                      aria-label="Charakter verschieben"
-                      title="Zielserver ausw&auml;hlen"
-                    >
-                      &harr;
-                    </button>
-                  </form>
-                  <form
-                    method="POST"
                     action="/characters/<%= char.id %>/guestbook-code-email"
                     class="character-mini-export-form"
                   >
@@ -168,6 +148,23 @@
                     </button>
                   </form>
                 </div>
+                <form
+                  method="POST"
+                  action="/characters/<%= char.id %>/move"
+                  class="serverlist-direct-move-form"
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                  <input type="hidden" name="target_server_id" value="<%= directMoveTargetServerId %>">
+                  <input type="hidden" name="target_dashboard_mode" value="main">
+                  <button
+                    type="submit"
+                    class="serverlist-direct-move-btn"
+                    aria-label="<%= char.name %> nach <%= directMoveTargetLabel %> verschieben"
+                    title="Nach <%= directMoveTargetLabel %> verschieben"
+                  >
+                    &harr;
+                  </button>
+                </form>
               </article>
             <% }) %>
           </div>

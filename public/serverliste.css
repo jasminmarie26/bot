@@ -568,6 +568,7 @@
 
 .serverlist-board-card {
   min-height: 0;
+  min-width: 0;
   border-radius: 18px;
   overflow: hidden;
 }
@@ -712,7 +713,7 @@
 .serverlist-board-character-list {
   display: grid;
   gap: 0.48rem;
-  padding: 0.65rem;
+  padding: 0.65rem 2.55rem 0.65rem 0.65rem;
 }
 
 .serverlist-board-character[hidden] {
@@ -720,11 +721,13 @@
 }
 
 .serverlist-board-character {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.62rem;
   min-height: 3.55rem;
+  margin-right: 0;
   padding: 0.55rem 0.62rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
   border-radius: 14px;
@@ -828,6 +831,39 @@
   color: color-mix(in srgb, var(--danger) 82%, white 18%);
 }
 
+.serverlist-direct-move-form {
+  position: absolute;
+  top: 50%;
+  right: -2.15rem;
+  margin: 0;
+  transform: translateY(-50%);
+}
+
+.serverlist-direct-move-btn {
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 48%, var(--panel-edge));
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 22%, transparent), color-mix(in srgb, black 14%, transparent));
+  color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 84%, white 16%);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 22px -18px var(--panel-shadow);
+}
+
+.serverlist-direct-move-btn:hover,
+.serverlist-direct-move-btn:focus-visible {
+  background: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 20%, transparent);
+  color: var(--text);
+}
+
 .serverlist-board-empty {
   display: grid;
   place-items: center;
@@ -841,13 +877,27 @@
 
 .serverlist-board-pagination {
   display: flex;
-  justify-content: center;
+  max-width: 100%;
+  justify-content: flex-start;
   gap: 0.45rem;
   padding: 0 0.85rem 0.95rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.serverlist-board-pagination::-webkit-scrollbar {
+  height: 0.42rem;
+}
+
+.serverlist-board-pagination::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-edge) 72%, var(--accent) 28%);
 }
 
 .serverlist-board-page-btn {
   display: inline-grid;
+  flex: 0 0 auto;
   place-items: center;
   min-width: 2rem;
   height: 2rem;
@@ -1076,6 +1126,14 @@
   .serverlist-board-character {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 0.58rem;
+  }
+
+  .serverlist-board-character-list {
+    padding-right: 2.25rem;
+  }
+
+  .serverlist-direct-move-form {
+    right: -1.95rem;
   }
 
   .serverlist-board-character-actions {
