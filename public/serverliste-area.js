@@ -190,10 +190,9 @@
         state.characters.forEach((character) => {
           character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
         });
-        const visiblePageCount = 5;
-        const visibleStart = currentPage <= visiblePageCount
-          ? 1
-          : Math.max(1, currentPage - visiblePageCount + 1);
+        const visiblePageCount = 9;
+        const lastVisibleStart = Math.max(1, state.maxPage - visiblePageCount + 1);
+        const visibleStart = Math.min(lastVisibleStart, Math.max(1, currentPage));
         const visibleEnd = Math.min(state.maxPage, visibleStart + visiblePageCount - 1);
 
         state.pageButtons.forEach((button) => {

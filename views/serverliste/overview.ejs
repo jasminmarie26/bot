@@ -181,7 +181,7 @@
                 &lsaquo;
               </button>
               <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
-                <% const isInitialVisiblePageButton = pageNumber <= Math.min(5, serverlistCharacterPageCount); %>
+                <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistCharacterPageCount); %>
                 <button
                   type="button"
                   class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
