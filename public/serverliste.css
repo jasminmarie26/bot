@@ -756,7 +756,7 @@
 .serverlist-board-character {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(7.5rem, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.52rem;
   min-height: 3.55rem;
@@ -813,6 +813,8 @@
 .serverlist-board-character-copy {
   display: grid;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   color: inherit;
   text-decoration: none;
 }
@@ -823,11 +825,13 @@
 }
 
 .serverlist-board-character-copy strong {
+  display: block;
+  max-width: 100%;
   color: var(--text);
   font-size: 0.8rem;
   line-height: 1.18;
-  overflow-wrap: normal;
-  word-break: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   hyphens: none;
   white-space: normal;
 }
@@ -916,15 +920,19 @@
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 2;
+  z-index: 6;
   display: flex;
   flex: 0 0 auto;
   max-width: 100%;
   justify-content: flex-start;
   gap: 0.45rem;
   padding: 0.2rem 0.85rem 0.78rem;
-  border-top: 0;
-  background: transparent;
+  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 54%, transparent);
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--panel-bg) 82%, transparent) 28%),
+    color-mix(in srgb, var(--panel-bg) 74%, transparent);
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -943,12 +951,13 @@
   padding: 0 0.55rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, white 4%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
   color: var(--muted);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 900;
   cursor: pointer;
+  box-shadow: 0 14px 24px -22px var(--panel-shadow);
 }
 
 .serverlist-board-page-btn:hover,
@@ -1183,7 +1192,7 @@
   }
 
   .serverlist-board-character {
-    grid-template-columns: auto minmax(6.8rem, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 0.48rem;
   }
 

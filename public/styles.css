@@ -13009,12 +13009,15 @@ body.gb-editor-fullscreen-open {
 }
 
 .character-mini-name {
+  display: inline-block;
+  max-width: min(12rem, 42vw);
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 
 .backup-view-tabs {
