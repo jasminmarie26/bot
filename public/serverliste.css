@@ -714,6 +714,10 @@
   padding: 0.85rem;
 }
 
+.serverlist-board-character[hidden] {
+  display: none !important;
+}
+
 .serverlist-board-character {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -833,6 +837,53 @@
   border-radius: 20px;
   color: var(--muted);
   text-align: center;
+}
+
+.serverlist-board-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.85rem 0.95rem;
+}
+
+.serverlist-board-page-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, white 4%, transparent);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.serverlist-board-page-btn:hover,
+.serverlist-board-page-btn:focus-visible,
+.serverlist-board-page-btn.is-active {
+  border-color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 56%, var(--panel-edge));
+  background: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 18%, transparent);
+  color: var(--text);
+}
+
+.serverlist-board-page-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.serverlist-board-page-btn:disabled:hover {
+  border-color: color-mix(in srgb, var(--panel-edge) 72%, transparent);
+  background: color-mix(in srgb, white 4%, transparent);
+  color: var(--muted);
+}
+
+.serverlist-board-page-arrow {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .serverlist-stage-column {

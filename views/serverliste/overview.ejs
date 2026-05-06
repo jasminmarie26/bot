@@ -27,6 +27,8 @@
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
+      <% const serverlistCharacterPageSize = 5; %>
+      <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" open>
         <summary class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
@@ -71,10 +73,11 @@
             <p>Noch keine Charaktere in <%= section.overview_title %>.</p>
           </div>
         <% } else { %>
-          <div class="serverlist-board-character-list">
-            <% sectionCharacters.forEach((char) => { %>
+          <div class="serverlist-board-character-list" data-serverlist-character-pages>
+            <% sectionCharacters.forEach((char, charIndex) => { %>
               <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
-              <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>">
+              <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
+              <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= characterPage === 1 ? "" : "hidden" %>>
                 <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
                   <% if (char.serverlist_icon_url) { %>
                     <img
@@ -169,6 +172,38 @@
               </article>
             <% }) %>
           </div>
+          <% if (serverlistCharacterPageCount > 1) { %>
+            <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten">
+              <button
+                type="button"
+                class="serverlist-board-page-btn serverlist-board-page-arrow"
+                data-serverlist-page-step="-1"
+                aria-label="Vorherige Charakterseite anzeigen"
+                disabled
+              >
+                &lsaquo;
+              </button>
+              <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
+                <button
+                  type="button"
+                  class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
+                  data-serverlist-page-button="<%= pageNumber %>"
+                  aria-label="Seite <%= pageNumber %> anzeigen"
+                  aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+                >
+                  <%= pageNumber %>
+                </button>
+              <% } %>
+              <button
+                type="button"
+                class="serverlist-board-page-btn serverlist-board-page-arrow"
+                data-serverlist-page-step="1"
+                aria-label="N&auml;chste Charakterseite anzeigen"
+              >
+                &rsaquo;
+              </button>
+            </nav>
+          <% } %>
         <% } %>
       </details>
     <% }) %>

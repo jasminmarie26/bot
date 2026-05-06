@@ -92,7 +92,57 @@
       });
     };
 
+    const initCharacterPagination = () => {
+      const cards = Array.from(document.querySelectorAll(".serverlist-board-card"));
+      cards.forEach((card) => {
+        const characters = Array.from(card.querySelectorAll("[data-serverlist-character-page]"));
+        const pagination = card.querySelector(".serverlist-board-pagination");
+        if (!characters.length || !pagination) {
+          return;
+        }
+
+        const pageButtons = Array.from(pagination.querySelectorAll("[data-serverlist-page-button]"));
+        const stepButtons = Array.from(pagination.querySelectorAll("[data-serverlist-page-step]"));
+        const pages = pageButtons
+          .map((button) => Number(button.dataset.serverlistPageButton))
+          .filter((page) => Number.isInteger(page) && page > 0);
+        const maxPage = Math.max(...pages, 1);
+        let currentPage = 1;
+
+        const showPage = (nextPage) => {
+          currentPage = Math.min(maxPage, Math.max(1, Number(nextPage) || 1));
+          characters.forEach((character) => {
+            character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
+          });
+          pageButtons.forEach((button) => {
+            const isActive = Number(button.dataset.serverlistPageButton) === currentPage;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-current", isActive ? "page" : "false");
+          });
+          stepButtons.forEach((button) => {
+            const step = Number(button.dataset.serverlistPageStep) || 0;
+            button.disabled = (step < 0 && currentPage <= 1) || (step > 0 && currentPage >= maxPage);
+          });
+        };
+
+        pageButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            showPage(Number(button.dataset.serverlistPageButton));
+          });
+        });
+
+        stepButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            showPage(currentPage + (Number(button.dataset.serverlistPageStep) || 0));
+          });
+        });
+
+        showPage(1);
+      });
+    };
+
     initOverviewAccordionState();
+    initCharacterPagination();
 
     if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
