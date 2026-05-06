@@ -133,7 +133,7 @@
     </div>
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Chat Navigation">
-      <%- include("../partials/serverlist-area-menu") %>
+      <%- include("../partials/serverlist-area-menu", { serverlistAreaMenuMode: "servers", serverlistAreaMenuNewTab: true }) %>
       <a
         href="<%= chatRoomListHref %>"
         target="_blank"

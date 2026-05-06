@@ -27,7 +27,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Festspiel Navigation">
-      <%- include("../../partials/serverlist-area-menu") %>
+      <%- include("../../partials/serverlist-area-menu", { serverlistAreaMenuMode: "servers", serverlistAreaMenuNewTab: true }) %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitglieder</a>
       <a href="/characters/<%= character.id %>/festplays/public" target="_blank" rel="noopener noreferrer">Festspiele</a>
       <a

@@ -56,7 +56,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
       <nav class="rp-menu" aria-label="Charakter Navigation">
-        <%- include("../partials/serverlist-area-menu") %>
+        <%- include("../partials/serverlist-area-menu", { serverlistAreaMenuMode: "servers", serverlistAreaMenuNewTab: true }) %>
         <a href="/members">Mitglieder</a>
         <% if (character.server_id === "free-rp" || character.server_id === "erp") { %>
           <a

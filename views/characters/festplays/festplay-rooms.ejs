@@ -41,7 +41,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Festspiel-Raumliste Navigation">
-      <%- include("../../partials/serverlist-area-menu") %>
+      <%- include("../../partials/serverlist-area-menu", { serverlistAreaMenuMode: "servers", serverlistAreaMenuNewTab: true }) %>
       <% if (festplayRoomIsOwner) { %>
         <a
           href="/characters/<%= character.id %>/festplays?selected_festplay=<%= festplay.id %>&tab=raeume#festplay-selected-editor"

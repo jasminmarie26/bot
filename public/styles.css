@@ -9412,13 +9412,13 @@ body.theme-atari .guestbook-entry-panel {
 
 .guestbook-page-preview[class*="gb-theme-"] .bb-image-left {
   width: auto;
-  max-width: 120px;
+  max-width: 100%;
   margin: 0 0.35rem 0.25rem 0;
 }
 
 .guestbook-page-preview[class*="gb-theme-"] .bb-image-right {
   width: auto;
-  max-width: 120px;
+  max-width: 100%;
   margin: 0 0 0.25rem 0.35rem;
 }
 
@@ -9985,14 +9985,14 @@ body.theme-atari .guestbook-entry-panel {
 .bb-image-left {
   float: left;
   width: auto;
-  max-width: 120px;
+  max-width: 100%;
   margin: 0 0.35rem 0.25rem 0;
 }
 
 .bb-image-right {
   float: right;
   width: auto;
-  max-width: 120px;
+  max-width: 100%;
   margin: 0 0 0.25rem 0.35rem;
 }
 

@@ -10464,6 +10464,73 @@ function decodeBasicHtmlEntities(value) {
     .replace(/&gt;/gi, ">");
 }
 
+function getBbcodeAttributeValue(rawAttributes, attributeNames = []) {
+  const attributeText = decodeBasicHtmlEntities(rawAttributes);
+  for (const attributeName of attributeNames) {
+    const safeAttributeName = String(attributeName || "").replace(/[^a-z0-9_-]/gi, "");
+    if (!safeAttributeName) {
+      continue;
+    }
+
+    const match = attributeText.match(new RegExp(`\\b${safeAttributeName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s\\]]+))`, "i"));
+    if (match) {
+      return String(match[1] ?? match[2] ?? match[3] ?? "").trim();
+    }
+  }
+  return "";
+}
+
+function sanitizeBbcodeImageDimension(rawValue, options = {}) {
+  const value = decodeBasicHtmlEntities(rawValue).trim().replace(",", ".");
+  if (!value) {
+    return "";
+  }
+
+  const maxPx = Number.isInteger(options.maxPx) && options.maxPx > 0 ? options.maxPx : 1600;
+  const pixelMatch = value.match(/^(\d{1,4})(?:\s*px)?$/i);
+  if (pixelMatch) {
+    const pixels = Math.min(maxPx, Math.max(1, Number.parseInt(pixelMatch[1], 10)));
+    return `${pixels}px`;
+  }
+
+  const percentMatch = value.match(/^(\d{1,3}(?:\.\d{1,2})?)\s*%$/);
+  if (percentMatch) {
+    const percent = Math.min(100, Math.max(1, Number.parseFloat(percentMatch[1])));
+    return `${percent}%`;
+  }
+
+  return "";
+}
+
+function parseBbcodeImageRenderAttributes(rawAttributes) {
+  const attributeText = decodeBasicHtmlEntities(rawAttributes);
+  const floatMatch = attributeText.match(/\bfloat\s*=\s*["']?\s*(left|right)\s*["']?/i);
+  const floatValue = floatMatch ? floatMatch[1].toLowerCase() : "";
+  const widthValue = sanitizeBbcodeImageDimension(
+    getBbcodeAttributeValue(attributeText, ["width", "w"]) ||
+      getBbcodeAttributeValue(attributeText, ["size"]),
+    { maxPx: 1800 }
+  );
+  const heightValue = sanitizeBbcodeImageDimension(
+    getBbcodeAttributeValue(attributeText, ["height", "h"]),
+    { maxPx: 1800 }
+  );
+  const styleParts = [];
+
+  if (widthValue) {
+    styleParts.push(`width:${widthValue}`);
+  }
+  if (heightValue) {
+    styleParts.push(`height:${heightValue}`);
+    styleParts.push("object-fit:contain");
+  }
+
+  return {
+    floatValue,
+    styleAttribute: styleParts.length ? ` style="${escapeHtml(styleParts.join(";"))}"` : ""
+  };
+}
+
 function extractYouTubeVideoId(rawValue) {
   const value = decodeBasicHtmlEntities(String(rawValue || "").trim());
   if (!value) return "";
@@ -11066,13 +11133,11 @@ function renderGuestbookBbcode(rawContent, options = {}) {
     const safeUrl = sanitizeBbcodeImageUrl(rawUrl);
     if (!safeUrl) return "";
 
-    const attributeText = String(rawAttributes || "");
-    const floatMatch = attributeText.match(/\bfloat\s*=\s*["']?\s*(left|right)\s*["']?/i);
-    const floatValue = floatMatch ? floatMatch[1].toLowerCase() : "";
-    const floatClass = floatValue ? ` bb-image-${floatValue}` : "";
+    const imageAttributes = parseBbcodeImageRenderAttributes(rawAttributes);
+    const floatClass = imageAttributes.floatValue ? ` bb-image-${imageAttributes.floatValue}` : "";
     const directSrc = escapeHtml(toGuestbookImageSrc(safeUrl));
     const fallbackSrc = escapeHtml(toGuestbookFallbackImageSrc(safeUrl));
-    return `<img class="bb-image${floatClass}" src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" />`;
+    return `<img class="bb-image${floatClass}"${imageAttributes.styleAttribute} src="${directSrc}" data-guestbook-image-fallback="1" data-fallback-src="${fallbackSrc}" alt="Bild" />`;
   });
 
   inlineTags.forEach(([bbTag, htmlTag]) => {
@@ -18551,7 +18616,8 @@ app.get("/dashboard", requireAuth, (req, res) => {
     erpMoveAllowed,
     serverlistOverviewStorageKey: getServerlistOverviewStorageKey(req),
     openLarpSection,
-    ...getServerListPageAssets(["/serverliste-area.js"])
+    ...getServerListPageAssets(["/serverliste-area.js"]),
+    pageClass: "page-serverliste page-serverliste-overview"
   });
 });
 
@@ -18589,7 +18655,8 @@ app.get("/dashboard/areas/overview", requireAuth, (req, res) => {
     overviewSections,
     erpMoveAllowed,
     serverlistOverviewStorageKey: getServerlistOverviewStorageKey(req),
-    ...getServerListPageAssets(["/serverliste-area.js"])
+    ...getServerListPageAssets(["/serverliste-area.js"]),
+    pageClass: "page-serverliste page-serverliste-overview"
   });
 });
 

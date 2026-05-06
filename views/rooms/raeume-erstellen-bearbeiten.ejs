@@ -32,7 +32,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Raum erstellen Navigation">
-      <%- include("../partials/serverlist-area-menu") %>
+      <%- include("../partials/serverlist-area-menu", { serverlistAreaMenuMode: "servers", serverlistAreaMenuNewTab: true }) %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
         class="live-updates-nav-link"

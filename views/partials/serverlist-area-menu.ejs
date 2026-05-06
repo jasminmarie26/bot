@@ -1,3 +1,19 @@
+<%
+  const areaMenuMode = String(typeof serverlistAreaMenuMode !== "undefined" ? serverlistAreaMenuMode || "" : "").trim().toLowerCase();
+  const areaMenuOpenInNewTab = Boolean(typeof serverlistAreaMenuNewTab !== "undefined" && serverlistAreaMenuNewTab);
+  const areaMenuLinks = areaMenuMode === "servers"
+    ? [
+        { href: "/dashboard/areas/free-rp", label: "Free-RP" },
+        { href: "/dashboard/areas/erp", label: "ERP" }
+      ]
+    : [
+        { href: "/dashboard", label: "Rollenspiel" },
+        { href: "/dashboard/larp", label: "LARP" }
+      ];
+  const areaMenuTargetAttributes = areaMenuOpenInNewTab
+    ? ' target="_blank" rel="noopener noreferrer"'
+    : "";
+%>
 <div class="rp-dropdown topbar-area-menu">
   <button
     type="button"
@@ -8,7 +24,8 @@
     Serverliste
   </button>
   <div class="rp-dropdown-menu topbar-area-menu-list" role="menu">
-    <a href="/dashboard" role="menuitem">Rollenspiel</a>
-    <a href="/dashboard/larp" role="menuitem">LARP</a>
+    <% areaMenuLinks.forEach((link) => { %>
+      <a href="<%= link.href %>" role="menuitem"<%- areaMenuTargetAttributes %>><%= link.label %></a>
+    <% }) %>
   </div>
 </div>
