@@ -27,10 +27,10 @@
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
-      <% const serverlistCharacterPageSize = 5; %>
+      <% const serverlistCharacterPageSize = 6; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
-      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" <%= sectionIndex === 0 ? "open" : "" %>>
+      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" <%= sectionIndex === 0 ? "open" : "" %>>
         <summary class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
             <span class="serverlist-board-label">Rollenspiel</span>

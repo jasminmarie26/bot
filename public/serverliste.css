@@ -572,6 +572,7 @@
 }
 
 .serverlist-board-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -726,6 +727,10 @@
   align-content: start;
   gap: 0.48rem;
   padding: 0.65rem 2.55rem 0.65rem 0.65rem;
+}
+
+.serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
+  padding-bottom: 4.25rem;
 }
 
 .serverlist-board-card[open] .serverlist-board-character-list {
@@ -907,6 +912,11 @@
 }
 
 .serverlist-board-pagination {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
   flex: 0 0 auto;
   max-width: 100%;
