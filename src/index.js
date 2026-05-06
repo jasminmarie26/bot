@@ -3071,6 +3071,20 @@ function canUseGuestbookPreviewSessionState(previewState, characterId, requested
   return Number(previewState.page_id) === parsedRequestedPageId;
 }
 
+function getGuestbookPreviewStateSavedAt(previewState) {
+  const savedAt = Number(previewState?.saved_at);
+  return Number.isFinite(savedAt) && savedAt > 0 ? savedAt : 0;
+}
+
+function selectLatestGuestbookPreviewState(previewStates) {
+  return (Array.isArray(previewStates) ? previewStates : [])
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        getGuestbookPreviewStateSavedAt(right) - getGuestbookPreviewStateSavedAt(left)
+    )[0] || null;
+}
+
 function getGuestbookPreviewCacheState(token, characterId, requestedPageId = null) {
   const normalizedToken = normalizeGuestbookPreviewToken(token);
   if (!normalizedToken) {
@@ -3090,60 +3104,6 @@ function getGuestbookPreviewCacheState(token, characterId, requestedPageId = nul
   return canUseGuestbookPreviewSessionState(previewState, characterId, requestedPageId)
     ? previewState
     : null;
-}
-
-function getGuestbookPreviewSessionState(req, characterId, requestedPageId = null, mode = "") {
-  const normalizedMode = String(mode || "").trim().toLowerCase();
-  const explicitPreview = req?.session?.guestbookPreview || null;
-  const draftPreview = req?.session?.guestbookPreviewDraft || null;
-
-  if (normalizedMode === "explicit") {
-    return canUseGuestbookPreviewSessionState(explicitPreview, characterId, requestedPageId)
-      ? explicitPreview
-      : null;
-  }
-
-  if (normalizedMode === "draft") {
-    return canUseGuestbookPreviewSessionState(draftPreview, characterId, requestedPageId)
-      ? draftPreview
-      : null;
-  }
-
-  if (canUseGuestbookPreviewSessionState(explicitPreview, characterId, requestedPageId)) {
-    return explicitPreview;
-  }
-
-  if (canUseGuestbookPreviewSessionState(draftPreview, characterId, requestedPageId)) {
-    return draftPreview;
-  }
-
-  return null;
-}
-
-function getGuestbookPreviewOriginSessionState(req, characterId, mode = "") {
-  const normalizedMode = String(mode || "").trim().toLowerCase();
-  const explicitPreview = req?.session?.guestbookPreview || null;
-  const draftPreview = req?.session?.guestbookPreviewDraft || null;
-  const matchesCharacter = (previewState) =>
-    Boolean(previewState) && Number(previewState.character_id) === Number(characterId);
-
-  if (normalizedMode === "explicit") {
-    return matchesCharacter(explicitPreview) ? explicitPreview : null;
-  }
-
-  if (normalizedMode === "draft") {
-    return matchesCharacter(draftPreview) ? draftPreview : null;
-  }
-
-  if (matchesCharacter(explicitPreview)) {
-    return explicitPreview;
-  }
-
-  if (matchesCharacter(draftPreview)) {
-    return draftPreview;
-  }
-
-  return null;
 }
 
 function clearGuestbookPreviewSessionState(req, characterId) {
@@ -22460,8 +22420,18 @@ app.get("/characters/:id/guestbook/edit/preview", requireAuth, (req, res) => {
   const previewMode = String(req.query.preview_mode || "").trim().toLowerCase();
   const previewToken = normalizeGuestbookPreviewToken(req.query.preview_token);
   const cachedPreview = getGuestbookPreviewCacheState(previewToken, id, requestedPageId);
-  const storedPreview = cachedPreview || getGuestbookPreviewSessionState(req, id, requestedPageId, previewMode);
-  const previewOriginState = cachedPreview || getGuestbookPreviewOriginSessionState(req, id, previewMode);
+  const explicitPreview = req.session?.guestbookPreview || null;
+  const draftPreview = req.session?.guestbookPreviewDraft || null;
+  const storedPreview = selectLatestGuestbookPreviewState([
+    cachedPreview,
+    canUseGuestbookPreviewSessionState(explicitPreview, id, requestedPageId) ? explicitPreview : null,
+    canUseGuestbookPreviewSessionState(draftPreview, id, requestedPageId) ? draftPreview : null
+  ]);
+  const previewOriginState = selectLatestGuestbookPreviewState([
+    cachedPreview,
+    Number(explicitPreview?.character_id) === id ? explicitPreview : null,
+    Number(draftPreview?.character_id) === id ? draftPreview : null
+  ]);
   const canUseStoredPreview = Boolean(storedPreview);
   const previewDraftSource = storedPreview || previewOriginState;
   const previewTitleUpdates = readGuestbookPageDraftUpdates(
