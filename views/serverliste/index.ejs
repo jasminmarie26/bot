@@ -4,22 +4,20 @@
   <div>
     <h1>Serverliste</h1>
   </div>
+  <a
+    class="serverlist-larp-switch"
+    href="/dashboard/larp"
+    data-serverlist-larp-slide-link
+    aria-label="Zum LARP Bereich wechseln"
+  >
+    <span>zum LARP</span>
+    <span class="serverlist-larp-switch-arrow" aria-hidden="true"></span>
+  </a>
 </section>
 
 <%- include("overview", {
   serverlistOverviewEmbedded: true,
   dashboardOverviewReturnTargetOverride: "/dashboard"
 }) %>
-
-<section class="serverlist-larp-strip">
-  <div>
-    <span class="serverlist-board-label">Live-Rollenspiel</span>
-    <h2>LARP Bereich</h2>
-    <p class="muted"><%= larpSection.description %></p>
-  </div>
-  <a class="btn btn-secondary" href="/dashboard/larp">
-    LARP-Bereich &ouml;ffnen
-  </a>
-</section>
 
 <%- include("../partials/end") %>
