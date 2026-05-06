@@ -1,5 +1,5 @@
 (() => {
-  document.addEventListener("DOMContentLoaded", () => {
+  const bootServerlistArea = () => {
     const modal = document.getElementById("serverlist-area-move-modal");
     const note = modal ? modal.querySelector(".serverlist-confirm-note") : null;
     const freeButton = document.getElementById("serverlist-area-move-free");
@@ -382,5 +382,11 @@
         closeModal();
       }
     });
-  });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootServerlistArea, { once: true });
+  } else {
+    bootServerlistArea();
+  }
 })();

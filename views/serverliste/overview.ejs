@@ -180,12 +180,14 @@
                 &lsaquo;
               </button>
               <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
+                <% const isInitialVisiblePageButton = pageNumber <= Math.min(3, serverlistCharacterPageCount); %>
                 <button
                   type="button"
                   class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
                   data-serverlist-page-button="<%= pageNumber %>"
                   aria-label="Seite <%= pageNumber %> anzeigen"
                   aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+                  <%= isInitialVisiblePageButton ? "" : "hidden" %>
                 >
                   <%= pageNumber %>
                 </button>
