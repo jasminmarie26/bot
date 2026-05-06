@@ -20,16 +20,16 @@
   class="serverlist-block serverlist-board"
   data-serverlist-overview-root
   data-serverlist-overview-storage-key="<%= dashboardOverviewStorageKey %>"
-  data-serverlist-overview-default-open="free-rp,erp"
+  data-serverlist-overview-default-open="free-rp"
 >
   <div class="serverlist-server-grid">
-    <% regularSections.forEach((section) => { %>
+    <% regularSections.forEach((section, sectionIndex) => { %>
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
       <% const serverlistCharacterPageSize = 5; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
-      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" open>
+      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" <%= sectionIndex === 0 ? "open" : "" %>>
         <summary class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
             <span class="serverlist-board-label"><%= isErpSection ? "Privater Bereich" : "Rollenspiel" %></span>

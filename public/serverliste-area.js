@@ -81,6 +81,17 @@
 
       overviewSections.forEach((section) => {
         section.addEventListener("toggle", () => {
+          if (section.open && section.classList.contains("serverlist-board-card")) {
+            overviewSections.forEach((otherSection) => {
+              if (
+                otherSection !== section &&
+                otherSection.open &&
+                otherSection.classList.contains("serverlist-board-card")
+              ) {
+                otherSection.open = false;
+              }
+            });
+          }
           scheduleAccordionSync();
         });
       });
