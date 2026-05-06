@@ -27,41 +27,44 @@
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
-      <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
-        <header class="serverlist-board-card-head">
+      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" open>
+        <summary class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
             <span class="serverlist-board-label"><%= isErpSection ? "Privater Bereich" : "Rollenspiel" %></span>
             <span class="serverlist-board-count"><%= sectionCharacters.length %> Charakter<%= sectionCharacters.length === 1 ? "" : "e" %></span>
           </div>
           <div class="serverlist-board-title-row">
             <h2><%= section.overview_title %></h2>
-            <div class="serverlist-board-actions" data-serverlist-overview-actions>
-              <a
-                class="serverlist-board-icon-btn"
-                href="/characters/new?server=<%= sectionServerId %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
-                aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-                title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
-              >
-                +
-              </a>
-              <form
-                method="POST"
-                action="/dashboard/areas/<%= sectionServerId %>/guestbook-code-email"
-                class="serverlist-export-all-form"
-              >
-                <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                <button
-                  type="submit"
+            <div class="serverlist-board-title-tools">
+              <div class="serverlist-board-actions" data-serverlist-overview-actions>
+                <a
                   class="serverlist-board-icon-btn"
-                  aria-label="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
-                  title="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+                  href="/characters/new?server=<%= sectionServerId %>&return_to=<%= encodeURIComponent(dashboardOverviewReturnTarget) %>"
+                  aria-label="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
+                  title="Charakter in <%= section.overview_title %> hinzuf&uuml;gen"
                 >
-                  &#10003;
-                </button>
-              </form>
+                  +
+                </a>
+                <form
+                  method="POST"
+                  action="/dashboard/areas/<%= sectionServerId %>/guestbook-code-email"
+                  class="serverlist-export-all-form"
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                  <button
+                    type="submit"
+                    class="serverlist-board-icon-btn"
+                    aria-label="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+                    title="G&auml;steb&uuml;cher aus <%= section.overview_title %> per E-Mail senden"
+                  >
+                    &#10003;
+                  </button>
+                </form>
+              </div>
+              <span class="serverlist-board-toggle-icon" aria-hidden="true"></span>
             </div>
           </div>
-        </header>
+        </summary>
 
         <% if (!sectionCharacters.length) { %>
           <div class="serverlist-board-empty">
@@ -167,7 +170,7 @@
             <% }) %>
           </div>
         <% } %>
-      </section>
+      </details>
     <% }) %>
   </div>
 

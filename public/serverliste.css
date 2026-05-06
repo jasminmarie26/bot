@@ -566,9 +566,13 @@
 }
 
 .serverlist-board-card {
-  min-height: 32rem;
+  min-height: 0;
   border-radius: 24px;
   overflow: hidden;
+}
+
+.serverlist-board-card[open] {
+  min-height: 32rem;
 }
 
 .serverlist-board-card.is-erp {
@@ -580,6 +584,7 @@
 }
 
 .serverlist-board-card-head {
+  list-style: none;
   min-height: 8.6rem;
   padding: 1.35rem;
   display: flex;
@@ -590,6 +595,15 @@
   background:
     radial-gradient(340px 180px at 14% 14%, color-mix(in srgb, var(--serverlist-local-accent) 28%, transparent), transparent 72%),
     linear-gradient(135deg, color-mix(in srgb, var(--serverlist-local-accent) 18%, transparent), transparent 56%);
+  cursor: pointer;
+}
+
+.serverlist-board-card-head::-webkit-details-marker {
+  display: none;
+}
+
+.serverlist-board-card:not([open]) .serverlist-board-card-head {
+  border-bottom: 0;
 }
 
 .serverlist-board-meta,
@@ -648,6 +662,27 @@
 
 .serverlist-board-actions {
   gap: 0.5rem;
+}
+
+.serverlist-board-title-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.serverlist-board-toggle-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 78%, white 22%);
+  transform: rotate(225deg);
+  transition: transform 180ms ease;
+}
+
+.serverlist-board-card:not([open]) .serverlist-board-toggle-icon {
+  transform: rotate(45deg);
 }
 
 .serverlist-board-icon-btn {
