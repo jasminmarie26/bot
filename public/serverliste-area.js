@@ -188,6 +188,14 @@
           character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
         });
         state.pageButtons.forEach((button) => {
+          const pageNumber = Number(button.dataset.serverlistPageButton);
+          const visibleStart = Math.min(
+            Math.max(1, currentPage - 1),
+            Math.max(1, state.maxPage - 2)
+          );
+          const visibleEnd = Math.min(state.maxPage, visibleStart + 2);
+          const isVisible = pageNumber >= visibleStart && pageNumber <= visibleEnd;
+          button.hidden = !isVisible;
           const isActive = Number(button.dataset.serverlistPageButton) === currentPage;
           button.classList.toggle("is-active", isActive);
           button.setAttribute("aria-current", isActive ? "page" : "false");
