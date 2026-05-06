@@ -109,51 +109,72 @@
     };
 
     const initCharacterPagination = () => {
-      const cards = Array.from(document.querySelectorAll(".serverlist-board-card"));
-      cards.forEach((card) => {
-        const characters = Array.from(card.querySelectorAll("[data-serverlist-character-page]"));
-        const pagination = card.querySelector(".serverlist-board-pagination");
-        if (!characters.length || !pagination) {
-          return;
-        }
+      const root = document.querySelector("[data-serverlist-overview-root]");
+      if (!root) {
+        return;
+      }
 
-        const pageButtons = Array.from(pagination.querySelectorAll("[data-serverlist-page-button]"));
-        const stepButtons = Array.from(pagination.querySelectorAll("[data-serverlist-page-step]"));
+      const getCardState = (card) => {
+        const pageButtons = Array.from(card.querySelectorAll("[data-serverlist-page-button]"));
         const pages = pageButtons
           .map((button) => Number(button.dataset.serverlistPageButton))
           .filter((page) => Number.isInteger(page) && page > 0);
-        const maxPage = Math.max(...pages, 1);
-        let currentPage = 1;
-
-        const showPage = (nextPage) => {
-          currentPage = Math.min(maxPage, Math.max(1, Number(nextPage) || 1));
-          characters.forEach((character) => {
-            character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
-          });
-          pageButtons.forEach((button) => {
-            const isActive = Number(button.dataset.serverlistPageButton) === currentPage;
-            button.classList.toggle("is-active", isActive);
-            button.setAttribute("aria-current", isActive ? "page" : "false");
-          });
-          stepButtons.forEach((button) => {
-            const step = Number(button.dataset.serverlistPageStep) || 0;
-            button.disabled = (step < 0 && currentPage <= 1) || (step > 0 && currentPage >= maxPage);
-          });
+        const currentButton = pageButtons.find((button) => button.classList.contains("is-active"));
+        return {
+          pageButtons,
+          stepButtons: Array.from(card.querySelectorAll("[data-serverlist-page-step]")),
+          characters: Array.from(card.querySelectorAll("[data-serverlist-character-page]")),
+          currentPage: Number(currentButton?.dataset.serverlistPageButton) || 1,
+          maxPage: Math.max(...pages, 1)
         };
+      };
 
-        pageButtons.forEach((button) => {
-          button.addEventListener("click", () => {
-            showPage(Number(button.dataset.serverlistPageButton));
-          });
+      const showPage = (card, nextPage) => {
+        const state = getCardState(card);
+        if (!state.characters.length || !state.pageButtons.length) {
+          return;
+        }
+
+        const currentPage = Math.min(state.maxPage, Math.max(1, Number(nextPage) || 1));
+        state.characters.forEach((character) => {
+          character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
         });
-
-        stepButtons.forEach((button) => {
-          button.addEventListener("click", () => {
-            showPage(currentPage + (Number(button.dataset.serverlistPageStep) || 0));
-          });
+        state.pageButtons.forEach((button) => {
+          const isActive = Number(button.dataset.serverlistPageButton) === currentPage;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-current", isActive ? "page" : "false");
         });
+        state.stepButtons.forEach((button) => {
+          const step = Number(button.dataset.serverlistPageStep) || 0;
+          button.disabled = (step < 0 && currentPage <= 1) || (step > 0 && currentPage >= state.maxPage);
+        });
+      };
 
-        showPage(1);
+      root.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-serverlist-page-button], [data-serverlist-page-step]");
+        if (!button) {
+          return;
+        }
+
+        const card = button.closest(".serverlist-board-card");
+        if (!card) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (button.dataset.serverlistPageButton) {
+          showPage(card, Number(button.dataset.serverlistPageButton));
+          return;
+        }
+
+        const state = getCardState(card);
+        showPage(card, state.currentPage + (Number(button.dataset.serverlistPageStep) || 0));
+      });
+
+      root.querySelectorAll(".serverlist-board-card").forEach((card) => {
+        showPage(card, 1);
       });
     };
 

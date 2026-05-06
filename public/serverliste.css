@@ -657,7 +657,7 @@
 .serverlist-stage-character-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
+  gap: 0.14rem;
 }
 
 .serverlist-board-actions {
@@ -722,13 +722,20 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.62rem;
   min-height: 4.75rem;
   padding: 0.72rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, white 4.5%, transparent);
   transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.serverlist-board-character.is-festplay-character {
+  border-color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 62%, var(--panel-edge));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 14%, transparent), transparent 56%),
+    color-mix(in srgb, white 4.5%, transparent);
 }
 
 .serverlist-board-character:hover {
@@ -769,7 +776,6 @@
 .serverlist-board-character-copy {
   display: grid;
   min-width: 0;
-  gap: 0.22rem;
   color: inherit;
   text-decoration: none;
 }
@@ -780,29 +786,22 @@
 }
 
 .serverlist-board-character-copy strong {
-  overflow: hidden;
   color: var(--text);
   font-size: 0.96rem;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
-.serverlist-board-character-copy span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.serverlist-board-character.is-festplay-character .serverlist-board-character-copy span {
+.serverlist-board-character.is-festplay-character .serverlist-board-character-copy strong {
   color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 78%, white 12%);
 }
 
 .serverlist-board-action-btn {
   display: grid;
   place-items: center;
-  width: 1.78rem;
-  height: 1.78rem;
+  width: 1.48rem;
+  height: 1.48rem;
   padding: 0;
   border: 0;
   border-radius: 9px;
@@ -1074,11 +1073,12 @@
   }
 
   .serverlist-board-character {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.58rem;
   }
 
   .serverlist-board-character-actions {
-    grid-column: 1 / -1;
+    grid-column: auto;
     justify-content: flex-end;
   }
 

@@ -96,7 +96,6 @@
                   title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
                 >
                   <strong><%= char.name %></strong>
-                  <span><%= isFestplayCharacter ? "In Festspiel aktiv" : "Freier Charakter" %></span>
                 </a>
                 <div class="serverlist-board-character-actions">
                   <a
@@ -172,7 +171,7 @@
               </article>
             <% }) %>
           </div>
-          <% if (serverlistCharacterPageCount > 1) { %>
+          <% if (sectionCharacters.length) { %>
             <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten">
               <button
                 type="button"
