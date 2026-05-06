@@ -447,13 +447,6 @@
       ? "noctra-nameplate"
       : (isTopbarBrandCerberus ? "cerberus-nameplate" : (isTopbarBrandCrescentia ? "crescentia-nameplate" : "")); %>
     <% const topbarBrandClassName = topbarBrandClass; %>
-    <% const topbarRoleplayAreaHref =
-      menuCharacter && menuCharacter.server_id === "larp"
-        ? "/dashboard/larp"
-        : menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")
-          ? `/dashboard/areas/${menuCharacter.server_id}`
-        : "/dashboard"; %>
-    <% const topbarAreaLabel = "Serverliste"; %>
     <% const isDashboardPath = Boolean(currentPath && currentPath.startsWith("/dashboard")); %>
     <% const topbarGuestbookModeActive = Boolean(
       typeof topbarGuestbookMode !== "undefined" && topbarGuestbookMode
@@ -795,7 +788,20 @@
             <% if (currentUser) { %>
               <% if (!topbarGuestbookModeActive) { %>
                 <% if (!hideTopbarAreaLinkOnLoggedInHome) { %>
-                  <a href="<%= topbarRoleplayAreaHref %>"><%= topbarAreaLabel %></a>
+                  <div class="rp-dropdown topbar-area-menu">
+                    <button
+                      type="button"
+                      class="rp-dropdown-toggle topbar-area-menu-toggle"
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                    >
+                      Serverliste
+                    </button>
+                    <div class="rp-dropdown-menu topbar-area-menu-list" role="menu">
+                      <a href="/dashboard" role="menuitem">Rollenspiel</a>
+                      <a href="/dashboard/larp" role="menuitem">LARP</a>
+                    </div>
+                  </div>
                 <% } %>
                 <% if (menuCharacter && (menuCharacter.server_id === "free-rp" || menuCharacter.server_id === "erp")) { %>
                   <a

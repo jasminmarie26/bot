@@ -18544,7 +18544,7 @@ app.get("/dashboard", requireAuth, (req, res) => {
   const openLarpSection = String(req.query.section || "").trim().toLowerCase() === "larp";
 
   return res.render("serverliste/index", {
-    title: "Serverliste",
+    title: "Rollenspiel",
     larpSection,
     larpCharacters,
     overviewSections,
@@ -18966,7 +18966,7 @@ app.get("/dashboard-legacy", requireAuth, (req, res) => {
   };
 
   return res.render("serverliste/index", {
-    title: "Serverliste",
+    title: "Rollenspiel",
     serverSections,
     larpSection,
     ...getServerListPageAssets()

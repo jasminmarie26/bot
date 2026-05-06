@@ -1721,15 +1721,44 @@ body.page-chat .server-work-notice {
   margin-left: auto;
 }
 
-.nav a {
+.nav a,
+.topbar-area-menu-toggle {
   color: var(--readable-link);
   font-size: 0.82rem;
   line-height: 1.15;
 }
 
 .nav a:hover,
-.nav a:focus-visible {
+.nav a:focus-visible,
+.topbar-area-menu:hover .topbar-area-menu-toggle,
+.topbar-area-menu:focus-within .topbar-area-menu-toggle {
   color: var(--readable-link-hover);
+}
+
+.topbar-area-menu {
+  flex: 0 0 auto;
+}
+
+.topbar-area-menu .topbar-area-menu-toggle {
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.topbar-area-menu .topbar-area-menu-toggle::after {
+  content: none;
+}
+
+.topbar-area-menu .topbar-area-menu-list {
+  right: 0;
+  left: auto;
+  min-width: 8.2rem;
+}
+
+.topbar-area-menu .topbar-area-menu-list a {
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
 }
 
 .nav-guestbook-mode {
