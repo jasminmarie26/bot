@@ -280,21 +280,10 @@
 
               <div class="serverlist-stage-character-row">
                 <% festplay.characters.forEach((char) => { %>
-                  <% const currentServerId = char.current_server_id || sectionServerId; %>
                   <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
-                  <% const isOnCurrentServer = currentServerId === sectionServerId; %>
-                  <% const currentLocationLabel = isOnCurrentServer
-                    ? (section.dashboard_label || section.label)
-                    : (char.current_server_label || section.dashboard_label || section.label); %>
-                  <% const stageCharacterHref = isInFestplayArea
-                    ? `/characters/${char.id}/festplays/${festplay.id}/rooms`
-                    : `/characters/${char.id}`; %>
-                  <% const stageCharacterTitle = isInFestplayArea
-                    ? `Festspiel-Raeume mit ${char.name} oeffnen`
-                    : (isOnCurrentServer
-                      ? `${char.name} liegt aktuell oben in ${currentLocationLabel}.`
-                      : `${char.name} ist aktuell auf ${currentLocationLabel}.`); %>
-                  <article class="serverlist-stage-character<%= isInFestplayArea ? "" : " is-festplay-ghost" %>">
+                  <% const stageCharacterHref = `/characters/${char.id}/festplays/${festplay.id}/rooms`; %>
+                  <% const stageCharacterTitle = `Festspiel-Raeume mit ${char.name} oeffnen`; %>
+                  <article class="serverlist-stage-character">
                     <a
                       class="serverlist-stage-character-main"
                       href="<%= stageCharacterHref %>"
