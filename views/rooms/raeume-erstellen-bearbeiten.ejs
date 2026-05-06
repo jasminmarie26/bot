@@ -32,7 +32,7 @@
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
     <nav class="rp-menu" aria-label="Raum erstellen Navigation">
-      <a href="<%= character.server_id === 'free-rp' || character.server_id === 'erp' ? `/dashboard/areas/${character.server_id}` : `/characters/${character.id}#roomlist` %>" <%= character.server_id === "free-rp" || character.server_id === "erp" ? 'target="_blank" rel="noopener noreferrer"' : "" %>><%= character.server_id === "free-rp" || character.server_id === "erp" ? "Serverliste" : "Raumliste" %></a>
+      <%- include("../partials/serverlist-area-menu") %>
       <a href="/members" target="_blank" rel="noopener noreferrer">Mitgliederliste</a>
       <a
         class="live-updates-nav-link"
@@ -115,7 +115,6 @@
 
         <nav class="rp-user-menu-links" aria-label="Benutzermen&uuml;">
           <a href="/account" target="_blank" rel="noopener noreferrer">Account</a>
-          <a href="/dashboard" target="_blank" rel="noopener noreferrer">Serverliste</a>
           <a href="/characters/<%= character.id %>/edit" target="_blank" rel="noopener noreferrer">Charakter editieren</a>
           <a href="/characters/<%= character.id %>/guestbook" target="_blank" rel="noopener noreferrer">G&auml;stebuch</a>
           <a href="/help" target="_blank" rel="noopener noreferrer">Hilfe</a>

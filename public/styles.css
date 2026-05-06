@@ -1756,6 +1756,17 @@ body.page-chat .server-work-notice {
   min-width: 8.2rem;
 }
 
+.rp-menu .topbar-area-menu .topbar-area-menu-toggle {
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+
+.rp-menu .topbar-area-menu .topbar-area-menu-list {
+  right: auto;
+  left: 0;
+}
+
 .topbar-area-menu .topbar-area-menu-list a {
   padding: 0.42rem 0.55rem;
   border-radius: 8px;

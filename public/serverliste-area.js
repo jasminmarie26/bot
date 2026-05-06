@@ -8,44 +8,6 @@
     const moveForms = document.querySelectorAll("[data-serverlist-area-move-confirm]");
     const erpMoveAllowed = modal?.dataset.erpMoveAllowed === "true";
 
-    const initLarpSlideLink = () => {
-      const larpLink = document.querySelector("[data-serverlist-larp-slide-link]");
-      if (!larpLink) {
-        return;
-      }
-
-      larpLink.addEventListener("click", (event) => {
-        if (
-          event.defaultPrevented ||
-          event.button !== 0 ||
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey ||
-          larpLink.classList.contains("is-sliding")
-        ) {
-          return;
-        }
-
-        const href = larpLink.getAttribute("href");
-        if (!href) {
-          return;
-        }
-
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          return;
-        }
-
-        event.preventDefault();
-        larpLink.classList.add("is-sliding");
-        document.body.classList.add("serverlist-is-leaving-to-larp");
-
-        window.setTimeout(() => {
-          window.location.href = href;
-        }, 260);
-      });
-    };
-
     const initOverviewAccordionState = () => {
       const root = document.querySelector("[data-serverlist-overview-root]");
       if (!root) {
@@ -297,7 +259,6 @@
 
     initOverviewAccordionState();
     initCharacterPagination();
-    initLarpSlideLink();
 
     if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
