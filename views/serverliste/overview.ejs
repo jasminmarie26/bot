@@ -14,7 +14,15 @@
 }; %>
 <% const regularSections = overviewSections.filter((section) => !String(section.id || "").endsWith("-festplay")); %>
 <% const festplaySections = overviewSections.filter((section) => String(section.id || "").endsWith("-festplay")); %>
-<% const totalFestplays = festplaySections.reduce((sum, section) => sum + (Array.isArray(section.festplays) ? section.festplays.length : 0), 0); %>
+<% const festplayStageEntries = festplaySections.flatMap((section) => {
+  const sectionServerId = section.server_id || section.id;
+  const sectionFestplays = Array.isArray(section.festplays) ? section.festplays : [];
+  return sectionFestplays.map((festplay) => ({ section, sectionServerId, festplay }));
+}); %>
+<% const totalFestplays = festplayStageEntries.length; %>
+<% const serverlistFestplayPageSize = 2; %>
+<% const serverlistFestplayPageCount = Math.max(1, Math.ceil(totalFestplays / serverlistFestplayPageSize)); %>
+<% const showFestplayPagination = serverlistFestplayPageCount > 1; %>
 
 <section
   class="serverlist-block serverlist-board"
@@ -209,18 +217,19 @@
   </div>
 
   <aside class="serverlist-stage-column">
-    <section class="serverlist-stage-card">
+    <section class="serverlist-stage-card<%= showFestplayPagination ? " has-serverlist-pagination" : "" %>">
       <header class="serverlist-stage-head">
         <h2>Festspiel-B&uuml;hnen</h2>
         <span class="serverlist-board-count"><%= totalFestplays %> aktiv</span>
       </header>
 
       <div class="serverlist-stage-list">
-        <% festplaySections.forEach((section) => { %>
-          <% const sectionServerId = section.server_id || section.id; %>
-          <% const sectionFestplays = Array.isArray(section.festplays) ? section.festplays : []; %>
-          <% sectionFestplays.forEach((festplay) => { %>
-            <section class="serverlist-festplay-stage">
+        <% festplayStageEntries.forEach((entry, stageIndex) => { %>
+          <% const section = entry.section; %>
+          <% const sectionServerId = entry.sectionServerId; %>
+          <% const festplay = entry.festplay; %>
+          <% const festplayPage = Math.floor(stageIndex / serverlistFestplayPageSize) + 1; %>
+            <section class="serverlist-festplay-stage" data-serverlist-stage-page="<%= festplayPage %>" <%= !showFestplayPagination || festplayPage === 1 ? "" : "hidden" %>>
               <header class="serverlist-festplay-stage-head">
                 <h3><%= festplay.name %></h3>
                 <span class="serverlist-festplay-tag"><%= section.dashboard_label || section.label || section.overview_title %></span>
@@ -357,13 +366,46 @@
                 <% }) %>
               </div>
             </section>
-          <% }) %>
         <% }) %>
 
         <% if (!totalFestplays) { %>
           <p class="muted">Zurzeit sind keine Festspiele sichtbar.</p>
         <% } %>
       </div>
+      <% if (showFestplayPagination) { %>
+        <nav class="serverlist-board-pagination" aria-label="Festspiel-Seiten">
+          <button
+            type="button"
+            class="serverlist-board-page-btn serverlist-board-page-arrow"
+            data-serverlist-page-step="-1"
+            aria-label="Vorherige Festspiel-Seite anzeigen"
+            disabled
+          >
+            &lsaquo;
+          </button>
+          <% for (let pageNumber = 1; pageNumber <= serverlistFestplayPageCount; pageNumber += 1) { %>
+            <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistFestplayPageCount); %>
+            <button
+              type="button"
+              class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
+              data-serverlist-page-button="<%= pageNumber %>"
+              aria-label="Festspiel-Seite <%= pageNumber %> anzeigen"
+              aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+              <%= isInitialVisiblePageButton ? "" : "hidden" %>
+            >
+              <%= pageNumber %>
+            </button>
+          <% } %>
+          <button
+            type="button"
+            class="serverlist-board-page-btn serverlist-board-page-arrow"
+            data-serverlist-page-step="1"
+            aria-label="N&auml;chste Festspiel-Seite anzeigen"
+          >
+            &rsaquo;
+          </button>
+        </nav>
+      <% } %>
     </section>
   </aside>
 </section>

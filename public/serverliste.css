@@ -822,6 +822,10 @@
   display: none !important;
 }
 
+.serverlist-festplay-stage[hidden] {
+  display: none !important;
+}
+
 .serverlist-board-character {
   position: relative;
   display: grid;
@@ -1076,6 +1080,7 @@
 }
 
 .serverlist-stage-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: clamp(31rem, 68vh, 38rem);
@@ -1104,6 +1109,10 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
+}
+
+.serverlist-stage-card.has-serverlist-pagination .serverlist-stage-list {
+  padding-bottom: 4.25rem;
 }
 
 .serverlist-stage-list::-webkit-scrollbar {

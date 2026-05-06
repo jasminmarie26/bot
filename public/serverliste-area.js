@@ -165,6 +165,9 @@
         return;
       }
 
+      const getItemPage = (item) =>
+        Number(item.dataset.serverlistCharacterPage || item.dataset.serverlistStagePage);
+
       const getCardState = (card) => {
         const pageButtons = Array.from(card.querySelectorAll("[data-serverlist-page-button]"));
         const pages = pageButtons
@@ -174,7 +177,7 @@
         return {
           pageButtons,
           stepButtons: Array.from(card.querySelectorAll("[data-serverlist-page-step]")),
-          characters: Array.from(card.querySelectorAll("[data-serverlist-character-page]")),
+          items: Array.from(card.querySelectorAll("[data-serverlist-character-page], [data-serverlist-stage-page]")),
           currentPage: Number(currentButton?.dataset.serverlistPageButton) || 1,
           maxPage: Math.max(...pages, 1)
         };
@@ -182,13 +185,13 @@
 
       const showPage = (card, nextPage) => {
         const state = getCardState(card);
-        if (!state.characters.length || !state.pageButtons.length) {
+        if (!state.items.length || !state.pageButtons.length) {
           return;
         }
 
         const currentPage = Math.min(state.maxPage, Math.max(1, Number(nextPage) || 1));
-        state.characters.forEach((character) => {
-          character.hidden = Number(character.dataset.serverlistCharacterPage) !== currentPage;
+        state.items.forEach((item) => {
+          item.hidden = getItemPage(item) !== currentPage;
         });
         const visiblePageCount = 9;
         const lastVisibleStart = Math.max(1, state.maxPage - visiblePageCount + 1);
@@ -215,7 +218,7 @@
           return;
         }
 
-        const card = button.closest(".serverlist-board-card");
+        const card = button.closest(".serverlist-board-card, .serverlist-stage-card");
         if (!card) {
           return;
         }
@@ -232,7 +235,7 @@
         showPage(card, state.currentPage + (Number(button.dataset.serverlistPageStep) || 0));
       });
 
-      root.querySelectorAll(".serverlist-board-card").forEach((card) => {
+      root.querySelectorAll(".serverlist-board-card, .serverlist-stage-card").forEach((card) => {
         showPage(card, 1);
       });
     };
