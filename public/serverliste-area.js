@@ -79,18 +79,23 @@
         }, 0);
       };
 
+      const closeOtherServerCards = (activeSection) => {
+        overviewSections.forEach((otherSection) => {
+          if (
+            otherSection !== activeSection &&
+            otherSection.open &&
+            otherSection.classList.contains("serverlist-board-card")
+          ) {
+            otherSection.open = false;
+          }
+        });
+      };
+
       overviewSections.forEach((section) => {
         section.addEventListener("toggle", () => {
-          if (section.open && section.classList.contains("serverlist-board-card")) {
-            overviewSections.forEach((otherSection) => {
-              if (
-                otherSection !== section &&
-                otherSection.open &&
-                otherSection.classList.contains("serverlist-board-card")
-              ) {
-                otherSection.open = false;
-              }
-            });
+          const isServerCardOpening = section.open && section.classList.contains("serverlist-board-card");
+          if (isServerCardOpening) {
+            closeOtherServerCards(section);
           }
           scheduleAccordionSync();
         });
