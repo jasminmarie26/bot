@@ -1030,6 +1030,10 @@
   box-shadow: 0 14px 24px -22px var(--panel-shadow);
 }
 
+.serverlist-board-page-btn[hidden] {
+  display: none !important;
+}
+
 .serverlist-board-page-btn:hover,
 .serverlist-board-page-btn:focus-visible,
 .serverlist-board-page-btn.is-active {
