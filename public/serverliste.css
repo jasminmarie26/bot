@@ -567,13 +567,17 @@
 }
 
 .serverlist-board-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 0;
   min-width: 0;
+  height: auto;
   border-radius: 18px;
   overflow: hidden;
 }
 
 .serverlist-board-card[open] {
+  height: clamp(24rem, 46vh, 32rem);
   min-height: 0;
 }
 
@@ -712,8 +716,25 @@
 
 .serverlist-board-character-list {
   display: grid;
+  align-content: start;
   gap: 0.48rem;
   padding: 0.65rem 2.55rem 0.65rem 0.65rem;
+}
+
+.serverlist-board-card[open] .serverlist-board-character-list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+
+.serverlist-board-card[open] .serverlist-board-character-list::-webkit-scrollbar {
+  width: 0.42rem;
+}
+
+.serverlist-board-card[open] .serverlist-board-character-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-edge) 72%, var(--accent) 28%);
 }
 
 .serverlist-board-character[hidden] {
@@ -867,7 +888,8 @@
 .serverlist-board-empty {
   display: grid;
   place-items: center;
-  min-height: 10rem;
+  flex: 1 1 auto;
+  min-height: 0;
   margin: 0.65rem;
   border: 1px dashed color-mix(in srgb, var(--panel-edge) 85%, transparent);
   border-radius: 14px;
@@ -877,22 +899,18 @@
 
 .serverlist-board-pagination {
   display: flex;
+  flex: 0 0 auto;
   max-width: 100%;
   justify-content: flex-start;
   gap: 0.45rem;
   padding: 0 0.85rem 0.95rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 .serverlist-board-pagination::-webkit-scrollbar {
-  height: 0.42rem;
-}
-
-.serverlist-board-pagination::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-edge) 72%, var(--accent) 28%);
+  display: none;
 }
 
 .serverlist-board-page-btn {
@@ -1108,7 +1126,12 @@
   }
 
   .serverlist-board-card {
+    height: auto;
     min-height: auto;
+  }
+
+  .serverlist-board-card[open] {
+    height: clamp(21rem, 62vh, 30rem);
   }
 
   .serverlist-board-card-head {
