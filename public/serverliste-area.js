@@ -71,6 +71,24 @@
       const storedOpenIds = readStoredOpenIds();
       applyOpenIds(storedOpenIds === null ? defaultOpenIds : storedOpenIds);
 
+      const normalizeOpenServerCards = () => {
+        let hasOpenServerCard = false;
+        overviewSections.forEach((section) => {
+          if (!section.classList.contains("serverlist-board-card") || !section.open) {
+            return;
+          }
+
+          if (hasOpenServerCard) {
+            section.open = false;
+            return;
+          }
+
+          hasOpenServerCard = true;
+        });
+      };
+
+      normalizeOpenServerCards();
+
       let syncTimer = 0;
       const scheduleAccordionSync = () => {
         window.clearTimeout(syncTimer);
@@ -90,6 +108,36 @@
           }
         });
       };
+
+      overviewSections.forEach((section) => {
+        if (!section.classList.contains("serverlist-board-card")) {
+          return;
+        }
+
+        const summary = section.querySelector(".serverlist-board-card-head");
+        if (!summary) {
+          return;
+        }
+
+        summary.addEventListener("click", (event) => {
+          if (event.target.closest("[data-serverlist-overview-actions]")) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (section.open) {
+            section.open = false;
+            scheduleAccordionSync();
+            return;
+          }
+
+          closeOtherServerCards(section);
+          section.open = true;
+          scheduleAccordionSync();
+        });
+      });
 
       overviewSections.forEach((section) => {
         section.addEventListener("toggle", () => {
