@@ -1,55 +1,25 @@
 <%- include("../partials/start") %>
 
-<% const larpActionLabel = "LARP-Bereich &ouml;ffnen"; %>
-<% const larpAccessNote = "Im LARP-Bereich nutzt jeder Account nur einen Zugangsname, nicht wie im RP Bereich mehrere Charaktere. Das LARP-Forum ist f&uuml;r alle verf&uuml;gbar."; %>
-
 <section class="header-line serverlist-page-header">
   <div>
     <h1>Serverliste</h1>
   </div>
 </section>
 
-<section class="serverlist-block serverlist-accordion-stack">
-  <details class="serverlist-accordion" <%= openLarpSection ? "" : "open" %>>
-    <summary class="serverlist-accordion-summary">
-      <div class="serverlist-accordion-copy">
-        <h2>Rollenspiel</h2>
-      </div>
-      <span class="serverlist-accordion-icon" aria-hidden="true"></span>
-    </summary>
+<%- include("overview", {
+  serverlistOverviewEmbedded: true,
+  dashboardOverviewReturnTargetOverride: "/dashboard"
+}) %>
 
-    <div class="serverlist-accordion-body">
-      <%- include("overview", {
-        serverlistOverviewEmbedded: true,
-        dashboardOverviewReturnTargetOverride: "/dashboard"
-      }) %>
-    </div>
-  </details>
-
-  <details class="serverlist-accordion" <%= openLarpSection ? "open" : "" %>>
-    <summary class="serverlist-accordion-summary">
-      <div class="serverlist-accordion-copy">
-        <h2>LARP BEREICH</h2>
-        <p class="muted"><%= larpSection.description %></p>
-      </div>
-      <span class="serverlist-accordion-icon" aria-hidden="true"></span>
-    </summary>
-
-    <div class="serverlist-accordion-body">
-      <section class="panel serverlist-larp-panel serverlist-subpanel">
-        <div class="serverlist-larp-orb" aria-hidden="true"></div>
-        <div class="serverlist-larp-copy">
-          <p class="muted"><%- larpAccessNote %></p>
-
-          <div class="serverlist-larp-actions">
-            <a class="btn btn-secondary" href="/dashboard/larp">
-              <%- larpActionLabel %>
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
-  </details>
+<section class="serverlist-larp-strip">
+  <div>
+    <span class="serverlist-board-label">Live-Rollenspiel</span>
+    <h2>LARP Bereich</h2>
+    <p class="muted"><%= larpSection.description %></p>
+  </div>
+  <a class="btn btn-secondary" href="/dashboard/larp">
+    LARP-Bereich &ouml;ffnen
+  </a>
 </section>
 
 <%- include("../partials/end") %>
