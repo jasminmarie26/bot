@@ -743,6 +743,38 @@ function rememberPreferredCharacter(req, character) {
   req.session.preferred_character_server_id = normalizedServerId;
 }
 
+function getPreferredCharacterSessionSnapshot(session) {
+  return {
+    preferred_character_ids: normalizePreferredCharacterMap(session?.preferred_character_ids),
+    preferred_character_server_id: getStoredCharacterServerId(session?.preferred_character_server_id)
+  };
+}
+
+function restorePreferredCharacterSessionSnapshot(session, snapshot) {
+  if (!session || typeof session !== "object") {
+    return;
+  }
+
+  const preferredMap = normalizePreferredCharacterMap(snapshot?.preferred_character_ids);
+  session.preferred_character_ids = preferredMap;
+
+  const preferredServerId = getStoredCharacterServerId(snapshot?.preferred_character_server_id);
+  if (preferredServerId) {
+    session.preferred_character_server_id = preferredServerId;
+  } else {
+    delete session.preferred_character_server_id;
+  }
+}
+
+function clearPreferredCharacterSession(session) {
+  if (!session || typeof session !== "object") {
+    return;
+  }
+
+  session.preferred_character_ids = {};
+  delete session.preferred_character_server_id;
+}
+
 function getStaffCharacterUsageForUser(user, character) {
   const parsedCharacterId = Number(character?.id);
   const canUseAdmin = Boolean(user?.is_admin);
@@ -5172,6 +5204,7 @@ function clearAdminImpersonationSession(session) {
   }
 
   delete session.admin_impersonator_user_id;
+  delete session.admin_impersonator_preferred_character_state;
 }
 
 function getUserForSessionById(userId) {
@@ -24146,6 +24179,10 @@ app.post("/admin/impersonate", requireAuth, requireAdmin, (req, res) => {
     return res.redirect("/dashboard");
   }
 
+  req.session.admin_impersonator_preferred_character_state =
+    req.session.admin_impersonator_preferred_character_state ||
+    getPreferredCharacterSessionSnapshot(req.session);
+  clearPreferredCharacterSession(req.session);
   req.session.admin_impersonator_user_id = Number(originalAdmin.id);
   req.session.user = toSessionUser(targetUser);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
@@ -24270,8 +24307,10 @@ app.post("/admin/impersonation/stop", requireAuth, (req, res) => {
     return res.redirect("/login");
   }
 
+  const adminPreferredCharacterState = req.session.admin_impersonator_preferred_character_state;
   clearAdminImpersonationSession(req.session);
   req.session.user = toSessionUser(adminUser);
+  restorePreferredCharacterSessionSnapshot(req.session, adminPreferredCharacterState);
   req.session.cookie.maxAge = getSessionMaxAgeForUser(req.session.user);
   setFlash(req, "success", `Du bist wieder als ${adminUser.username} eingeloggt.`);
   return res.redirect("/admin");
