@@ -71,42 +71,12 @@
       const storedOpenIds = readStoredOpenIds();
       applyOpenIds(storedOpenIds === null ? defaultOpenIds : storedOpenIds);
 
-      const normalizeOpenServerCards = () => {
-        let hasOpenServerCard = false;
-        overviewSections.forEach((section) => {
-          if (!section.classList.contains("serverlist-board-card") || !section.open) {
-            return;
-          }
-
-          if (hasOpenServerCard) {
-            section.open = false;
-            return;
-          }
-
-          hasOpenServerCard = true;
-        });
-      };
-
-      normalizeOpenServerCards();
-
       let syncTimer = 0;
       const scheduleAccordionSync = () => {
         window.clearTimeout(syncTimer);
         syncTimer = window.setTimeout(() => {
           writeOpenIds();
         }, 0);
-      };
-
-      const closeOtherServerCards = (activeSection) => {
-        overviewSections.forEach((otherSection) => {
-          if (
-            otherSection !== activeSection &&
-            otherSection.open &&
-            otherSection.classList.contains("serverlist-board-card")
-          ) {
-            otherSection.open = false;
-          }
-        });
       };
 
       overviewSections.forEach((section) => {
@@ -133,7 +103,6 @@
             return;
           }
 
-          closeOtherServerCards(section);
           section.open = true;
           scheduleAccordionSync();
         });
@@ -141,10 +110,6 @@
 
       overviewSections.forEach((section) => {
         section.addEventListener("toggle", () => {
-          const isServerCardOpening = section.open && section.classList.contains("serverlist-board-card");
-          if (isServerCardOpening) {
-            closeOtherServerCards(section);
-          }
           scheduleAccordionSync();
         });
       });
