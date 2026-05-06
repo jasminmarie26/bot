@@ -168,30 +168,70 @@
       const getItemPage = (item) =>
         Number(item.dataset.serverlistCharacterPage || item.dataset.serverlistStagePage);
 
+      const itemMatchesFilter = (item, filterId) => {
+        const itemFilter = String(item.dataset.serverlistStageServer || "").trim();
+        return !filterId || !itemFilter || itemFilter === filterId;
+      };
+
       const getCardState = (card) => {
         const pageButtons = Array.from(card.querySelectorAll("[data-serverlist-page-button]"));
-        const pages = pageButtons
-          .map((button) => Number(button.dataset.serverlistPageButton))
+        const filterId = String(card.dataset.serverlistStageFilter || "").trim();
+        const allItems = Array.from(card.querySelectorAll("[data-serverlist-character-page], [data-serverlist-stage-page]"));
+        const filteredItems = allItems.filter((item) => itemMatchesFilter(item, filterId));
+        const pages = filteredItems
+          .map(getItemPage)
           .filter((page) => Number.isInteger(page) && page > 0);
         const currentButton = pageButtons.find((button) => button.classList.contains("is-active"));
         return {
+          filterId,
           pageButtons,
           stepButtons: Array.from(card.querySelectorAll("[data-serverlist-page-step]")),
-          items: Array.from(card.querySelectorAll("[data-serverlist-character-page], [data-serverlist-stage-page]")),
+          allItems,
+          filteredItems,
           currentPage: Number(currentButton?.dataset.serverlistPageButton) || 1,
           maxPage: Math.max(...pages, 1)
         };
       };
 
+      const syncStageFilterUi = (card, state) => {
+        if (!card.matches(".serverlist-stage-card")) {
+          return;
+        }
+
+        const activeCount = state.filteredItems.length;
+        const countNode = card.querySelector("[data-serverlist-stage-count]");
+        if (countNode) {
+          countNode.textContent = `${activeCount} aktiv`;
+        }
+
+        card.querySelectorAll("[data-serverlist-stage-filter-button]").forEach((button) => {
+          const isActive = button.dataset.serverlistStageFilterButton === state.filterId;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+
+        card.querySelectorAll("[data-serverlist-stage-empty]").forEach((emptyNode) => {
+          emptyNode.hidden = emptyNode.dataset.serverlistStageEmpty !== state.filterId || activeCount > 0;
+        });
+
+        const hasPagination = state.maxPage > 1;
+        const pagination = card.querySelector(".serverlist-board-pagination");
+        card.classList.toggle("has-serverlist-pagination", Boolean(pagination && hasPagination));
+        if (pagination) {
+          pagination.hidden = !hasPagination;
+        }
+      };
+
       const showPage = (card, nextPage) => {
         const state = getCardState(card);
-        if (!state.items.length || !state.pageButtons.length) {
+        if (!state.allItems.length) {
+          syncStageFilterUi(card, state);
           return;
         }
 
         const currentPage = Math.min(state.maxPage, Math.max(1, Number(nextPage) || 1));
-        state.items.forEach((item) => {
-          item.hidden = getItemPage(item) !== currentPage;
+        state.allItems.forEach((item) => {
+          item.hidden = !itemMatchesFilter(item, state.filterId) || getItemPage(item) !== currentPage;
         });
         const visiblePageCount = 9;
         const lastVisibleStart = Math.max(1, state.maxPage - visiblePageCount + 1);
@@ -210,9 +250,24 @@
           const step = Number(button.dataset.serverlistPageStep) || 0;
           button.disabled = (step < 0 && currentPage <= 1) || (step > 0 && currentPage >= state.maxPage);
         });
+        syncStageFilterUi(card, state);
       };
 
       root.addEventListener("click", (event) => {
+        const filterButton = event.target.closest("[data-serverlist-stage-filter-button]");
+        if (filterButton) {
+          const card = filterButton.closest(".serverlist-stage-card");
+          if (!card) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          card.dataset.serverlistStageFilter = String(filterButton.dataset.serverlistStageFilterButton || "").trim();
+          showPage(card, 1);
+          return;
+        }
+
         const button = event.target.closest("[data-serverlist-page-button], [data-serverlist-page-step]");
         if (!button) {
           return;

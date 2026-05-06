@@ -21,8 +21,20 @@
 }); %>
 <% const totalFestplays = festplayStageEntries.length; %>
 <% const serverlistFestplayPageSize = 2; %>
-<% const serverlistFestplayPageCount = Math.max(1, Math.ceil(totalFestplays / serverlistFestplayPageSize)); %>
-<% const showFestplayPagination = serverlistFestplayPageCount > 1; %>
+<% const festplayFilterOptions = [
+  { id: "free-rp", label: "Free-RP" },
+  { id: "erp", label: "ERP" }
+]; %>
+<% const getFestplayServerId = (serverId) => String(serverId || "").trim() === "erp" ? "erp" : "free-rp"; %>
+<% const festplayCountsByServer = festplayStageEntries.reduce((counts, entry) => {
+  const festplayServerId = getFestplayServerId(entry.sectionServerId);
+  counts[festplayServerId] = (counts[festplayServerId] || 0) + 1;
+  return counts;
+}, {}); %>
+<% const initialFestplayServerId = (festplayFilterOptions.find((option) => (festplayCountsByServer[option.id] || 0) > 0) || festplayFilterOptions[0]).id; %>
+<% const initialFestplayCount = festplayCountsByServer[initialFestplayServerId] || 0; %>
+<% const maxFestplayPageCount = Math.max(1, ...festplayFilterOptions.map((option) => Math.ceil((festplayCountsByServer[option.id] || 0) / serverlistFestplayPageSize))); %>
+<% const showFestplayPagination = maxFestplayPageCount > 1; %>
 
 <section
   class="serverlist-block serverlist-board"
@@ -217,19 +229,46 @@
   </div>
 
   <aside class="serverlist-stage-column">
-    <section class="serverlist-stage-card<%= showFestplayPagination ? " has-serverlist-pagination" : "" %>">
+    <section
+      class="serverlist-stage-card<%= showFestplayPagination ? " has-serverlist-pagination" : "" %>"
+      data-serverlist-stage-card
+      data-serverlist-stage-filter="<%= initialFestplayServerId %>"
+    >
       <header class="serverlist-stage-head">
-        <h2>Festspiel-B&uuml;hnen</h2>
-        <span class="serverlist-board-count"><%= totalFestplays %> aktiv</span>
+        <div class="serverlist-stage-title-block">
+          <h2>FESTSPIELE:</h2>
+          <div class="serverlist-stage-filter" aria-label="Festspiel-Bereich ausw&auml;hlen">
+            <% festplayFilterOptions.forEach((option) => { %>
+              <button
+                type="button"
+                class="serverlist-stage-filter-btn<%= option.id === initialFestplayServerId ? " is-active" : "" %>"
+                data-serverlist-stage-filter-button="<%= option.id %>"
+                aria-pressed="<%= option.id === initialFestplayServerId ? "true" : "false" %>"
+              >
+                <%= option.label %>
+              </button>
+            <% }) %>
+          </div>
+        </div>
+        <span class="serverlist-board-count" data-serverlist-stage-count><%= initialFestplayCount %> aktiv</span>
       </header>
 
       <div class="serverlist-stage-list">
+        <% const festplayServerPageIndexes = {}; %>
         <% festplayStageEntries.forEach((entry, stageIndex) => { %>
           <% const section = entry.section; %>
           <% const sectionServerId = entry.sectionServerId; %>
           <% const festplay = entry.festplay; %>
-          <% const festplayPage = Math.floor(stageIndex / serverlistFestplayPageSize) + 1; %>
-            <section class="serverlist-festplay-stage" data-serverlist-stage-page="<%= festplayPage %>" <%= !showFestplayPagination || festplayPage === 1 ? "" : "hidden" %>>
+          <% const festplayServerId = getFestplayServerId(sectionServerId); %>
+          <% const festplayServerIndex = festplayServerPageIndexes[festplayServerId] || 0; %>
+          <% festplayServerPageIndexes[festplayServerId] = festplayServerIndex + 1; %>
+          <% const festplayPage = Math.floor(festplayServerIndex / serverlistFestplayPageSize) + 1; %>
+            <section
+              class="serverlist-festplay-stage"
+              data-serverlist-stage-server="<%= festplayServerId %>"
+              data-serverlist-stage-page="<%= festplayPage %>"
+              <%= festplayServerId === initialFestplayServerId && festplayPage === 1 ? "" : "hidden" %>
+            >
               <header class="serverlist-festplay-stage-head">
                 <h3><%= festplay.name %></h3>
                 <span class="serverlist-festplay-tag"><%= section.dashboard_label || section.label || section.overview_title %></span>
@@ -370,6 +409,16 @@
 
         <% if (!totalFestplays) { %>
           <p class="muted">Zurzeit sind keine Festspiele sichtbar.</p>
+        <% } else { %>
+          <% festplayFilterOptions.forEach((option) => { %>
+            <p
+              class="muted serverlist-stage-empty"
+              data-serverlist-stage-empty="<%= option.id %>"
+              <%= option.id === initialFestplayServerId && !initialFestplayCount ? "" : "hidden" %>
+            >
+              Keine Festspiele in <%= option.label %>.
+            </p>
+          <% }) %>
         <% } %>
       </div>
       <% if (showFestplayPagination) { %>
@@ -383,8 +432,9 @@
           >
             &lsaquo;
           </button>
-          <% for (let pageNumber = 1; pageNumber <= serverlistFestplayPageCount; pageNumber += 1) { %>
-            <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistFestplayPageCount); %>
+          <% for (let pageNumber = 1; pageNumber <= maxFestplayPageCount; pageNumber += 1) { %>
+            <% const initialFestplayPageCount = Math.max(1, Math.ceil(initialFestplayCount / serverlistFestplayPageSize)); %>
+            <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, initialFestplayPageCount); %>
             <button
               type="button"
               class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
