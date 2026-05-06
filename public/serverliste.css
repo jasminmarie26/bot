@@ -537,12 +537,12 @@
 }
 
 .page-serverliste .container {
-  max-width: 1380px;
+  max-width: 1820px;
 }
 
 .serverlist-board {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.45fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
   align-items: start;
   margin-top: 0.7rem;
@@ -550,6 +550,7 @@
 
 .serverlist-server-grid {
   display: grid;
+  grid-column: span 2;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 0.8rem;
@@ -911,9 +912,9 @@
   max-width: 100%;
   justify-content: flex-start;
   gap: 0.45rem;
-  padding: 0.55rem 0.85rem 0.78rem;
-  border-top: 1px solid color-mix(in srgb, var(--panel-edge) 56%, transparent);
-  background: color-mix(in srgb, var(--panel-bg) 74%, black 10%);
+  padding: 0.2rem 0.85rem 0.78rem;
+  border-top: 0;
+  background: transparent;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -968,6 +969,10 @@
   .serverlist-board,
   .serverlist-server-grid {
     grid-template-columns: 1fr;
+  }
+
+  .serverlist-server-grid {
+    grid-column: auto;
   }
 }
 
@@ -1136,6 +1141,10 @@
   .serverlist-board,
   .serverlist-server-grid {
     grid-template-columns: 1fr;
+  }
+
+  .serverlist-server-grid {
+    grid-column: auto;
   }
 
   .serverlist-page-header h1 {

@@ -29,6 +29,7 @@
       <% const isErpSection = sectionServerId === "erp"; %>
       <% const serverlistCharacterPageSize = 5; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
+      <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
       <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" <%= sectionIndex === 0 ? "open" : "" %>>
         <summary class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
@@ -79,7 +80,7 @@
               <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
               <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
               <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
-              <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= characterPage === 1 ? "" : "hidden" %>>
+              <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
                 <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
                   <% if (char.serverlist_icon_url) { %>
                     <img
@@ -168,7 +169,7 @@
               </article>
             <% }) %>
           </div>
-          <% if (sectionCharacters.length) { %>
+          <% if (showServerlistPagination) { %>
             <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten">
               <button
                 type="button"
