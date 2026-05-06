@@ -531,23 +531,23 @@
 }
 
 .serverlist-page-header h1 {
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(1.7rem, 3.2vw, 2.55rem);
   line-height: 0.94;
   text-shadow: 0 20px 44px color-mix(in srgb, var(--panel-shadow) 72%, transparent);
 }
 
 .serverlist-board {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+  gap: 0.8rem;
   align-items: start;
-  margin-top: 1rem;
+  margin-top: 0.7rem;
 }
 
 .serverlist-server-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
   min-width: 0;
 }
 
@@ -567,12 +567,12 @@
 
 .serverlist-board-card {
   min-height: 0;
-  border-radius: 24px;
+  border-radius: 18px;
   overflow: hidden;
 }
 
 .serverlist-board-card[open] {
-  min-height: 32rem;
+  min-height: 0;
 }
 
 .serverlist-board-card.is-erp {
@@ -585,8 +585,8 @@
 
 .serverlist-board-card-head {
   list-style: none;
-  min-height: 8.6rem;
-  padding: 1.35rem;
+  min-height: 6.35rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -648,7 +648,7 @@
 
 .serverlist-board-title-row h2 {
   margin: 0;
-  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-size: clamp(1.28rem, 2.2vw, 1.9rem);
   line-height: 0.98;
 }
 
@@ -688,10 +688,10 @@
 .serverlist-board-icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 1.9rem;
+  height: 1.9rem;
   border: 1px solid color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 52%, var(--panel-edge));
-  border-radius: 12px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 16%, rgba(255, 255, 255, 0.04));
   color: var(--text);
   font-size: 1.05rem;
@@ -710,8 +710,8 @@
 
 .serverlist-board-character-list {
   display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem;
+  gap: 0.48rem;
+  padding: 0.65rem;
 }
 
 .serverlist-board-character[hidden] {
@@ -723,10 +723,10 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.62rem;
-  min-height: 4.75rem;
-  padding: 0.72rem;
+  min-height: 3.55rem;
+  padding: 0.55rem 0.62rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 78%, transparent);
-  border-radius: 18px;
+  border-radius: 14px;
   background: color-mix(in srgb, white 4.5%, transparent);
   transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
 }
@@ -748,10 +748,10 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
+  width: 2.25rem;
+  height: 2.25rem;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 82%, white 10%), color-mix(in srgb, var(--accent-2) 74%, black 8%));
   color: var(--accent-text);
@@ -787,7 +787,7 @@
 
 .serverlist-board-character-copy strong {
   color: var(--text);
-  font-size: 0.96rem;
+  font-size: 0.82rem;
   line-height: 1.18;
   overflow-wrap: anywhere;
   white-space: normal;
@@ -800,8 +800,8 @@
 .serverlist-board-action-btn {
   display: grid;
   place-items: center;
-  width: 1.48rem;
-  height: 1.48rem;
+  width: 1.28rem;
+  height: 1.28rem;
   padding: 0;
   border: 0;
   border-radius: 9px;
@@ -830,10 +830,10 @@
 .serverlist-board-empty {
   display: grid;
   place-items: center;
-  min-height: 21rem;
-  margin: 0.85rem;
+  min-height: 10rem;
+  margin: 0.65rem;
   border: 1px dashed color-mix(in srgb, var(--panel-edge) 85%, transparent);
-  border-radius: 20px;
+  border-radius: 14px;
   color: var(--muted);
   text-align: center;
 }
@@ -892,30 +892,30 @@
 }
 
 .serverlist-stage-card {
-  border-radius: 24px;
+  border-radius: 18px;
   overflow: hidden;
 }
 
 .serverlist-stage-head {
-  padding: 1.2rem 1.2rem 0.9rem;
+  padding: 1rem 1rem 0.7rem;
 }
 
 .serverlist-stage-head h2 {
   margin: 0;
-  font-size: clamp(1.3rem, 2.2vw, 2rem);
+  font-size: clamp(1.15rem, 1.9vw, 1.62rem);
 }
 
 .serverlist-stage-list {
   display: grid;
-  gap: 0.75rem;
-  padding: 0 0.85rem 0.85rem;
+  gap: 0.58rem;
+  padding: 0 0.65rem 0.65rem;
 }
 
 .serverlist-festplay-stage {
-  min-height: 9.8rem;
+  min-height: 6.8rem;
   border: 1px solid color-mix(in srgb, var(--panel-edge) 82%, transparent);
-  border-radius: 20px;
-  padding: 1rem;
+  border-radius: 14px;
+  padding: 0.75rem;
   background:
     radial-gradient(280px 140px at 100% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 68%),
     color-mix(in srgb, white 4.5%, transparent);
@@ -928,15 +928,15 @@
 
 .serverlist-festplay-stage h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.92rem;
   line-height: 1.15;
 }
 
 .serverlist-stage-character-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 0.42rem;
+  margin-top: 0.56rem;
 }
 
 .serverlist-stage-character {
@@ -950,13 +950,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 2.15rem;
-  padding: 0.36rem 0.62rem 0.36rem 0.42rem;
+  min-height: 1.8rem;
+  padding: 0.26rem 0.5rem 0.26rem 0.34rem;
   border: 1px solid var(--panel-edge);
   border-radius: 999px;
   background: color-mix(in srgb, black 18%, transparent);
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 850;
   text-decoration: none;
 }
@@ -969,8 +969,8 @@
 
 .serverlist-stage-mini-avatar {
   display: block;
-  width: 1.32rem;
-  height: 1.32rem;
+  width: 1.05rem;
+  height: 1.05rem;
   overflow: hidden;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -985,9 +985,9 @@
 }
 
 .serverlist-larp-strip {
-  margin-top: 1rem;
-  padding: 1.1rem 1.2rem;
-  border-radius: 24px;
+  margin-top: 0.8rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
 }
 
 .serverlist-larp-strip h2 {
