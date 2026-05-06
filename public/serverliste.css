@@ -577,7 +577,7 @@
 }
 
 .serverlist-board-card[open] {
-  height: clamp(24rem, 46vh, 32rem);
+  height: clamp(31rem, 68vh, 38rem);
   min-height: 0;
 }
 
@@ -725,6 +725,7 @@
 
 .serverlist-board-card[open] .serverlist-board-character-list {
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
 }
@@ -1136,7 +1137,7 @@
   }
 
   .serverlist-board-card[open] {
-    height: clamp(21rem, 62vh, 30rem);
+    height: clamp(29rem, 72vh, 36rem);
   }
 
   .serverlist-board-card-head {
