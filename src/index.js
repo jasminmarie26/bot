@@ -7142,6 +7142,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
              ON c.server_id = ?
             AND (
               c.festplay_id = f.id
+              OR c.id = f.creator_character_id
               OR EXISTS (
                 SELECT 1
                   FROM festplay_permissions fp
@@ -7160,11 +7161,14 @@ function getDashboardFestplaysForUser(userId, serverId) {
            LEFT JOIN characters creator ON creator.id = f.creator_character_id
           WHERE f.id IN (${placeholders})
             AND lower(trim(COALESCE(f.server_id, ''))) = ?
-            AND c.id != COALESCE(f.creator_character_id, 0)
+            AND (
+              c.id != COALESCE(f.creator_character_id, 0)
+              OR COALESCE(f.created_by_user_id, 0) = ?
+            )
             AND ${nonVioletUsersSqlCondition}
           ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
       )
-      .all(normalizedServerId, ...visibleFestplayIds, normalizedServerId);
+      .all(normalizedServerId, ...visibleFestplayIds, normalizedServerId, parsedUserId);
 
     characterRows.forEach((row) => {
       addDashboardFestplayCharacter(row, "");
