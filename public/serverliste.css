@@ -589,7 +589,7 @@
 
   .page-serverliste-overview .serverlist-board {
     flex: 1 1 auto;
-    height: 100%;
+    height: auto;
     min-height: 0;
     overflow: hidden;
     align-items: stretch;
