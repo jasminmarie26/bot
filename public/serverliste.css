@@ -636,6 +636,7 @@
 
 .serverlist-board-card {
   position: relative;
+  z-index: 3;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
@@ -653,10 +654,12 @@
 }
 
 .serverlist-board-card.is-erp {
+  z-index: 2;
   --serverlist-local-accent: color-mix(in srgb, var(--danger) 56%, var(--accent) 44%);
 }
 
 .serverlist-board-card:not(.is-erp) {
+  z-index: 3;
   --serverlist-local-accent: var(--accent);
 }
 
