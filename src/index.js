@@ -6912,6 +6912,7 @@ function getOwnedFestplaysForUser(userId, serverId = "") {
   if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1 || !normalizedServerId) return [];
+  purgeOrphanedCreatorFestplays();
   return db
     .prepare(
       `SELECT f.id,
@@ -6937,6 +6938,7 @@ function getOtherFestplaysForUser(userId, serverId) {
   if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeServer(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  purgeOrphanedCreatorFestplays();
   return db
     .prepare(
       `SELECT DISTINCT
@@ -6990,6 +6992,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
   const parsedUserId = Number(userId);
   const normalizedServerId = normalizeServer(serverId);
   if (!Number.isInteger(parsedUserId) || parsedUserId < 1) return [];
+  purgeOrphanedCreatorFestplays();
 
   const festplayMap = new Map();
 
@@ -7219,6 +7222,7 @@ function getOwnedFestplayById(userId, festplayId) {
   ) {
     return null;
   }
+  purgeOrphanedCreatorFestplays();
   return (
     (() => {
       const festplay = db
@@ -7246,6 +7250,7 @@ function getPublicFestplays(serverId = "") {
   if (isLarpServerId(serverId)) return [];
   const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!normalizedServerId) return [];
+  purgeOrphanedCreatorFestplays();
   return db
     .prepare(
       `SELECT f.id,
@@ -7271,6 +7276,7 @@ function getPublicFestplayById(festplayId, serverId = "") {
   if (isLarpServerId(serverId)) return null;
   const normalizedServerId = normalizeFestplayServerId(serverId);
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1 || !normalizedServerId) return null;
+  purgeOrphanedCreatorFestplays();
   return decorateFestplayRecord(
     db
       .prepare(
@@ -7505,6 +7511,7 @@ function getFestplayById(festplayId) {
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
     return null;
   }
+  purgeOrphanedCreatorFestplays();
 
   return decorateFestplayRecord(
     db
@@ -8301,6 +8308,46 @@ function deleteFestplayAndResetCharacters(festplayId) {
   })();
 
   return true;
+}
+
+function purgeOrphanedCreatorFestplays() {
+  const orphanedFestplays = db
+    .prepare(
+      `SELECT f.id
+         FROM festplays f
+         LEFT JOIN characters creator ON creator.id = f.creator_character_id
+         LEFT JOIN users owner ON owner.id = f.created_by_user_id
+        WHERE NOT (
+                lower(trim(COALESCE(f.name, ''))) = 'freeplay'
+            AND COALESCE(f.created_by_user_id, 0) = 0
+            AND COALESCE(f.creator_character_id, 0) = 0
+        )
+          AND lower(trim(COALESCE(f.server_id, ''))) IN ('free-rp', 'erp')
+          AND (
+            COALESCE(f.created_by_user_id, 0) <= 0
+            OR owner.id IS NULL
+            OR COALESCE(f.creator_character_id, 0) <= 0
+            OR creator.id IS NULL
+            OR COALESCE(creator.user_id, 0) != COALESCE(f.created_by_user_id, 0)
+            OR lower(trim(COALESCE(creator.server_id, ''))) != lower(trim(COALESCE(f.server_id, '')))
+          )
+        ORDER BY f.id ASC`
+    )
+    .all()
+    .map((row) => Number(row.id))
+    .filter((festplayId) => Number.isInteger(festplayId) && festplayId > 0);
+
+  if (!orphanedFestplays.length) {
+    return 0;
+  }
+
+  db.transaction((festplayIds) => {
+    festplayIds.forEach((festplayId) => {
+      deleteFestplayAndResetCharactersInCurrentTx(festplayId);
+    });
+  })(orphanedFestplays);
+
+  return orphanedFestplays.length;
 }
 
 async function purgeInactiveFestplays() {
