@@ -21857,7 +21857,8 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
 
   if (!character) {
-    return res.status(404).render("errors/404", { title: "Nicht gefunden" });
+    setFlash(req, "success", "Charakter ist bereits gelöscht.");
+    return res.redirect(returnTarget);
   }
 
   if (character.user_id !== req.session.user.id) {
@@ -21870,6 +21871,10 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   try {
     deleteCharacterWithBackupTx(id);
   } catch (error) {
+    if (error?.code === "CHARACTER_NOT_FOUND") {
+      setFlash(req, "success", "Charakter ist bereits gelöscht.");
+      return res.redirect(returnTarget);
+    }
     console.error(error);
     setFlash(req, "error", "Charakter konnte nicht gelöscht werden.");
     return res.redirect(returnTarget);
