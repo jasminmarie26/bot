@@ -14586,6 +14586,9 @@ app.use((req, res, next) => {
   if (req.session.guest_theme) {
     req.session.guest_theme = normalizeTheme(req.session.guest_theme);
   }
+  if (req.session.serverlist_theme) {
+    req.session.serverlist_theme = normalizeTheme(req.session.serverlist_theme);
+  }
 
   req.session.preferred_character_ids = normalizePreferredCharacterMap(
     req.session.preferred_character_ids
@@ -14704,8 +14707,19 @@ app.use((req, res, next) => {
     currentPath.startsWith("/") && !currentPath.startsWith("//")
       ? currentPath
       : "/";
+  const isServerlistThemePath = /^\/dashboard(?:\/|$)/.test(requestPath);
+  const serverlistActiveTheme = normalizeTheme(
+    req.session.serverlist_theme ||
+    req.session.guest_theme ||
+    cookieTheme ||
+    DEFAULT_THEME
+  );
   res.locals.activeTheme = req.session.user
-    ? resolveCharacterTheme(topbarPreferredCharacter, req.session.guest_theme || DEFAULT_THEME)
+    ? (
+      isServerlistThemePath
+        ? serverlistActiveTheme
+        : resolveCharacterTheme(topbarPreferredCharacter, req.session.guest_theme || DEFAULT_THEME)
+    )
     : cookieTheme || req.session.guest_theme || DEFAULT_THEME;
 
   if (!req.session.user && cookieTheme !== res.locals.activeTheme) {
@@ -17598,14 +17612,19 @@ app.post("/admin/server-work-notice", requireAuth, requireAdmin, requirePrimaryA
 
 app.post("/settings/theme", (req, res) => {
   const theme = normalizeTheme(req.body.theme);
+  const themeScope = String(req.body.theme_scope || "").trim().toLowerCase();
 
   if (req.session.user) {
-    req.session.guest_theme = theme;
-    const targetCharacter = getThemeTargetCharacterForRequest(req);
-    if (targetCharacter) {
-      db.prepare("UPDATE characters SET theme = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")
-        .run(theme, targetCharacter.id, req.session.user.id);
-      rememberPreferredCharacter(req, { ...targetCharacter, theme });
+    if (themeScope === "serverlist") {
+      req.session.serverlist_theme = theme;
+    } else {
+      req.session.guest_theme = theme;
+      const targetCharacter = getThemeTargetCharacterForRequest(req);
+      if (targetCharacter) {
+        db.prepare("UPDATE characters SET theme = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")
+          .run(theme, targetCharacter.id, req.session.user.id);
+        rememberPreferredCharacter(req, { ...targetCharacter, theme });
+      }
     }
   } else {
     req.session.guest_theme = theme;

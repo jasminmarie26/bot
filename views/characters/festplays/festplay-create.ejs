@@ -1,4 +1,4 @@
-<%- include("../../partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+<%- include("../../partials/start", { hideTopbar: true, pageClass: "page-roomlist", topbarCharacter: character }) %>
 
 <section class="rp-shell">
   <% const festplayDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
@@ -80,6 +80,7 @@
       <form method="POST" action="/settings/theme" class="inline-form theme-form">
         <label for="rp-theme-select-festplay-create">Design</label>
         <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <input type="hidden" name="character_id" value="<%= character ? Number(character.id) : '' %>" />
         <select
           id="rp-theme-select-festplay-create"
           name="theme"

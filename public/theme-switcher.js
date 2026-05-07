@@ -18,6 +18,16 @@
     }
   }
 
+  function getAppliedTheme() {
+    if (!body) return "";
+    for (const className of Array.from(body.classList)) {
+      if (!className.startsWith(themeClassPrefix)) continue;
+      const themeId = className.slice(themeClassPrefix.length).trim().toLowerCase();
+      if (themeId) return themeId;
+    }
+    return "";
+  }
+
   function applyTheme(themeId) {
     if (!body || !themeId) return;
 
@@ -39,7 +49,19 @@
     }
   }
 
+  function getThemeStorageScope(form) {
+    return String(form?.dataset?.themeStorageScope || body?.dataset?.themeStorageScope || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "");
+  }
+
   function getThemeStorageKey(form) {
+    const storageScope = getThemeStorageScope(form);
+    if (storageScope) {
+      return `${themeStorageKeyBase}:${storageScope}`;
+    }
+
     const characterField = form?.elements?.character_id;
     const characterId = String(characterField?.value || body?.dataset?.themeCharacterId || "")
       .trim();
@@ -160,8 +182,16 @@
     });
   }
 
-  const localTheme = getPersistedLocalTheme(forms[0]);
-  if (localTheme) {
+  const initialForm = forms[0];
+  const initialSelect = initialForm?.querySelector('select[name="theme"]');
+  const initialServerTheme = getAppliedTheme() || String(initialSelect?.value || "").trim().toLowerCase();
+  const hasCharacterThemeScope = Boolean(String(body?.dataset?.themeCharacterId || "").trim());
+  const localTheme = getPersistedLocalTheme(initialForm);
+  if (hasCharacterThemeScope && initialServerTheme) {
+    applyTheme(initialServerTheme);
+    syncThemeSelects(initialServerTheme);
+    persistThemeLocally(initialServerTheme, initialForm);
+  } else if (localTheme) {
     applyTheme(localTheme);
     syncThemeSelects(localTheme);
   }

@@ -334,11 +334,20 @@
       typeof topbarIconCharacter !== "undefined" && topbarIconCharacter
         ? topbarIconCharacter
         : menuCharacter; %>
-    <% const themeCharacter =
-      menuCharacter ||
-      (typeof activeThemeCharacter !== "undefined" && activeThemeCharacter
-        ? activeThemeCharacter
-        : null); %>
+    <% const resolvedThemeScope =
+      typeof themeScope !== "undefined" && themeScope
+        ? String(themeScope || "").trim().toLowerCase()
+        : (typeof pageClass !== "undefined" && /\bpage-serverliste\b/.test(String(pageClass || ""))
+          ? "serverlist"
+          : ""); %>
+    <% const themeCharacter = resolvedThemeScope === "serverlist"
+      ? null
+      : (
+        menuCharacter ||
+        (typeof activeThemeCharacter !== "undefined" && activeThemeCharacter
+          ? activeThemeCharacter
+          : null)
+      ); %>
     <% const viewCharacterTheme =
       themeCharacter && themeCharacter.theme
         ? String(themeCharacter.theme || "").trim().toLowerCase()
@@ -353,6 +362,7 @@
     class="<%= bodyClassNames.join(' ') %>"
     data-current-user-is-admin="<%= currentUser && currentUser.is_admin ? 'true' : 'false' %>"
     data-theme-character-id="<%= themeCharacter ? Number(themeCharacter.id) : '' %>"
+    data-theme-storage-scope="<%= resolvedThemeScope %>"
   >
     <% const topbarHidden = typeof hideTopbar !== "undefined" ? hideTopbar : false; %>
     <% const showAccountDeleteControl = Boolean(
@@ -857,9 +867,10 @@
               </a>
             <% } %>
             <% if (!topbarGuestbookModeActive) { %>
-              <form method="POST" action="/settings/theme" class="inline-form theme-form">
+              <form method="POST" action="/settings/theme" class="inline-form theme-form" data-theme-storage-scope="<%= resolvedThemeScope %>">
                 <label for="theme-select">Design</label>
                 <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+                <input type="hidden" name="theme_scope" value="<%= resolvedThemeScope %>" />
                 <input type="hidden" name="character_id" value="<%= themeCharacter ? Number(themeCharacter.id) : '' %>" />
                 <select
                   id="theme-select"

@@ -1,4 +1,4 @@
-<%- include("../../partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+<%- include("../../partials/start", { hideTopbar: true, pageClass: "page-roomlist", topbarCharacter: character }) %>
 
 <section class="rp-shell">
   <% const festplayRoomDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
@@ -37,6 +37,11 @@
   }; %>
   <% const festplayRoomIsOwner = Number(currentUser?.id) === Number(festplay?.created_by_user_id); %>
   <% const festplayRoomBoardHref = `/rp-board?server_id=${character.server_id}&character_id=${Number(character.id)}`; %>
+  <% const festplayRoomCharacterTheme = character?.theme ? String(character.theme || "").trim().toLowerCase() : ""; %>
+  <% const festplayRoomActiveTheme =
+    festplayRoomCharacterTheme && availableThemes.some((theme) => theme.id === festplayRoomCharacterTheme)
+      ? festplayRoomCharacterTheme
+      : activeTheme; %>
 
   <header class="rp-topline">
     <a class="rp-logo" href="/">Heldenhafte Reisen</a>
@@ -100,13 +105,14 @@
       <form method="POST" action="/settings/theme" class="inline-form theme-form">
         <label for="rp-theme-select-festplay-rooms">Design</label>
         <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
+        <input type="hidden" name="character_id" value="<%= character ? Number(character.id) : '' %>" />
         <select
           id="rp-theme-select-festplay-rooms"
           name="theme"
           class="theme-select"
         >
           <% availableThemes.forEach((theme) => { %>
-            <option value="<%= theme.id %>" <%= activeTheme === theme.id ? "selected" : "" %>>
+            <option value="<%= theme.id %>" <%= festplayRoomActiveTheme === theme.id ? "selected" : "" %>>
               <%= theme.label %>
             </option>
           <% }) %>

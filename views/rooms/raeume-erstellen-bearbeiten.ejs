@@ -1,4 +1,4 @@
-<%- include("../partials/start", { hideTopbar: true, pageClass: "page-roomlist" }) %>
+<%- include("../partials/start", { hideTopbar: true, pageClass: "page-roomlist", topbarCharacter: character }) %>
 
 <section class="rp-shell">
   <% const roomcreateDisplayName = currentUserDisplayName || (currentUser ? currentUser.display_name || currentUser.username : character.name); %>
