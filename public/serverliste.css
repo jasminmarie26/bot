@@ -651,6 +651,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: visible;
 }
 
 .serverlist-board-card.is-erp {
@@ -786,8 +787,7 @@
 }
 
 .serverlist-board-card .serverlist-board-character-list {
-  overflow-y: hidden;
-  overflow-x: visible;
+  overflow: visible;
 }
 
 .serverlist-board-character[hidden] {
