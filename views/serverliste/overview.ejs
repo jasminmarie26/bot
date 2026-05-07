@@ -151,7 +151,7 @@
               <p>Noch keine Charaktere in <%= section.overview_title %>.</p>
             </div>
           <% } else { %>
-            <div class="serverlist-board-character-list" data-serverlist-character-pages>
+            <div class="serverlist-board-character-list" data-serverlist-character-pages data-serverlist-character-page-size="<%= serverlistCharacterPageSize %>">
               <% sectionCharacters.forEach((char, charIndex) => { %>
                 <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
                 <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>

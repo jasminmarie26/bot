@@ -381,6 +381,16 @@
         });
         const pageList = card.querySelector("[data-serverlist-character-pages]");
         if (pageList) {
+          const pageSize = Number(pageList.dataset.serverlistCharacterPageSize) || 0;
+          const visibleCharacterCount = state.allItems.filter((item) =>
+            item.matches("[data-serverlist-character-page]") &&
+            itemMatchesFilter(item, state.filterId) &&
+            getItemPage(item) === currentPage
+          ).length;
+          pageList.classList.toggle(
+            "is-full-character-page",
+            Boolean(pageSize && visibleCharacterCount >= pageSize)
+          );
           pageList.scrollTop = 0;
         }
         syncPaginationUi(card, state);

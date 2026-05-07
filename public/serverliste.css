@@ -812,8 +812,14 @@
   flex: 1 1 auto;
   min-height: 0;
   align-content: start;
+  grid-auto-rows: auto;
   gap: 0.2rem;
   padding: 0.38rem var(--serverlist-character-list-inline-end) 0.4rem 0.52rem;
+}
+
+.serverlist-board-character-list.is-full-character-page {
+  align-content: stretch;
+  grid-auto-rows: minmax(2.38rem, 1fr);
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
