@@ -100,7 +100,7 @@
               class="rp-user-menu-toggle-icon<%= roomcreateMenuIconUrl ? ' has-custom-icon' : '' %>"
               aria-hidden="true"
               data-serverlist-account-icon-anchor
-              style="--serverlist-account-icon-focus-x: <%= roomcreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomcreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomcreateMenuIconZoom %>;"
+              style="--serverlist-account-icon-focus-x: <%= roomcreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomcreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomcreateMenuIconZoom %>; --serverlist-account-icon-size: <%= roomcreateMenuIconZoom * 100 %>%;"
             ><% if (roomcreateMenuIconUrl) { %><img src="<%= roomcreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">

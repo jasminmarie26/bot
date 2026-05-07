@@ -353,6 +353,7 @@
       guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
       guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+      guestbookCharacterIconPreview.style.setProperty("--serverlist-account-icon-size", `${nextZoom * 100}%`);
     };
 
     const syncMenuIcons = (imageUrl, focusXValue, focusYValue, zoomValue) => {
@@ -369,6 +370,7 @@
         anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
         anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
         anchor.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+        anchor.style.setProperty("--serverlist-account-icon-size", `${nextZoom * 100}%`);
         anchor.classList.toggle("has-custom-icon", Boolean(resolvedImageUrl));
 
         const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");

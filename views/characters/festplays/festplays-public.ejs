@@ -109,7 +109,7 @@
               class="rp-user-menu-toggle-icon<%= festplaysMenuIconUrl ? ' has-custom-icon' : '' %>"
               aria-hidden="true"
               data-serverlist-account-icon-anchor
-              style="--serverlist-account-icon-focus-x: <%= festplaysMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplaysMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplaysMenuIconZoom %>;"
+              style="--serverlist-account-icon-focus-x: <%= festplaysMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplaysMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplaysMenuIconZoom %>; --serverlist-account-icon-size: <%= festplaysMenuIconZoom * 100 %>%;"
             ><% if (festplaysMenuIconUrl) { %><img src="<%= festplaysMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">

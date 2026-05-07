@@ -829,6 +829,7 @@
     anchor.style.setProperty("--serverlist-account-icon-focus-x", `${focusX}%`);
     anchor.style.setProperty("--serverlist-account-icon-focus-y", `${focusY}%`);
     anchor.style.setProperty("--serverlist-account-icon-zoom", String(zoom));
+    anchor.style.setProperty("--serverlist-account-icon-size", `${zoom * 100}%`);
     anchor.classList.toggle("has-custom-icon", Boolean(imageUrl));
 
     let imageNode = anchor.querySelector("[data-serverlist-account-icon-image]");

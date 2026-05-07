@@ -141,7 +141,7 @@
               class="rp-user-menu-toggle-icon<%= roomlistMenuIconUrl ? ' has-custom-icon' : '' %>"
               aria-hidden="true"
               data-serverlist-account-icon-anchor
-              style="--serverlist-account-icon-focus-x: <%= roomlistMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomlistMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomlistMenuIconZoom %>;"
+              style="--serverlist-account-icon-focus-x: <%= roomlistMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= roomlistMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= roomlistMenuIconZoom %>; --serverlist-account-icon-size: <%= roomlistMenuIconZoom * 100 %>%;"
             ><% if (roomlistMenuIconUrl) { %><img src="<%= roomlistMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">

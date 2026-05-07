@@ -111,7 +111,7 @@
               class="rp-user-menu-toggle-icon<%= festplayCreateMenuIconUrl ? ' has-custom-icon' : '' %>"
               aria-hidden="true"
               data-serverlist-account-icon-anchor
-              style="--serverlist-account-icon-focus-x: <%= festplayCreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayCreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayCreateMenuIconZoom %>;"
+              style="--serverlist-account-icon-focus-x: <%= festplayCreateMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= festplayCreateMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= festplayCreateMenuIconZoom %>; --serverlist-account-icon-size: <%= festplayCreateMenuIconZoom * 100 %>%;"
             ><% if (festplayCreateMenuIconUrl) { %><img src="<%= festplayCreateMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">

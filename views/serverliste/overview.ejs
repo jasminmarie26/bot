@@ -10,7 +10,7 @@
   const focusX = Math.min(100, Math.max(0, Number(char?.serverlist_icon_focus_x ?? 50) || 50));
   const focusY = Math.min(100, Math.max(0, Number(char?.serverlist_icon_focus_y ?? 50) || 50));
   const zoom = Math.min(4, Math.max(1, Number(char?.serverlist_icon_zoom ?? 1) || 1));
-  return `--serverlist-avatar-focus-x: ${focusX}%; --serverlist-avatar-focus-y: ${focusY}%; --serverlist-avatar-zoom: ${zoom}; object-position: var(--serverlist-avatar-focus-x) var(--serverlist-avatar-focus-y);`;
+  return `--serverlist-avatar-focus-x: ${focusX}%; --serverlist-avatar-focus-y: ${focusY}%; --serverlist-avatar-zoom: ${zoom}; --serverlist-avatar-size: ${zoom * 100}%; object-position: var(--serverlist-avatar-focus-x) var(--serverlist-avatar-focus-y);`;
 }; %>
 <% const regularSections = overviewSections.filter((section) => !String(section.id || "").endsWith("-festplay")); %>
 <% const festplaySections = overviewSections.filter((section) => String(section.id || "").endsWith("-festplay")); %>

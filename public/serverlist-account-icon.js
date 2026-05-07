@@ -14,6 +14,15 @@
     return Math.min(100, Math.max(0, numericValue));
   }
 
+  function clampZoom(value, fallback = 1) {
+    const numericValue = Number.parseFloat(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.min(4, Math.max(1, numericValue));
+  }
+
   const openButtons = Array.from(document.querySelectorAll("[data-serverlist-account-icon-open]"));
   const closeButtons = Array.from(modal.querySelectorAll("[data-serverlist-account-icon-close]"));
   const preview = modal.querySelector("[data-serverlist-account-icon-preview]");
@@ -24,6 +33,7 @@
   const fileInput = form.elements.iconFile;
   const focusXInput = form.elements.focusX;
   const focusYInput = form.elements.focusY;
+  const zoomInput = form.elements.zoom;
   const userMenu = document.querySelector(".topbar-user-menu");
   const menuIconAnchors = Array.from(document.querySelectorAll("[data-serverlist-account-icon-anchor]"));
   const maxUploadBytes = 4 * 1024 * 1024;
@@ -35,6 +45,7 @@
   let savedImageUrl = String(form.dataset.currentImageUrl || "").trim();
   let savedFocusX = clampPercent(form.dataset.currentFocusX);
   let savedFocusY = clampPercent(form.dataset.currentFocusY);
+  let savedZoom = clampZoom(form.dataset.currentZoom);
 
   function ensurePreviewImage() {
     let image = preview.querySelector("[data-serverlist-account-icon-preview-image]");
@@ -73,11 +84,14 @@
     statusNode.classList.toggle("is-success", kind === "success");
   }
 
-  function syncFocusStyles(focusXValue, focusYValue) {
+  function syncIconStyles(focusXValue, focusYValue, zoomValue) {
     const nextFocusX = clampPercent(focusXValue, savedFocusX);
     const nextFocusY = clampPercent(focusYValue, savedFocusY);
+    const nextZoom = clampZoom(zoomValue, savedZoom);
     preview.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
     preview.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+    preview.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+    preview.style.setProperty("--serverlist-account-icon-size", `${nextZoom * 100}%`);
 
     if (!Number.isInteger(menuCharacterId) || menuCharacterId < 1 || currentCharacterId !== menuCharacterId) {
       return;
@@ -86,6 +100,8 @@
     menuIconAnchors.forEach((anchor) => {
       anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+      anchor.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+      anchor.style.setProperty("--serverlist-account-icon-size", `${nextZoom * 100}%`);
     });
   }
 
@@ -102,7 +118,7 @@
     attachFallbackOnError(previewImage);
   }
 
-  function syncMenuIcons(imageUrl, focusXValue, focusYValue) {
+  function syncMenuIcons(imageUrl, focusXValue, focusYValue, zoomValue) {
     if (!Number.isInteger(menuCharacterId) || menuCharacterId < 1 || currentCharacterId !== menuCharacterId) {
       return;
     }
@@ -110,10 +126,13 @@
     const resolvedImageUrl = String(imageUrl || "").trim();
     const nextFocusX = clampPercent(focusXValue, savedFocusX);
     const nextFocusY = clampPercent(focusYValue, savedFocusY);
+    const nextZoom = clampZoom(zoomValue, savedZoom);
 
     menuIconAnchors.forEach((anchor) => {
       anchor.style.setProperty("--serverlist-account-icon-focus-x", `${nextFocusX}%`);
       anchor.style.setProperty("--serverlist-account-icon-focus-y", `${nextFocusY}%`);
+      anchor.style.setProperty("--serverlist-account-icon-zoom", String(nextZoom));
+      anchor.style.setProperty("--serverlist-account-icon-size", `${nextZoom * 100}%`);
       anchor.classList.toggle("has-custom-icon", Boolean(resolvedImageUrl));
 
       const existingImage = anchor.querySelector("[data-serverlist-account-icon-image]");
@@ -135,7 +154,7 @@
     });
   }
 
-  function syncCharacterButtons(imageUrl, focusXValue, focusYValue) {
+  function syncCharacterButtons(imageUrl, focusXValue, focusYValue, zoomValue) {
     if (!Number.isInteger(currentCharacterId) || currentCharacterId < 1) {
       return;
     }
@@ -149,6 +168,7 @@
       button.dataset.currentImageUrl = String(imageUrl || "").trim();
       button.dataset.currentFocusX = String(clampPercent(focusXValue, savedFocusX));
       button.dataset.currentFocusY = String(clampPercent(focusYValue, savedFocusY));
+      button.dataset.currentZoom = String(clampZoom(zoomValue, savedZoom));
     });
   }
 
@@ -158,11 +178,13 @@
     savedImageUrl = String(characterState.imageUrl || "").trim();
     savedFocusX = clampPercent(characterState.focusX, 50);
     savedFocusY = clampPercent(characterState.focusY, 50);
+    savedZoom = clampZoom(characterState.zoom, 1);
     form.dataset.characterId = Number.isInteger(currentCharacterId) ? String(currentCharacterId) : "";
     form.dataset.characterName = currentCharacterName;
     form.dataset.currentImageUrl = savedImageUrl;
     form.dataset.currentFocusX = String(savedFocusX);
     form.dataset.currentFocusY = String(savedFocusY);
+    form.dataset.currentZoom = String(savedZoom);
 
     if (titleNode instanceof HTMLElement) {
       titleNode.textContent = "Icon editieren";
@@ -189,7 +211,10 @@
     if (focusYInput instanceof HTMLInputElement) {
       focusYInput.value = String(savedFocusY);
     }
-    syncFocusStyles(savedFocusX, savedFocusY);
+    if (zoomInput instanceof HTMLInputElement) {
+      zoomInput.value = String(savedZoom);
+    }
+    syncIconStyles(savedFocusX, savedFocusY, savedZoom);
     setPreviewSource(savedImageUrl);
     setStatus("");
   }
@@ -203,7 +228,8 @@
         ? buttonDataset.currentImageUrl
         : form.dataset.currentImageUrl,
       focusX: buttonDataset.currentFocusX || form.dataset.currentFocusX,
-      focusY: buttonDataset.currentFocusY || form.dataset.currentFocusY
+      focusY: buttonDataset.currentFocusY || form.dataset.currentFocusY,
+      zoom: buttonDataset.currentZoom || form.dataset.currentZoom
     });
     lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     resetFormToSavedState();
@@ -286,7 +312,8 @@
   function getSubmitPayload() {
     const payload = {
       focusX: clampPercent(focusXInput?.value, savedFocusX),
-      focusY: clampPercent(focusYInput?.value, savedFocusY)
+      focusY: clampPercent(focusYInput?.value, savedFocusY),
+      zoom: clampZoom(zoomInput?.value, savedZoom)
     };
 
     if (activeFilePayload?.dataUrl) {
@@ -333,11 +360,15 @@
   fileInput?.addEventListener("change", handleFileChange);
 
   focusXInput?.addEventListener("input", () => {
-    syncFocusStyles(focusXInput.value, focusYInput?.value);
+    syncIconStyles(focusXInput.value, focusYInput?.value, zoomInput?.value);
   });
 
   focusYInput?.addEventListener("input", () => {
-    syncFocusStyles(focusXInput?.value, focusYInput.value);
+    syncIconStyles(focusXInput?.value, focusYInput.value, zoomInput?.value);
+  });
+
+  zoomInput?.addEventListener("input", () => {
+    syncIconStyles(focusXInput?.value, focusYInput?.value, zoomInput.value);
   });
 
   form.addEventListener("submit", async (event) => {
@@ -380,11 +411,13 @@
       savedImageUrl = String(responsePayload.imageUrl || "").trim();
       savedFocusX = clampPercent(responsePayload.focusX, savedFocusX);
       savedFocusY = clampPercent(responsePayload.focusY, savedFocusY);
+      savedZoom = clampZoom(responsePayload.zoom, savedZoom);
       form.dataset.currentImageUrl = savedImageUrl;
       form.dataset.currentFocusX = String(savedFocusX);
       form.dataset.currentFocusY = String(savedFocusY);
-      syncCharacterButtons(savedImageUrl, savedFocusX, savedFocusY);
-      syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
+      form.dataset.currentZoom = String(savedZoom);
+      syncCharacterButtons(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
+      syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
       setStatus("Icon gespeichert.", "success");
       closeModal();
     } catch (error) {
@@ -401,7 +434,8 @@
     characterName: form.dataset.characterName,
     imageUrl: form.dataset.currentImageUrl,
     focusX: form.dataset.currentFocusX,
-    focusY: form.dataset.currentFocusY
+    focusY: form.dataset.currentFocusY,
+    zoom: form.dataset.currentZoom
   });
-  syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY);
+  syncMenuIcons(savedImageUrl, savedFocusX, savedFocusY, savedZoom);
 })();

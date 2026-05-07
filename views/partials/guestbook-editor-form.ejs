@@ -145,7 +145,7 @@
                 <div
                   class="serverlist-account-icon-preview<%= String(character.serverlist_icon_url || "").trim() ? ' has-custom-icon' : '' %>"
                   data-guestbook-character-icon-preview
-                  style="--serverlist-account-icon-focus-x: <%= Number(character.serverlist_icon_focus_x ?? 50) %>%; --serverlist-account-icon-focus-y: <%= Number(character.serverlist_icon_focus_y ?? 50) %>%; --serverlist-account-icon-zoom: <%= Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1 %>;"
+                  style="--serverlist-account-icon-focus-x: <%= Number(character.serverlist_icon_focus_x ?? 50) %>%; --serverlist-account-icon-focus-y: <%= Number(character.serverlist_icon_focus_y ?? 50) %>%; --serverlist-account-icon-zoom: <%= Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1 %>; --serverlist-account-icon-size: <%= (Number.isFinite(Number(character.serverlist_icon_zoom)) ? Math.min(4, Math.max(1, Number(character.serverlist_icon_zoom))) : 1) * 100 %>%;"
                 >
                   <% if (String(character.serverlist_icon_url || "").trim()) { %>
                     <img

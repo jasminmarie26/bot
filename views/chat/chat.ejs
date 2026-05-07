@@ -357,7 +357,7 @@
               class="rp-user-menu-toggle-icon<%= chatMenuIconUrl ? ' has-custom-icon' : '' %>"
               aria-hidden="true"
               data-serverlist-account-icon-anchor
-              style="--serverlist-account-icon-focus-x: <%= chatMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= chatMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= chatMenuIconZoom %>;"
+              style="--serverlist-account-icon-focus-x: <%= chatMenuIconFocusX %>%; --serverlist-account-icon-focus-y: <%= chatMenuIconFocusY %>%; --serverlist-account-icon-zoom: <%= chatMenuIconZoom %>; --serverlist-account-icon-size: <%= chatMenuIconZoom * 100 %>%;"
             ><% if (chatMenuIconUrl) { %><img src="<%= chatMenuIconUrl %>" alt="" data-serverlist-account-icon-image onerror="this.parentElement && this.parentElement.classList.remove('has-custom-icon'); this.remove();" /><% } %></span>
           </summary>
           <div class="rp-user-menu-panel">
