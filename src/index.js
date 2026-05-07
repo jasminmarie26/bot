@@ -17579,13 +17579,12 @@ app.post("/settings/theme", (req, res) => {
   const theme = normalizeTheme(req.body.theme);
 
   if (req.session.user) {
+    req.session.guest_theme = theme;
     const targetCharacter = getThemeTargetCharacterForRequest(req);
     if (targetCharacter) {
       db.prepare("UPDATE characters SET theme = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")
         .run(theme, targetCharacter.id, req.session.user.id);
       rememberPreferredCharacter(req, { ...targetCharacter, theme });
-    } else {
-      req.session.guest_theme = theme;
     }
   } else {
     req.session.guest_theme = theme;
@@ -19558,11 +19557,16 @@ app.post("/characters", requireAuth, (req, res) => {
     return renderCharacterCreateFormError("Dieser Charaktername ist bereits vergeben.");
   }
 
+  const initialTheme = normalizeTheme(
+    req.session.guest_theme ||
+      getThemeCookie(req) ||
+      resolveCharacterTheme(getPreferredMenuCharacterForUser(req), DEFAULT_THEME)
+  );
   const info = db
     .prepare(
       `INSERT INTO characters
-       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, larp_profile_title_image_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, chat_input_background_color, chat_online_list_background_color, is_public)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (user_id, server_id, festplay_id, name, species, age, faceclaim, description, avatar_url, larp_profile_title_image_url, public_birth_show_age, public_birth_show_day_month, public_birth_show_year, chat_background_url, chat_background_color, chat_background_image_opacity, chat_input_background_color, chat_online_list_background_color, is_public, theme)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id,
@@ -19583,7 +19587,8 @@ app.post("/characters", requireAuth, (req, res) => {
       payload.chat_background_image_opacity,
       payload.chat_input_background_color,
       payload.chat_online_list_background_color,
-      payload.is_public
+      payload.is_public,
+      initialTheme
     );
 
   saveCharacterChatColor(Number(info.lastInsertRowid), payload.chat_text_color);
