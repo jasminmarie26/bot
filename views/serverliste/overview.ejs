@@ -50,6 +50,7 @@
       <% const serverlistCharacterPageSize = 7; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
+      <% const serverlistVisiblePageButtonCount = showServerlistPagination ? Math.max(3, serverlistCharacterPageCount) : serverlistCharacterPageCount; %>
       <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
         <header class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
@@ -69,8 +70,9 @@
                 >
                   &lsaquo;
                 </button>
-                <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
-                  <% const isInitialVisiblePageButton = pageNumber <= Math.min(3, serverlistCharacterPageCount); %>
+                <% for (let pageNumber = 1; pageNumber <= serverlistVisiblePageButtonCount; pageNumber += 1) { %>
+                  <% const isInitialVisiblePageButton = pageNumber <= Math.min(3, serverlistVisiblePageButtonCount); %>
+                  <% const isAvailablePageButton = pageNumber <= serverlistCharacterPageCount; %>
                   <button
                     type="button"
                     class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
@@ -78,6 +80,7 @@
                     aria-label="Seite <%= pageNumber %> anzeigen"
                     aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
                     <%= isInitialVisiblePageButton ? "" : "hidden" %>
+                    <%= isAvailablePageButton ? "" : "disabled" %>
                   >
                     <%= pageNumber %>
                   </button>

@@ -86,6 +86,11 @@
     const payload = new URLSearchParams();
     payload.set("theme", nextTheme);
     payload.set("return_to", returnTo);
+    const characterField = form.elements.character_id;
+    const characterId = String(characterField?.value || "").trim();
+    if (characterId) {
+      payload.set("character_id", characterId);
+    }
     const response = await fetch(form.action, {
       method: "POST",
       credentials: "same-origin",
