@@ -1266,23 +1266,25 @@
 }
 
 .serverlist-stage-character-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
   gap: 0.42rem;
   margin-top: 0.56rem;
 }
 
 .serverlist-stage-character {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  min-width: 0;
   max-width: 100%;
-  gap: 0.35rem;
 }
 
 .serverlist-stage-character-main {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
   min-height: 1.8rem;
   padding: 0.26rem 0.5rem 0.26rem 0.34rem;
   border: 1px solid var(--panel-edge);
@@ -1292,6 +1294,13 @@
   font-size: 0.76rem;
   font-weight: 850;
   text-decoration: none;
+}
+
+.serverlist-stage-character-main strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .serverlist-stage-character-main:hover,

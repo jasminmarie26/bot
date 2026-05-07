@@ -7082,6 +7082,39 @@ function getDashboardFestplaysForUser(userId, serverId) {
     );
   });
 
+  const assignedRows = db
+    .prepare(
+      `SELECT DISTINCT
+              f.id,
+              f.name,
+              f.server_id,
+              COALESCE(creator.name, '') AS creator_character_name,
+              c.id AS character_id,
+              c.name AS character_name,
+              c.server_id AS character_server_id,
+              c.serverlist_icon_url AS character_serverlist_icon_url,
+              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
+              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
+              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
+              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
+         FROM characters c
+         JOIN festplays f ON f.id = c.festplay_id
+         LEFT JOIN characters creator ON creator.id = f.creator_character_id
+        WHERE c.user_id = ?
+          AND c.server_id = ?
+          AND lower(trim(COALESCE(f.server_id, ''))) = ?
+          AND COALESCE(f.created_by_user_id, 0) != ?
+        ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
+    )
+    .all(parsedUserId, normalizedServerId, normalizedServerId, parsedUserId);
+
+  assignedRows.forEach((row) => {
+    addDashboardFestplayCharacter(
+      row,
+      "Freigeschaltetes Festspiel auf diesem Bereich."
+    );
+  });
+
   const fallbackOwnedCharacters = db
     .prepare(
       `SELECT f.id AS festplay_id,
@@ -7115,14 +7148,17 @@ function getDashboardFestplaysForUser(userId, serverId) {
     )
     .all(parsedUserId, normalizedServerId);
 
-  const fallbackOwnedCharacterMap = new Map();
+  const fallbackOwnedCharactersByFestplay = new Map();
   fallbackOwnedCharacters.forEach((row) => {
     const festplayId = Number(row.festplay_id);
-    if (!Number.isInteger(festplayId) || festplayId < 1 || fallbackOwnedCharacterMap.has(festplayId)) {
+    if (!Number.isInteger(festplayId) || festplayId < 1) {
       return;
     }
 
-    fallbackOwnedCharacterMap.set(festplayId, row);
+    if (!fallbackOwnedCharactersByFestplay.has(festplayId)) {
+      fallbackOwnedCharactersByFestplay.set(festplayId, []);
+    }
+    fallbackOwnedCharactersByFestplay.get(festplayId).push(row);
   });
 
   const ownedRows = db
@@ -7171,19 +7207,11 @@ function getDashboardFestplaysForUser(userId, serverId) {
         },
         ""
       );
-      return;
     }
 
-    if (Number.isInteger(Number(row.creator_character_id)) && Number(row.creator_character_id) > 0) {
-      return;
-    }
-
-    const fallbackCharacter = fallbackOwnedCharacterMap.get(Number(row.id));
-    if (!fallbackCharacter) {
-      return;
-    }
-
-    addDashboardFestplayCharacter(
+    const ownedCharacters = fallbackOwnedCharactersByFestplay.get(Number(row.id)) || [];
+    ownedCharacters.forEach((fallbackCharacter) => {
+      addDashboardFestplayCharacter(
         {
           ...row,
           character_id: fallbackCharacter.character_id,
@@ -7195,8 +7223,9 @@ function getDashboardFestplaysForUser(userId, serverId) {
           character_serverlist_icon_zoom: fallbackCharacter.character_serverlist_icon_zoom,
           character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
         },
-      ""
-    );
+        ""
+      );
+    });
   });
 
   return Array.from(festplayMap.values())

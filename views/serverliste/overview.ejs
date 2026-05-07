@@ -314,7 +314,6 @@
 
               <div class="serverlist-stage-character-row">
                 <% festplay.characters.forEach((char) => { %>
-                  <% const isInFestplayArea = Boolean(char.is_in_festplay_area); %>
                   <% const stageCharacterHref = `/characters/${char.id}/festplays/${festplay.id}/rooms`; %>
                   <% const stageCharacterTitle = `Festspiel-Raeume mit ${char.name} oeffnen`; %>
                   <article class="serverlist-stage-character">
@@ -336,57 +335,6 @@
                       </span>
                       <strong><%= char.name %></strong>
                     </a>
-                    <div class="serverlist-stage-character-actions">
-                      <a
-                        class="serverlist-board-action-btn"
-                        href="/characters/<%= char.id %>/guestbook"
-                        aria-label="G&auml;stebuch &ouml;ffnen"
-                        title="G&auml;stebuch &ouml;ffnen"
-                      >
-                        <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
-                      </a>
-                      <a
-                        class="serverlist-board-action-btn"
-                        href="/characters/<%= char.id %>/guestbook/edit"
-                        aria-label="G&auml;stebuch bearbeiten"
-                        title="G&auml;stebuch bearbeiten"
-                      >
-                        <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
-                      </a>
-                      <form
-                        method="POST"
-                        action="/characters/<%= char.id %>/guestbook-code-email"
-                        class="character-mini-export-form"
-                      >
-                        <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                        <button
-                          type="submit"
-                          class="serverlist-board-action-btn"
-                          aria-label="G&auml;stebuch-Code per E-Mail senden"
-                          title="G&auml;stebuch-Code per E-Mail senden"
-                        >
-                          <span class="character-mini-export-icon" aria-hidden="true"></span>
-                        </button>
-                      </form>
-                      <% if (isInFestplayArea) { %>
-                        <form
-                          method="POST"
-                          action="/characters/<%= char.id %>/delete"
-                          class="character-mini-delete-form"
-                          onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
-                        >
-                          <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                          <button
-                            type="submit"
-                            class="serverlist-board-action-btn is-danger"
-                            aria-label="Charakter l&ouml;schen"
-                            title="Charakter l&ouml;schen"
-                          >
-                            X
-                          </button>
-                        </form>
-                      <% } %>
-                    </div>
                   </article>
                 <% }) %>
               </div>
