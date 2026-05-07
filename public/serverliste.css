@@ -640,7 +640,7 @@
   min-width: 0;
   height: clamp(31rem, 68vh, 38rem);
   border-radius: 18px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .serverlist-board-card-body {
@@ -772,7 +772,7 @@
   min-height: 0;
   align-content: start;
   gap: 0.34rem;
-  padding: 0.55rem 2.55rem 0.55rem 0.65rem;
+  padding: 0.55rem 0.85rem 0.55rem 0.65rem;
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
@@ -781,7 +781,7 @@
 
 .serverlist-board-card .serverlist-board-character-list {
   overflow-y: hidden;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 .serverlist-board-character[hidden] {
@@ -914,7 +914,7 @@
 .serverlist-direct-move-form {
   position: absolute;
   top: 50%;
-  right: -2.1rem;
+  right: -1.875rem;
   margin: 0;
   transform: translateY(-50%);
 }
@@ -1307,11 +1307,11 @@
   }
 
   .serverlist-board-character-list {
-    padding-right: 2.25rem;
+    padding-right: 0.85rem;
   }
 
   .serverlist-direct-move-form {
-    right: -1.95rem;
+    right: -1.875rem;
   }
 
   .serverlist-board-character-actions {
