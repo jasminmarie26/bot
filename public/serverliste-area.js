@@ -427,8 +427,156 @@
       }
     };
 
+    const initBulkCharacterDelete = () => {
+      const root = document.querySelector("[data-serverlist-overview-root]");
+      if (!root) {
+        return;
+      }
+
+      const getCardSelections = (card) =>
+        Array.from(card.querySelectorAll("[data-serverlist-character-select]"));
+
+      const getSelectedSelections = (card) =>
+        getCardSelections(card).filter((input) => input.checked);
+
+      const updateSelectionState = (card) => {
+        const isSelecting = card.classList.contains("is-selecting-characters");
+        const selectedInputs = getSelectedSelections(card);
+        const toggle = card.querySelector("[data-serverlist-bulk-delete-toggle]");
+
+        getCardSelections(card).forEach((input) => {
+          const row = input.closest(".serverlist-board-character");
+          row?.classList.toggle("is-bulk-selected", input.checked);
+        });
+
+        if (toggle) {
+          toggle.classList.toggle("is-active", isSelecting);
+          toggle.setAttribute("aria-pressed", isSelecting ? "true" : "false");
+          toggle.setAttribute(
+            "aria-label",
+            selectedInputs.length
+              ? `${selectedInputs.length} ausgew\u00e4hlte Charaktere l\u00f6schen`
+              : "Charaktere zum L\u00f6schen ausw\u00e4hlen"
+          );
+          toggle.title = selectedInputs.length
+            ? `${selectedInputs.length} ausgew\u00e4hlte Charaktere l\u00f6schen`
+            : "Charaktere zum L\u00f6schen ausw\u00e4hlen";
+        }
+      };
+
+      const setSelectionMode = (card, enabled) => {
+        card.classList.toggle("is-selecting-characters", enabled);
+        if (!enabled) {
+          getCardSelections(card).forEach((input) => {
+            input.checked = false;
+          });
+        }
+        updateSelectionState(card);
+      };
+
+      const submitSelectedCharacters = (card, selectedInputs) => {
+        const form = card.querySelector("[data-serverlist-bulk-delete-form]");
+        if (!form || !selectedInputs.length) {
+          return;
+        }
+
+        const selectedNames = selectedInputs
+          .map((input) => input.closest(".serverlist-board-character")?.dataset.serverlistCharacterName || "")
+          .filter(Boolean);
+        const confirmText = selectedNames.length === 1
+          ? `${selectedNames[0]} wirklich l\u00f6schen?`
+          : `${selectedNames.length} Charaktere wirklich l\u00f6schen?`;
+        if (!window.confirm(confirmText)) {
+          return;
+        }
+
+        form.querySelectorAll('input[name="character_ids"]').forEach((input) => input.remove());
+        selectedInputs.forEach((input) => {
+          const hiddenInput = document.createElement("input");
+          hiddenInput.type = "hidden";
+          hiddenInput.name = "character_ids";
+          hiddenInput.value = input.value;
+          form.appendChild(hiddenInput);
+        });
+        form.submit();
+      };
+
+      root.addEventListener("click", (event) => {
+        const toggle = event.target.closest("[data-serverlist-bulk-delete-toggle]");
+        if (toggle) {
+          const card = toggle.closest(".serverlist-board-card");
+          if (!card) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (!card.classList.contains("is-selecting-characters")) {
+            setSelectionMode(card, true);
+            return;
+          }
+
+          const selectedInputs = getSelectedSelections(card);
+          if (!selectedInputs.length) {
+            setSelectionMode(card, false);
+            return;
+          }
+
+          submitSelectedCharacters(card, selectedInputs);
+          return;
+        }
+
+        const card = event.target.closest(".serverlist-board-card.is-selecting-characters");
+        if (!card) {
+          return;
+        }
+
+        if (
+          event.target.closest(
+            ".serverlist-board-character-actions, .serverlist-direct-move-form, .serverlist-board-card-head, .serverlist-board-pagination"
+          )
+        ) {
+          return;
+        }
+
+        const row = event.target.closest(".serverlist-board-character");
+        if (!row) {
+          return;
+        }
+
+        const selectionInput = row.querySelector("[data-serverlist-character-select]");
+        if (!selectionInput) {
+          return;
+        }
+
+        if (event.target.closest(".serverlist-character-select")) {
+          window.setTimeout(() => updateSelectionState(card), 0);
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        selectionInput.checked = !selectionInput.checked;
+        updateSelectionState(card);
+      });
+
+      root.addEventListener("change", (event) => {
+        const selectionInput = event.target.closest("[data-serverlist-character-select]");
+        if (!selectionInput) {
+          return;
+        }
+
+        const card = selectionInput.closest(".serverlist-board-card");
+        if (card) {
+          updateSelectionState(card);
+        }
+      });
+    };
+
     initOverviewAccordionState();
     initCharacterPagination();
+    initBulkCharacterDelete();
 
     if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;

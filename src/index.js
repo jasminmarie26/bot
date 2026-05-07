@@ -21850,6 +21850,85 @@ app.post("/characters/:id/update", requireAuth, (req, res) => {
   );
 });
 
+app.post("/characters/delete-selected", requireAuth, (req, res) => {
+  const returnTarget = getSafeReturnTarget(req, "/dashboard");
+  const requestedCharacterIds = Array.isArray(req.body.character_ids)
+    ? req.body.character_ids
+    : [req.body.character_ids];
+  const characterIds = [
+    ...new Set(
+      requestedCharacterIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  ];
+
+  if (!characterIds.length) {
+    return res.redirect(returnTarget);
+  }
+
+  const characters = characterIds
+    .map((characterId) => getCharacterById(characterId))
+    .filter(Boolean);
+
+  if (characters.some((character) => Number(character.user_id) !== Number(req.session.user.id))) {
+    return res.status(403).render("errors/error", {
+      title: "Kein Zugriff",
+      message: "Nur der Besitzer darf diese Charaktere löschen."
+    });
+  }
+
+  const deletedCharacterIds = new Set();
+  try {
+    characters.forEach((character) => {
+      const characterId = Number(character.id);
+      if (!Number.isInteger(characterId) || characterId < 1) {
+        return;
+      }
+
+      try {
+        deleteCharacterWithBackupTx(characterId);
+        deletedCharacterIds.add(characterId);
+      } catch (error) {
+        if (error?.code !== "CHARACTER_NOT_FOUND") {
+          throw error;
+        }
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    setFlash(req, "error", "Ausgewählte Charaktere konnten nicht gelöscht werden.");
+    return res.redirect(returnTarget);
+  }
+
+  if (deletedCharacterIds.size) {
+    const preferredMap = normalizePreferredCharacterMap(req.session.preferred_character_ids);
+    CHARACTER_SERVER_IDS.forEach((serverId) => {
+      if (deletedCharacterIds.has(Number(preferredMap[serverId]))) {
+        delete preferredMap[serverId];
+      }
+    });
+    req.session.preferred_character_ids = preferredMap;
+    const preferredServerId = getStoredCharacterServerId(req.session.preferred_character_server_id);
+    if (preferredServerId && !preferredMap[preferredServerId]) {
+      const nextPreferredServerId = CHARACTER_SERVER_IDS.find((serverId) => preferredMap[serverId]);
+      if (nextPreferredServerId) {
+        req.session.preferred_character_server_id = nextPreferredServerId;
+      } else {
+        delete req.session.preferred_character_server_id;
+      }
+    }
+
+    const refreshedUser = getUserForSessionById(req.session.user.id);
+    if (refreshedUser) {
+      req.session.user = toSessionUser(refreshedUser);
+    }
+    emitHomeStatsUpdate();
+  }
+
+  return res.redirect(returnTarget);
+});
+
 app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const character = getCharacterById(id);

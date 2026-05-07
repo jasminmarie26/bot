@@ -120,6 +120,25 @@
                     &#10003;
                   </button>
                 </form>
+                <form
+                  method="POST"
+                  action="/characters/delete-selected"
+                  class="serverlist-bulk-delete-form"
+                  data-serverlist-bulk-delete-form
+                >
+                  <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                  <input type="hidden" name="server_id" value="<%= sectionServerId %>">
+                  <button
+                    type="button"
+                    class="serverlist-board-icon-btn serverlist-bulk-delete-toggle"
+                    data-serverlist-bulk-delete-toggle
+                    aria-label="Charaktere zum L&ouml;schen ausw&auml;hlen"
+                    aria-pressed="false"
+                    title="Charaktere zum L&ouml;schen ausw&auml;hlen"
+                  >
+                    <span class="serverlist-bulk-delete-mark" aria-hidden="true"></span>
+                  </button>
+                </form>
               </div>
             </div>
           </div>
@@ -139,7 +158,16 @@
                 <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
                 <% const characterNameLength = String(char.name || "").trim().length; %>
                 <% const characterNameFontSize = characterNameLength > 34 ? "0.62rem" : (characterNameLength > 26 ? "0.68rem" : (characterNameLength > 18 ? "0.74rem" : "0.8rem")); %>
-                <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
+                <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-id="<%= char.id %>" data-serverlist-character-name="<%= char.name %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
+                  <label class="serverlist-character-select" title="<%= char.name %> ausw&auml;hlen">
+                    <input
+                      type="checkbox"
+                      value="<%= char.id %>"
+                      data-serverlist-character-select
+                      aria-label="<%= char.name %> zum L&ouml;schen ausw&auml;hlen"
+                    >
+                    <span class="serverlist-character-select-box" aria-hidden="true"></span>
+                  </label>
                   <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
                     <% if (char.serverlist_icon_url) { %>
                       <img

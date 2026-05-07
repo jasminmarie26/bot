@@ -94,6 +94,10 @@
   margin: 0;
 }
 
+.serverlist-bulk-delete-form {
+  margin: 0;
+}
+
 .serverlist-overview-actions {
   display: inline-flex;
   align-items: center;
@@ -774,6 +778,31 @@
   text-decoration: none;
 }
 
+.serverlist-bulk-delete-toggle {
+  border-radius: 6px;
+}
+
+.serverlist-bulk-delete-toggle.is-active {
+  border-color: color-mix(in srgb, var(--danger) 58%, var(--panel-edge));
+  background: color-mix(in srgb, var(--danger) 16%, rgba(255, 255, 255, 0.04));
+}
+
+.serverlist-bulk-delete-mark {
+  display: grid;
+  place-items: center;
+  width: 0.98rem;
+  height: 0.98rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: currentColor;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.serverlist-bulk-delete-toggle.is-active .serverlist-bulk-delete-mark::before {
+  content: "\2713";
+}
+
 .serverlist-board-character-list {
   --serverlist-character-list-inline-end: 0.85rem;
   display: grid;
@@ -813,6 +842,58 @@
   border-radius: 14px;
   background: color-mix(in srgb, white 4.5%, transparent);
   transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.serverlist-board-card.is-selecting-characters .serverlist-board-character {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.serverlist-character-select {
+  display: none;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  cursor: pointer;
+}
+
+.serverlist-board-card.is-selecting-characters .serverlist-character-select {
+  display: grid;
+}
+
+.serverlist-character-select input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.serverlist-character-select-box {
+  display: grid;
+  place-items: center;
+  width: 1.18rem;
+  height: 1.18rem;
+  border: 1px solid color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 52%, var(--panel-edge));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--field-bg) 80%, transparent);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.serverlist-character-select input:checked + .serverlist-character-select-box {
+  border-color: color-mix(in srgb, var(--danger) 64%, var(--panel-edge));
+  background: color-mix(in srgb, var(--danger) 20%, rgba(255, 255, 255, 0.04));
+}
+
+.serverlist-character-select input:checked + .serverlist-character-select-box::before {
+  content: "\2713";
+}
+
+.serverlist-board-character.is-bulk-selected {
+  border-color: color-mix(in srgb, var(--danger) 54%, var(--panel-edge));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--danger) 12%, transparent), transparent 58%),
+    color-mix(in srgb, white 4.5%, transparent);
 }
 
 .serverlist-board-character.is-festplay-character {
