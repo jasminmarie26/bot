@@ -19594,9 +19594,6 @@ app.post("/characters", requireAuth, (req, res) => {
   });
 
   emitHomeStatsUpdate();
-  if (payload.server_id !== LARP_SERVER_ID) {
-    setFlash(req, "success", "Charakter gespeichert.");
-  }
   return res.redirect(returnTarget);
 });
 
@@ -22004,28 +22001,6 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
   refreshConnectedUserDisplay(req.session.user.id);
 
   emitHomeStatsUpdate();
-  let successMessage = `Charakter wurde nach ${nextServerId === "erp" ? "ERP" : "FREE-RP"} verschoben.`;
-  if (
-    festplayHomeServerId &&
-    nextServerId === festplayHomeServerId &&
-    nextDashboardPlacement === "festplay"
-  ) {
-    successMessage = "Charakter wurde zurück ins Festspiel gelegt.";
-  } else if (
-    festplayHomeServerId &&
-    nextServerId === festplayHomeServerId &&
-    currentDashboardPlacement === "festplay" &&
-    nextDashboardPlacement === "main"
-  ) {
-    successMessage = `Charakter wurde in ${getServerLabel(nextServerId)} zu den normalen Charakteren gelegt.`;
-  }
-
-  const returnTargetPath = String(returnTarget || "").split(/[?#]/)[0];
-  const returnsToServerlistOverview =
-    returnTargetPath === "/dashboard" || returnTargetPath === "/dashboard/areas/overview";
-  if (!returnsToServerlistOverview) {
-    setFlash(req, "success", successMessage);
-  }
   return res.redirect(returnTarget);
 });
 
