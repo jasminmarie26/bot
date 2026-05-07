@@ -644,6 +644,8 @@
 }
 
 .serverlist-board-card[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: clamp(31rem, 68vh, 38rem);
   min-height: 0;
 }
