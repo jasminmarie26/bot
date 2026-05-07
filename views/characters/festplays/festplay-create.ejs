@@ -192,9 +192,6 @@
                 title="Festspiel &ouml;ffnen"
               >
                 <span class="rp-room-inline-name"><%= festplay.name %></span>
-                <% if (activeFestplayOverviewTab === "andere" && festplay.creator_display_name) { %>
-                  <span class="rp-room-inline-teaser">von <%= festplay.creator_display_name %></span>
-                <% } %>
               </a>
             <% }) %>
           </div>
@@ -429,7 +426,7 @@
 
               <% if (readOnlyFestplayRoom) { %>
                 <p class="rp-room-editor-note">
-                  Dieser Festspiel-Raum wurde mit <strong><%= readOnlyFestplayRoom.creator_character_name || selectedFestplay.creator_display_name || 'einem anderen Charakter' %></strong> erstellt.
+                  Dieser Festspiel-Raum wurde mit <strong><%= readOnlyFestplayRoom.creator_character_name || 'einem anderen Charakter' %></strong> erstellt.
                   Du kannst hier eigene R&auml;ume anlegen und nur deine eigenen bearbeiten oder l&ouml;schen.
                 </p>
               <% } %>
@@ -588,10 +585,6 @@
           </form>
         <% } else { %>
           <div class="rp-room-editor-body">
-            <% if (selectedFestplay.creator_display_name) { %>
-              <p class="rp-room-editor-note">Erstellt mit <strong><%= selectedFestplay.creator_display_name %></strong>.</p>
-            <% } %>
-
             <div class="rp-room-editor-field">
               <span class="rp-room-editor-field-label">Festplay Beschreibung</span>
               <div class="rp-room-editor-static rp-room-editor-static-long rp-festplay-description-box">

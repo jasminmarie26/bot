@@ -6624,7 +6624,9 @@ const deleteCharacterWithBackupTx = db.transaction((characterId) => {
 
   db.prepare("UPDATE users SET admin_character_id = NULL WHERE admin_character_id = ?").run(characterId);
   db.prepare("UPDATE users SET moderator_character_id = NULL WHERE moderator_character_id = ?").run(characterId);
-  db.prepare("UPDATE festplays SET creator_character_id = NULL WHERE creator_character_id = ?").run(characterId);
+  getCreatorFestplaysForCharacter(characterId).forEach((festplay) => {
+    deleteFestplayAndResetCharactersInCurrentTx(festplay.id);
+  });
   deleteGuestbookNotificationsForCharacter(characterId);
   db.prepare("DELETE FROM characters WHERE id = ?").run(characterId);
 });
@@ -7140,7 +7142,6 @@ function getDashboardFestplaysForUser(userId, serverId) {
              ON c.server_id = ?
             AND (
               c.festplay_id = f.id
-              OR c.id = f.creator_character_id
               OR EXISTS (
                 SELECT 1
                   FROM festplay_permissions fp
@@ -7159,6 +7160,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
            LEFT JOIN characters creator ON creator.id = f.creator_character_id
           WHERE f.id IN (${placeholders})
             AND lower(trim(COALESCE(f.server_id, ''))) = ?
+            AND c.id != COALESCE(f.creator_character_id, 0)
             AND ${nonVioletUsersSqlCondition}
           ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
       )
@@ -8225,7 +8227,27 @@ function syncFestplayCreatorCharacter(festplayId, ownerUserId, characterId) {
   return true;
 }
 
-function deleteFestplayAndResetCharacters(festplayId) {
+function getCreatorFestplaysForCharacter(characterId) {
+  const parsedCharacterId = Number(characterId);
+  if (!Number.isInteger(parsedCharacterId) || parsedCharacterId < 1) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT id, name
+         FROM festplays
+        WHERE creator_character_id = ?
+        ORDER BY LOWER(name) ASC, id ASC`
+    )
+    .all(parsedCharacterId)
+    .map((festplay) => ({
+      id: Number(festplay.id),
+      name: String(festplay.name || "").trim() || "Unbenanntes Festspiel"
+    }));
+}
+
+function deleteFestplayAndResetCharactersInCurrentTx(festplayId) {
   const parsedFestplayId = Number(festplayId);
   if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
     return false;
@@ -8256,11 +8278,22 @@ function deleteFestplayAndResetCharacters(festplayId) {
   const deleteFestplayRooms = db.prepare("DELETE FROM chat_rooms WHERE festplay_id = ?");
   const deleteFestplay = db.prepare("DELETE FROM festplays WHERE id = ?");
 
+  resetPermissionCharacters.run(parsedFestplayId);
+  resetAssignedCharacters.run(parsedFestplayId, parsedFestplayId);
+  deleteFestplayRooms.run(parsedFestplayId);
+  deleteFestplay.run(parsedFestplayId);
+
+  return true;
+}
+
+function deleteFestplayAndResetCharacters(festplayId) {
+  const parsedFestplayId = Number(festplayId);
+  if (!Number.isInteger(parsedFestplayId) || parsedFestplayId < 1) {
+    return false;
+  }
+
   db.transaction(() => {
-    resetPermissionCharacters.run(parsedFestplayId);
-    resetAssignedCharacters.run(parsedFestplayId, parsedFestplayId);
-    deleteFestplayRooms.run(parsedFestplayId);
-    deleteFestplay.run(parsedFestplayId);
+    deleteFestplayAndResetCharactersInCurrentTx(parsedFestplayId);
   })();
 
   return true;
@@ -21967,6 +22000,71 @@ app.post("/characters/delete-selected", requireAuth, (req, res) => {
   }
 
   return res.redirect(returnTarget);
+});
+
+function getOwnedCharacterDeleteImpact(userId, characterIds) {
+  const parsedUserId = Number(userId);
+  if (!Number.isInteger(parsedUserId) || parsedUserId < 1) {
+    return [];
+  }
+
+  const uniqueCharacterIds = [
+    ...new Set(
+      (Array.isArray(characterIds) ? characterIds : [characterIds])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  ];
+
+  return uniqueCharacterIds
+    .map((characterId) => getCharacterById(characterId))
+    .filter((character) => character && Number(character.user_id) === parsedUserId)
+    .map((character) => ({
+      character_id: Number(character.id),
+      character_name: String(character.name || "").trim() || "Unbenannter Charakter",
+      creator_festplays: getCreatorFestplaysForCharacter(character.id)
+    }));
+}
+
+function sendCharacterDeleteImpact(req, res, characterIds) {
+  const impacts = getOwnedCharacterDeleteImpact(req.session.user?.id, characterIds);
+  const creatorFestplays = [];
+  const seenFestplayIds = new Set();
+
+  impacts.forEach((impact) => {
+    impact.creator_festplays.forEach((festplay) => {
+      const festplayId = Number(festplay.id);
+      if (!Number.isInteger(festplayId) || seenFestplayIds.has(festplayId)) {
+        return;
+      }
+      seenFestplayIds.add(festplayId);
+      creatorFestplays.push({
+        id: festplayId,
+        name: festplay.name,
+        character_name: impact.character_name
+      });
+    });
+  });
+
+  return res.json({
+    ok: true,
+    impacts,
+    creator_festplays: creatorFestplays
+  });
+}
+
+app.get("/characters/delete-impact", requireAuth, (req, res) => {
+  const rawCharacterIds = Array.isArray(req.query.character_ids)
+    ? req.query.character_ids
+    : String(req.query.character_ids || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  return sendCharacterDeleteImpact(req, res, rawCharacterIds);
+});
+
+app.get("/characters/:id/delete-impact", requireAuth, (req, res) => {
+  return sendCharacterDeleteImpact(req, res, [req.params.id]);
 });
 
 app.post("/characters/:id/delete", requireAuth, (req, res) => {

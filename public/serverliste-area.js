@@ -505,6 +505,43 @@
       const getSelectedSelections = (card) =>
         getCardSelections(card).filter((input) => input.checked);
 
+      const fetchDeleteImpact = async (characterIds) => {
+        const params = new URLSearchParams();
+        characterIds.forEach((characterId) => {
+          params.append("character_ids", String(characterId));
+        });
+        const response = await fetch(`/characters/delete-impact?${params.toString()}`, {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        });
+        if (!response.ok) {
+          return null;
+        }
+        try {
+          return await response.json();
+        } catch (_error) {
+          return null;
+        }
+      };
+
+      const buildDeleteImpactWarning = (impact) => {
+        const creatorFestplays = Array.isArray(impact?.creator_festplays)
+          ? impact.creator_festplays
+          : [];
+        if (!creatorFestplays.length) {
+          return "";
+        }
+
+        const festplayNames = creatorFestplays
+          .map((festplay) => String(festplay?.name || "").trim())
+          .filter(Boolean);
+        const listText = festplayNames.length ? festplayNames.join(", ") : "diese Festspiele";
+        return `Ausgew\u00e4hlte Charaktere haben folgende Festspiele er\u00f6ffnet: ${listText}.\n\nWenn du sie l\u00f6schst, werden diese Festspiele inklusive R\u00e4umen ebenfalls gel\u00f6scht. Trotzdem l\u00f6schen?`;
+      };
+
       const updateSelectionState = (card) => {
         const isSelecting = card.classList.contains("is-selecting-characters");
         const selectedInputs = getSelectedSelections(card);
@@ -540,7 +577,7 @@
         updateSelectionState(card);
       };
 
-      const submitSelectedCharacters = (card, selectedInputs) => {
+      const submitSelectedCharacters = async (card, selectedInputs) => {
         const form = card.querySelector("[data-serverlist-bulk-delete-form]");
         if (!form || !selectedInputs.length) {
           return;
@@ -553,6 +590,17 @@
           ? `${selectedNames[0]} wirklich l\u00f6schen?`
           : `${selectedNames.length} Charaktere wirklich l\u00f6schen?`;
         if (!window.confirm(confirmText)) {
+          return;
+        }
+
+        let impact = null;
+        try {
+          impact = await fetchDeleteImpact(selectedInputs.map((input) => input.value));
+        } catch (_error) {
+          impact = null;
+        }
+        const warning = buildDeleteImpactWarning(impact);
+        if (warning && !window.confirm(warning)) {
           return;
         }
 
@@ -589,7 +637,7 @@
             return;
           }
 
-          submitSelectedCharacters(card, selectedInputs);
+          submitSelectedCharacters(card, selectedInputs).catch(() => {});
           return;
         }
 
