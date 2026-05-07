@@ -57,7 +57,41 @@
             <span class="serverlist-board-count"><%= sectionCharacters.length %> Charakter<%= sectionCharacters.length === 1 ? "" : "e" %></span>
           </div>
           <div class="serverlist-board-title-row">
-            <h2><%= section.overview_title %></h2>
+            <div class="serverlist-board-title-main">
+              <h2><%= section.overview_title %></h2>
+              <nav class="serverlist-board-pagination serverlist-board-title-pagination" aria-label="<%= section.overview_title %> Charakterseiten" <%= showServerlistPagination ? "" : "hidden" %>>
+                <button
+                  type="button"
+                  class="serverlist-board-page-btn serverlist-board-page-arrow"
+                  data-serverlist-page-step="-1"
+                  aria-label="Vorherige Charakterseite anzeigen"
+                  disabled
+                >
+                  &lsaquo;
+                </button>
+                <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
+                  <% const isInitialVisiblePageButton = pageNumber <= Math.min(3, serverlistCharacterPageCount); %>
+                  <button
+                    type="button"
+                    class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
+                    data-serverlist-page-button="<%= pageNumber %>"
+                    aria-label="Seite <%= pageNumber %> anzeigen"
+                    aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+                    <%= isInitialVisiblePageButton ? "" : "hidden" %>
+                  >
+                    <%= pageNumber %>
+                  </button>
+                <% } %>
+                <button
+                  type="button"
+                  class="serverlist-board-page-btn serverlist-board-page-arrow"
+                  data-serverlist-page-step="1"
+                  aria-label="N&auml;chste Charakterseite anzeigen"
+                >
+                  &rsaquo;
+                </button>
+              </nav>
+            </div>
             <div class="serverlist-board-title-tools">
               <div class="serverlist-board-actions" data-serverlist-overview-actions>
                 <a
@@ -190,38 +224,6 @@
                 </article>
               <% }) %>
             </div>
-            <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten" <%= showServerlistPagination ? "" : "hidden" %>>
-              <button
-                type="button"
-                class="serverlist-board-page-btn serverlist-board-page-arrow"
-                data-serverlist-page-step="-1"
-                aria-label="Vorherige Charakterseite anzeigen"
-                disabled
-              >
-                &lsaquo;
-              </button>
-              <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
-                <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistCharacterPageCount); %>
-                <button
-                  type="button"
-                  class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
-                  data-serverlist-page-button="<%= pageNumber %>"
-                  aria-label="Seite <%= pageNumber %> anzeigen"
-                  aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
-                  <%= isInitialVisiblePageButton ? "" : "hidden" %>
-                >
-                  <%= pageNumber %>
-                </button>
-              <% } %>
-              <button
-                type="button"
-                class="serverlist-board-page-btn serverlist-board-page-arrow"
-                data-serverlist-page-step="1"
-                aria-label="N&auml;chste Charakterseite anzeigen"
-              >
-                &rsaquo;
-              </button>
-            </nav>
           <% } %>
         </div>
       </details>

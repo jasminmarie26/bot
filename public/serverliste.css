@@ -727,6 +727,14 @@
   align-items: flex-end;
 }
 
+.serverlist-board-title-main {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .serverlist-board-title-row h2 {
   margin: 0;
   font-size: clamp(1.28rem, 2.2vw, 1.9rem);
@@ -799,7 +807,7 @@
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
-  padding-bottom: 4.25rem;
+  padding-bottom: 0.65rem;
 }
 
 .serverlist-board-card[open] .serverlist-board-character-list {
@@ -1009,6 +1017,17 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
+}
+
+.serverlist-board-title-pagination {
+  position: static;
+  z-index: 1;
+  max-width: min(100%, 14rem);
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .serverlist-board-pagination::-webkit-scrollbar {

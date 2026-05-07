@@ -90,7 +90,7 @@
         }
 
         summary.addEventListener("click", (event) => {
-          if (event.target.closest("[data-serverlist-overview-actions]")) {
+          if (event.target.closest("[data-serverlist-overview-actions], .serverlist-board-pagination")) {
             return;
           }
 
@@ -127,7 +127,7 @@
         return;
       }
 
-      const visiblePageCount = 9;
+      const visiblePageCount = 3;
 
       const getItemPage = (item) =>
         Number(item.dataset.serverlistCharacterPage || item.dataset.serverlistStagePage);
@@ -295,6 +295,10 @@
       };
 
       const repaginateCharacterCard = (card) => {
+        if (card.matches(".serverlist-board-card")) {
+          return false;
+        }
+
         const pagesWithoutNavigation = measureCharacterPages(card, false);
         if (!pagesWithoutNavigation) {
           return false;
