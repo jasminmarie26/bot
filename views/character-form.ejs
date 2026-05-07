@@ -654,7 +654,7 @@
         </fieldset>
       <% } %>
 
-      <% if (!isLarpProfile) { %>
+      <% if (!isLarpProfile && mode !== "create") { %>
         <label>
           Chat-Farbe
           <span class="gb-editor-helptext">Hex-Farbe wie <code>#AEE7B7</code>.</span>
