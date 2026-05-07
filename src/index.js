@@ -22020,7 +22020,12 @@ app.post("/characters/:id/move", requireAuth, (req, res) => {
     successMessage = `Charakter wurde in ${getServerLabel(nextServerId)} zu den normalen Charakteren gelegt.`;
   }
 
-  setFlash(req, "success", successMessage);
+  const returnTargetPath = String(returnTarget || "").split(/[?#]/)[0];
+  const returnsToServerlistOverview =
+    returnTargetPath === "/dashboard" || returnTargetPath === "/dashboard/areas/overview";
+  if (!returnsToServerlistOverview) {
+    setFlash(req, "success", successMessage);
+  }
   return res.redirect(returnTarget);
 });
 
