@@ -1027,38 +1027,29 @@
   color: color-mix(in srgb, var(--danger) 82%, white 18%);
 }
 
-.serverlist-direct-move-form {
-  position: absolute;
-  top: 50%;
-  right: auto;
-  left: calc(100% + var(--serverlist-character-list-inline-end, 0.85rem) + var(--serverlist-board-gap-half, 0.4rem));
-  z-index: 8;
-  margin: 0;
-  transform: translate(-45%, -50%);
+.serverlist-board-character[draggable="true"] {
+  cursor: grab;
 }
 
-.serverlist-direct-move-btn {
-  display: grid;
-  place-items: center;
-  width: 0.98rem;
-  height: 1.18rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 84%, white 16%);
-  font: inherit;
-  font-size: 0.64rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: none;
+.serverlist-board-character[draggable="true"]:active {
+  cursor: grabbing;
 }
 
-.serverlist-direct-move-btn:hover,
-.serverlist-direct-move-btn:focus-visible {
-  background: transparent;
-  color: var(--text);
+.serverlist-board-character.is-dragging {
+  opacity: 0.58;
+  transform: scale(0.985);
+}
+
+.serverlist-board-card.is-drag-target {
+  border-color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 72%, var(--panel-edge));
+  box-shadow:
+    0 28px 70px -48px var(--panel-shadow),
+    inset 0 0 0 1px color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 58%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+}
+
+.serverlist-board-card.is-invalid-drag-target {
+  opacity: 0.78;
 }
 
 .serverlist-board-empty {
@@ -1488,11 +1479,6 @@
   .serverlist-board-character-list {
     --serverlist-character-list-inline-end: 0.85rem;
     padding-right: var(--serverlist-character-list-inline-end);
-  }
-
-  .serverlist-direct-move-form {
-    right: auto;
-    left: calc(100% + var(--serverlist-character-list-inline-end, 0.85rem) + var(--serverlist-board-gap-half, 0.4rem));
   }
 
   .serverlist-board-character-actions {

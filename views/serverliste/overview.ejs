@@ -52,7 +52,7 @@
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
       <% const serverlistVisiblePageButtonCount = serverlistCharacterPageCount; %>
-      <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
+      <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" data-serverlist-drop-server-id="<%= sectionServerId %>">
         <header class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
             <span class="serverlist-board-label">Rollenspiel</span>
@@ -155,11 +155,20 @@
               <% sectionCharacters.forEach((char, charIndex) => { %>
                 <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
                 <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
-                <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
-                <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
                 <% const characterNameLength = String(char.name || "").trim().length; %>
                 <% const characterNameFontSize = characterNameLength > 34 ? "0.62rem" : (characterNameLength > 26 ? "0.68rem" : (characterNameLength > 18 ? "0.74rem" : "0.8rem")); %>
-                <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-id="<%= char.id %>" data-serverlist-character-name="<%= char.name %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
+                <article
+                  class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>"
+                  draggable="true"
+                  data-serverlist-draggable-character
+                  data-serverlist-character-id="<%= char.id %>"
+                  data-serverlist-character-name="<%= char.name %>"
+                  data-serverlist-character-server-id="<%= sectionServerId %>"
+                  data-serverlist-character-page="<%= characterPage %>"
+                  data-serverlist-move-action="/characters/<%= char.id %>/move"
+                  data-serverlist-move-return-to="<%= dashboardOverviewReturnTarget %>"
+                  <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>
+                >
                   <label class="serverlist-character-select" title="<%= char.name %> ausw&auml;hlen">
                     <input
                       type="checkbox"
@@ -176,6 +185,7 @@
                         alt=""
                         style="<%= getAvatarStyle(char) %>"
                         loading="lazy"
+                        draggable="false"
                         onerror="this.parentElement && this.parentElement.classList.remove('has-image'); this.remove();"
                       >
                     <% } %>
@@ -185,6 +195,7 @@
                     class="serverlist-board-character-copy"
                     href="/characters/<%= char.id %>"
                     title="<%= char.name %>"
+                    draggable="false"
                   >
                     <strong style="--serverlist-character-name-font-size: <%= characterNameFontSize %>;"><%= char.name %></strong>
                   </a>
@@ -237,23 +248,6 @@
                       </button>
                     </form>
                   </div>
-                  <form
-                    method="POST"
-                    action="/characters/<%= char.id %>/move"
-                    class="serverlist-direct-move-form"
-                  >
-                    <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                    <input type="hidden" name="target_server_id" value="<%= directMoveTargetServerId %>">
-                    <input type="hidden" name="target_dashboard_mode" value="main">
-                    <button
-                      type="submit"
-                      class="serverlist-direct-move-btn"
-                      aria-label="<%= char.name %> nach <%= directMoveTargetLabel %> verschieben"
-                      title="Nach <%= directMoveTargetLabel %> verschieben"
-                    >
-                      &harr;
-                    </button>
-                  </form>
                 </article>
               <% }) %>
             </div>

@@ -648,7 +648,7 @@
 
         if (
           event.target.closest(
-            ".serverlist-board-character-actions, .serverlist-direct-move-form, .serverlist-board-card-head, .serverlist-board-pagination"
+            ".serverlist-board-character-actions, .serverlist-board-card-head, .serverlist-board-pagination"
           )
         ) {
           return;
@@ -688,9 +688,154 @@
       });
     };
 
+    const initCharacterDragMove = () => {
+      const root = document.querySelector("[data-serverlist-overview-root]");
+      if (!root) {
+        return;
+      }
+
+      const rows = Array.from(root.querySelectorAll("[data-serverlist-draggable-character]"));
+      const dropCards = Array.from(root.querySelectorAll("[data-serverlist-drop-server-id]"));
+      if (!rows.length || dropCards.length < 2) {
+        return;
+      }
+
+      let draggedRow = null;
+      const ignoredDragStartSelector = [
+        ".serverlist-board-character-actions",
+        ".serverlist-character-select",
+        "button",
+        "input",
+        "textarea",
+        "select",
+        "label"
+      ].join(", ");
+
+      const getCardServerId = (card) => String(card?.dataset?.serverlistDropServerId || "").trim();
+      const getRowServerId = (row) => String(row?.dataset?.serverlistCharacterServerId || "").trim();
+
+      const clearDropState = () => {
+        dropCards.forEach((card) => {
+          card.classList.remove("is-drag-target", "is-invalid-drag-target");
+        });
+      };
+
+      const buildHiddenInput = (name, value) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        return input;
+      };
+
+      const submitMove = (row, targetServerId) => {
+        const action = String(row?.dataset?.serverlistMoveAction || "").trim();
+        const currentServerId = getRowServerId(row);
+        const normalizedTargetServerId = String(targetServerId || "").trim();
+        if (!action || !normalizedTargetServerId || normalizedTargetServerId === currentServerId) {
+          return;
+        }
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+        form.hidden = true;
+        form.appendChild(buildHiddenInput("return_to", String(row.dataset.serverlistMoveReturnTo || "/dashboard")));
+        form.appendChild(buildHiddenInput("target_server_id", normalizedTargetServerId));
+        form.appendChild(buildHiddenInput("target_dashboard_mode", "main"));
+        document.body.appendChild(form);
+        form.submit();
+      };
+
+      const isValidTarget = (card) => {
+        if (!draggedRow) {
+          return false;
+        }
+        const targetServerId = getCardServerId(card);
+        return Boolean(targetServerId && targetServerId !== getRowServerId(draggedRow));
+      };
+
+      rows.forEach((row) => {
+        row.addEventListener("dragstart", (event) => {
+          const dragStartTarget = event.target instanceof Element ? event.target : null;
+          if (
+            row.closest(".serverlist-board-card.is-selecting-characters") ||
+            dragStartTarget?.closest(ignoredDragStartSelector)
+          ) {
+            event.preventDefault();
+            return;
+          }
+
+          draggedRow = row;
+          row.classList.add("is-dragging");
+          root.classList.add("is-dragging-character");
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", String(row.dataset.serverlistCharacterId || ""));
+          }
+        });
+
+        row.addEventListener("dragend", () => {
+          row.classList.remove("is-dragging");
+          root.classList.remove("is-dragging-character");
+          draggedRow = null;
+          clearDropState();
+        });
+      });
+
+      dropCards.forEach((card) => {
+        card.addEventListener("dragenter", (event) => {
+          if (!draggedRow) {
+            return;
+          }
+
+          if (isValidTarget(card)) {
+            event.preventDefault();
+            clearDropState();
+            card.classList.add("is-drag-target");
+            return;
+          }
+
+          card.classList.add("is-invalid-drag-target");
+        });
+
+        card.addEventListener("dragover", (event) => {
+          if (!draggedRow || !isValidTarget(card)) {
+            return;
+          }
+
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+          }
+          card.classList.add("is-drag-target");
+        });
+
+        card.addEventListener("dragleave", (event) => {
+          if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) {
+            return;
+          }
+          card.classList.remove("is-drag-target", "is-invalid-drag-target");
+        });
+
+        card.addEventListener("drop", (event) => {
+          if (!draggedRow || !isValidTarget(card)) {
+            return;
+          }
+
+          event.preventDefault();
+          const rowToMove = draggedRow;
+          const targetServerId = getCardServerId(card);
+          clearDropState();
+          submitMove(rowToMove, targetServerId);
+        });
+      });
+    };
+
     initOverviewAccordionState();
     initCharacterPagination();
     initBulkCharacterDelete();
+    initCharacterDragMove();
 
     if (!modal || !note || !freeButton || !erpButton || !moveForms.length) {
       return;
