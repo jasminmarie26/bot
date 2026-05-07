@@ -1,5 +1,7 @@
 ﻿<!doctype html>
-<html lang="de">
+<% const htmlClassNames = []; %>
+<% if (typeof pageClass !== "undefined" && /\bpage-serverliste-overview\b/.test(String(pageClass || ""))) { htmlClassNames.push("page-serverliste-overview-root"); } %>
+<html lang="de"<% if (htmlClassNames.length) { %> class="<%= htmlClassNames.join(" ") %>"<% } %>>
   <head>
     <% const pageTitle = String(typeof title !== "undefined" && title ? title : "Heldenhafte Reisen"); %>
     <% const resolvedSiteName = String(typeof siteName !== "undefined" && siteName ? siteName : "Heldenhafte Reisen"); %>
