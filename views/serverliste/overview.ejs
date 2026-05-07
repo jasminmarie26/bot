@@ -21,6 +21,7 @@
 }); %>
 <% const totalFestplays = festplayStageEntries.length; %>
 <% const serverlistFestplayPageSize = 2; %>
+<% const festplayCharacterPageSize = 4; %>
 <% const festplayFilterOptions = [
   { id: "free-rp", label: "Free-RP" },
   { id: "erp", label: "ERP" }
@@ -293,14 +294,18 @@
           <% const section = entry.section; %>
           <% const sectionServerId = entry.sectionServerId; %>
           <% const festplay = entry.festplay; %>
+          <% const festplayCharacters = Array.isArray(festplay.characters) ? festplay.characters : []; %>
           <% const festplayServerId = getFestplayServerId(sectionServerId); %>
           <% const festplayServerIndex = festplayServerPageIndexes[festplayServerId] || 0; %>
           <% festplayServerPageIndexes[festplayServerId] = festplayServerIndex + 1; %>
           <% const festplayPage = Math.floor(festplayServerIndex / serverlistFestplayPageSize) + 1; %>
+          <% const festplayCharacterPageCount = Math.max(1, Math.ceil(festplayCharacters.length / festplayCharacterPageSize)); %>
             <section
-              class="serverlist-festplay-stage"
+              class="serverlist-festplay-stage<%= festplayCharacterPageCount > 1 ? " has-stage-character-pagination" : "" %>"
               data-serverlist-stage-server="<%= festplayServerId %>"
               data-serverlist-stage-page="<%= festplayPage %>"
+              data-serverlist-stage-character-current="1"
+              data-serverlist-stage-character-page-count="<%= festplayCharacterPageCount %>"
               <%= festplayServerId === initialFestplayServerId && festplayPage === 1 ? "" : "hidden" %>
             >
               <header class="serverlist-festplay-stage-head">
@@ -313,10 +318,11 @@
               <% } %>
 
               <div class="serverlist-stage-character-row">
-                <% festplay.characters.forEach((char) => { %>
+                <% festplayCharacters.forEach((char, charIndex) => { %>
                   <% const stageCharacterHref = `/characters/${char.id}/festplays/${festplay.id}/rooms`; %>
                   <% const stageCharacterTitle = `Festspiel-Raeume mit ${char.name} oeffnen`; %>
-                  <article class="serverlist-stage-character">
+                  <% const stageCharacterPage = Math.floor(charIndex / festplayCharacterPageSize) + 1; %>
+                  <article class="serverlist-stage-character" data-serverlist-stage-character-page="<%= stageCharacterPage %>" <%= stageCharacterPage === 1 ? "" : "hidden" %>>
                     <a
                       class="serverlist-stage-character-main"
                       href="<%= stageCharacterHref %>"
@@ -338,6 +344,27 @@
                   </article>
                 <% }) %>
               </div>
+              <% if (festplayCharacterPageCount > 1) { %>
+                <nav class="serverlist-stage-character-pagination" data-serverlist-stage-character-pagination aria-label="Festspiel-Charakterseiten">
+                  <button
+                    type="button"
+                    class="serverlist-board-page-btn serverlist-board-page-arrow serverlist-stage-character-page-btn"
+                    data-serverlist-stage-character-step="-1"
+                    aria-label="Vorherige Charakterseite im Festspiel anzeigen"
+                    disabled
+                  >
+                    &lsaquo;
+                  </button>
+                  <button
+                    type="button"
+                    class="serverlist-board-page-btn serverlist-board-page-arrow serverlist-stage-character-page-btn"
+                    data-serverlist-stage-character-step="1"
+                    aria-label="N&auml;chste Charakterseite im Festspiel anzeigen"
+                  >
+                    &rsaquo;
+                  </button>
+                </nav>
+              <% } %>
             </section>
         <% }) %>
 
@@ -368,7 +395,7 @@
           </button>
           <% for (let pageNumber = 1; pageNumber <= maxFestplayPageCount; pageNumber += 1) { %>
             <% const initialFestplayPageCount = Math.max(1, Math.ceil(initialFestplayCount / serverlistFestplayPageSize)); %>
-            <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, initialFestplayPageCount); %>
+            <% const isInitialVisiblePageButton = pageNumber <= Math.min(3, initialFestplayPageCount); %>
             <button
               type="button"
               class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"

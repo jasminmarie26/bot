@@ -129,6 +129,41 @@
 
       const visiblePageCount = 3;
 
+      const getStageCharacterItems = (stage) =>
+        Array.from(stage.querySelectorAll("[data-serverlist-stage-character-page]"));
+
+      const getStageCharacterPage = (item) =>
+        Number(item.dataset.serverlistStageCharacterPage) || 1;
+
+      const getStageCharacterMaxPage = (stage) => {
+        const configuredPageCount = Number(stage.dataset.serverlistStageCharacterPageCount) || 0;
+        const itemPageCount = Math.max(...getStageCharacterItems(stage).map(getStageCharacterPage), 1);
+        return Math.max(configuredPageCount, itemPageCount, 1);
+      };
+
+      const showStageCharacterPage = (stage, nextPage) => {
+        const items = getStageCharacterItems(stage);
+        const maxPage = getStageCharacterMaxPage(stage);
+        const currentPage = Math.min(maxPage, Math.max(1, Number(nextPage) || 1));
+        const hasPagination = maxPage > 1;
+        stage.dataset.serverlistStageCharacterCurrent = String(currentPage);
+        stage.classList.toggle("has-stage-character-pagination", hasPagination);
+
+        items.forEach((item) => {
+          item.hidden = getStageCharacterPage(item) !== currentPage;
+        });
+
+        const pagination = stage.querySelector("[data-serverlist-stage-character-pagination]");
+        if (pagination) {
+          pagination.hidden = !hasPagination;
+        }
+
+        stage.querySelectorAll("[data-serverlist-stage-character-step]").forEach((button) => {
+          const step = Number(button.dataset.serverlistStageCharacterStep) || 0;
+          button.disabled = (step < 0 && currentPage <= 1) || (step > 0 && currentPage >= maxPage);
+        });
+      };
+
       const getItemPage = (item) =>
         Number(item.dataset.serverlistCharacterPage || item.dataset.serverlistStagePage);
 
@@ -368,6 +403,23 @@
 
         const button = event.target.closest("[data-serverlist-page-button], [data-serverlist-page-step]");
         if (!button) {
+          const stageCharacterButton = event.target.closest("[data-serverlist-stage-character-step]");
+          if (!stageCharacterButton) {
+            return;
+          }
+
+          const stage = stageCharacterButton.closest(".serverlist-festplay-stage");
+          if (!stage) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          const currentPage = Number(stage.dataset.serverlistStageCharacterCurrent) || 1;
+          showStageCharacterPage(
+            stage,
+            currentPage + (Number(stageCharacterButton.dataset.serverlistStageCharacterStep) || 0)
+          );
           return;
         }
 
@@ -410,6 +462,10 @@
         }
 
         showPage(card, 1);
+      });
+
+      root.querySelectorAll(".serverlist-festplay-stage").forEach((stage) => {
+        showStageCharacterPage(stage, Number(stage.dataset.serverlistStageCharacterCurrent) || 1);
       });
 
       root.querySelectorAll(".serverlist-board-card").forEach((card) => {
