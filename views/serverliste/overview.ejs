@@ -47,11 +47,11 @@
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
-      <% const serverlistCharacterPageSize = 5; %>
+      <% const serverlistCharacterPageSize = 6; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
-      <details class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>" <%= sectionIndex === 0 ? "open" : "" %>>
-        <summary class="serverlist-board-card-head">
+      <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
+        <header class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
             <span class="serverlist-board-label">Rollenspiel</span>
             <span class="serverlist-board-count"><%= sectionCharacters.length %> Charakter<%= sectionCharacters.length === 1 ? "" : "e" %></span>
@@ -118,10 +118,9 @@
                   </button>
                 </form>
               </div>
-              <span class="serverlist-board-toggle-icon" aria-hidden="true"></span>
             </div>
           </div>
-        </summary>
+        </header>
 
         <div class="serverlist-board-card-body">
           <% if (!sectionCharacters.length) { %>
@@ -135,6 +134,8 @@
                 <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
                 <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
                 <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
+                <% const characterNameLength = String(char.name || "").trim().length; %>
+                <% const characterNameFontSize = characterNameLength > 34 ? "0.62rem" : (characterNameLength > 26 ? "0.68rem" : (characterNameLength > 18 ? "0.74rem" : "0.8rem")); %>
                 <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
                   <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
                     <% if (char.serverlist_icon_url) { %>
@@ -153,7 +154,7 @@
                     href="/characters/<%= char.id %>"
                     title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
                   >
-                    <strong><%= char.name %></strong>
+                    <strong style="--serverlist-character-name-font-size: <%= characterNameFontSize %>;"><%= char.name %></strong>
                   </a>
                   <div class="serverlist-board-character-actions">
                     <a
@@ -226,7 +227,7 @@
             </div>
           <% } %>
         </div>
-      </details>
+      </section>
     <% }) %>
   </div>
 
