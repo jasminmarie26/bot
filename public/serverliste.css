@@ -790,7 +790,7 @@
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
-  padding-bottom: 4.25rem;
+  padding-bottom: 0.65rem;
 }
 
 .serverlist-board-card[open] .serverlist-board-character-list {
@@ -980,10 +980,7 @@
 }
 
 .serverlist-board-pagination {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  position: static;
   z-index: 6;
   display: flex;
   flex: 0 0 auto;
@@ -1150,7 +1147,7 @@
 }
 
 .serverlist-stage-card.has-serverlist-pagination .serverlist-stage-list {
-  padding-bottom: 4.25rem;
+  padding-bottom: 0.65rem;
 }
 
 .serverlist-stage-list::-webkit-scrollbar {
