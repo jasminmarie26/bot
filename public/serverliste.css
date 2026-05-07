@@ -1028,31 +1028,30 @@
   left: calc(100% + var(--serverlist-character-list-inline-end, 0.85rem) + var(--serverlist-board-gap-half, 0.4rem));
   z-index: 8;
   margin: 0;
-  transform: translate(0, -50%);
+  transform: translate(-50%, -50%);
 }
 
 .serverlist-direct-move-btn {
   display: grid;
   place-items: center;
-  width: 1.18rem;
+  width: 0.98rem;
   height: 1.18rem;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 48%, var(--panel-edge));
-  border-radius: 999px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 22%, transparent), color-mix(in srgb, black 14%, transparent));
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 84%, white 16%);
   font: inherit;
   font-size: 0.64rem;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 12px 22px -18px var(--panel-shadow);
+  box-shadow: none;
 }
 
 .serverlist-direct-move-btn:hover,
 .serverlist-direct-move-btn:focus-visible {
-  background: color-mix(in srgb, var(--serverlist-local-accent, var(--accent)) 20%, transparent);
+  background: transparent;
   color: var(--text);
 }
 
