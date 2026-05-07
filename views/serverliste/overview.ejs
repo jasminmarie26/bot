@@ -89,139 +89,141 @@
           </div>
         </summary>
 
-        <% if (!sectionCharacters.length) { %>
-          <div class="serverlist-board-empty">
-            <p>Noch keine Charaktere in <%= section.overview_title %>.</p>
-          </div>
-        <% } else { %>
-          <div class="serverlist-board-character-list" data-serverlist-character-pages>
-            <% sectionCharacters.forEach((char, charIndex) => { %>
-              <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
-              <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
-              <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
-              <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
-              <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
-                <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
-                  <% if (char.serverlist_icon_url) { %>
-                    <img
-                      src="<%= char.serverlist_icon_url %>"
-                      alt=""
-                      style="<%= getAvatarStyle(char) %>"
-                      loading="lazy"
-                      onerror="this.parentElement && this.parentElement.classList.remove('has-image'); this.remove();"
-                    >
-                  <% } %>
-                  <span><%= getInitials(char.name) %></span>
-                </span>
-                <a
-                  class="serverlist-board-character-copy"
-                  href="/characters/<%= char.id %>"
-                  title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
-                >
-                  <strong><%= char.name %></strong>
-                </a>
-                <div class="serverlist-board-character-actions">
+        <div class="serverlist-board-card-body">
+          <% if (!sectionCharacters.length) { %>
+            <div class="serverlist-board-empty">
+              <p>Noch keine Charaktere in <%= section.overview_title %>.</p>
+            </div>
+          <% } else { %>
+            <div class="serverlist-board-character-list" data-serverlist-character-pages>
+              <% sectionCharacters.forEach((char, charIndex) => { %>
+                <% const isFestplayCharacter = Boolean(char.is_festplay_character || char.dashboard_position === "festplay"); %>
+                <% const characterPage = Math.floor(charIndex / serverlistCharacterPageSize) + 1; %>
+                <% const directMoveTargetServerId = sectionServerId === "erp" ? "free-rp" : "erp"; %>
+                <% const directMoveTargetLabel = directMoveTargetServerId === "erp" ? "ERP" : "Free RP"; %>
+                <article class="serverlist-board-character<%= isFestplayCharacter ? " is-festplay-character" : "" %>" data-serverlist-character-page="<%= characterPage %>" <%= !showServerlistPagination || characterPage === 1 ? "" : "hidden" %>>
+                  <span class="serverlist-board-avatar<%= char.serverlist_icon_url ? " has-image" : "" %>" aria-hidden="true">
+                    <% if (char.serverlist_icon_url) { %>
+                      <img
+                        src="<%= char.serverlist_icon_url %>"
+                        alt=""
+                        style="<%= getAvatarStyle(char) %>"
+                        loading="lazy"
+                        onerror="this.parentElement && this.parentElement.classList.remove('has-image'); this.remove();"
+                      >
+                    <% } %>
+                    <span><%= getInitials(char.name) %></span>
+                  </span>
                   <a
-                    class="serverlist-board-action-btn"
-                    href="/characters/<%= char.id %>/guestbook"
-                    aria-label="G&auml;stebuch &ouml;ffnen"
-                    title="G&auml;stebuch &ouml;ffnen"
+                    class="serverlist-board-character-copy"
+                    href="/characters/<%= char.id %>"
+                    title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
                   >
-                    <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                    <strong><%= char.name %></strong>
                   </a>
-                  <a
-                    class="serverlist-board-action-btn"
-                    href="/characters/<%= char.id %>/guestbook/edit"
-                    aria-label="G&auml;stebuch bearbeiten"
-                    title="G&auml;stebuch bearbeiten"
-                  >
-                    <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
-                  </a>
-                  <form
-                    method="POST"
-                    action="/characters/<%= char.id %>/guestbook-code-email"
-                    class="character-mini-export-form"
-                  >
-                    <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                    <button
-                      type="submit"
+                  <div class="serverlist-board-character-actions">
+                    <a
                       class="serverlist-board-action-btn"
-                      aria-label="G&auml;stebuch-Code per E-Mail senden"
-                      title="G&auml;stebuch-Code per E-Mail senden"
+                      href="/characters/<%= char.id %>/guestbook"
+                      aria-label="G&auml;stebuch &ouml;ffnen"
+                      title="G&auml;stebuch &ouml;ffnen"
                     >
-                      <span class="character-mini-export-icon" aria-hidden="true"></span>
-                    </button>
-                  </form>
+                      <span class="character-mini-guestbook-open-icon" aria-hidden="true"></span>
+                    </a>
+                    <a
+                      class="serverlist-board-action-btn"
+                      href="/characters/<%= char.id %>/guestbook/edit"
+                      aria-label="G&auml;stebuch bearbeiten"
+                      title="G&auml;stebuch bearbeiten"
+                    >
+                      <span class="character-mini-guestbook-edit-icon" aria-hidden="true"></span>
+                    </a>
+                    <form
+                      method="POST"
+                      action="/characters/<%= char.id %>/guestbook-code-email"
+                      class="character-mini-export-form"
+                    >
+                      <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                      <button
+                        type="submit"
+                        class="serverlist-board-action-btn"
+                        aria-label="G&auml;stebuch-Code per E-Mail senden"
+                        title="G&auml;stebuch-Code per E-Mail senden"
+                      >
+                        <span class="character-mini-export-icon" aria-hidden="true"></span>
+                      </button>
+                    </form>
+                    <form
+                      method="POST"
+                      action="/characters/<%= char.id %>/delete"
+                      class="character-mini-delete-form"
+                      onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                    >
+                      <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                      <button
+                        type="submit"
+                        class="serverlist-board-action-btn is-danger"
+                        aria-label="Charakter l&ouml;schen"
+                        title="Charakter l&ouml;schen"
+                      >
+                        X
+                      </button>
+                    </form>
+                  </div>
                   <form
                     method="POST"
-                    action="/characters/<%= char.id %>/delete"
-                    class="character-mini-delete-form"
-                    onsubmit="return confirm('Charakter wirklich l&ouml;schen?')"
+                    action="/characters/<%= char.id %>/move"
+                    class="serverlist-direct-move-form"
                   >
                     <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
+                    <input type="hidden" name="target_server_id" value="<%= directMoveTargetServerId %>">
+                    <input type="hidden" name="target_dashboard_mode" value="main">
                     <button
                       type="submit"
-                      class="serverlist-board-action-btn is-danger"
-                      aria-label="Charakter l&ouml;schen"
-                      title="Charakter l&ouml;schen"
+                      class="serverlist-direct-move-btn"
+                      aria-label="<%= char.name %> nach <%= directMoveTargetLabel %> verschieben"
+                      title="Nach <%= directMoveTargetLabel %> verschieben"
                     >
-                      X
+                      &harr;
                     </button>
                   </form>
-                </div>
-                <form
-                  method="POST"
-                  action="/characters/<%= char.id %>/move"
-                  class="serverlist-direct-move-form"
-                >
-                  <input type="hidden" name="return_to" value="<%= dashboardOverviewReturnTarget %>">
-                  <input type="hidden" name="target_server_id" value="<%= directMoveTargetServerId %>">
-                  <input type="hidden" name="target_dashboard_mode" value="main">
-                  <button
-                    type="submit"
-                    class="serverlist-direct-move-btn"
-                    aria-label="<%= char.name %> nach <%= directMoveTargetLabel %> verschieben"
-                    title="Nach <%= directMoveTargetLabel %> verschieben"
-                  >
-                    &harr;
-                  </button>
-                </form>
-              </article>
-            <% }) %>
-          </div>
-          <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten" <%= showServerlistPagination ? "" : "hidden" %>>
-            <button
-              type="button"
-              class="serverlist-board-page-btn serverlist-board-page-arrow"
-              data-serverlist-page-step="-1"
-              aria-label="Vorherige Charakterseite anzeigen"
-              disabled
-            >
-              &lsaquo;
-            </button>
-            <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
-              <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistCharacterPageCount); %>
+                </article>
+              <% }) %>
+            </div>
+            <nav class="serverlist-board-pagination" aria-label="<%= section.overview_title %> Charakterseiten" <%= showServerlistPagination ? "" : "hidden" %>>
               <button
                 type="button"
-                class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
-                data-serverlist-page-button="<%= pageNumber %>"
-                aria-label="Seite <%= pageNumber %> anzeigen"
-                aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
-                <%= isInitialVisiblePageButton ? "" : "hidden" %>
+                class="serverlist-board-page-btn serverlist-board-page-arrow"
+                data-serverlist-page-step="-1"
+                aria-label="Vorherige Charakterseite anzeigen"
+                disabled
               >
-                <%= pageNumber %>
+                &lsaquo;
               </button>
-            <% } %>
-            <button
-              type="button"
-              class="serverlist-board-page-btn serverlist-board-page-arrow"
-              data-serverlist-page-step="1"
-              aria-label="N&auml;chste Charakterseite anzeigen"
-            >
-              &rsaquo;
-            </button>
-          </nav>
-        <% } %>
+              <% for (let pageNumber = 1; pageNumber <= serverlistCharacterPageCount; pageNumber += 1) { %>
+                <% const isInitialVisiblePageButton = pageNumber <= Math.min(9, serverlistCharacterPageCount); %>
+                <button
+                  type="button"
+                  class="serverlist-board-page-btn<%= pageNumber === 1 ? " is-active" : "" %>"
+                  data-serverlist-page-button="<%= pageNumber %>"
+                  aria-label="Seite <%= pageNumber %> anzeigen"
+                  aria-current="<%= pageNumber === 1 ? "page" : "false" %>"
+                  <%= isInitialVisiblePageButton ? "" : "hidden" %>
+                >
+                  <%= pageNumber %>
+                </button>
+              <% } %>
+              <button
+                type="button"
+                class="serverlist-board-page-btn serverlist-board-page-arrow"
+                data-serverlist-page-step="1"
+                aria-label="N&auml;chste Charakterseite anzeigen"
+              >
+                &rsaquo;
+              </button>
+            </nav>
+          <% } %>
+        </div>
       </details>
     <% }) %>
   </div>
