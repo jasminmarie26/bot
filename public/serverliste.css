@@ -984,6 +984,7 @@
   z-index: 6;
   display: flex;
   flex: 0 0 auto;
+  margin-top: auto;
   max-width: 100%;
   justify-content: flex-start;
   gap: 0.45rem;
