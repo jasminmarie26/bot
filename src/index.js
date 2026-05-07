@@ -21859,7 +21859,6 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
   const returnTarget = getSafeReturnTarget(req, fallbackReturnTarget);
 
   if (!character) {
-    setFlash(req, "success", "Charakter ist bereits gelöscht.");
     return res.redirect(returnTarget);
   }
 
@@ -21874,7 +21873,6 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     deleteCharacterWithBackupTx(id);
   } catch (error) {
     if (error?.code === "CHARACTER_NOT_FOUND") {
-      setFlash(req, "success", "Charakter ist bereits gelöscht.");
       return res.redirect(returnTarget);
     }
     console.error(error);
@@ -21887,7 +21885,6 @@ app.post("/characters/:id/delete", requireAuth, (req, res) => {
     req.session.user = toSessionUser(refreshedUser);
   }
   emitHomeStatsUpdate();
-  setFlash(req, "success", "Charakter gelöscht und als Backup gespeichert.");
   return res.redirect(returnTarget);
 });
 
