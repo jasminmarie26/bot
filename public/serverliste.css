@@ -772,7 +772,7 @@
   min-height: 0;
   align-content: start;
   gap: 0.34rem;
-  padding: 0.55rem 1.05rem 0.55rem 0.65rem;
+  padding: 0.55rem 2.55rem 0.55rem 0.65rem;
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
@@ -914,7 +914,7 @@
 .serverlist-direct-move-form {
   position: absolute;
   top: 50%;
-  right: -0.825rem;
+  right: -2.1rem;
   margin: 0;
   transform: translateY(-50%);
 }
@@ -1307,11 +1307,11 @@
   }
 
   .serverlist-board-character-list {
-    padding-right: 1rem;
+    padding-right: 2.25rem;
   }
 
   .serverlist-direct-move-form {
-    right: -0.825rem;
+    right: -1.95rem;
   }
 
   .serverlist-board-character-actions {
