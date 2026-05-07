@@ -50,7 +50,7 @@
       <% const serverlistCharacterPageSize = 7; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
-      <% const serverlistVisiblePageButtonCount = showServerlistPagination ? Math.max(3, serverlistCharacterPageCount) : serverlistCharacterPageCount; %>
+      <% const serverlistVisiblePageButtonCount = serverlistCharacterPageCount; %>
       <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
         <header class="serverlist-board-card-head">
           <div class="serverlist-board-meta">
