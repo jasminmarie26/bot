@@ -643,7 +643,6 @@
   min-width: 0;
   height: clamp(31rem, 68vh, 38rem);
   border-radius: 18px;
-  border-top-left-radius: 0;
   overflow: visible;
 }
 
@@ -669,6 +668,8 @@
   list-style: none;
   min-height: 6.35rem;
   padding: 1rem;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1079,7 +1080,6 @@
   min-width: 0;
   min-height: 0;
   border-radius: 18px;
-  border-top-left-radius: 0;
   overflow: hidden;
 }
 
