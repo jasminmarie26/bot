@@ -14791,6 +14791,7 @@ app.use((req, res, next) => {
   const isServerlistThemePath = /^\/dashboard(?:\/|$)/.test(requestPath);
   const serverlistActiveTheme = normalizeTheme(
     req.session.serverlist_theme ||
+    req.session.user?.theme ||
     req.session.guest_theme ||
     cookieTheme ||
     DEFAULT_THEME
@@ -17698,6 +17699,12 @@ app.post("/settings/theme", (req, res) => {
   if (req.session.user) {
     if (themeScope === "serverlist") {
       req.session.serverlist_theme = theme;
+      db.prepare("UPDATE users SET theme = ? WHERE id = ?")
+        .run(theme, req.session.user.id);
+      req.session.user = {
+        ...req.session.user,
+        theme
+      };
     } else {
       req.session.guest_theme = theme;
       const targetCharacter = getThemeTargetCharacterForRequest(req);

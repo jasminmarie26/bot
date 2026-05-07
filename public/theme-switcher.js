@@ -108,6 +108,13 @@
     const payload = new URLSearchParams();
     payload.set("theme", nextTheme);
     payload.set("return_to", returnTo);
+    const scopeField = form.elements.theme_scope;
+    const themeScope = String(scopeField?.value || form.dataset.themeStorageScope || body?.dataset?.themeStorageScope || "")
+      .trim()
+      .toLowerCase();
+    if (themeScope) {
+      payload.set("theme_scope", themeScope);
+    }
     const characterField = form.elements.character_id;
     const characterId = String(characterField?.value || "").trim();
     if (characterId) {
