@@ -47,7 +47,7 @@
       <% const sectionServerId = section.server_id || section.id; %>
       <% const sectionCharacters = Array.isArray(section.characters) ? section.characters : []; %>
       <% const isErpSection = sectionServerId === "erp"; %>
-      <% const serverlistCharacterPageSize = 6; %>
+      <% const serverlistCharacterPageSize = 7; %>
       <% const serverlistCharacterPageCount = Math.max(1, Math.ceil(sectionCharacters.length / serverlistCharacterPageSize)); %>
       <% const showServerlistPagination = serverlistCharacterPageCount > 1; %>
       <section class="serverlist-board-card<%= isErpSection ? " is-erp" : "" %><%= showServerlistPagination ? " has-serverlist-pagination" : "" %>" data-serverlist-overview-section data-serverlist-overview-section-id="<%= section.id %>">
@@ -152,7 +152,7 @@
                   <a
                     class="serverlist-board-character-copy"
                     href="/characters/<%= char.id %>"
-                    title="<%= char.name %> in <%= section.overview_title %> &ouml;ffnen"
+                    title="<%= char.name %>"
                   >
                     <strong style="--serverlist-character-name-font-size: <%= characterNameFontSize %>;"><%= char.name %></strong>
                   </a>
