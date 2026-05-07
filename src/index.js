@@ -7113,11 +7113,7 @@ function getDashboardFestplaysForUser(userId, serverId) {
     );
 
   visibleFestplayRows.forEach((row) => {
-    const isOwnedFestplay = Number(row.created_by_user_id) === parsedUserId;
-    addDashboardFestplay(
-      row,
-      isOwnedFestplay ? "" : "Freigeschaltetes Festspiel auf diesem Bereich."
-    );
+    addDashboardFestplay(row);
   });
 
   const visibleFestplayIds = Array.from(festplayMap.keys())
