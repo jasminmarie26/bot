@@ -643,6 +643,7 @@
   min-width: 0;
   height: clamp(31rem, 68vh, 38rem);
   border-radius: 18px;
+  border-top-left-radius: 0;
   overflow: visible;
 }
 
@@ -1078,6 +1079,7 @@
   min-width: 0;
   min-height: 0;
   border-radius: 18px;
+  border-top-left-radius: 0;
   overflow: hidden;
 }
 
