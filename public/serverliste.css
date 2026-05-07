@@ -607,9 +607,11 @@
 }
 
 .serverlist-board {
+  --serverlist-board-gap: 0.8rem;
+  --serverlist-board-gap-half: 0.4rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 23rem), 1fr));
-  gap: 0.8rem;
+  gap: var(--serverlist-board-gap);
   align-items: start;
   margin-top: 0.7rem;
 }
@@ -767,12 +769,13 @@
 }
 
 .serverlist-board-character-list {
+  --serverlist-character-list-inline-end: 0.85rem;
   display: grid;
   flex: 1 1 auto;
   min-height: 0;
   align-content: start;
   gap: 0.34rem;
-  padding: 0.55rem 0.85rem 0.55rem 0.65rem;
+  padding: 0.55rem var(--serverlist-character-list-inline-end) 0.55rem 0.65rem;
 }
 
 .serverlist-board-card.has-serverlist-pagination .serverlist-board-character-list {
@@ -914,9 +917,11 @@
 .serverlist-direct-move-form {
   position: absolute;
   top: 50%;
-  right: -1.875rem;
+  right: auto;
+  left: calc(100% + var(--serverlist-character-list-inline-end, 0.85rem) + var(--serverlist-board-gap-half, 0.4rem));
+  z-index: 8;
   margin: 0;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .serverlist-direct-move-btn {
@@ -1307,11 +1312,13 @@
   }
 
   .serverlist-board-character-list {
-    padding-right: 0.85rem;
+    --serverlist-character-list-inline-end: 0.85rem;
+    padding-right: var(--serverlist-character-list-inline-end);
   }
 
   .serverlist-direct-move-form {
-    right: -1.875rem;
+    right: auto;
+    left: calc(100% + var(--serverlist-character-list-inline-end, 0.85rem) + var(--serverlist-board-gap-half, 0.4rem));
   }
 
   .serverlist-board-character-actions {
