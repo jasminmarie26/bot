@@ -6991,12 +6991,29 @@ function getDashboardFestplaysForUser(userId, serverId) {
 
   const festplayMap = new Map();
 
-  const addDashboardFestplayCharacter = (row, caption) => {
+  const addDashboardFestplay = (row, caption = "") => {
     const festplayId = Number(row.id);
     if (!Number.isInteger(festplayId) || festplayId < 1) {
-      return;
+      return null;
     }
 
+    if (!festplayMap.has(festplayId)) {
+      festplayMap.set(festplayId, {
+        id: festplayId,
+        name: row.name,
+        creator_character_name: row.creator_character_name,
+        caption: String(caption || "").trim(),
+        server_id: normalizedServerId,
+        characters: []
+      });
+    } else if (caption && !festplayMap.get(festplayId).caption) {
+      festplayMap.get(festplayId).caption = String(caption || "").trim();
+    }
+
+    return festplayMap.get(festplayId);
+  };
+
+  const addDashboardFestplayCharacter = (row, caption) => {
     const characterId = Number(row.character_id);
     if (!Number.isInteger(characterId) || characterId < 1) {
       return;
@@ -7011,18 +7028,11 @@ function getDashboardFestplaysForUser(userId, serverId) {
     );
     const isInFestplayArea = dashboardPosition === "festplay";
 
-    if (!festplayMap.has(festplayId)) {
-      festplayMap.set(festplayId, {
-        id: festplayId,
-        name: row.name,
-        creator_character_name: row.creator_character_name,
-        caption: String(caption || "").trim(),
-        server_id: normalizedServerId,
-        characters: []
-      });
+    const festplay = addDashboardFestplay(row, caption);
+    if (!festplay) {
+      return;
     }
 
-    const festplay = festplayMap.get(festplayId);
     if (!festplay.characters.some((character) => Number(character.id) === characterId)) {
       festplay.characters.push({
         id: characterId,
@@ -7049,184 +7059,115 @@ function getDashboardFestplaysForUser(userId, serverId) {
     }
   };
 
-  const approvedRows = db
+  const visibleFestplayRows = db
     .prepare(
       `SELECT DISTINCT
               f.id,
               f.name,
+              f.created_by_user_id,
               f.server_id,
-              COALESCE(creator.name, '') AS creator_character_name,
-              c.id AS character_id,
-              c.name AS character_name,
-              c.server_id AS character_server_id,
-              c.serverlist_icon_url AS character_serverlist_icon_url,
-              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
-              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
-              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
-              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
-         FROM festplay_permissions fp
-         JOIN festplays f ON f.id = fp.festplay_id
-         LEFT JOIN characters creator ON creator.id = f.creator_character_id
-         JOIN characters c ON c.id = fp.character_id
-         WHERE fp.user_id = ?
-           AND lower(trim(COALESCE(f.server_id, ''))) = ?
-           AND COALESCE(f.created_by_user_id, 0) != ?
-         ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
-    )
-    .all(parsedUserId, normalizedServerId, parsedUserId);
-
-  approvedRows.forEach((row) => {
-    addDashboardFestplayCharacter(
-      row,
-      "Freigeschaltetes Festspiel auf diesem Bereich."
-    );
-  });
-
-  const assignedRows = db
-    .prepare(
-      `SELECT DISTINCT
-              f.id,
-              f.name,
-              f.server_id,
-              COALESCE(creator.name, '') AS creator_character_name,
-              c.id AS character_id,
-              c.name AS character_name,
-              c.server_id AS character_server_id,
-              c.serverlist_icon_url AS character_serverlist_icon_url,
-              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
-              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
-              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
-              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
-         FROM characters c
-         JOIN festplays f ON f.id = c.festplay_id
-         LEFT JOIN characters creator ON creator.id = f.creator_character_id
-        WHERE c.user_id = ?
-          AND c.server_id = ?
-          AND lower(trim(COALESCE(f.server_id, ''))) = ?
-          AND COALESCE(f.created_by_user_id, 0) != ?
-        ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
-    )
-    .all(parsedUserId, normalizedServerId, normalizedServerId, parsedUserId);
-
-  assignedRows.forEach((row) => {
-    addDashboardFestplayCharacter(
-      row,
-      "Freigeschaltetes Festspiel auf diesem Bereich."
-    );
-  });
-
-  const fallbackOwnedCharacters = db
-    .prepare(
-      `SELECT f.id AS festplay_id,
-              c.id AS character_id,
-              c.name AS character_name,
-              c.server_id AS character_server_id,
-              c.serverlist_icon_url AS character_serverlist_icon_url,
-              c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
-              c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
-              c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
-              c.festplay_dashboard_mode AS character_festplay_dashboard_mode
+              COALESCE(creator.name, '') AS creator_character_name
          FROM festplays f
-         JOIN characters c
-           ON c.user_id = f.created_by_user_id
-        WHERE f.created_by_user_id = ?
-          AND lower(trim(COALESCE(f.server_id, ''))) = ?
+         LEFT JOIN characters creator ON creator.id = f.creator_character_id
+        WHERE lower(trim(COALESCE(f.server_id, ''))) = ?
           AND (
-            c.festplay_id = f.id
+            COALESCE(f.created_by_user_id, 0) = ?
             OR EXISTS (
               SELECT 1
                 FROM festplay_permissions fp
                WHERE fp.festplay_id = f.id
-                 AND fp.character_id = c.id
+                 AND fp.user_id = ?
+            )
+            OR EXISTS (
+              SELECT 1
+                FROM characters own_character
+               WHERE own_character.festplay_id = f.id
+                 AND own_character.user_id = ?
+                 AND own_character.server_id = ?
+            )
+            OR EXISTS (
+              SELECT 1
+                FROM festplay_applications fa
+                JOIN characters own_application_character ON own_application_character.id = fa.applicant_character_id
+               WHERE fa.festplay_id = f.id
+                 AND fa.applicant_user_id = ?
+                 AND fa.status = 'approved'
+                 AND own_application_character.server_id = ?
             )
           )
-        ORDER BY lower(f.name) ASC,
-                 f.id ASC,
-                 CASE WHEN c.festplay_id = f.id THEN 0 ELSE 1 END ASC,
-                 lower(c.name) ASC,
-                 c.id ASC`
+        ORDER BY lower(f.name) ASC, f.id ASC`
     )
-    .all(parsedUserId, normalizedServerId);
+    .all(
+      normalizedServerId,
+      parsedUserId,
+      parsedUserId,
+      parsedUserId,
+      normalizedServerId,
+      parsedUserId,
+      normalizedServerId
+    );
 
-  const fallbackOwnedCharactersByFestplay = new Map();
-  fallbackOwnedCharacters.forEach((row) => {
-    const festplayId = Number(row.festplay_id);
-    if (!Number.isInteger(festplayId) || festplayId < 1) {
-      return;
-    }
-
-    if (!fallbackOwnedCharactersByFestplay.has(festplayId)) {
-      fallbackOwnedCharactersByFestplay.set(festplayId, []);
-    }
-    fallbackOwnedCharactersByFestplay.get(festplayId).push(row);
+  visibleFestplayRows.forEach((row) => {
+    const isOwnedFestplay = Number(row.created_by_user_id) === parsedUserId;
+    addDashboardFestplay(
+      row,
+      isOwnedFestplay ? "" : "Freigeschaltetes Festspiel auf diesem Bereich."
+    );
   });
 
-  const ownedRows = db
-    .prepare(
-      `SELECT f.id,
-              f.name,
-              f.creator_character_id,
-              f.server_id,
-              COALESCE(creator.name, '') AS creator_character_name,
-              creator.id AS linked_character_id,
-              creator.name AS linked_character_name,
-              creator.user_id AS linked_character_user_id,
-              creator.server_id AS linked_character_server_id,
-              creator.serverlist_icon_url AS linked_character_serverlist_icon_url,
-              creator.serverlist_icon_focus_x AS linked_character_serverlist_icon_focus_x,
-              creator.serverlist_icon_focus_y AS linked_character_serverlist_icon_focus_y,
-              creator.serverlist_icon_zoom AS linked_character_serverlist_icon_zoom,
-              creator.festplay_dashboard_mode AS linked_character_festplay_dashboard_mode
-         FROM festplays f
-         LEFT JOIN characters creator ON creator.id = f.creator_character_id
-         WHERE f.created_by_user_id = ?
-           AND lower(trim(COALESCE(f.server_id, ''))) = ?
-         ORDER BY lower(f.name) ASC, f.id ASC`
-    )
-    .all(parsedUserId, normalizedServerId);
+  const visibleFestplayIds = Array.from(festplayMap.keys())
+    .filter((festplayId) => Number.isInteger(festplayId) && festplayId > 0);
+  if (visibleFestplayIds.length) {
+    const placeholders = visibleFestplayIds.map(() => "?").join(", ");
+    const nonVioletUsersSqlCondition = getNonVioletUsersSqlCondition("u");
+    const characterRows = db
+      .prepare(
+        `SELECT DISTINCT
+                f.id,
+                f.name,
+                f.server_id,
+                COALESCE(creator.name, '') AS creator_character_name,
+                c.id AS character_id,
+                c.name AS character_name,
+                c.server_id AS character_server_id,
+                c.serverlist_icon_url AS character_serverlist_icon_url,
+                c.serverlist_icon_focus_x AS character_serverlist_icon_focus_x,
+                c.serverlist_icon_focus_y AS character_serverlist_icon_focus_y,
+                c.serverlist_icon_zoom AS character_serverlist_icon_zoom,
+                c.festplay_dashboard_mode AS character_festplay_dashboard_mode
+           FROM festplays f
+           JOIN characters c
+             ON c.server_id = ?
+            AND (
+              c.festplay_id = f.id
+              OR c.id = f.creator_character_id
+              OR EXISTS (
+                SELECT 1
+                  FROM festplay_permissions fp
+                 WHERE fp.festplay_id = f.id
+                   AND fp.character_id = c.id
+              )
+              OR EXISTS (
+                SELECT 1
+                  FROM festplay_applications fa
+                 WHERE fa.festplay_id = f.id
+                   AND fa.applicant_character_id = c.id
+                   AND fa.status = 'approved'
+              )
+            )
+           JOIN users u ON u.id = c.user_id
+           LEFT JOIN characters creator ON creator.id = f.creator_character_id
+          WHERE f.id IN (${placeholders})
+            AND lower(trim(COALESCE(f.server_id, ''))) = ?
+            AND ${nonVioletUsersSqlCondition}
+          ORDER BY lower(f.name) ASC, f.id ASC, lower(c.name) ASC, c.id ASC`
+      )
+      .all(normalizedServerId, ...visibleFestplayIds, normalizedServerId);
 
-  ownedRows.forEach((row) => {
-    const linkedCharacterId = Number(row.linked_character_id);
-    const linkedCharacterUserId = Number(row.linked_character_user_id);
-    if (
-      Number.isInteger(linkedCharacterId) &&
-      linkedCharacterId > 0 &&
-      linkedCharacterUserId === parsedUserId
-    ) {
-      addDashboardFestplayCharacter(
-        {
-          ...row,
-          character_id: linkedCharacterId,
-          character_name: row.linked_character_name,
-          character_server_id: row.linked_character_server_id,
-          character_serverlist_icon_url: row.linked_character_serverlist_icon_url,
-          character_serverlist_icon_focus_x: row.linked_character_serverlist_icon_focus_x,
-          character_serverlist_icon_focus_y: row.linked_character_serverlist_icon_focus_y,
-          character_serverlist_icon_zoom: row.linked_character_serverlist_icon_zoom,
-          character_festplay_dashboard_mode: row.linked_character_festplay_dashboard_mode
-        },
-        ""
-      );
-    }
-
-    const ownedCharacters = fallbackOwnedCharactersByFestplay.get(Number(row.id)) || [];
-    ownedCharacters.forEach((fallbackCharacter) => {
-      addDashboardFestplayCharacter(
-        {
-          ...row,
-          character_id: fallbackCharacter.character_id,
-          character_name: fallbackCharacter.character_name,
-          character_server_id: fallbackCharacter.character_server_id,
-          character_serverlist_icon_url: fallbackCharacter.character_serverlist_icon_url,
-          character_serverlist_icon_focus_x: fallbackCharacter.character_serverlist_icon_focus_x,
-          character_serverlist_icon_focus_y: fallbackCharacter.character_serverlist_icon_focus_y,
-          character_serverlist_icon_zoom: fallbackCharacter.character_serverlist_icon_zoom,
-          character_festplay_dashboard_mode: fallbackCharacter.character_festplay_dashboard_mode
-        },
-        ""
-      );
+    characterRows.forEach((row) => {
+      addDashboardFestplayCharacter(row, "");
     });
-  });
+  }
 
   return Array.from(festplayMap.values())
     .map((festplay) => ({
