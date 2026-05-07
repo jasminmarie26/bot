@@ -6250,6 +6250,76 @@ body.theme-future.page-home-screen .home-copyright {
   font-size: 0.72rem;
 }
 
+.dashboard-character-overview-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin-left: auto;
+}
+
+.backup-bulk-delete-form,
+.backup-delete-all-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.backup-character-action-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, var(--panel-edge) 42%);
+  border-radius: 0.48rem;
+  background: color-mix(in srgb, var(--accent) 12%, var(--field-bg) 88%);
+  color: color-mix(in srgb, var(--accent) 76%, white 24%);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.backup-character-action-btn:hover,
+.backup-character-action-btn:focus-visible,
+.backup-character-action-btn.is-active {
+  border-color: color-mix(in srgb, var(--accent) 82%, white 18%);
+  background: color-mix(in srgb, var(--accent) 22%, var(--field-bg) 78%);
+  color: color-mix(in srgb, var(--accent) 58%, white 42%);
+  transform: translateY(-1px);
+}
+
+.backup-character-action-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
+.backup-character-action-mark::before {
+  content: "";
+  display: block;
+  width: 0.66rem;
+  height: 0.66rem;
+  border: 2px solid currentColor;
+  border-radius: 0.18rem;
+}
+
+.backup-delete-selected-toggle.is-active .backup-character-action-mark::before {
+  width: 0.42rem;
+  height: 0.72rem;
+  border-top: 0;
+  border-left: 0;
+  border-radius: 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
 .dashboard-festplay-count {
   color: color-mix(in srgb, var(--text-muted) 76%, white 24%);
   font-size: 0.68rem;
@@ -12993,6 +13063,65 @@ body.gb-editor-fullscreen-open {
   gap: 0.38rem;
   min-width: 0;
   max-width: 100%;
+}
+
+.backup-character-select {
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.dashboard-character-overview.is-selecting-backups .backup-character-select {
+  display: inline-flex;
+}
+
+.backup-character-select input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.backup-character-select-box {
+  position: relative;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 2px solid color-mix(in srgb, var(--accent) 58%, var(--panel-edge) 42%);
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--field-bg) 86%, transparent);
+  color: color-mix(in srgb, var(--accent) 62%, white 38%);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.backup-character-select input:focus-visible + .backup-character-select-box,
+.backup-character-select input:checked + .backup-character-select-box {
+  border-color: color-mix(in srgb, var(--accent) 82%, white 18%);
+  background: color-mix(in srgb, var(--accent) 22%, var(--field-bg) 78%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.backup-character-select input:checked + .backup-character-select-box::after {
+  content: "";
+  position: absolute;
+  left: 0.3rem;
+  top: 0.12rem;
+  width: 0.32rem;
+  height: 0.58rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.character-mini-card.is-backup-selected .character-mini-name {
+  color: color-mix(in srgb, var(--accent) 66%, white 34%);
 }
 
 .character-mini-item {

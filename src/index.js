@@ -16590,7 +16590,8 @@ app.get("/character-backups", requireAuth, (req, res) => {
     activeTab: "characters",
     characterBackups,
     isLarpBackupView,
-    backupReturnTarget
+    backupReturnTarget,
+    pageScripts: ["/character-backups.js?v=" + STATIC_ASSET_VERSION]
   });
 });
 
@@ -16694,6 +16695,56 @@ app.post("/character-backups/logs/:logId/delete", requireAuth, (req, res) => {
   }
 
   return res.redirect("/character-backups/logs");
+});
+
+app.post("/character-backups/delete-selected", requireAuth, (req, res) => {
+  const returnTarget = getSafeReturnTarget(req, "/character-backups");
+  const requestedBackupIds = Array.isArray(req.body.backup_ids)
+    ? req.body.backup_ids
+    : [req.body.backup_ids];
+  const backupIds = [
+    ...new Set(
+      requestedBackupIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  ];
+
+  if (!backupIds.length) {
+    return res.redirect(returnTarget);
+  }
+
+  const placeholders = backupIds.map(() => "?").join(", ");
+  db.prepare(
+    `DELETE FROM character_backups
+      WHERE user_id = ?
+        AND trim(COALESCE(restored_at, '')) = ''
+        AND id IN (${placeholders})`
+  ).run(req.session.user.id, ...backupIds);
+
+  return res.redirect(returnTarget);
+});
+
+app.post("/character-backups/delete-all", requireAuth, (req, res) => {
+  const returnTarget = getSafeReturnTarget(req, "/character-backups");
+  const requestedServerId = String(req.body.server_id || "").trim().toLowerCase();
+  const filterServerId = CHARACTER_SERVER_IDS.includes(requestedServerId)
+    ? requestedServerId
+    : "";
+  const values = [req.session.user.id];
+  const serverClause = filterServerId ? "AND server_id = ?" : "";
+  if (filterServerId) {
+    values.push(filterServerId);
+  }
+
+  db.prepare(
+    `DELETE FROM character_backups
+      WHERE user_id = ?
+        AND trim(COALESCE(restored_at, '')) = ''
+        ${serverClause}`
+  ).run(...values);
+
+  return res.redirect(returnTarget);
 });
 
 app.post("/character-backups/:backupId/restore", requireAuth, (req, res) => {

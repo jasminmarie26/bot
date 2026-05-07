@@ -4,6 +4,8 @@
 <% const resolvedBackupReturnTarget = typeof backupReturnTarget !== "undefined" && backupReturnTarget
   ? backupReturnTarget
   : "/character-backups"; %>
+<% const visibleCharacterBackups = Array.isArray(characterBackups) ? characterBackups : []; %>
+<% const backupServerFilterId = isLarpView ? "larp" : ""; %>
 
 <section class="header-line dashboard-page-header">
   <div>
@@ -25,23 +27,75 @@
   </nav>
 <% } %>
 
-<section class="dashboard-block">
-  <details class="dashboard-festplay-overview dashboard-character-overview" open>
+<section class="dashboard-block" data-character-backups-root>
+  <details class="dashboard-festplay-overview dashboard-character-overview" data-character-backup-panel open>
     <summary class="dashboard-festplay-overview-header">
       <div class="dashboard-festplay-overview-title">
         <h3>Gelöschte Charaktere</h3>
-        <span class="dashboard-festplay-count">(<%= Array.isArray(characterBackups) ? characterBackups.length : 0 %>)</span>
+        <span class="dashboard-festplay-count">(<%= visibleCharacterBackups.length %>)</span>
       </div>
+      <% if (visibleCharacterBackups.length) { %>
+        <div class="dashboard-character-overview-actions" data-backup-character-actions>
+          <form
+            method="POST"
+            action="/character-backups/delete-selected"
+            class="backup-bulk-delete-form"
+            data-backup-delete-selected-form
+          >
+            <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
+            <input type="hidden" name="server_id" value="<%= backupServerFilterId %>">
+            <button
+              type="button"
+              class="backup-character-action-btn backup-delete-selected-toggle"
+              data-backup-delete-selected-toggle
+              aria-label="Gel&ouml;schte Charaktere zum L&ouml;schen ausw&auml;hlen"
+              aria-pressed="false"
+              title="Gel&ouml;schte Charaktere zum L&ouml;schen ausw&auml;hlen"
+            >
+              <span class="backup-character-action-mark" aria-hidden="true"></span>
+            </button>
+          </form>
+          <form
+            method="POST"
+            action="/character-backups/delete-all"
+            class="backup-delete-all-form"
+            data-backup-delete-all-form
+            onsubmit="return confirm('Alle gel&ouml;schten Charaktere endg&uuml;ltig l&ouml;schen? Danach k&ouml;nnen sie nie wieder wiederhergestellt werden.')"
+          >
+            <input type="hidden" name="return_to" value="<%= resolvedBackupReturnTarget %>">
+            <input type="hidden" name="server_id" value="<%= backupServerFilterId %>">
+            <button
+              type="submit"
+              class="backup-character-action-btn backup-delete-all-btn"
+              data-backup-delete-all-toggle
+              data-backup-count="<%= visibleCharacterBackups.length %>"
+              aria-label="Alle gel&ouml;schten Charaktere endg&uuml;ltig l&ouml;schen"
+              title="Alle gel&ouml;schten Charaktere endg&uuml;ltig l&ouml;schen"
+            >
+              &#10003;
+            </button>
+          </form>
+        </div>
+      <% } %>
       <span class="dashboard-festplay-toggle-icon" aria-hidden="true"></span>
     </summary>
 
     <div class="dashboard-server-panel dashboard-character-overview-body">
-      <% if (!characterBackups || !characterBackups.length) { %>
+      <% if (!visibleCharacterBackups.length) { %>
         <p class="muted">Noch keine gelöschten Charaktere vorhanden.</p>
       <% } else { %>
         <div class="character-mini-grid">
-          <% characterBackups.forEach((backup) => { %>
-            <article class="character-mini-card">
+          <% visibleCharacterBackups.forEach((backup) => { %>
+            <article class="character-mini-card" data-backup-character-card data-backup-id="<%= backup.id %>" data-backup-name="<%= backup.character_name %>">
+              <label class="backup-character-select" title="<%= backup.character_name %> ausw&auml;hlen">
+                <input
+                  type="checkbox"
+                  value="<%= backup.id %>"
+                  data-backup-character-select
+                  aria-label="<%= backup.character_name %> zum endg&uuml;ltigen L&ouml;schen ausw&auml;hlen"
+                >
+                <span class="backup-character-select-box" aria-hidden="true"></span>
+              </label>
               <div class="character-mini-item">
                 <span class="character-mini-name"><%= backup.character_name %></span>
               </div>
