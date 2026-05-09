@@ -14147,6 +14147,10 @@ body.page-guestbook-view .guestbook-entry-heading {
   cursor: pointer;
 }
 
+.chat-online-trigger.is-menu-open {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--field-edge));
+}
+
 .chat-online-item > span {
   display: inline-block;
   max-width: 100%;
@@ -14194,6 +14198,14 @@ body.page-guestbook-view .guestbook-entry-heading {
   padding: 0.14rem 0.62rem;
   font-size: 0.84rem;
   line-height: 1.08;
+}
+
+.page-chat .chat-online-item:hover {
+  transform: none;
+}
+
+.page-chat .chat-online-item.is-disabled {
+  cursor: default;
 }
 
 .online-actions-menu {

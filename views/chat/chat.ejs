@@ -475,12 +475,30 @@
                 <% const onlineEntryDisplayName = formatChatRoleName(entry.name, entry.role_style); %>
                 <% const onlineEntryBirthdayDisplayName = formatBirthdayCakeLabel(onlineEntryDisplayName, entry.show_birthday_cake); %>
                 <% const onlineEntrySpecialClass = getChatSpecialNameClass(onlineEntryDisplayName); %>
+                <% const onlineEntryIsActionable = Number(entry.user_id) > 0 && !entry.is_npc; %>
                 <% if (entry.is_npc) { %>
                   <div
                     class="chat-online-item is-npc"
                     data-presence-key="<%= entry.presence_key || '' %>"
                     aria-label="<%= `${onlineEntryBirthdayDisplayName} (Raumfigur)` %>"
                     title="Raumfigur"
+                  >
+                    <span class="chat-online-content">
+                      <% if (entry.is_afk) { %>
+                        <span class="chat-afk-clock" aria-hidden="true">&#9687;</span>
+                      <% } %>
+                      <span
+                        class="chat-online-name <%= entry.role_style ? `role-name-${entry.role_style}` : "" %><%= onlineEntrySpecialClass ? ` ${onlineEntrySpecialClass}` : "" %><%= entry.is_afk ? ' is-afk' : '' %>"
+                        style="<%= entry.chat_text_color ? `color:${entry.chat_text_color};` : "" %>"
+                      ><%= onlineEntryBirthdayDisplayName %></span>
+                    </span>
+                  </div>
+                <% } else if (!onlineEntryIsActionable) { %>
+                  <div
+                    class="chat-online-item is-disabled"
+                    data-presence-key="<%= entry.presence_key || '' %>"
+                    aria-label="<%= onlineEntryBirthdayDisplayName %>"
+                    title="<%= onlineEntryBirthdayDisplayName %>"
                   >
                     <span class="chat-online-content">
                       <% if (entry.is_afk) { %>

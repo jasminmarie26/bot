@@ -140,6 +140,7 @@
     chatChannelStorageKey
   ].join(":");
   let selectedOnlineEntry = null;
+  let selectedOnlineTrigger = null;
   let typingEmitActive = false;
   let typingStopTimer = null;
   let afkTimer = null;
@@ -4184,6 +4185,8 @@
     if (!onlineActionsMenu) return;
     onlineActionsMenu.hidden = true;
     selectedOnlineEntry = null;
+    selectedOnlineTrigger?.classList?.remove("is-menu-open");
+    selectedOnlineTrigger = null;
   }
 
   function openWhisperPanel({ focusInput = false } = {}) {
@@ -4383,7 +4386,14 @@
     const characterId = Number(triggerEl.dataset.characterId);
     const presenceKey = String(triggerEl.dataset.presenceKey || "").trim();
     const name = String(triggerEl.dataset.name || triggerEl.textContent || "").trim() || "Unbekannt";
+    if (!Number.isInteger(userId) || userId < 1 || !presenceKey) {
+      closeOnlineMenu();
+      return;
+    }
 
+    selectedOnlineTrigger?.classList?.remove("is-menu-open");
+    selectedOnlineTrigger = triggerEl;
+    selectedOnlineTrigger.classList.add("is-menu-open");
     selectedOnlineEntry = {
       presenceKey,
       userId: Number.isInteger(userId) && userId > 0 ? userId : null,
@@ -4585,6 +4595,7 @@
       const characterId = Number(entry?.character_id);
       const presenceKey = resolvePresenceKey(entry);
       const label = String(entry?.name || "").trim();
+      const isActionable = Number.isInteger(userId) && userId > 0 && Boolean(presenceKey);
       const showBirthdayCake = entry?.show_birthday_cake === true;
       const roleStyle = String(entry?.role_style || "").trim().toLowerCase();
       const chatTextColor = normalizeChatTextColor(entry?.chat_text_color);
@@ -4592,12 +4603,12 @@
       const isNpc = entry?.is_npc === true;
       const displayName = formatRoleDisplayName(label || "Unbekannt", roleStyle);
       const displayNameWithBirthdayCake = getBirthdayCakeLabel(displayName, showBirthdayCake);
-      const node = document.createElement(isNpc ? "div" : "button");
+      const node = document.createElement(isNpc || !isActionable ? "div" : "button");
       const contentNode = document.createElement("span");
       const textNode = document.createElement("span");
       const afkClockNode = document.createElement("span");
 
-      if (!isNpc) {
+      if (!isNpc && isActionable) {
         node.type = "button";
       }
       node.classList.add("chat-online-item");
@@ -4605,8 +4616,12 @@
         node.classList.add("is-npc");
         node.setAttribute("aria-label", `${displayNameWithBirthdayCake} (Raumfigur)`);
         node.title = "Raumfigur";
-      } else {
+      } else if (isActionable) {
         node.classList.add("chat-online-trigger");
+      } else {
+        node.classList.add("is-disabled");
+        node.setAttribute("aria-label", displayNameWithBirthdayCake);
+        node.title = displayNameWithBirthdayCake;
       }
       contentNode.className = "chat-online-content";
       if (isAfk) {
