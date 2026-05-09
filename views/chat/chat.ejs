@@ -198,22 +198,6 @@
           ><%= chatIdentityName %></span>
         <% } %>
       <% } %>
-      <form method="POST" action="/settings/theme" class="inline-form theme-form">
-        <label for="rp-theme-select-chat">Design</label>
-        <input type="hidden" name="return_to" value="<%= currentPath || '/' %>" />
-        <input type="hidden" name="character_id" value="<%= activeCharacter ? Number(activeCharacter.id) : '' %>" />
-        <select
-          id="rp-theme-select-chat"
-          name="theme"
-          class="theme-select"
-        >
-          <% availableThemes.forEach((theme) => { %>
-            <option value="<%= theme.id %>" <%= chatActiveTheme === theme.id ? "selected" : "" %>>
-              <%= theme.label %>
-            </option>
-          <% }) %>
-        </select>
-      </form>
       <div class="rp-topline-quick-actions">
         <%- include("../partials/guestbook-notification-link") %>
         <button
