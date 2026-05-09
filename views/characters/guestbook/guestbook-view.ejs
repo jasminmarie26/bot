@@ -112,7 +112,8 @@
   topbarGuestbookPageLinks: guestbookPageNavigation?.overviewPages || [],
   topbarGuestbookSearchCharacters: guestbookSearchCharacters,
   topbarGuestbookMusicVideoId: guestbookMusicVideoId,
-  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`
+  pageClass: `page-guestbook-view ${guestbookPanelFontClass}`,
+  enableRealtime: false
 }) %>
 
 <style id="guestbook-page-theme-vars">
@@ -368,12 +369,10 @@
   </section>
 </div>
 
-<div data-server-presence="<%= character.server_id %>" hidden></div>
 <script id="guestbook-page-map" type="application/json"><%- JSON.stringify((guestbookPages || []).map((page) => ({
   id: Number(page.id),
   number: Number(page.page_number) || 1
 }))) %></script>
-<script src="/server-presence.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-media.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-page-navigation.js?v=<%= staticAssetVersion %>"></script>
 <script src="/guestbook-modal.js?v=<%= staticAssetVersion %>"></script>

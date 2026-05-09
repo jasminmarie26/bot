@@ -3475,6 +3475,19 @@ body.serverlist-account-icon-modal-open {
   display: none;
 }
 
+.page-guestbook-view .guestbook-preview-shell::before {
+  display: none;
+}
+
+.page-guestbook-view .guestbook-view-shell {
+  background-color: var(--gb-surround-color, transparent);
+  background-image: var(--gb-outer-image, none);
+  background-position: var(--gb-outer-image-position, center top);
+  background-size: var(--gb-outer-image-size, cover);
+  background-repeat: var(--gb-outer-image-repeat, no-repeat);
+  background-attachment: scroll;
+}
+
 .page-rp-screen {
   height: calc(100vh - var(--server-work-notice-height, 0px));
   height: calc(100dvh - var(--server-work-notice-height, 0px));
