@@ -15250,7 +15250,7 @@ body.page-guestbook-view .guestbook-entry-heading {
 .whisper-actions {
   display: flex;
   gap: 0.55rem;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 @media (max-width: 860px) {
