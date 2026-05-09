@@ -801,6 +801,12 @@
       return;
     }
 
+    if (imageNode.dataset.serverlistIconErrorBound === "1") {
+      return;
+    }
+
+    imageNode.dataset.serverlistIconErrorBound = "1";
+
     imageNode.addEventListener(
       "error",
       () => {
@@ -846,8 +852,12 @@
       anchor.appendChild(imageNode);
     }
 
-    imageNode.src = imageUrl;
     attachServerlistIconFallback(imageNode);
+    if (String(imageNode.getAttribute("src") || "").trim() === imageUrl) {
+      return;
+    }
+
+    imageNode.src = imageUrl;
   }
 
   function readSessionStorage(key) {
